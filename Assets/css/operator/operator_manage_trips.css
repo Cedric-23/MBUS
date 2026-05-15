@@ -1,0 +1,249 @@
+.main{
+margin-left:290px;
+padding:35px;
+}
+
+.page-title h1{
+margin:0;
+color:#1e3a5f;
+font-size:42px;
+}
+
+.page-title p{
+margin-top:8px;
+color:#555;
+}
+
+.card{
+background:white;
+padding:22px;
+border-radius:18px;
+box-shadow:0 4px 12px rgba(0,0,0,.08);
+margin-top:25px;
+overflow:hidden;
+}
+
+/* FILTERS */
+
+.filters{
+display:flex;
+gap:12px;
+margin-bottom:20px;
+flex-wrap:wrap;
+}
+
+.filter-btn{
+background:#e5edf8;
+color:#1e3a5f;
+padding:10px 18px;
+border-radius:30px;
+text-decoration:none;
+font-weight:bold;
+transition:.3s;
+}
+
+.filter-btn:hover{
+background:#1e3a5f;
+color:white;
+}
+
+.active-filter{
+background:#1e3a5f;
+color:white;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+th{
+background:#1e3a5f;
+color:white;
+padding:18px 12px;
+font-size:14px;
+}
+
+td{
+padding:18px 12px;
+text-align:center;
+border-bottom:1px solid #e5e5e5;
+}
+
+.route-badge{
+background:#1e3a5f;
+color:white;
+padding:8px 16px;
+border-radius:20px;
+font-size:13px;
+display:inline-block;
+}
+
+.status{
+padding:8px 14px;
+border-radius:20px;
+font-size:12px;
+font-weight:bold;
+display:inline-block;
+}
+
+.scheduled{
+background:#dbeafe;
+color:#1d4ed8;
+}
+
+.boarding{
+background:#fff3cd;
+color:#856404;
+}
+
+.departed{
+background:#cfe2ff;
+color:#084298;
+}
+
+.arrived{
+background:#d4edda;
+color:#155724;
+}
+
+.cancelled{
+background:#f8d7da;
+color:#721c24;
+}
+
+.action-form{
+display:flex;
+justify-content:center;
+align-items:center;
+gap:10px;
+}
+
+.status-select{
+padding:10px;
+border:1px solid #ccc;
+border-radius:8px;
+}
+
+.update-btn{
+background:#1e3a5f;
+color:white;
+border:none;
+padding:10px 16px;
+border-radius:10px;
+cursor:pointer;
+font-weight:bold;
+}
+
+.update-btn:hover{
+background:#16304d;
+}
+
+.view-btn{
+background:#1e3a5f;
+color:white;
+border:none;
+padding:10px 18px;
+border-radius:10px;
+cursor:pointer;
+font-weight:bold;
+}
+
+.view-btn:hover{
+background:#16304d;
+}
+
+/* MANIFEST */
+
+.manifest-row td{
+padding:0!important;
+border:none!important;
+background:transparent!important;
+}
+
+.manifest-wrapper{
+background:#eef4ff;
+border:2px solid #d6e4ff;
+border-radius:18px;
+padding:22px;
+margin:18px 12px 28px;
+box-shadow:0 4px 10px rgba(0,0,0,.05);
+}
+
+.manifest-title{
+margin:0 0 18px;
+font-size:28px;
+font-weight:bold;
+color:#1e3a5f;
+text-align:center;
+}
+
+.manifest-table{
+width:100%;
+border-collapse:separate;
+border-spacing:0 12px;
+}
+
+.manifest-table th{
+background:#1e3a5f;
+color:white;
+padding:14px;
+font-size:14px;
+}
+
+.manifest-table td{
+background:white;
+padding:16px 14px;
+text-align:center;
+border:none;
+}
+
+.manifest-table tr{
+box-shadow:0 2px 6px rgba(0,0,0,.04);
+}
+
+.passenger-name{
+font-weight:bold;
+color:#1e3a5f;
+}
+
+.boarded-badge{
+background:#d4edda;
+color:#155724;
+padding:6px 14px;
+border-radius:20px;
+font-size:12px;
+font-weight:bold;
+display:inline-block;
+}
+
+.paid-badge{
+background:#fff3cd;
+color:#856404;
+padding:6px 14px;
+border-radius:20px;
+font-size:12px;
+font-weight:bold;
+display:inline-block;
+}
+
+.board-btn{
+background:#198754;
+color:white;
+border:none;
+padding:10px 16px;
+border-radius:10px;
+font-weight:bold;
+cursor:pointer;
+}
+
+.board-btn:hover{
+background:#157347;
+}
+
+.trip-divider{
+height:3px;
+background:#dbe4f0;
+margin:10px 0;
+border-radius:20px;
+}

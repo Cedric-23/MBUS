@@ -1,0 +1,123 @@
+.main{
+    margin-left:290px;padding:30px;}
+
+.tabs{
+    display:flex;
+    gap:10px;
+    margin-bottom:15px;
+    flex-wrap:wrap;
+}
+
+.tab{
+    padding:10px 15px;
+    background:white;
+    border-radius:5px;
+    text-decoration:none;
+    color:#1e3a5f;
+    font-weight:bold;
+    box-shadow:0 0 5px rgba(0,0,0,0.1);
+}
+
+.active{
+    background:#1e3a5f;
+    color:white;
+}
+
+.day-tabs{
+    display:flex;
+    gap:10px;
+    margin-bottom:25px;
+    flex-wrap:wrap;
+}
+
+.day-tab{
+    padding:8px 12px;
+    background:#ddd;
+    border-radius:5px;
+    text-decoration:none;
+    color:black;
+    font-size:14px;
+}
+
+.day-active{
+    background:#1e3a5f;
+    color:white;
+    font-weight:bold;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    background:white;
+}
+
+th,td{
+    padding:12px;
+    text-align:center;
+    border:1px solid #ddd;
+}
+
+th{
+    background:#1e3a5f;
+    color:white;
+}
+
+.select-btn{
+    background:#1e3a5f;
+    color:white;
+    border:none;
+    padding:8px 16px;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:bold;
+    transition:.2s;
+}
+
+.select-btn:hover{
+    background:#2d4f7a;
+    transform:scale(1.05);
+}
+
+.available{
+    color:green;
+    font-weight:bold;
+}
+
+.full{
+    color:red;
+    font-weight:bold;}
+
+.badge{
+    padding:6px 12px;
+    border-radius:20px;
+    color:white;
+    font-size:13px;
+    font-weight:bold;
+}
+
+.active-badge{
+    background:green;
+}
+
+.cancelled-badge{
+    background:red;
+}
+
+.delayed-badge{
+    background:orange;
+}
+
+.route-badge{
+    background:#1e3a5f;
+    color:white;
+    padding:8px 14px;
+    border-radius:20px;
+    display:inline-block;
+    font-size:14px;}
+
+.no-data{
+    background:white;
+    padding:30px;
+    text-align:center;
+    border-radius:10px;
+}

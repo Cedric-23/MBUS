@@ -1,0 +1,138 @@
+body{
+    margin-top:40px;
+    padding:20px;
+    font-family:Arial;
+
+    background: url("../images/mbus_background.png") no-repeat center center fixed;
+    background-size: cover;
+}
+
+body::before{
+    content:"";
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(255,255,255,0.7); /* adjust opacity */
+    z-index:-1;
+}
+
+.ticket{
+max-width:480px;
+margin:auto;
+background:white;
+border-radius:18px;
+padding:22px;
+box-shadow:0 8px 20px rgba(0,0,0,0.08);
+text-align:left;
+}
+
+.header{
+text-align:center;
+}
+
+.header h1{
+margin:0;
+color:#1e3a5f;
+font-size:36px;
+}
+
+.header p{
+margin:3px 0 10px;
+color:#777;
+font-size:13px;
+}
+
+.ticket-code{
+background:#1e3a5f;
+color:white;
+text-align:center;
+padding:10px;
+border-radius:10px;
+margin:15px 0;
+font-weight:bold;
+letter-spacing:1px;
+}
+
+.section{
+margin-bottom:14px;
+}
+
+.label{
+font-size:11px;
+color:#888;
+margin-bottom:2px;
+}
+
+.value{
+font-size:15px;
+font-weight:600;
+color:#222;
+}
+
+.route{
+text-align:center;
+margin:20px 0;
+}
+
+.route-place{
+font-size:22px;
+font-weight:700;
+color:#1e3a5f;
+}
+
+.route-to{
+font-size:12px;
+color:#777;
+text-transform:uppercase;
+margin:3px 0;
+}
+
+hr{
+border:none;
+border-top:1px dashed #ccc;
+margin:15px 0;
+}
+
+.payment-box{
+background:#f8f9fb;
+padding:14px;
+border-radius:12px;
+}
+
+.btn{
+display:block;
+width:100%;
+padding:14px;
+border:none;
+border-radius:10px;
+margin-top:10px;
+text-decoration:none;
+text-align:center;
+font-weight:bold;
+box-sizing:border-box;
+}
+
+.download{
+background:#1e3a5f;
+color:white;
+}
+
+.reservation-btn{
+background:#0a8f2f;
+color:white;
+}
+
+.btn:hover{
+opacity:0.9;
+}
+
+.back-link{
+text-align:center;
+display:block;
+margin-top:15px;
+color:#1e3a5f;
+font-weight:bold;
+text-decoration:none;
+}

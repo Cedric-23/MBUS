@@ -1,0 +1,130 @@
+body{
+    margin:0;
+    font-family:'Poppins', sans-serif;
+}
+
+.container{
+    display:flex;
+    height:100vh;
+    background:
+    linear-gradient(rgba(30,58,95,0.85), rgba(30,58,95,0.85)),
+    url("Assets/images/mbus_background.png") no-repeat center center;
+    background-size:cover;
+}
+
+.left{
+    flex:1;
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    padding-left:120px;
+    padding-top:180px;
+    color:white;
+}
+
+.left-content{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+}
+
+.left img{
+    width:650px;
+    margin-bottom:20px;
+}
+
+.left-text{
+    text-align:left;
+}
+
+.left-text h3{
+    font-size:22px;
+    font-weight:600;
+    margin:0;
+    white-space:nowrap;
+}
+
+.left-text p{
+    margin-top:10px;
+    font-size:15px;
+    opacity:0.9;
+}
+
+.right{
+    flex:1;
+    display:flex;
+    align-items:flex-start;
+    justify-content:flex-end;
+    padding-right:150px;
+    padding-top:200px; 
+}
+.register-box{
+    width:420px;
+    background:white;
+    padding:35px;
+    border-radius:15px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.15);
+}
+
+.register-box h2{
+    text-align:center;
+    color:#1e3a5f;
+    margin-bottom:25px;
+}
+
+.input-group{
+    position:relative;
+    margin-bottom:18px;
+    width:100%;
+}
+
+.input-group i{
+    position:absolute;
+    left:12px;
+    top:50%;
+    transform:translateY(-50%);
+    color:#888;
+}
+
+.input-group input{
+    width:100%;
+    padding:12px 40px 12px 38px;
+    border:1px solid #ccc;
+    border-radius:8px;
+    font-size:14px;
+    box-sizing:border-box;
+}
+
+.eye{
+    position:absolute;
+    right:12px;
+    top:50%;
+    transform:translateY(-50%);
+    cursor:pointer;
+}
+
+button{
+    width:100%;
+    padding:13px;
+    border:none;
+    background:#1e3a5f;
+    color:white;
+    font-size:16px;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#16304d;
+}
+
+.login-link{
+    text-align:center;
+    margin-top:15px;
+}
+
+.login-link a{
+    text-decoration:none;
+    color:#1e3a5f;
+    font-weight:bold;
+}

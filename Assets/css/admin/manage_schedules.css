@@ -1,0 +1,169 @@
+.main{
+    margin-left:290px;
+    padding:30px;
+}
+
+.card{
+    background:white;
+    padding:25px;
+    border-radius:10px;
+    margin-bottom:25px;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+.page-title{
+    margin-bottom:25px;
+}
+
+.page-title h1{
+    color:#000000;
+    margin-bottom:5px;
+}
+
+.form-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:20px;
+}
+
+.form-group{
+    display:flex;
+    flex-direction:column;
+}
+
+.form-group label{
+    margin-bottom:8px;
+    font-weight:bold;
+}
+
+.form-group input,
+.form-group select{
+    padding:12px;
+    border:1px solid #ccc;
+    border-radius:5px;
+}
+
+.btn{
+    background:#1e3a5f;
+    color:white;
+    border:none;
+    padding:12px 18px;
+    border-radius:5px;
+    cursor:pointer;
+    margin-top:20px;
+}
+
+.btn:hover{
+    background:#16304d;
+}
+
+.top-actions{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+}
+
+.edit-mode-btn{
+    background:#1e3a5f;
+    color:white;
+    border:none;
+    padding:10px 15px;
+    border-radius:5px;
+    cursor:pointer;
+}
+
+.filter-buttons{
+    margin-bottom:20px;
+}
+
+.filter-btn{
+    background:#1e3a5f;
+    color:white;
+    border:none;
+    padding:10px 15px;
+    border-radius:5px;
+    cursor:pointer;
+    margin-right:10px;
+}
+
+.active-filter{
+    background:#10243b;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+table th{
+    background:#1e3a5f;
+    color:white;
+    padding:14px;
+}
+
+table td{
+    padding:14px;
+    border-bottom:1px solid #ddd;
+    text-align:center;
+}
+
+.route-badge{
+    background:#1e3a5f;
+    color:white;
+    padding:8px 14px;
+    border-radius:20px;
+    font-size:13px;
+}
+
+.status{
+    padding:6px 12px;
+    border-radius:20px;
+    font-size:13px;
+    font-weight:bold;
+}
+
+.active{
+    background:#d4edda;
+    color:#155724;
+}
+
+.inactive{
+    background:#f8d7da;
+    color:#721c24;
+}
+
+.edit-controls{
+    display:none;
+}
+
+.edit-input{
+    width:100%;
+    padding:8px;
+    border:1px solid #ccc;
+    border-radius:5px;
+}
+
+.action-buttons{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+}
+
+.save-btn{
+    background:#198754;
+    color:white;
+    border:none;
+    padding:8px 12px;
+    border-radius:5px;
+    cursor:pointer;
+}
+
+.delete-btn{
+    background:#dc3545;
+    color:white;
+    border:none;
+    padding:8px 12px;
+    border-radius:5px;
+    cursor:pointer;
+}

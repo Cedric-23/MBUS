@@ -1,0 +1,188 @@
+.main{
+
+    margin-left:290px;
+    padding:30px;
+
+}
+
+/* PAGE TITLE */
+
+.page-title h1{
+
+    margin:0;
+
+}
+
+.page-title p{
+
+    color:#666;
+    margin-top:8px;
+    margin-bottom:30px;
+
+}
+
+/* BOX */
+
+.box{
+
+    background:white;
+
+    border-radius:12px;
+
+    padding:30px;
+
+    margin-bottom:30px;
+
+    box-shadow:
+    0 0 10px rgba(0,0,0,0.08);
+
+}
+
+/* FORM */
+
+.form-grid{
+
+    display:grid;
+
+    grid-template-columns:
+    repeat(auto-fit,minmax(280px,1fr));
+
+    gap:25px;
+
+    margin-top:25px;
+
+}
+
+.form-group{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:10px;
+
+}
+
+.form-group label{
+
+    font-weight:bold;
+
+    color:#1e3a5f;
+
+}
+
+select,
+input{
+
+    width:100%;
+
+    padding:12px;
+
+    border:1px solid #ccc;
+
+    border-radius:6px;
+
+    box-sizing:border-box;
+
+    font-size:14px;
+
+}
+
+select:focus,
+input:focus{
+
+    outline:none;
+
+    border-color:#1e3a5f;
+
+}
+
+.custom-input{
+
+    display:none;
+
+}
+
+/* BUTTON */
+
+.btn{
+
+    margin-top:25px;
+
+    padding:12px 20px;
+
+    border:none;
+
+    background:#1e3a5f;
+
+    color:white;
+
+    border-radius:6px;
+
+    cursor:pointer;
+
+    font-size:15px;
+
+}
+
+.btn:hover{
+
+    background:#16304d;
+
+}
+
+/* TABLE */
+
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+    margin-top:20px;
+
+}
+
+th,
+td{
+
+    padding:16px;
+
+    text-align:center;
+
+    border-bottom:1px solid #ddd;
+
+}
+
+th{
+
+    background:#1e3a5f;
+
+    color:white;
+
+}
+
+tr:hover{
+
+    background:#f8f8f8;
+
+}
+
+/* ROUTE BADGE */
+
+.route-badge{
+    background:#1e3a5f;
+
+    color:white;
+
+    padding:8px 14px;
+
+    border-radius:20px;
+
+    font-size:13px;
+
+    font-weight:bold;
+
+    display:inline-block;
+
+}
