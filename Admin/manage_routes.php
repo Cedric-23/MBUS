@@ -42,19 +42,19 @@ echo "<script>alert('Origin and destination cannot be the same');</script>";
 
 }else{
 
-$check = mysqli_query($conn,"
+$check = mbus_db_query($conn,"
 SELECT * FROM routes
 WHERE origin='$origin'
 AND destination='$destination'
 ");
 
-if(mysqli_num_rows($check)>0){
+if(mbus_db_num_rows($check)>0){
 
 echo "<script>alert('Route already exists');</script>";
 
 }else{
 
-mysqli_query($conn,"
+mbus_db_query($conn,"
 INSERT INTO routes(origin,destination,fare)
 VALUES('$origin','$destination','$fare')
 ");
@@ -245,12 +245,12 @@ Add Route
 
 <?php
 
-$query = mysqli_query($conn,"
+$query = mbus_db_query($conn,"
 SELECT * FROM routes
 ORDER BY route_id DESC
 ");
 
-while($row=mysqli_fetch_assoc($query)){
+while($row=mbus_db_fetch_assoc($query)){
 
 ?>
 

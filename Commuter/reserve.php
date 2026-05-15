@@ -3,7 +3,7 @@ session_start();
 include "../config/db_connect.php";
 
 /* AUTO EXPIRE */
-mysqli_query($conn,"
+mbus_db_query($conn,"
 UPDATE reservation
 SET status='Cancelled'
 WHERE status='Pending'
@@ -21,7 +21,7 @@ $user_id=$_SESSION['user_id'];
 /* SCHEDULE */
 if(!isset($_GET['schedule_id'])){die("Schedule not found.");}
 
-$schedule_id=mysqli_real_escape_string($conn,$_GET['schedule_id']);
+$schedule_id=mbus_db_escape($conn,$_GET['schedule_id']);
 
 /* STOPS */
 $stops=["MORONG TERMINAL","BINARITAN","POBLACION","HILLTOP","SABANG","ANVAYA","MABAYO","MINANGA","MORONG GATE","GROUP 6","IDESS","APPAREL","GATE 2","TRIBOA","TOWER","KORYO","TECHNO","UA","NSD","PETRON","INDUSTRIAL","HARBOR POINT","MAIN GATE"];
@@ -36,7 +36,7 @@ $fare_table=[
 ];
 
 /* ROUTE */
-$route_query=mysqli_query($conn,"
+$route_query=mbus_db_query($conn,"
 SELECT routes.origin,routes.destination,buses.bus_number,schedule.departure_time,schedule.trip_status
 FROM schedule
 JOIN routes ON schedule.route_id=routes.route_id
@@ -44,7 +44,7 @@ JOIN buses ON schedule.bus_id=buses.bus_id
 WHERE schedule.schedule_id='$schedule_id'
 ");
 
-$route_data=mysqli_fetch_assoc($route_query);
+$route_data=mbus_db_fetch_assoc($route_query);
 
 if(!$route_data){die("Invalid schedule.");}
 
@@ -65,42 +65,42 @@ array_pop($pickup_stops);
 
 /* RESERVED */
 $reserved=[];
-$reserved_query=mysqli_query($conn,"
+$reserved_query=mbus_db_query($conn,"
 SELECT seat_number FROM reservation
 WHERE schedule_id='$schedule_id'
 AND(status='Paid' OR status='Boarded' OR(status='Pending' AND created_at>NOW()-INTERVAL 5 MINUTE))
 ");
 
-while($r=mysqli_fetch_assoc($reserved_query)){$reserved[]=$r['seat_number'];}
+while($r=mbus_db_fetch_assoc($reserved_query)){$reserved[]=$r['seat_number'];}
 
 $available_seats=28-count($reserved);
 
 /* RESERVE */
 if(isset($_POST['confirm_reserve'])){
 
-$pickup=mysqli_real_escape_string($conn,$_POST['pickup']);
-$destination=mysqli_real_escape_string($conn,$_POST['destination']);
+$pickup=mbus_db_escape($conn,$_POST['pickup']);
+$destination=mbus_db_escape($conn,$_POST['destination']);
 $seats=explode(",",$_POST['seats']);
 
 foreach($seats as $seat){
 
 $seat=intval($seat);
 
-$check=mysqli_query($conn,"
+$check=mbus_db_query($conn,"
 SELECT reservation_id FROM reservation
 WHERE schedule_id='$schedule_id'
 AND seat_number='$seat'
 AND(status='Paid' OR status='Boarded' OR(status='Pending' AND created_at>NOW()-INTERVAL 5 MINUTE))
 ");
 
-if(mysqli_num_rows($check)>0){continue;}
+if(mbus_db_num_rows($check)>0){continue;}
 
 do{
 $ticket_code=rand(1000,9999);
-$check_code=mysqli_query($conn,"SELECT reservation_id FROM reservation WHERE ticket_code='$ticket_code'");
-}while(mysqli_num_rows($check_code)>0);
+$check_code=mbus_db_query($conn,"SELECT reservation_id FROM reservation WHERE ticket_code='$ticket_code'");
+}while(mbus_db_num_rows($check_code)>0);
 
-mysqli_query($conn,"
+mbus_db_query($conn,"
 INSERT INTO reservation(ticket_code,user_id,schedule_id,seat_number,pickup_location,destination,reservation_date,created_at,status)
 VALUES('$ticket_code','$user_id','$schedule_id','$seat','$pickup','$destination',NOW(),NOW(),'Pending')
 ");

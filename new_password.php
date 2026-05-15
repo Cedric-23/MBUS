@@ -21,7 +21,7 @@ echo "<script>alert('Passwords do not match');</script>";
 $hashed = password_hash($password, PASSWORD_DEFAULT);
 $email = $_SESSION['reset_email'];
 
-mysqli_query($conn, "
+mbus_db_query($conn, "
 UPDATE users 
 SET password='$hashed',
 reset_code=NULL,

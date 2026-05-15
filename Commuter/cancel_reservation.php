@@ -18,7 +18,7 @@ if(!isset($_POST['schedule_id'])){
 exit();
 }
 
-$schedule_id=mysqli_real_escape_string(
+$schedule_id=mbus_db_escape(
 $conn,
 $_POST['schedule_id']
 );
@@ -26,7 +26,7 @@ $_POST['schedule_id']
 /* CANCEL ALL USER PENDING RESERVATIONS
 FOR THIS SCHEDULE */
 
-mysqli_query($conn,"
+mbus_db_query($conn,"
 UPDATE reservation
 SET status='Cancelled'
 WHERE user_id='$user_id'

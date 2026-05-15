@@ -21,46 +21,46 @@ include "../config/db_connect.php";
    TOTAL BUSES
 ========================= */
 
-$bus_query = mysqli_query($conn,"
+$bus_query = mbus_db_query($conn,"
     SELECT COUNT(*) AS total
     FROM buses
 ");
 
-$bus_data = mysqli_fetch_assoc($bus_query);
+$bus_data = mbus_db_fetch_assoc($bus_query);
 
 /* =========================
    TOTAL OPERATORS
 ========================= */
 
-$operator_query = mysqli_query($conn,"
+$operator_query = mbus_db_query($conn,"
     SELECT COUNT(*) AS total
     FROM users
     WHERE LOWER(user_type)='operator'
 ");
 
-$operator_data = mysqli_fetch_assoc($operator_query);
+$operator_data = mbus_db_fetch_assoc($operator_query);
 
 /* =========================
    TOTAL SCHEDULES
 ========================= */
 
-$schedule_query = mysqli_query($conn,"
+$schedule_query = mbus_db_query($conn,"
     SELECT COUNT(*) AS total
     FROM schedule
 ");
 
-$schedule_data = mysqli_fetch_assoc($schedule_query);
+$schedule_data = mbus_db_fetch_assoc($schedule_query);
 
 /* =========================
    TOTAL RESERVATIONS
 ========================= */
 
-$reservation_query = mysqli_query($conn,"
+$reservation_query = mbus_db_query($conn,"
     SELECT COUNT(*) AS total
     FROM reservation
 ");
 
-$reservation_data = mysqli_fetch_assoc($reservation_query);
+$reservation_data = mbus_db_fetch_assoc($reservation_query);
 
 ?>
 

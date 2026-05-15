@@ -12,11 +12,11 @@ if(isset($_POST['login'])){
     $password = trim($_POST['password']);
 
     $sql = "SELECT * FROM users WHERE email='$email'";
-    $result = mysqli_query($conn, $sql);
+    $result = mbus_db_query($conn, $sql);
 
-    if(mysqli_num_rows($result) > 0){
+    if(mbus_db_num_rows($result) > 0){
 
-        $user = mysqli_fetch_assoc($result);
+        $user = mbus_db_fetch_assoc($result);
 
         if(password_verify($password, $user['password'])){
 

@@ -6,14 +6,14 @@ if(isset($_POST['send_code'])){
 
 $email = $_POST['email'];
 
-$result = mysqli_query($conn, "SELECT * FROM users WHERE email='$email'");
+$result = mbus_db_query($conn, "SELECT * FROM users WHERE email='$email'");
 
-if(mysqli_num_rows($result) > 0){
+if(mbus_db_num_rows($result) > 0){
 
 $code = rand(100000,999999);
 $expiry = date("Y-m-d H:i:s", strtotime("+15 minutes"));
 
-mysqli_query($conn, "UPDATE users 
+mbus_db_query($conn, "UPDATE users 
 SET reset_code='$code', reset_expiry='$expiry'
 WHERE email='$email'");
 

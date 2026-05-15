@@ -14,7 +14,7 @@ include("../config/db_connect.php");
 $operator_id = $_SESSION['user_id'];
 
 /* TRIPS TODAY */
-$trips_today_query = mysqli_query($conn,"
+$trips_today_query = mbus_db_query($conn,"
 SELECT COUNT(*) as total
 FROM schedule
 LEFT JOIN operator_bus_assignments
@@ -22,10 +22,10 @@ ON schedule.bus_id = operator_bus_assignments.bus_id
 WHERE operator_bus_assignments.operator_id='$operator_id'
 AND DATE(schedule.departure_time)=CURDATE()
 ");
-$trips_today = mysqli_fetch_assoc($trips_today_query)['total'];
+$trips_today = mbus_db_fetch_assoc($trips_today_query)['total'];
 
 /* TOTAL PASSENGERS */
-$passengers_query = mysqli_query($conn,"
+$passengers_query = mbus_db_query($conn,"
 SELECT COUNT(*) as total
 FROM reservation
 JOIN schedule ON reservation.schedule_id = schedule.schedule_id
@@ -33,10 +33,10 @@ JOIN operator_bus_assignments ON schedule.bus_id = operator_bus_assignments.bus_
 WHERE operator_bus_assignments.operator_id='$operator_id'
 AND (reservation.status='Paid' OR reservation.status='Boarded')
 ");
-$total_passengers = mysqli_fetch_assoc($passengers_query)['total'];
+$total_passengers = mbus_db_fetch_assoc($passengers_query)['total'];
 
 /* BOARDED */
-$boarded_query = mysqli_query($conn,"
+$boarded_query = mbus_db_query($conn,"
 SELECT COUNT(*) as total
 FROM reservation
 JOIN schedule ON reservation.schedule_id = schedule.schedule_id
@@ -44,17 +44,17 @@ JOIN operator_bus_assignments ON schedule.bus_id = operator_bus_assignments.bus_
 WHERE operator_bus_assignments.operator_id='$operator_id'
 AND reservation.status='Boarded'
 ");
-$total_boarded = mysqli_fetch_assoc($boarded_query)['total'];
+$total_boarded = mbus_db_fetch_assoc($boarded_query)['total'];
 
 /* ACTIVE */
-$active_query = mysqli_query($conn,"
+$active_query = mbus_db_query($conn,"
 SELECT COUNT(*) as total
 FROM schedule
 JOIN operator_bus_assignments ON schedule.bus_id = operator_bus_assignments.bus_id
 WHERE operator_bus_assignments.operator_id='$operator_id'
 AND (schedule.trip_status='Scheduled' OR schedule.trip_status='Boarding')
 ");
-$active_trips = mysqli_fetch_assoc($active_query)['total'];
+$active_trips = mbus_db_fetch_assoc($active_query)['total'];
 ?>
 
 <!DOCTYPE html>

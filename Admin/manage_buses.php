@@ -21,7 +21,7 @@ $bus_number = trim($_POST['bus_number']);
 $bus_type   = trim($_POST['bus_type']);
 $capacity   = trim($_POST['capacity']);
 
-mysqli_query($conn,"
+mbus_db_query($conn,"
 INSERT INTO buses (bus_number,bus_type,capacity)
 VALUES ('$bus_number','$bus_type','$capacity')
 ");
@@ -159,12 +159,12 @@ Add Bus
 
 <?php
 
-$query = mysqli_query($conn,"
+$query = mbus_db_query($conn,"
 SELECT * FROM buses
 ORDER BY bus_id DESC
 ");
 
-while($row = mysqli_fetch_assoc($query)){
+while($row = mbus_db_fetch_assoc($query)){
 
 ?>
 

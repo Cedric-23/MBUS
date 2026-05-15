@@ -10,7 +10,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $id = $_POST['reservation_id'];
 
         /* DELETE FROM DATABASE */
-        $delete = mysqli_query($conn,"
+        $delete = mbus_db_query($conn,"
         DELETE FROM reservation
         WHERE reservation_id='$id'
         ");

@@ -17,7 +17,7 @@ if(isset($_POST['update_schedule'])){
     $arrival_time = $_POST['arrival_time'];
     $schedule_status = $_POST['schedule_status'];
 
-    mysqli_query($conn,"
+    mbus_db_query($conn,"
         UPDATE schedule SET
         bus_id='$bus_id',
         route_id='$route_id',
@@ -33,7 +33,7 @@ if(isset($_POST['update_schedule'])){
 
 /* DELETE */
 if(isset($_POST['delete_schedule'])){
-    mysqli_query($conn,"
+    mbus_db_query($conn,"
         DELETE FROM schedule
         WHERE schedule_id='".$_POST['schedule_id']."'
     ");
@@ -44,7 +44,7 @@ if(isset($_POST['delete_schedule'])){
 
 /* ADD */
 if(isset($_POST['add_schedule'])){
-    mysqli_query($conn,"
+    mbus_db_query($conn,"
         INSERT INTO schedule(
             bus_id, route_id,
             departure_time, arrival_time,
@@ -64,10 +64,10 @@ if(isset($_POST['add_schedule'])){
 }
 
 /* FETCH */
-$routes = mysqli_query($conn,"SELECT * FROM routes ORDER BY origin ASC");
-$buses  = mysqli_query($conn,"SELECT * FROM buses ORDER BY bus_id ASC");
+$routes = mbus_db_query($conn,"SELECT * FROM routes ORDER BY origin ASC");
+$buses  = mbus_db_query($conn,"SELECT * FROM buses ORDER BY bus_id ASC");
 
-$query = mysqli_query($conn,"
+$query = mbus_db_query($conn,"
 SELECT schedule.*, routes.origin, routes.destination
 FROM schedule
 LEFT JOIN routes ON schedule.route_id=routes.route_id
@@ -155,7 +155,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
 <select name="bus_id" required>
 <option value="">Select Bus</option>
 
-<?php mysqli_data_seek($buses,0); while($bus=mysqli_fetch_assoc($buses)){ ?>
+<?php mbus_db_data_seek($buses,0); while($bus=mbus_db_fetch_assoc($buses)){ ?>
 <option value="<?= $bus['bus_id']; ?>">
 <?= $bus['bus_number']; ?> - <?= $bus['bus_type']; ?> - <?= $bus['capacity']; ?> Seats
 </option>
@@ -169,7 +169,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
 <select name="route_id" required>
 <option value="">Select Route</option>
 
-<?php mysqli_data_seek($routes,0); while($route=mysqli_fetch_assoc($routes)){ ?>
+<?php mbus_db_data_seek($routes,0); while($route=mbus_db_fetch_assoc($routes)){ ?>
 <option value="<?= $route['route_id']; ?>">
 <?= $route['origin']; ?> → <?= $route['destination']; ?>
 </option>
@@ -231,7 +231,7 @@ Add Schedule
 <th class="edit-controls">Actions</th>
 </tr>
 
-<?php while($row=mysqli_fetch_assoc($query)){ ?>
+<?php while($row=mbus_db_fetch_assoc($query)){ ?>
 
 <tr class="schedule-row"
 data-route="<?= ($row['origin']=='Morong Terminal')?'morong':'sbma'; ?>">
@@ -246,7 +246,7 @@ data-route="<?= ($row['origin']=='Morong Terminal')?'morong':'sbma'; ?>">
 <span class="view-mode">Bus <?= $row['bus_id']; ?></span>
 <div class="edit-controls">
 <select name="bus_id" class="edit-input">
-<?php mysqli_data_seek($buses,0); while($bus=mysqli_fetch_assoc($buses)){ ?>
+<?php mbus_db_data_seek($buses,0); while($bus=mbus_db_fetch_assoc($buses)){ ?>
 <option value="<?= $bus['bus_id']; ?>"
 <?= ($bus['bus_id']==$row['bus_id'])?'selected':''; ?>>
 <?= $bus['bus_number']; ?> - <?= $bus['bus_type']; ?>
@@ -265,7 +265,7 @@ data-route="<?= ($row['origin']=='Morong Terminal')?'morong':'sbma'; ?>">
 
 <div class="edit-controls">
 <select name="route_id" class="edit-input">
-<?php mysqli_data_seek($routes,0); while($route=mysqli_fetch_assoc($routes)){ ?>
+<?php mbus_db_data_seek($routes,0); while($route=mbus_db_fetch_assoc($routes)){ ?>
 <option value="<?= $route['route_id']; ?>"
 <?= ($route['route_id']==$row['route_id'])?'selected':''; ?>>
 <?= $route['origin']; ?> → <?= $route['destination']; ?>

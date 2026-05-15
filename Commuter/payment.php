@@ -13,9 +13,9 @@ if(!isset($_GET['schedule_id'])){
     die("Invalid request.");
 }
 
-$schedule_id = mysqli_real_escape_string($conn, $_GET['schedule_id']);
+$schedule_id = mbus_db_escape($conn, $_GET['schedule_id']);
 
-$query = mysqli_query($conn,"
+$query = mbus_db_query($conn,"
 SELECT reservation.*, schedule.departure_time, schedule.arrival_time,
 routes.origin, routes.destination AS route_destination,
 buses.bus_number
@@ -28,12 +28,12 @@ AND reservation.schedule_id = '$schedule_id'
 AND reservation.status = 'Pending'
 ");
 
-if(mysqli_num_rows($query) <= 0){
+if(mbus_db_num_rows($query) <= 0){
     die("No pending reservation found.");
 }
 
 $reservations = [];
-while($row = mysqli_fetch_assoc($query)){
+while($row = mbus_db_fetch_assoc($query)){
     $reservations[] = $row;
 }
 
@@ -47,8 +47,8 @@ $error = "";
 /* CONFIRM PAYMENT */
 if(isset($_POST['confirm_payment'])){
 
-    $method = mysqli_real_escape_string($conn, $_POST['payment_method']);
-    $reference = mysqli_real_escape_string($conn, $_POST['reference_number']);
+    $method = mbus_db_escape($conn, $_POST['payment_method']);
+    $reference = mbus_db_escape($conn, $_POST['reference_number']);
 
     if(empty($reference)){
         $error = "Reference number required.";
@@ -56,17 +56,17 @@ if(isset($_POST['confirm_payment'])){
 
         $ticket_code = "MB-" . rand(1000,9999);
 
-        $get_res = mysqli_query($conn,"
+        $get_res = mbus_db_query($conn,"
         SELECT reservation_id FROM reservation
         WHERE user_id='$user_id'
         AND schedule_id='$schedule_id'
         LIMIT 1
         ");
 
-        $res_data = mysqli_fetch_assoc($get_res);
+        $res_data = mbus_db_fetch_assoc($get_res);
         $res_id = $res_data['reservation_id'];
 
-        mysqli_query($conn,"
+        mbus_db_query($conn,"
         INSERT INTO payment(
         reservation_id, amount, payment_method,
         payment_reference, payment_status,
@@ -78,7 +78,7 @@ if(isset($_POST['confirm_payment'])){
         )
         ");
 
-        $update = mysqli_query($conn,"
+        $update = mbus_db_query($conn,"
         UPDATE reservation
         SET status='Paid'
         WHERE user_id='$user_id'
@@ -97,7 +97,7 @@ if(isset($_POST['confirm_payment'])){
 
 /* CANCEL */
 if(isset($_POST['cancel_reservation'])){
-    mysqli_query($conn,"
+    mbus_db_query($conn,"
     UPDATE reservation
     SET status='Cancelled'
     WHERE user_id='$user_id'

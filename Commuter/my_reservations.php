@@ -3,7 +3,7 @@ session_start();
 include "../config/db_connect.php";
 
 /* AUTO EXPIRE */
-mysqli_query($conn,"
+mbus_db_query($conn,"
 UPDATE reservation
 SET status='Cancelled'
 WHERE status='Pending'
@@ -19,7 +19,7 @@ if(!isset($_SESSION['user_id'])){
 $user_id=$_SESSION['user_id'];
 
 /* RESERVATIONS */
-$sql=mysqli_query($conn,"
+$sql=mbus_db_query($conn,"
 SELECT
 reservation.reservation_id,
 reservation.schedule_id,
@@ -83,9 +83,9 @@ ORDER BY reservation.reservation_id DESC
 
 <div class="page-title">My Reservations</div>
 
-<?php if(mysqli_num_rows($sql)>0){ ?>
+<?php if(mbus_db_num_rows($sql)>0){ ?>
 
-<?php while($row=mysqli_fetch_assoc($sql)){ ?>
+<?php while($row=mbus_db_fetch_assoc($sql)){ ?>
 
 <?php
 $statusClass=strtolower($row['status']);
@@ -97,7 +97,7 @@ if($row['status']=="Pending"){
     $remaining=$expire-time();
 
     if($remaining<0){
-        mysqli_query($conn,"UPDATE reservation SET status='Cancelled' WHERE reservation_id='".$row['reservation_id']."'");
+        mbus_db_query($conn,"UPDATE reservation SET status='Cancelled' WHERE reservation_id='".$row['reservation_id']."'");
         $row['status']="Cancelled";
         $statusClass="cancelled";
     }

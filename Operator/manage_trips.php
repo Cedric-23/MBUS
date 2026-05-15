@@ -57,7 +57,7 @@ if(isset($_POST['update_status'])){
 $schedule_id=$_POST['schedule_id'];
 $trip_status=$_POST['trip_status'];
 
-mysqli_query($conn,"
+mbus_db_query($conn,"
 UPDATE schedule
 SET trip_status='$trip_status'
 WHERE schedule_id='$schedule_id'
@@ -73,7 +73,7 @@ if(isset($_POST['mark_boarded'])){
 
 $reservation_id=$_POST['reservation_id'];
 
-mysqli_query($conn,"
+mbus_db_query($conn,"
 UPDATE reservation
 SET status='Boarded'
 WHERE reservation_id='$reservation_id'
@@ -87,7 +87,7 @@ exit();
 
 $operator_id=$_SESSION['user_id'];
 
-$query=mysqli_query($conn,"
+$query=mbus_db_query($conn,"
 SELECT
 
 schedule.schedule_id,
@@ -245,7 +245,7 @@ Next Week
 
 </tr>
 
-<?php while($row=mysqli_fetch_assoc($query)){ ?>
+<?php while($row=mbus_db_fetch_assoc($query)){ ?>
 
 <tr>
 
@@ -381,7 +381,7 @@ Passenger Manifest
 
 $schedule_id=$row['schedule_id'];
 
-$passengers=mysqli_query($conn,"
+$passengers=mbus_db_query($conn,"
 SELECT
 reservation.*,
 users.full_name
@@ -401,9 +401,9 @@ OR reservation.status='Boarded'
 ORDER BY reservation.seat_number ASC
 ");
 
-if(mysqli_num_rows($passengers)>0){
+if(mbus_db_num_rows($passengers)>0){
 
-while($passenger=mysqli_fetch_assoc($passengers)){
+while($passenger=mbus_db_fetch_assoc($passengers)){
 
 ?>
 

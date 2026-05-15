@@ -124,10 +124,10 @@ JOIN routes ON schedule.route_id=routes.route_id
 $where
 ORDER BY schedule.departure_time ASC";
 
-$result=mysqli_query($conn,$sql);
+$result=mbus_db_query($conn,$sql);
 ?>
 
-<?php if(mysqli_num_rows($result)>0){ ?>
+<?php if(mbus_db_num_rows($result)>0){ ?>
 
 <table>
 
@@ -141,12 +141,12 @@ $result=mysqli_query($conn,$sql);
 <th>Action</th>
 </tr>
 
-<?php while($row=mysqli_fetch_assoc($result)){
+<?php while($row=mbus_db_fetch_assoc($result)){
 $schedule_id=$row['schedule_id'];
 
 $seat_sql="SELECT COUNT(*) AS total_reserved FROM reservation WHERE schedule_id='$schedule_id' AND status!='Cancelled'";
-$seat_result=mysqli_query($conn,$seat_sql);
-$seat_data=mysqli_fetch_assoc($seat_result);
+$seat_result=mbus_db_query($conn,$seat_sql);
+$seat_data=mbus_db_fetch_assoc($seat_result);
 
 $reserved=$seat_data['total_reserved'];
 $available=28-$reserved;

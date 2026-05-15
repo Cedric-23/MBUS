@@ -25,17 +25,17 @@ $password = trim($_POST['password']);
 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
 /* CHECK EMAIL */
-$check = mysqli_query($conn,"
+$check = mbus_db_query($conn,"
 SELECT * FROM users WHERE email='$email'
 ");
 
-if(mysqli_num_rows($check) > 0){
+if(mbus_db_num_rows($check) > 0){
 
 echo "<script>alert('Email already exists');</script>";
 
 }else{
 
-mysqli_query($conn,"
+mbus_db_query($conn,"
 INSERT INTO users
 (full_name,email,phone_number,password,user_type)
 VALUES
@@ -177,13 +177,13 @@ Create Operator
 
 <?php
 
-$query = mysqli_query($conn,"
+$query = mbus_db_query($conn,"
 SELECT * FROM users
 WHERE LOWER(user_type)='operator'
 ORDER BY user_id DESC
 ");
 
-while($row = mysqli_fetch_assoc($query)){
+while($row = mbus_db_fetch_assoc($query)){
 
 ?>
 

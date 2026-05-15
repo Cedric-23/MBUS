@@ -21,7 +21,7 @@ $filter=isset($_GET['filter'])
 /* SEARCH */
 
 $search=isset($_GET['search'])
-?mysqli_real_escape_string($conn,$_GET['search'])
+?mbus_db_escape($conn,$_GET['search'])
 :'';
 
 $where="
@@ -90,7 +90,7 @@ OR reservation.seat_number LIKE '%$search%'
 
 /* STATS */
 
-$total_passengers=mysqli_fetch_assoc(mysqli_query($conn,"
+$total_passengers=mbus_db_fetch_assoc(mbus_db_query($conn,"
 SELECT COUNT(*) total
 
 FROM reservation
@@ -106,7 +106,7 @@ WHERE operator_bus_assignments.operator_id='".$_SESSION['user_id']."'
 AND schedule.departure_time >= NOW()
 "));
 
-$paid_passengers=mysqli_fetch_assoc(mysqli_query($conn,"
+$paid_passengers=mbus_db_fetch_assoc(mbus_db_query($conn,"
 SELECT COUNT(*) total
 
 FROM reservation
@@ -124,7 +124,7 @@ AND reservation.status='Paid'
 AND schedule.departure_time >= NOW()
 "));
 
-$boarded_passengers=mysqli_fetch_assoc(mysqli_query($conn,"
+$boarded_passengers=mbus_db_fetch_assoc(mbus_db_query($conn,"
 SELECT COUNT(*) total
 
 FROM reservation
@@ -142,7 +142,7 @@ AND reservation.status='Boarded'
 AND schedule.departure_time >= NOW()
 "));
 
-$today_trips=mysqli_fetch_assoc(mysqli_query($conn,"
+$today_trips=mbus_db_fetch_assoc(mbus_db_query($conn,"
 SELECT COUNT(*) total
 
 FROM schedule
@@ -159,7 +159,7 @@ AND schedule.departure_time >= NOW()
 
 /* FETCH PASSENGERS */
 
-$query=mysqli_query($conn,"
+$query=mbus_db_query($conn,"
 SELECT
 
 reservation.*,
@@ -373,9 +373,9 @@ Search
 
 <?php
 
-if(mysqli_num_rows($query)>0){
+if(mbus_db_num_rows($query)>0){
 
-while($row=mysqli_fetch_assoc($query)){
+while($row=mbus_db_fetch_assoc($query)){
 
 ?>
 

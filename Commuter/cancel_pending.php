@@ -12,12 +12,12 @@ if(!isset($_POST['reservation_id'])){
 exit();
 }
 
-$reservation_id=mysqli_real_escape_string(
+$reservation_id=mbus_db_escape(
 $conn,
 $_POST['reservation_id']
 );
 
-$update=mysqli_query($conn,"
+$update=mbus_db_query($conn,"
 UPDATE reservation
 SET status='Cancelled'
 WHERE reservation_id='$reservation_id'

@@ -15,7 +15,7 @@ include("../config/db_connect.php");
    FETCH ROUTES
 ========================= */
 
-$routes = mysqli_query($conn, "
+$routes = mbus_db_query($conn, "
     SELECT *
     FROM routes
     ORDER BY origin ASC
@@ -27,9 +27,9 @@ $routes = mysqli_query($conn, "
 
 if(isset($_POST['add_schedule'])){
 
-    $bus_id = mysqli_real_escape_string($conn, $_POST['bus_id']);
+    $bus_id = mbus_db_escape($conn, $_POST['bus_id']);
 
-    $route_id = mysqli_real_escape_string($conn, $_POST['route_id']);
+    $route_id = mbus_db_escape($conn, $_POST['route_id']);
 
     $departure = $_POST['departure_date'] . ' ' . $_POST['departure_time'];
 
@@ -55,7 +55,7 @@ if(isset($_POST['add_schedule'])){
                 '$status'
             )";
 
-    if(mysqli_query($conn, $sql)){
+    if(mbus_db_query($conn, $sql)){
 
         echo "<script>
 
@@ -67,7 +67,7 @@ if(isset($_POST['add_schedule'])){
 
     } else {
 
-        echo mysqli_error($conn);
+        echo mbus_db_error($conn);
 
     }
 
@@ -193,7 +193,7 @@ if(isset($_POST['add_schedule'])){
 
                 </option>
 
-                <?php while($route = mysqli_fetch_assoc($routes)) { ?>
+                <?php while($route = mbus_db_fetch_assoc($routes)) { ?>
 
                     <option value="<?php echo $route['route_id']; ?>">
 

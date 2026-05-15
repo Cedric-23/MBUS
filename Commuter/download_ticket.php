@@ -14,23 +14,23 @@ if(!isset($_GET['schedule_id'])){
     die("Schedule not found.");
 }
 
-$schedule_id = mysqli_real_escape_string($conn, $_GET['schedule_id']);
+$schedule_id = mbus_db_escape($conn, $_GET['schedule_id']);
 
 /* =========================
    USER
 ========================= */
-$user_query = mysqli_query($conn,"
+$user_query = mbus_db_query($conn,"
 SELECT full_name
 FROM users
 WHERE user_id='$user_id'
 ");
 
-$user = mysqli_fetch_assoc($user_query);
+$user = mbus_db_fetch_assoc($user_query);
 
 /* =========================
    RESERVATIONS (PAID)
 ========================= */
-$res_query = mysqli_query($conn,"
+$res_query = mbus_db_query($conn,"
 SELECT *
 FROM reservation
 WHERE user_id='$user_id'
@@ -39,14 +39,14 @@ AND status='Paid'
 ORDER BY reservation_id DESC
 ");
 
-if(mysqli_num_rows($res_query) <= 0){
+if(mbus_db_num_rows($res_query) <= 0){
     die("No paid reservation found.");
 }
 
 /* =========================
    PAYMENT (FIXED)
 ========================= */
-$payment_query = mysqli_query($conn,"
+$payment_query = mbus_db_query($conn,"
 SELECT p.*
 FROM payment p
 JOIN reservation r ON p.reservation_id = r.reservation_id
@@ -56,7 +56,7 @@ ORDER BY p.payment_id DESC
 LIMIT 1
 ");
 
-$payment = mysqli_fetch_assoc($payment_query);
+$payment = mbus_db_fetch_assoc($payment_query);
 
 /* SAFE VARIABLES */
 $payment_method   = isset($payment['payment_method']) ? $payment['payment_method'] : '';
@@ -72,7 +72,7 @@ $seats = [];
 $pickup = "";
 $destination = "";
 
-while($row = mysqli_fetch_assoc($res_query)){
+while($row = mbus_db_fetch_assoc($res_query)){
 
     if(!empty($row['seat_number'])){
         $seats[] = $row['seat_number'];
@@ -92,14 +92,14 @@ $seat_list = implode(", ", $seats);
 /* =========================
    BUS + SCHEDULE
 ========================= */
-$schedule_query = mysqli_query($conn,"
+$schedule_query = mbus_db_query($conn,"
 SELECT buses.bus_number, schedule.departure_time
 FROM schedule
 JOIN buses ON schedule.bus_id = buses.bus_id
 WHERE schedule.schedule_id='$schedule_id'
 ");
 
-$data = mysqli_fetch_assoc($schedule_query);
+$data = mbus_db_fetch_assoc($schedule_query);
 
 /* =========================
    PDF GENERATION

@@ -11,7 +11,7 @@ if(!isset($_SESSION['user_id'])){
 $user_id=$_SESSION['user_id'];
 
 /* FETCH HISTORY */
-$sql=mysqli_query($conn,"
+$sql=mbus_db_query($conn,"
 SELECT
 reservation.reservation_id,
 reservation.schedule_id,
@@ -78,9 +78,9 @@ ORDER BY reservation.reservation_id DESC
 
 <div id="history-container">
 
-<?php if(mysqli_num_rows($sql)>0){ ?>
+<?php if(mbus_db_num_rows($sql)>0){ ?>
 
-<?php while($row=mysqli_fetch_assoc($sql)){ ?>
+<?php while($row=mbus_db_fetch_assoc($sql)){ ?>
 
 <div class="card">
 

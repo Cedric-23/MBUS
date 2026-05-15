@@ -99,73 +99,49 @@ function mbus_translate_sql(string $sql): string
     return $sql;
 }
 
-function mysqli_query($conn, string $sql): MbusResult|bool
+function mbus_db_query(MbusConnection $conn, string $sql): MbusResult|bool
 {
-    if ($conn instanceof MbusConnection) {
-        return $conn->query($sql);
-    }
-
-    return \mysqli_query($conn, $sql);
+    return $conn->query($sql);
 }
 
-function mysqli_fetch_assoc(MbusResult|mysqli_result|false|null $result): array|false
+function mbus_db_fetch_assoc(MbusResult|false|null $result): array|false
 {
     if ($result instanceof MbusResult) {
         return $result->fetchAssoc();
     }
 
-    if ($result instanceof mysqli_result) {
-        return mysqli_fetch_assoc($result);
-    }
-
     return false;
 }
 
-function mysqli_num_rows(MbusResult|mysqli_result|false|null $result): int
+function mbus_db_num_rows(MbusResult|false|null $result): int
 {
     if ($result instanceof MbusResult) {
         return $result->numRows();
     }
 
-    if ($result instanceof mysqli_result) {
-        return mysqli_num_rows($result);
-    }
-
     return 0;
 }
 
-function mysqli_data_seek(MbusResult|mysqli_result|false|null $result, int $offset): bool
+function mbus_db_data_seek(MbusResult|false|null $result, int $offset): bool
 {
     if ($result instanceof MbusResult) {
         return $result->dataSeek($offset);
     }
 
-    if ($result instanceof mysqli_result) {
-        return mysqli_data_seek($result, $offset);
-    }
-
     return false;
 }
 
-function mysqli_real_escape_string(MbusConnection|mysqli $conn, string $value): string
+function mbus_db_escape(MbusConnection $conn, string $value): string
 {
-    if ($conn instanceof MbusConnection) {
-        return $conn->escape($value);
-    }
-
-    return mysqli_real_escape_string($conn, $value);
+    return $conn->escape($value);
 }
 
-function mysqli_error(MbusConnection|mysqli $conn): string
+function mbus_db_error(MbusConnection $conn): string
 {
-    if ($conn instanceof MbusConnection) {
-        return $conn->lastError;
-    }
-
-    return mysqli_error($conn);
+    return $conn->lastError;
 }
 
-function mysqli_connect_error(): string
+function mbus_db_connect_error(): string
 {
     return $GLOBALS['mbus_connect_error'] ?? '';
 }
