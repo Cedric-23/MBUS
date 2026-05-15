@@ -2,13 +2,13 @@
 # Connect repo https://github.com/Cedric-23/MBUS → New Web Service → use this blueprint
 # Then add secret env vars in the Render dashboard (see README).
 
-# For public production: use Starter plan ($7/mo) so the site never sleeps.
-# Free plan spins down after inactivity — not suitable for real users.
+# Free plan — no credit card required. Site may sleep ~15 min after no visits (first load ~30s).
+# Upgrade to starter in Render dashboard later for always-on ($7/mo).
 services:
   - type: web
     name: mbus
     runtime: docker
-    plan: starter
+    plan: free
     region: singapore
     healthCheckPath: /login.php
     envVars:

@@ -13,22 +13,20 @@ Public bus reservation system — PHP + Supabase PostgreSQL.
 
 ## Public production (real users, laptop off)
 
-### Recommended: Render Starter (~$7/month)
-
-Free hosting **sleeps** when idle — bad for public use. Use **Starter** so the site is always fast.
+### Render (free — no credit card)
 
 1. Sign up at https://render.com (GitHub login).
 2. **New +** → **Blueprint** → repo **Cedric-23/MBUS**.
 3. Set secrets when prompted:
    - `SUPABASE_DB_PASSWORD` — Supabase → Settings → Database
    - `SUPABASE_ANON_KEY` — Supabase → Settings → API
-4. Deploy. Your public URL will look like:
+4. Click **Apply** (no payment needed on free plan).
+5. Your public URL will look like:
    ```
    https://mbus.onrender.com/login.php
    ```
-5. Share that URL with commuters, operators, and admins.
 
-`render.yaml` already sets `MBUS_ENV=production` and uses the **Starter** plan.
+**Free plan note:** after ~15 minutes with no visitors, the site sleeps; the first visit may take ~30 seconds to wake up. For always-on, upgrade to **Starter** in Render later (requires card, ~$7/month).
 
 ### Environment variables (Render dashboard)
 
