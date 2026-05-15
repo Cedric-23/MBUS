@@ -1,0 +1,26 @@
+# Deploy on Render: https://render.com
+# Connect repo https://github.com/Cedric-23/MBUS → New Web Service → use this blueprint
+# Then add secret env vars in the Render dashboard (see README).
+
+services:
+  - type: web
+    name: mbus
+    runtime: docker
+    plan: free
+    region: singapore
+    healthCheckPath: /dbtest.php
+    envVars:
+      - key: SUPABASE_DB_HOST
+        value: aws-1-ap-south-1.pooler.supabase.com
+      - key: SUPABASE_DB_PORT
+        value: "5432"
+      - key: SUPABASE_DB_NAME
+        value: postgres
+      - key: SUPABASE_DB_USER
+        value: postgres.xeczvnheaixpfattbwsk
+      - key: SUPABASE_DB_PASSWORD
+        sync: false
+      - key: SUPABASE_URL
+        value: https://xeczvnheaixpfattbwsk.supabase.co
+      - key: SUPABASE_ANON_KEY
+        sync: false

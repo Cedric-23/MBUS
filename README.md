@@ -2,29 +2,66 @@
 
 PHP bus reservation app backed by **Supabase (PostgreSQL)**.
 
-## Requirements
+- **GitHub:** https://github.com/Cedric-23/MBUS
+- **Database:** Supabase (always online in the cloud)
 
-- PHP 8.2+ with `pdo_pgsql` and `pgsql` enabled
-- Apache (XAMPP) or similar web server
-- Supabase project: [xeczvnheaixpfattbwsk](https://supabase.com/dashboard/project/xeczvnheaixpfattbwsk)
+## Local development (XAMPP)
 
-## Setup
+1. Start **Apache** in XAMPP (MySQL is not required).
+2. Copy `.env.example` to `.env` and set `SUPABASE_DB_PASSWORD`.
+3. Open `http://localhost/MBus/login.php`
 
-1. Copy environment file:
-   ```bash
-   copy .env.example .env
-   ```
-2. Set `SUPABASE_DB_PASSWORD` in `.env` (Supabase Dashboard → **Project Settings** → **Database**).
-3. Create tables and seed data:
-   ```bash
-   php scripts/setup_supabase.php
-   ```
-4. Point your web server at this folder (e.g. `http://localhost/MBus/`).
-5. Enable `extension=pdo_pgsql` and `extension=pgsql` in `php.ini`, then restart Apache.
+## Deploy online (works when your laptop is off)
 
-## Deploy
+Use **[Render](https://render.com)** (free tier) to host the PHP app. Your database stays on Supabase.
 
-Host on any PHP-capable platform (shared hosting, VPS, Railway, etc.). Set the same environment variables on the server and run `setup_supabase.php` once if the database is empty.
+### Step 1 — Push code (already on GitHub)
+
+Repo: https://github.com/Cedric-23/MBUS
+
+### Step 2 — Create Render account
+
+1. Go to https://render.com and sign up (GitHub login is easiest).
+2. Connect your GitHub account.
+
+### Step 3 — New Web Service
+
+1. Click **New +** → **Blueprint** (or **Web Service**).
+2. Connect repository **Cedric-23/MBUS**.
+3. If using Blueprint, Render reads `render.yaml` automatically.
+4. If manual: set **Runtime** to **Docker**, **Region** → Singapore (near Supabase).
+
+### Step 4 — Environment variables
+
+In Render → your service → **Environment**, add:
+
+| Key | Value |
+|-----|--------|
+| `SUPABASE_DB_HOST` | `aws-1-ap-south-1.pooler.supabase.com` |
+| `SUPABASE_DB_PORT` | `5432` |
+| `SUPABASE_DB_NAME` | `postgres` |
+| `SUPABASE_DB_USER` | `postgres.xeczvnheaixpfattbwsk` |
+| `SUPABASE_DB_PASSWORD` | *(your Supabase database password)* |
+| `SUPABASE_URL` | `https://xeczvnheaixpfattbwsk.supabase.co` |
+| `SUPABASE_ANON_KEY` | *(from Supabase → Settings → API)* |
+
+Do **not** commit passwords to GitHub.
+
+### Step 5 — Deploy
+
+Click **Deploy**. When finished, Render gives you a URL like:
+
+`https://mbus-xxxx.onrender.com`
+
+Open:
+
+- `https://your-app.onrender.com/login.php`
+
+### Notes
+
+- **Free tier:** the site may sleep after ~15 minutes of no traffic; the first visit can take ~30 seconds to wake up.
+- For **always-fast** hosting, use a paid plan or shared PHP hosting (Hostinger, etc.).
+- Database setup (`scripts/setup_supabase.php`) only needs to run **once** — already done on Supabase.
 
 ## Repository
 
