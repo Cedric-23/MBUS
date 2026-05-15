@@ -3,10 +3,10 @@
 require_once __DIR__ . '/load_env.php';
 require_once __DIR__ . '/mysqli_compat.php';
 
-$host = getenv('SUPABASE_DB_HOST') ?: 'db.xeczvnheaixpfattbwsk.supabase.co';
+$host = getenv('SUPABASE_DB_HOST') ?: 'aws-1-ap-south-1.pooler.supabase.com';
 $port = getenv('SUPABASE_DB_PORT') ?: '5432';
 $database = getenv('SUPABASE_DB_NAME') ?: 'postgres';
-$user = getenv('SUPABASE_DB_USER') ?: 'postgres';
+$user = getenv('SUPABASE_DB_USER') ?: 'postgres.xeczvnheaixpfattbwsk';
 $password = getenv('SUPABASE_DB_PASSWORD') ?: '';
 
 if ($password === '') {
