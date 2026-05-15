@@ -10,7 +10,7 @@ services:
     runtime: docker
     plan: free
     region: singapore
-    healthCheckPath: /login.php
+    healthCheckPath: /health.php
     envVars:
       - key: MBUS_ENV
         value: production
