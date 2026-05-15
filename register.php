@@ -1,3 +1,35 @@
+<?php
+session_start();
+include "config/db_connect.php";
+
+if (isset($_POST['register'])) {
+    $full_name = mbus_db_escape($conn, trim($_POST['full_name']));
+    $email = mbus_db_escape($conn, trim($_POST['email']));
+    $phone = mbus_db_escape($conn, trim($_POST['phone_number']));
+    $password = $_POST['password'] ?? '';
+    $confirm = $_POST['confirm_password'] ?? '';
+
+    if ($password !== $confirm) {
+        $error = 'Passwords do not match.';
+    } elseif (strlen($password) < 8) {
+        $error = 'Password must be at least 8 characters.';
+    } else {
+        $check = mbus_db_query($conn, "SELECT user_id FROM users WHERE email='$email'");
+        if (mbus_db_num_rows($check) > 0) {
+            $error = 'Email is already registered.';
+        } else {
+            $hash = password_hash($password, PASSWORD_DEFAULT);
+            $hash = mbus_db_escape($conn, $hash);
+            mbus_db_query($conn, "
+                INSERT INTO users (full_name, email, phone_number, password, user_type)
+                VALUES ('$full_name', '$email', '$phone', '$hash', 'Commuter')
+            ");
+            header('Location: login.php?registered=1');
+            exit();
+        }
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -39,6 +71,10 @@
         <div class="register-box">
 
             <h2>Create Account</h2>
+
+            <?php if (!empty($error)) { ?>
+            <p style="color:#c0392b;margin-bottom:12px;"><?php echo htmlspecialchars($error); ?></p>
+            <?php } ?>
 
             <form method="POST">
 

@@ -1,0 +1,18 @@
+# Block direct access to sensitive folders (Apache)
+<IfModule mod_authz_core.c>
+    <DirectoryMatch "^.*/(config|scripts|supabase)/">
+        Require all denied
+    </DirectoryMatch>
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(config|scripts|supabase)(/|$) - [F,L]
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

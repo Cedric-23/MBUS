@@ -2,14 +2,18 @@
 # Connect repo https://github.com/Cedric-23/MBUS → New Web Service → use this blueprint
 # Then add secret env vars in the Render dashboard (see README).
 
+# For public production: use Starter plan ($7/mo) so the site never sleeps.
+# Free plan spins down after inactivity — not suitable for real users.
 services:
   - type: web
     name: mbus
     runtime: docker
-    plan: free
+    plan: starter
     region: singapore
-    healthCheckPath: /dbtest.php
+    healthCheckPath: /login.php
     envVars:
+      - key: MBUS_ENV
+        value: production
       - key: SUPABASE_DB_HOST
         value: aws-1-ap-south-1.pooler.supabase.com
       - key: SUPABASE_DB_PORT

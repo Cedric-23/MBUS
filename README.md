@@ -1,68 +1,85 @@
 # MBUS — Morong–SBMA Bus Reservation System
 
-PHP bus reservation app backed by **Supabase (PostgreSQL)**.
+Public bus reservation system — PHP + Supabase PostgreSQL.
 
-- **GitHub:** https://github.com/Cedric-23/MBUS
-- **Database:** Supabase (always online in the cloud)
+| Component | Host | Always online? |
+|-----------|------|----------------|
+| Database | [Supabase](https://supabase.com/dashboard/project/xeczvnheaixpfattbwsk) | Yes |
+| Website | [Render](https://render.com) (recommended) | Yes (paid plan) |
 
-## Local development (XAMPP)
+**GitHub:** https://github.com/Cedric-23/MBUS
 
-1. Start **Apache** in XAMPP (MySQL is not required).
-2. Copy `.env.example` to `.env` and set `SUPABASE_DB_PASSWORD`.
-3. Open `http://localhost/MBus/login.php`
+---
 
-## Deploy online (works when your laptop is off)
+## Public production (real users, laptop off)
 
-Use **[Render](https://render.com)** (free tier) to host the PHP app. Your database stays on Supabase.
+### Recommended: Render Starter (~$7/month)
 
-### Step 1 — Push code (already on GitHub)
+Free hosting **sleeps** when idle — bad for public use. Use **Starter** so the site is always fast.
 
-Repo: https://github.com/Cedric-23/MBUS
+1. Sign up at https://render.com (GitHub login).
+2. **New +** → **Blueprint** → repo **Cedric-23/MBUS**.
+3. Set secrets when prompted:
+   - `SUPABASE_DB_PASSWORD` — Supabase → Settings → Database
+   - `SUPABASE_ANON_KEY` — Supabase → Settings → API
+4. Deploy. Your public URL will look like:
+   ```
+   https://mbus.onrender.com/login.php
+   ```
+5. Share that URL with commuters, operators, and admins.
 
-### Step 2 — Create Render account
+`render.yaml` already sets `MBUS_ENV=production` and uses the **Starter** plan.
 
-1. Go to https://render.com and sign up (GitHub login is easiest).
-2. Connect your GitHub account.
+### Environment variables (Render dashboard)
 
-### Step 3 — New Web Service
-
-1. Click **New +** → **Blueprint** (or **Web Service**).
-2. Connect repository **Cedric-23/MBUS**.
-3. If using Blueprint, Render reads `render.yaml` automatically.
-4. If manual: set **Runtime** to **Docker**, **Region** → Singapore (near Supabase).
-
-### Step 4 — Environment variables
-
-In Render → your service → **Environment**, add:
-
-| Key | Value |
-|-----|--------|
+| Variable | Value |
+|----------|--------|
+| `MBUS_ENV` | `production` |
 | `SUPABASE_DB_HOST` | `aws-1-ap-south-1.pooler.supabase.com` |
 | `SUPABASE_DB_PORT` | `5432` |
 | `SUPABASE_DB_NAME` | `postgres` |
 | `SUPABASE_DB_USER` | `postgres.xeczvnheaixpfattbwsk` |
-| `SUPABASE_DB_PASSWORD` | *(your Supabase database password)* |
+| `SUPABASE_DB_PASSWORD` | *(secret)* |
 | `SUPABASE_URL` | `https://xeczvnheaixpfattbwsk.supabase.co` |
-| `SUPABASE_ANON_KEY` | *(from Supabase → Settings → API)* |
+| `SUPABASE_ANON_KEY` | *(secret)* |
 
-Do **not** commit passwords to GitHub.
+### After go-live checklist
 
-### Step 5 — Deploy
+- [ ] Test register, login, book seat, payment flow on the live URL
+- [ ] Regenerate Supabase API keys if they were ever shared publicly
+- [ ] Create admin/operator accounts via Supabase Table Editor or admin panel
+- [ ] Optional: add custom domain in Render → Settings → Custom Domains
 
-Click **Deploy**. When finished, Render gives you a URL like:
+### Cheaper alternatives
 
-`https://mbus-xxxx.onrender.com`
+- **Hostinger / Namecheap PHP hosting** (~₱150–300/mo) — upload files via FTP, add `.env` on server
+- **Railway** — similar to Render, pay-as-you-go
 
-Open:
+---
 
-- `https://your-app.onrender.com/login.php`
+## Local development (XAMPP)
 
-### Notes
+1. Start **Apache** only (MySQL not needed).
+2. Copy `.env.example` → `.env`, set `SUPABASE_DB_PASSWORD`.
+3. Open `http://localhost/MBus/login.php`
 
-- **Free tier:** the site may sleep after ~15 minutes of no traffic; the first visit can take ~30 seconds to wake up.
-- For **always-fast** hosting, use a paid plan or shared PHP hosting (Hostinger, etc.).
-- Database setup (`scripts/setup_supabase.php`) only needs to run **once** — already done on Supabase.
+---
 
-## Repository
+## Database setup (one time)
 
-https://github.com/Cedric-23/MBUS
+Already applied if you ran setup before. To re-run:
+
+```bash
+php scripts/setup_supabase.php
+```
+
+Or run SQL files in Supabase SQL Editor: `00_reset.sql` → `01_schema.sql` → `02_data.sql`.
+
+---
+
+## Security (production)
+
+- Test URLs (`dbtest.php`) are disabled when `MBUS_ENV=production`
+- `/config`, `/scripts`, `/supabase` blocked via `.htaccess`
+- HTTPS provided by Render automatically
+- New commuters register at `/register.php` (Commuter role)

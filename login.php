@@ -1,14 +1,11 @@
 <?php
 
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 session_start();
 include "config/db_connect.php";
 
 if(isset($_POST['login'])){
 
-    $email = trim($_POST['email']);
+    $email = mbus_db_escape($conn, trim($_POST['email']));
     $password = trim($_POST['password']);
 
     $sql = "SELECT * FROM users WHERE email='$email'";

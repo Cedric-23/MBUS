@@ -1,3 +1,4 @@
 <?php
-echo "MBUS System is Working!";
-?>
+
+header('Location: login.php');
+exit();
