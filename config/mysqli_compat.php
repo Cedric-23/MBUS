@@ -77,18 +77,33 @@ function mbus_iso_year_week(string $column): string
 function mbus_translate_sql(string $sql): string
 {
     $replacements = [
+        // MySQL DATE(col) → PostgreSQL (col)::date
+        // Word boundary before DATE ensures we don't match DATE_ADD etc.
+        '/\bDATE\(([a-zA-Z_][a-zA-Z0-9_.]*)\)/i' => '($1)::date',
+
+        // NOW() - INTERVAL 5 MINUTE → PostgreSQL interval syntax
         '/NOW\(\)\s*-\s*INTERVAL\s+5\s+MINUTE/i' => "NOW() - INTERVAL '5 minutes'",
         '/>\s*NOW\(\)\s*-\s*INTERVAL\s+5\s+MINUTE/i' => "> NOW() - INTERVAL '5 minutes'",
         '/<=\s*NOW\(\)\s*-\s*INTERVAL\s+5\s+MINUTE/i' => "<= NOW() - INTERVAL '5 minutes'",
-        '/\bCURDATE\(\)/i' => 'CURRENT_DATE',
-        '/DATE_ADD\s*\(\s*CURDATE\(\)\s*,\s*INTERVAL\s+1\s+DAY\s*\)/i' => "(CURRENT_DATE + INTERVAL '1 day')",
-        '/DATE_ADD\s*\(\s*CURDATE\(\)\s*,\s*INTERVAL\s+1\s+WEEK\s*\)/i' => "(CURRENT_DATE + INTERVAL '1 week')",
-        '/YEARWEEK\s*\(\s*([^,]+?)\s*,\s*1\s*\)\s*=\s*YEARWEEK\s*\(\s*CURDATE\(\)\s*,\s*1\s*\)/i'
-            => mbus_iso_year_week('$1') . ' = ' . mbus_iso_year_week('CURRENT_DATE::timestamp'),
+
+        // Compound YEARWEEK with embedded DATE_ADD — must come before standalone DATE_ADD
         '/YEARWEEK\s*\(\s*([^,]+?)\s*,\s*1\s*\)\s*=\s*YEARWEEK\s*\(\s*DATE_ADD\s*\(\s*CURDATE\(\)\s*,\s*INTERVAL\s+1\s+WEEK\s*\)\s*,\s*1\s*\)/i'
             => mbus_iso_year_week('$1') . ' = ' . mbus_iso_year_week("(CURRENT_DATE + INTERVAL '1 week')::timestamp"),
+
+        // Other YEARWEEK patterns — must come before standalone CURDATE replacement
+        '/YEARWEEK\s*\(\s*([^,]+?)\s*,\s*1\s*\)\s*=\s*YEARWEEK\s*\(\s*CURDATE\(\)\s*,\s*1\s*\)/i'
+            => mbus_iso_year_week('$1') . ' = ' . mbus_iso_year_week('CURRENT_DATE::timestamp'),
         '/YEARWEEK\s*\(\s*([^,]+?)\s*,\s*1\s*\)\s*=\s*YEARWEEK\s*\(\s*CURDATE\(\)\s*,\s*1\s*\)\s*\+\s*1/i'
             => mbus_iso_year_week('$1') . ' = ' . mbus_iso_year_week("(CURRENT_DATE + INTERVAL '1 week')::timestamp"),
+
+        // Standalone DATE_ADD patterns — must come before simple CURDATE replacement
+        '/DATE_ADD\s*\(\s*CURDATE\(\)\s*,\s*INTERVAL\s+1\s+DAY\s*\)/i' => "(CURRENT_DATE + INTERVAL '1 day')",
+        '/DATE_ADD\s*\(\s*CURDATE\(\)\s*,\s*INTERVAL\s+1\s+WEEK\s*\)/i' => "(CURRENT_DATE + INTERVAL '1 week')",
+
+        // Simple CURDATE() → CURRENT_DATE (after all compound patterns)
+        '/\bCURDATE\(\)/i' => 'CURRENT_DATE',
+
+        // MySQL DAYNAME() → PostgreSQL TO_CHAR
         '/\bDAYNAME\s*\(\s*([^)]+)\s*\)/i' => "TRIM(TO_CHAR($1, 'FMDay'))",
     ];
 
