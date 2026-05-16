@@ -1,8 +1,8 @@
 # Block direct access to sensitive folders (Apache)
 <IfModule mod_authz_core.c>
-    <DirectoryMatch "^.*/(config|scripts|supabase)/">
+    <If "%{REQUEST_URI} =~ m#^/(config|scripts|supabase)/#">
         Require all denied
-    </DirectoryMatch>
+    </If>
 </IfModule>
 
 <IfModule mod_rewrite.c>
