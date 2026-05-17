@@ -2,6 +2,7 @@
 
 session_start();
 include "config/db_connect.php";
+include "Includes/activity_log.php";
 
 if(isset($_POST['login'])){
 
@@ -20,6 +21,9 @@ if(isset($_POST['login'])){
             $_SESSION['user_id'] = $user['user_id'];
             $_SESSION['full_name'] = $user['full_name'];
             $_SESSION['user_type'] = strtolower($user['user_type']);
+
+            // Log successful login
+            log_activity($conn, $user['user_id'], ACTION_LOGIN, "User logged in successfully");
 
             if($_SESSION['user_type'] == "commuter"){
                 header("Location: Commuter/commuter_dashboard.php");

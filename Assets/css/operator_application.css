@@ -1,0 +1,154 @@
+/* Operator Application Page Styles */
+
+.application-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.application-form {
+    width: 100%;
+    max-width: 700px;
+    padding: 40px;
+}
+
+.form-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.form-header .logo {
+    width: 120px;
+    height: auto;
+    margin-bottom: 20px;
+}
+
+.form-header h1 {
+    color: var(--primary-navy);
+    margin-bottom: 12px;
+    font-size: 32px;
+}
+
+.form-header p {
+    color: var(--medium-gray);
+    font-size: 16px;
+}
+
+.operator-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.operator-form h2 {
+    color: var(--primary-navy);
+    font-size: 20px;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--primary-blue);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: var(--dark-gray);
+    font-size: 14px;
+}
+
+.form-group small {
+    color: var(--medium-gray);
+    font-size: 12px;
+}
+
+.terms-agreement {
+    margin-top: 8px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--dark-gray);
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin-top: 4px;
+    width: 18px;
+    height: 18px;
+}
+
+.form-footer {
+    text-align: center;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--light-gray);
+}
+
+.form-footer p {
+    margin: 8px 0;
+    color: var(--medium-gray);
+    font-size: 14px;
+}
+
+.form-footer a {
+    color: var(--primary-blue);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.form-footer a:hover {
+    text-decoration: underline;
+}
+
+.notice {
+    padding: 16px 20px;
+    border-radius: var(--radius-md);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.notice.success {
+    background: rgba(76, 175, 80, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.notice.error {
+    background: rgba(244, 67, 54, 0.1);
+    color: var(--error);
+    border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.notice i {
+    font-size: 24px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .application-container {
+        padding: 20px 16px;
+    }
+    
+    .application-form {
+        padding: 24px;
+    }
+    
+    .form-header h1 {
+        font-size: 24px;
+    }
+}

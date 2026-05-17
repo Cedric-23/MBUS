@@ -123,6 +123,10 @@ if (isset($_POST['register'])) {
 
             <div class="login-link">
                 <a href="login.php">Already have an account? Login</a>
+                <br><br>
+                <a href="apply_operator.php" style="color: var(--primary-blue); font-weight: 600;">
+                    <i class="fa fa-bus"></i> Apply as Driver/Operator
+                </a>
             </div>
 
         </div>
