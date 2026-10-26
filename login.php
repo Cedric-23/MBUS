@@ -152,22 +152,13 @@ if(isset($_POST['login'])){
                 </button>
             </div>
 
-            <div class="form-options">
-                <label class="checkbox-wrapper">
-                    <input type="checkbox" name="remember" value="1" id="remember">
-                    <span>Remember me</span>
-                </label>
-                <a href="forgot_password.php" class="forgot-link">Forgot Password?</a>
-            </div>
-
-            <button 
-                type="submit" 
-                name="login" 
-                class="btn btn-primary btn-block login-submit"
-            >
-                <i class="fa-solid fa-sign-in-alt" aria-hidden="true"></i>
-                Login
-            </button>
+                        <button 
+                            type="submit" 
+                            name="login" 
+                            class="btn btn-primary btn-block login-submit"
+                        >
+                            Login
+                        </button>
         </form>
 
         <div class="login-footer">

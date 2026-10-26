@@ -190,13 +190,12 @@ if (isset($_POST['register'])) {
             </div>
 
             <button 
-                type="submit" 
-                name="register" 
-                class="btn btn-primary btn-block login-submit"
-            >
-                <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
-                Register
-            </button>
+                            type="submit" 
+                            name="register" 
+                            class="btn btn-primary btn-block login-submit"
+                        >
+                            Register
+                        </button>
         </form>
 
         <div class="login-footer">

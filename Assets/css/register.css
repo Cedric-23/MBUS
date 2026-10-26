@@ -194,47 +194,13 @@
   border-radius: var(--radius-sm);
 }
 
-.form-options {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  font-size: var(--fs-sm);
-}
-
-.checkbox-wrapper {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  cursor: pointer;
-}
-
-.checkbox-wrapper input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--color-accent);
-  cursor: pointer;
-}
-
-.forgot-link {
-  color: var(--color-accent);
-  font-weight: var(--fw-medium);
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
-
-.forgot-link:hover {
-  color: var(--color-primary);
-  text-decoration: underline;
-}
-
 .login-submit {
   margin-top: var(--space-2);
-  padding: var(--space-4);
-  font-size: var(--fs-lg);
+  padding: var(--space-2);
+  font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
+  min-height: 44px;
 }
 
 .login-footer {
