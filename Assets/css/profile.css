@@ -3,7 +3,7 @@
 .profile-container {
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--space-5);
+  gap: var(--space-6);
   max-width: 800px;
   margin: 0 auto;
 }
@@ -91,7 +91,7 @@
 
 .profile-info-section,
 .password-section {
-  padding: var(--space-5);
+  padding: var(--space-6);
 }
 
 .profile-form,

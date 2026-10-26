@@ -22,7 +22,7 @@
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--space-5);
+  gap: var(--space-6);
 }
 
 .card {
@@ -52,7 +52,7 @@
 .notice {
   /* Uses .card from responsive.css + these overrides */
   margin-top: var(--space-6);
-  padding: var(--space-5);
+  padding: var(--space-6);
   border-left: 4px solid var(--color-primary);
 }
 
