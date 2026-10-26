@@ -193,15 +193,17 @@ $query = mbus_db_prepare($conn, $passenger_sql, $params);
     <h2>Operator</h2>
 
     <nav class="menu-top" aria-label="Operator menu">
-        <a href="operator_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
-        <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
-        <a href="passengers.php" aria-current="page"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
-    </nav>
+            <a href="operator_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+            <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
+            <a href="passengers.php" aria-current="page"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
+        </nav>
 
-    <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
-        <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
-    </a>
-</aside>
+        <div class="menu-bottom">
+            <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+                <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
+            </a>
+        </div>
+    </aside>
 
 <main class="main" role="main">
 

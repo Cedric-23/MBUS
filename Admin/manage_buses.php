@@ -68,17 +68,19 @@ VALUES (?, ?, ?)
     <h2>Admin</h2>
 
     <nav class="menu-top" aria-label="Admin menu">
-        <a href="admin_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
-        <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
-        <a href="manage_buses.php" aria-current="page"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
-        <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
-        <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
-    </nav>
+            <a href="admin_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+            <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
+            <a href="manage_buses.php" aria-current="page"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
+            <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
+            <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
+        </nav>
 
-    <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
-        <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
-    </a>
-</aside>
+        <div class="menu-bottom">
+            <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+                <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
+            </a>
+        </div>
+    </aside>
 
 <main class="main" role="main">
 
