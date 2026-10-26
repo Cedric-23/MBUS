@@ -95,7 +95,7 @@ $page_header = "Manage Trips";
 $page_subtitle = "View and update your scheduled trips";
 $active_nav = "manage_trips";
 
-include "includes/operator_header.php";
+// include "includes/operator_header.php";
 ?>
 <main class="main">
     <header class="page-header">

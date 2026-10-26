@@ -129,7 +129,7 @@ $page_header = "Passenger List";
 $page_subtitle = "Monitor all passengers and trip reservations";
 $active_nav = "passengers";
 
-include "includes/operator_header.php";
+// include "includes/operator_header.php";
 ?>
 <main class="main">
     <header class="page-header">
