@@ -5,7 +5,7 @@ require_once "../config/mysqli_compat.php";
 require_once "../Includes/csrf.php";
 require_once "../Includes/activity_log.php";
 
-if(!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'Operator'){
+if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type']) !== 'operator'){
     header("Location: ../login.php");
     exit();
 }
