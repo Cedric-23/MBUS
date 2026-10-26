@@ -130,13 +130,14 @@
 
 .form-field input {
   width: 100%;
-  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-12);
-  font-size: var(--fs-base);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-10);
+  font-size: var(--fs-sm);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-white);
   color: var(--color-text-primary);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  min-height: 44px;
 }
 
 .form-field input:focus {
@@ -151,11 +152,11 @@
 
 .form-field-icon {
   position: absolute;
-  left: var(--space-4);
+  left: var(--space-3);
   top: 50%;
   transform: translateY(-50%);
   color: var(--color-text-muted);
-  font-size: var(--fs-lg);
+  font-size: var(--fs-base);
   pointer-events: none;
   transition: color var(--transition-fast);
 }
@@ -167,13 +168,13 @@
 
 .password-toggle {
   position: absolute;
-  right: var(--space-4);
+  right: var(--space-3);
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   color: var(--color-text-muted);
-  font-size: var(--fs-lg);
+  font-size: var(--fs-base);
   cursor: pointer;
   padding: var(--space-1);
   display: flex;
@@ -199,27 +200,27 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--space-3);
-  font-size: var(--fs-sm);
+  gap: var(--space-2);
+  font-size: var(--fs-xs);
 }
 
 .checkbox-wrapper {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
   cursor: pointer;
 }
 
 .checkbox-wrapper input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   accent-color: var(--color-accent);
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .checkbox-wrapper label {
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   color: var(--color-text-secondary);
   cursor: pointer;
   user-select: none;
@@ -230,7 +231,7 @@
   font-weight: var(--fw-medium);
   text-decoration: none;
   transition: color var(--transition-fast);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
 }
 
 .forgot-link:hover {
@@ -240,11 +241,11 @@
 
 .login-submit {
   margin-top: var(--space-2);
-  padding: var(--space-3);
-  font-size: var(--fs-base);
+  padding: var(--space-2);
+  font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
-  border-radius: var(--radius-md);
-  min-height: 48px;
+  border-radius: var(--radius-sm);
+  min-height: 44px;
 }
 
 .login-footer {
