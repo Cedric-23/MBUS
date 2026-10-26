@@ -58,6 +58,31 @@ class MbusConnection
             return true;
         } catch (PDOException $e) {
             $this->lastError = $e->getMessage();
+            error_log("Database Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function prepareAndExecute(string $sql, array $params): MbusResult|bool
+    {
+        $sql = mbus_translate_sql($sql);
+
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            if ($stmt === false) {
+                return false;
+            }
+
+            $stmt->execute($params);
+
+            if (preg_match('/^\s*(SELECT|WITH)\b/is', $sql)) {
+                return new MbusResult($stmt->fetchAll(PDO::FETCH_ASSOC));
+            }
+
+            return true;
+        } catch (PDOException $e) {
+            $this->lastError = $e->getMessage();
+            error_log("Database Error: " . $e->getMessage());
             return false;
         }
     }
@@ -149,6 +174,11 @@ function mbus_db_data_seek(MbusResult|false|null $result, int $offset): bool
 function mbus_db_escape(MbusConnection $conn, string $value): string
 {
     return $conn->escape($value);
+}
+
+function mbus_db_prepare(MbusConnection $conn, string $sql, array $params): MbusResult|bool
+{
+    return $conn->prepareAndExecute($sql, $params);
 }
 
 function mbus_db_error(MbusConnection $conn): string

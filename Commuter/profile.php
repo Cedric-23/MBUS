@@ -3,6 +3,7 @@ session_start();
 include "../config/db_connect.php";
 include "../Includes/activity_log.php";
 include "../Includes/email_helper.php";
+include "../Includes/csrf.php";
 
 if(!isset($_SESSION['user_id'])){
     header("Location: ../login.php");
@@ -12,132 +13,124 @@ if(!isset($_SESSION['user_id'])){
 $user_id = $_SESSION['user_id'];
 
 /* GET USER DATA */
-$user_query = mbus_db_query($conn,"
-    SELECT user_id, full_name, email, phone_number, user_type
+$user_query = mbus_db_prepare($conn,"
+    SELECT user_id, full_name, email, phone_number, user_type, profile_picture
     FROM users
-    WHERE user_id = '$user_id'
-");
+    WHERE user_id = ?
+", [$user_id]);
 
 $user_data = mbus_db_fetch_assoc($user_query);
 
-/* HANDLE PROFILE UPDATE */
-if(isset($_POST['update_profile'])){
-    $full_name = mbus_db_escape($conn, $_POST['full_name']);
-    $email = mbus_db_escape($conn, $_POST['email']);
-    $phone_number = mbus_db_escape($conn, $_POST['phone_number']);
-    
-    // Validate email
-    if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
-        $error = "Invalid email format";
-    } else {
-        // Check if email already exists for another user
-        $email_check = mbus_db_query($conn,"
-            SELECT user_id FROM users
-            WHERE email = '$email' AND user_id != '$user_id'
-        ");
-        
-        if(mbus_db_num_rows($email_check) > 0){
-            $error = "Email already in use by another account";
-        } else {
-            // Update profile
-            mbus_db_query($conn,"
-                UPDATE users
-                SET full_name = '$full_name', email = '$email', phone_number = '$phone_number'
-                WHERE user_id = '$user_id'
-            ");
-            
-            // Log profile update
-            log_activity($conn, $user_id, ACTION_PROFILE_UPDATE, "Profile information updated");
-            
-            $_SESSION['full_name'] = $full_name;
-            $success = "Profile updated successfully";
-            
-            // Refresh user data
-            $user_query = mbus_db_query($conn,"
-                SELECT user_id, full_name, email, phone_number, user_type
-                FROM users
-                WHERE user_id = '$user_id'
-            ");
-            $user_data = mbus_db_fetch_assoc($user_query);
-        }
-    }
+// Handle case where user data might be false/null
+if (!$user_data) {
+    $user_data = [
+        'user_id' => $user_id,
+        'full_name' => '',
+        'email' => '',
+        'phone_number' => '',
+        'user_type' => 'Regular',
+        'profile_picture' => 'default.png'
+    ];
+} elseif (empty($user_data['user_type'])) {
+    $user_data['user_type'] = 'Regular';
 }
 
-/* HANDLE PASSWORD CHANGE */
-if(isset($_POST['change_password'])){
-    $current_password = $_POST['current_password'];
-    $new_password = $_POST['new_password'];
-    $confirm_password = $_POST['confirm_password'];
-    
-    // Verify current password
-    $password_check = mbus_db_query($conn,"
-        SELECT password FROM users WHERE user_id = '$user_id'
-    ");
-    $password_data = mbus_db_fetch_assoc($password_check);
-    
-    if(!password_verify($current_password, $password_data['password'])){
-        $password_error = "Current password is incorrect";
-    } elseif(strlen($new_password) < 8){
-        $password_error = "New password must be at least 8 characters";
-    } elseif($new_password !== $confirm_password){
-        $password_error = "New passwords do not match";
+/* HANDLE PROFILE UPDATE */
+if(isset($_POST['update_profile'])){
+    if(!csrf_validate_token()){
+        $error = "Security validation failed. Please try again.";
     } else {
-        $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-        mbus_db_query($conn,"
-            UPDATE users
-            SET password = '$hashed_password'
-            WHERE user_id = '$user_id'
-        ");
-        
-        // Log password change
-        log_activity($conn, $user_id, ACTION_PASSWORD_CHANGE, "Password changed successfully");
-        
-        // Send email notification
-        $user_email_query = mbus_db_query($conn, "SELECT email FROM users WHERE user_id = '$user_id'");
-        $user_email_data = mbus_db_fetch_assoc($user_email_query);
-        $user_email = $user_email_data['email'];
-        
-        $email_subject = "Password Changed Successfully";
-        $email_message = "
-            <h2>Password Changed</h2>
-            <p>Your password has been changed successfully.</p>
-            <p>If you did not make this change, please contact our support team immediately.</p>
-            <p>For your security, we recommend changing your password regularly.</p>
-        ";
-        send_email_notification($user_email, $email_subject, $email_message);
-        
-        $password_success = "Password changed successfully";
+        $full_name = trim($_POST['full_name']);
+        $email = trim($_POST['email']);
+        $phone_number = trim($_POST['phone_number']);
+
+        if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
+            $error = "Invalid email format";
+        } elseif (!preg_match('/^09\d{9}$/', $phone_number) && !empty($phone_number)) {
+            $error = "Phone number must be 11 digits starting with 09 (e.g., 09123456789).";
+        } else {
+            $email_check = mbus_db_prepare($conn,"
+                SELECT user_id FROM users
+                WHERE email = ? AND user_id != ?
+            ", [$email, $user_id]);
+
+            if(mbus_db_num_rows($email_check) > 0){
+                $error = "Email already in use by another account";
+            } else {
+                mbus_db_prepare($conn,"
+                    UPDATE users
+                    SET full_name = ?, email = ?, phone_number = ?
+                    WHERE user_id = ?
+                ", [$full_name, $email, $phone_number, $user_id]);
+
+                log_activity($conn, $user_id, ACTION_PROFILE_UPDATE, "Profile information updated");
+
+                $_SESSION['full_name'] = $full_name;
+                $success = "Profile updated successfully";
+
+                $user_query = mbus_db_prepare($conn,"
+                    SELECT user_id, full_name, email, phone_number, user_type, profile_picture
+                    FROM users
+                    WHERE user_id = ?
+                ", [$user_id]);
+                $user_data = mbus_db_fetch_assoc($user_query);
+            }
+        }
     }
 }
 
 /* HANDLE PROFILE PICTURE UPLOAD */
 if(isset($_POST['upload_picture'])){
-    if(isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] == 0){
+    if(!csrf_validate_token()){
+        $picture_error = "Security validation failed. Please try again.";
+    } elseif(isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] == 0){
         $allowed = ['jpg', 'jpeg', 'png', 'gif'];
         $filename = $_FILES['profile_picture']['name'];
         $file_ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        
-        if(in_array($file_ext, $allowed)){
-            $new_filename = "profile_" . $user_id . "_" . time() . "." . $file_ext;
-            $upload_path = "../Assets/profile_pictures/" . $new_filename;
-            
-            // Create directory if it doesn't exist
-            if(!file_exists("../Assets/profile_pictures/")){
-                mkdir("../Assets/profile_pictures/", 0777, true);
-            }
-            
-            if(move_uploaded_file($_FILES['profile_picture']['tmp_name'], $upload_path)){
-                mbus_db_query($conn,"
-                    UPDATE users
-                    SET profile_picture = '$new_filename'
-                    WHERE user_id = '$user_id'
-                ");
-                $picture_success = "Profile picture updated successfully";
-            } else {
-                $picture_error = "Failed to upload profile picture";
-            }
-        } else {
+        $max_size = 5 * 1024 * 1024;
+
+        if($_FILES['profile_picture']['size'] > $max_size){
+            $picture_error = "File too large. Maximum size is 5MB.";
+        } elseif(!in_array($file_ext, $allowed)){
             $picture_error = "Invalid file type. Only JPG, JPEG, PNG, and GIF allowed";
+        } else {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime_type = finfo_file($finfo, $_FILES['profile_picture']['tmp_name']);
+            finfo_close($finfo);
+
+            $allowed_mimes = ['image/jpeg', 'image/png', 'image/gif'];
+            if(!in_array($mime_type, $allowed_mimes)){
+                $picture_error = "Invalid file content. Only images allowed.";
+            } else {
+                $image_info = getimagesize($_FILES['profile_picture']['tmp_name']);
+                if($image_info === false){
+                    $picture_error = "Invalid image file.";
+                } else {
+                    $max_width = 2000;
+                    $max_height = 2000;
+                    if($image_info[0] > $max_width || $image_info[1] > $max_height){
+                        $picture_error = "Image too large. Maximum dimensions: {$max_width}x{$max_height}px";
+                    } else {
+                        $new_filename = "profile_" . $user_id . "_" . time() . "." . $file_ext;
+                        $upload_path = "../Assets/profile_pictures/" . $new_filename;
+
+                        if(!file_exists("../Assets/profile_pictures/")){
+                            mkdir("../Assets/profile_pictures/", 0755, true);
+                        }
+
+                        if(move_uploaded_file($_FILES['profile_picture']['tmp_name'], $upload_path)){
+                            mbus_db_prepare($conn,"
+                                UPDATE users
+                                SET profile_picture = ?
+                                WHERE user_id = ?
+                            ", [$new_filename, $user_id]);
+                            $picture_success = "Profile picture updated successfully";
+                        } else {
+                            $picture_error = "Failed to upload profile picture";
+                        }
+                    }
+                }
+            }
         }
     } else {
         $picture_error = "No file uploaded or upload error";
@@ -153,255 +146,164 @@ if(isset($_POST['upload_picture'])){
     <title>My Profile - MBUS</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="../Assets/css/modern_theme.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/commuter_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/profile.css">
 </head>
-<body>
+<body class="has-sidebar">
 
 <!-- Mobile Sidebar Toggle -->
-<button class="sidebar-toggle" onclick="toggleSidebar()">
-    <i class="fa fa-bars"></i>
+<button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
+    <i class="fa fa-bars" aria-hidden="true"></i>
 </button>
 
 <!-- Sidebar Overlay -->
-<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+<div class="sidebar-overlay" onclick="toggleSidebar()" aria-hidden="true"></div>
 
-<div class="sidebar">
+<aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
     <div class="logo-container">
-        <img src="../Assets/images/mbus_logo.png" class="logo">
+        <img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo">
     </div>
     
     <h2>Commuter</h2>
     
-    <div class="menu-top">
-        <a href="commuter_dashboard.php"><i class="fa fa-home"></i> Dashboard</a>
-        <a href="my_reservations.php"><i class="fa fa-ticket"></i> My Reservations</a>
-        <a href="history.php"><i class="fa fa-history"></i> History</a>
-        <a href="profile.php" class="active"><i class="fa fa-user"></i> My Profile</a>
-        
-        <!-- Notification Bell -->
-        <div class="notification-container">
-            <div class="notification-bell" onclick="toggleNotifications()">
-                <i class="fa fa-bell"></i>
-                <span class="notification-badge" id="notificationBadge">0</span>
-            </div>
-            <div class="notification-dropdown" id="notificationDropdown">
-                <div class="notification-dropdown-header">
-                    Notifications
-                </div>
-                <div id="notificationList">
-                    <div class="notification-empty">Loading notifications...</div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <nav class="menu-top" aria-label="Commuter menu">
+        <a href="commuter_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+        <a href="my_reservations.php"><i class="fa fa-ticket" aria-hidden="true"></i> My Reservations</a>
+        <a href="history.php"><i class="fa fa-history" aria-hidden="true"></i> History</a>
+        <a href="profile.php" aria-current="page"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+        <a href="verification.php"><i class="fa fa-id-card" aria-hidden="true"></i> Verification</a>
+    </nav>
     
-    <a href="../logout.php" class="logout-btn">
-        <i class="fa fa-sign-out"></i> Logout
+    <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+        <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
     </a>
+</aside>
+
+<main class="main" role="main">
+
+<header class="page-header">
+    <div class="page-header-left">
+        <h1>My Profile</h1>
+    </div>
+</header>
+
+<div class="profile-container">
+    <section class="card profile-picture-section">
+        <h2 class="section-title">
+            <i class="fa fa-user-circle" aria-hidden="true"></i> Profile Picture
+        </h2>
+        <div class="profile-picture-container">
+            <?php 
+            $profile_pic = $user_data['profile_picture'] ?? 'default.png';
+            $profile_pic_path = "../Assets/profile_pictures/" . $profile_pic;
+            if(!file_exists($profile_pic_path) || $profile_pic === 'default.png'){
+                $profile_pic = 'default.png';
+                $profile_pic_path = "../Assets/images/mbus_icon.png";
+            }
+            ?>
+            <img src="<?php echo $profile_pic_path; ?>" alt="Profile Picture" class="profile-picture" id="profilePreview">
+        </div>
+        
+        <form method="POST" enctype="multipart/form-data" class="upload-form">
+            <?php csrf_field(); ?>
+            <div class="file-input-wrapper">
+                <input type="file" name="profile_picture" accept="image/*" id="profilePictureInput" class="file-input" onchange="previewProfilePicture(this)">
+                <label for="profilePictureInput" class="btn btn-secondary">
+                    <i class="fa fa-upload" aria-hidden="true"></i> Choose New Picture
+                </label>
+            </div>
+            <button type="submit" name="upload_picture" class="btn btn-primary" disabled id="uploadPictureBtn">
+                            <i class="fa fa-paper-plane" aria-hidden="true"></i> Submit
+                        </button>
+        </form>
+        
+        <?php if(isset($picture_error)): ?>
+            <div class="alert alert-error" role="alert"><?php echo $picture_error; ?></div>
+        <?php endif; ?>
+        
+        <?php if(isset($picture_success)): ?>
+            <div class="alert alert-success" role="alert"><?php echo $picture_success; ?></div>
+        <?php endif; ?>
+    </section>
+    
+    <section class="card profile-info-section">
+        <h2 class="section-title">
+            <i class="fa fa-id-card" aria-hidden="true"></i> Profile Information
+        </h2>
+        
+        <?php if(isset($success)): ?>
+            <div class="alert alert-success" role="alert"><?php echo $success; ?></div>
+        <?php endif; ?>
+        
+        <?php if(isset($error)): ?>
+            <div class="alert alert-error" role="alert"><?php echo $error; ?></div>
+        <?php endif; ?>
+        
+        <form method="POST" class="profile-form">
+            <?php csrf_field(); ?>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="full_name">Full Name</label>
+                    <input type="text" name="full_name" id="full_name" value="<?php echo htmlspecialchars($user_data['full_name'] ?? ''); ?>" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" name="email" id="email" value="<?php echo htmlspecialchars($user_data['email'] ?? ''); ?>" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone_number">Phone Number</label>
+                    <input type="tel" name="phone_number" id="phone_number" value="<?php echo htmlspecialchars($user_data['phone_number'] ?? ''); ?>" class="form-control" pattern="09\d{9}" maxlength="11" placeholder="09XXXXXXXXX">
+                    <small class="form-hint">Format: 11 digits starting with 09 (e.g., 09123456789)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="user_type">User Type</label>
+                    <input type="text" id="user_type" value="<?php echo htmlspecialchars($user_data['user_type'] ?? 'Regular'); ?>" class="form-control" disabled aria-disabled="true">
+                </div>
+            </div>
+            
+            <button type="submit" name="update_profile" class="btn btn-primary">
+                <i class="fa fa-save" aria-hidden="true"></i> Update Profile
+            </button>
+        </form>
+    </section>
 </div>
 
-<div class="main">
-    <h1>My Profile</h1>
-    
-    <div class="profile-container">
-        <!-- Profile Picture Section -->
-        <div class="profile-picture-section glass-card">
-            <div class="profile-picture-container">
-                <?php 
-                $profile_pic = $user_data['profile_picture'] ?? 'default.png';
-                if(!file_exists("../Assets/profile_pictures/" . $profile_pic)){
-                    $profile_pic = 'default.png';
-                }
-                ?>
-                <img src="../Assets/profile_pictures/<?php echo $profile_pic; ?>" alt="Profile Picture" class="profile-picture">
-            </div>
-            
-            <form method="POST" enctype="multipart/form-data" class="upload-form">
-                <input type="file" name="profile_picture" accept="image/*" id="profilePictureInput">
-                <button type="submit" name="upload_picture" class="btn-modern btn-primary">
-                    <i class="fa fa-upload"></i> Upload New Picture
-                </button>
-            </form>
-            
-            <?php if(isset($picture_error)): ?>
-                <div class="notice error"><?php echo $picture_error; ?></div>
-            <?php endif; ?>
-            
-            <?php if(isset($picture_success)): ?>
-                <div class="notice success"><?php echo $picture_success; ?></div>
-            <?php endif; ?>
-        </div>
-        
-        <!-- Profile Information Section -->
-        <div class="profile-info-section glass-card">
-            <h2>Profile Information</h2>
-            
-            <?php if(isset($success)): ?>
-                <div class="notice success"><?php echo $success; ?></div>
-            <?php endif; ?>
-            
-            <?php if(isset($error)): ?>
-                <div class="notice error"><?php echo $error; ?></div>
-            <?php endif; ?>
-            
-            <form method="POST" class="profile-form">
-                <div class="form-group">
-                    <label>Full Name</label>
-                    <input type="text" name="full_name" value="<?php echo htmlspecialchars($user_data['full_name']); ?>" class="input-modern" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>Email Address</label>
-                    <input type="email" name="email" value="<?php echo htmlspecialchars($user_data['email']); ?>" class="input-modern" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>Phone Number</label>
-                    <input type="tel" name="phone_number" value="<?php echo htmlspecialchars($user_data['phone_number'] ?? ''); ?>" class="input-modern">
-                </div>
-                
-                <div class="form-group">
-                    <label>User Type</label>
-                    <input type="text" value="<?php echo htmlspecialchars($user_data['user_type']); ?>" class="input-modern" disabled style="background: #f5f5f5;">
-                </div>
-                
-                <button type="submit" name="update_profile" class="btn-modern btn-primary">
-                    <i class="fa fa-save"></i> Update Profile
-                </button>
-            </form>
-        </div>
-        
-        <!-- Change Password Section -->
-        <div class="password-section glass-card">
-            <h2>Change Password</h2>
-            
-            <?php if(isset($password_error)): ?>
-                <div class="notice error"><?php echo $password_error; ?></div>
-            <?php endif; ?>
-            
-            <?php if(isset($password_success)): ?>
-                <div class="notice success"><?php echo $password_success; ?></div>
-            <?php endif; ?>
-            
-            <form method="POST" class="password-form">
-                <div class="form-group">
-                    <label>Current Password</label>
-                    <input type="password" name="current_password" class="input-modern" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>New Password</label>
-                    <input type="password" name="new_password" class="input-modern" required minlength="8">
-                    <small>Minimum 8 characters</small>
-                </div>
-                
-                <div class="form-group">
-                    <label>Confirm New Password</label>
-                    <input type="password" name="confirm_password" class="input-modern" required minlength="8">
-                </div>
-                
-                <button type="submit" name="change_password" class="btn-modern btn-secondary">
-                    <i class="fa fa-key"></i> Change Password
-                </button>
-            </form>
-        </div>
-    </div>
-</div>
+</main>
 
 <script>
-let notificationDropdownOpen = false;
-
+// Toggle sidebar
 function toggleSidebar() {
-    document.querySelector('.sidebar').classList.toggle('open');
-    document.querySelector('.sidebar-overlay').classList.toggle('active');
-}
-
-// Toggle notification dropdown
-function toggleNotifications() {
-    const dropdown = document.getElementById('notificationDropdown');
-    notificationDropdownOpen = !notificationDropdownOpen;
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    const toggle = document.querySelector('.sidebar-toggle');
     
-    if (notificationDropdownOpen) {
-        dropdown.classList.add('active');
-        loadNotifications();
-    } else {
-        dropdown.classList.remove('active');
+    if (sidebar && overlay && toggle) {
+        const isOpen = sidebar.classList.toggle('open');
+        overlay.classList.toggle('active', isOpen);
+        toggle.setAttribute('aria-expanded', isOpen);
+        document.body.classList.toggle('sidebar-open', isOpen);
     }
 }
 
-// Load notifications
-function loadNotifications() {
-    fetch('../api/get_notifications.php')
-        .then(response => response.json())
-        .then(data => {
-            updateNotificationBadge(data.unread_count);
-            renderNotifications(data.notifications);
-        })
-        .catch(error => {
-            console.error('Error loading notifications:', error);
-        });
-}
-
-// Update notification badge
-function updateNotificationBadge(count) {
-    const badge = document.getElementById('notificationBadge');
-    badge.textContent = count;
-    badge.style.display = count > 0 ? 'flex' : 'none';
-}
-
-// Render notifications
-function renderNotifications(notifications) {
-    const list = document.getElementById('notificationList');
+// Profile picture preview
+function previewProfilePicture(input) {
+    const preview = document.getElementById('profilePreview');
+    const uploadBtn = document.getElementById('uploadPictureBtn');
     
-    if (notifications.length === 0) {
-        list.innerHTML = '<div class="notification-empty">No notifications</div>';
-        return;
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            uploadBtn.disabled = false;
+        };
+        reader.readAsDataURL(input.files[0]);
     }
-    
-    list.innerHTML = notifications.map(notif => `
-        <div class="notification-item ${notif.status === 'Unread' ? 'unread' : ''}" 
-             onclick="markAsRead(${notif.id})">
-            <div class="notification-message">${notif.message}</div>
-            <div class="notification-time">${notif.time_ago}</div>
-        </div>
-    `).join('');
 }
-
-// Mark notification as read
-function markAsRead(notificationId) {
-    const formData = new FormData();
-    formData.append('notification_id', notificationId);
-    
-    fetch('../api/mark_notification_read.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            loadNotifications();
-        }
-    })
-    .catch(error => {
-        console.error('Error marking notification as read:', error);
-    });
-}
-
-// Close dropdown when clicking outside
-document.addEventListener('click', function(event) {
-    const container = document.querySelector('.notification-container');
-    if (!container.contains(event.target) && notificationDropdownOpen) {
-        toggleNotifications();
-    }
-});
-
-// Auto-refresh notifications every 30 seconds
-setInterval(loadNotifications, 30000);
-
-// Initial load
-loadNotifications();
 </script>
 
 </body>

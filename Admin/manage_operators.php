@@ -13,199 +13,220 @@ exit();
 }
 
 include "../config/db_connect.php";
+include "../Includes/csrf.php";
 
 /* ADD OPERATOR */
 if(isset($_POST['add_operator'])){
+    // Validate CSRF token
+    if(!csrf_validate_token()){
+        $error = "Security validation failed. Please try again.";
+    } else {
+        $full_name = trim($_POST['full_name']);
+        $email = trim($_POST['email']);
+        $phone_number = trim($_POST['phone_number']);
+        $password = trim($_POST['password']);
 
-$full_name = trim($_POST['full_name']);
-$email = trim($_POST['email']);
-$phone_number = trim($_POST['phone_number']);
-$password = trim($_POST['password']);
+        // Validate phone number
+        if(!preg_match('/^09\d{9}$/', $phone_number)){
+            $error = "Phone number must be 11 digits starting with 09 (e.g., 09123456789).";
+        } else {
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-$hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            /* CHECK EMAIL using prepared statement */
+            $check = mbus_db_prepare($conn, "
+SELECT * FROM users WHERE email = ?
+", [$email]);
 
-/* CHECK EMAIL */
-$check = mbus_db_query($conn,"
-SELECT * FROM users WHERE email='$email'
-");
-
-if(mbus_db_num_rows($check) > 0){
-
-echo "<script>alert('Email already exists');</script>";
-
-}else{
-
-mbus_db_query($conn,"
+            if(mbus_db_num_rows($check) > 0){
+                $error = "Email already exists";
+            } else {
+                mbus_db_prepare($conn, "
 INSERT INTO users
-(full_name,email,phone_number,password,user_type)
+(full_name, email, phone_number, password, user_type)
 VALUES
-('$full_name','$email','$phone_number','$hashed_password','operator')
-");
+(?, ?, ?, ?, 'operator')
+", [$full_name, $email, $phone_number, $hashed_password]);
 
-echo "
-<script>
-alert('Operator account created');
-window.location='manage_operators.php';
-</script>
-";
-
-}
-
+                $success = "Operator account created";
+            }
+        }
+    }
 }
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Operators</title>
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Manage Operators</title>
-
-<!-- ✅ SIDEBAR CSS -->
-<link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
-
-<!-- ✅ PAGE CSS -->
-<link rel="stylesheet" href="../Assets/css/admin/manage_operators.css">
-
-<!-- ✅ ICONS -->
-<link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../Assets/css/responsive.css">
+    <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
+    <link rel="stylesheet" href="../Assets/css/admin/manage_operators.css">
 </head>
 
-<body>
+<body class="has-sidebar">
 
-<!-- ✅ SIDEBAR -->
-<div class="sidebar">
-
-<div class="logo-container">
-<img src="../Assets/images/mbus_logo.png" class="logo">
-</div>
-
-<h2>Admin</h2>
-
-<div class="menu-top">
-
-<a href="admin_dashboard.php">
-<i class="fa-solid fa-house"></i> Dashboard
-</a>
-
-<a href="manage_schedules.php">
-<i class="fa-solid fa-calendar"></i> Manage Schedules
-</a>
-
-<a href="manage_buses.php">
-<i class="fa-solid fa-bus"></i> Manage Buses
-</a>
-
-<a href="manage_operators.php">
-<i class="fa-solid fa-user-gear"></i> Manage Operators
-</a>
-
-<a href="manage_routes.php">
-<i class="fa-solid fa-route"></i> Manage Routes
-</a>
-
-</div>
-
-<div class="logout-btn">
-<a href="../logout.php">
-<i class="fa-solid fa-right-from-bracket"></i> Logout
-</a>
-</div>
-
-</div>
-
-<!-- MAIN -->
-<div class="main">
-
-<!-- ADD OPERATOR -->
-<div class="box">
-
-<h2>Create Operator Account</h2>
-
-<form method="POST">
-
-<div class="form-grid">
-
-<div class="form-group">
-<label>Full Name</label>
-<input type="text" name="full_name" required>
-</div>
-
-<div class="form-group">
-<label>Email</label>
-<input type="email" name="email" required>
-</div>
-
-<div class="form-group">
-<label>Phone Number</label>
-<input type="text" name="phone_number" required>
-</div>
-
-<div class="form-group">
-<label>Password</label>
-<input type="password" name="password" required>
-</div>
-
-</div>
-
-<button type="submit" name="add_operator" class="btn">
-Create Operator
+<!-- Mobile Sidebar Toggle -->
+<button class="sidebar-toggle btn btn-icon" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
+    <i class="fa fa-bars" aria-hidden="true"></i>
 </button>
 
-</form>
+<!-- Sidebar Overlay -->
+<div class="sidebar-overlay" onclick="toggleSidebar()" aria-hidden="true"></div>
 
-</div>
+<aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="logo-container">
+        <img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo">
+    </div>
+
+    <h2>Admin</h2>
+
+    <nav class="menu-top" aria-label="Admin menu">
+        <a href="admin_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+        <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
+        <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
+        <a href="manage_operators.php" aria-current="page"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
+        <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
+    </nav>
+
+    <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+        <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
+    </a>
+</aside>
+
+<main class="main" role="main">
+
+<header class="page-header">
+    <h1>Manage Operators</h1>
+</header>
+
+<?php if(isset($success)): ?>
+    <div class="alert alert-success" role="alert"><?php echo $success; ?></div>
+<?php endif; ?>
+<?php if(isset($error)): ?>
+    <div class="alert alert-error" role="alert"><?php echo $error; ?></div>
+<?php endif; ?>
+
+<!-- ADD OPERATOR -->
+<section class="card">
+    <h2>Create Operator Account</h2>
+    <form method="POST" class="form-section">
+        <?php csrf_field(); ?>
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="full_name">Full Name</label>
+                <input type="text" name="full_name" id="full_name" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" name="email" id="email" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="phone_number">Phone Number</label>
+                <input type="text" name="phone_number" id="phone_number" class="form-control" pattern="09\d{9}" maxlength="11" placeholder="09XXXXXXXXX" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" name="password" id="password" class="form-control" required>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" name="add_operator" class="btn btn-primary">
+                <i class="fa fa-plus" aria-hidden="true"></i> Create Operator
+            </button>
+        </div>
+    </form>
+</section>
 
 <!-- OPERATOR LIST -->
-<div class="box">
+<section class="card">
+    <h2>Operator List</h2>
 
-<h2>Operator List</h2>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Phone Number</th>
+                    <th>Role</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $query = mbus_db_query($conn, "
+                    SELECT * FROM users
+                    WHERE LOWER(user_type)='operator'
+                    ORDER BY user_id DESC
+                ");
 
-<table>
+                while($row = mbus_db_fetch_assoc($query)){
+                ?>
+                <tr>
+                    <td data-label="Full Name"><?php echo htmlspecialchars($row['full_name']); ?></td>
+                    <td data-label="Email"><?php echo htmlspecialchars($row['email']); ?></td>
+                    <td data-label="Phone Number"><?php echo htmlspecialchars($row['phone_number']); ?></td>
+                    <td data-label="Role">
+                        <span class="badge badge-primary">Operator</span>
+                    </td>
+                </tr>
+                <?php } ?>
+            </tbody>
+        </table>
+    </div>
+</section>
 
-<tr>
-<th>Full Name</th>
-<th>Email</th>
-<th>Phone Number</th>
-<th>Role</th>
-</tr>
+</main>
 
-<?php
+<script>
+// Toggle sidebar for mobile
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    const toggle = document.querySelector('.sidebar-toggle');
+    
+    const isOpen = sidebar.classList.toggle('open');
+    overlay.classList.toggle('active');
+    
+    if (toggle) {
+        toggle.setAttribute('aria-expanded', isOpen);
+    }
+    
+    if (isOpen) {
+        document.body.style.overflow = 'hidden';
+        const firstLink = sidebar.querySelector('a, button');
+        if (firstLink) firstLink.focus();
+    } else {
+        document.body.style.overflow = '';
+    }
+}
 
-$query = mbus_db_query($conn,"
-SELECT * FROM users
-WHERE LOWER(user_type)='operator'
-ORDER BY user_id DESC
-");
+// Close sidebar when clicking a nav link on mobile
+document.querySelectorAll('.menu-top a').forEach(link => {
+    link.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+            toggleSidebar();
+        }
+    });
+});
 
-while($row = mbus_db_fetch_assoc($query)){
-
-?>
-
-<tr>
-
-<td><?= $row['full_name']; ?></td>
-<td><?= $row['email']; ?></td>
-<td><?= $row['phone_number']; ?></td>
-
-<td>
-<span class="badge">Operator</span>
-</td>
-
-</tr>
-
-<?php } ?>
-
-</table>
-
-</div>
-
-</div>
+// Handle keyboard navigation for sidebar
+document.addEventListener('keydown', function(e) {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar.classList.contains('open') && e.key === 'Escape') {
+        toggleSidebar();
+    }
+});
+</script>
 
 </body>
 </html>

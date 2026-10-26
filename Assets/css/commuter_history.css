@@ -1,107 +1,106 @@
-.main{
-margin-left:310px;
-padding:30px;
-margin-top:10px;
+/* Trip History — page-specific overrides using responsive.css tokens */
+
+.history-card {
+  padding: var(--space-5);
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
-
-.page-title{
-font-size:30px;
-font-weight:bold;
-margin-bottom:25px;
-color:#1e3a5f;
+.history-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
-.card{
-background:white;
-padding:25px;
-border-radius:12px;
-margin-bottom:20px;
-box-shadow:0 0 10px rgba(0,0,0,.08);
-transition:0.3s;
+.reservation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
 }
 
-.top{
-display:flex;
-justify-content:space-between;
-align-items:center;
-margin-bottom:15px;
+.bus-info .badge {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  padding: var(--space-2) var(--space-3);
 }
 
-.bus{
-font-size:22px;
-font-weight:bold;
-color:#1e3a5f;
+.status-badge {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: capitalize;
+  white-space: nowrap;
 }
 
-.status{
-padding:8px 14px;
-border-radius:20px;
-font-size:13px;
-font-weight:bold;
-display:inline-block;
+.status-boarded {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
 }
 
-.boarded{
-background:#cfe2ff;
-color:#084298;
+.status-cancelled {
+  background: var(--color-error-light);
+  color: var(--color-error-dark);
 }
 
-.cancelled{
-background:#f8d7da;
-color:#721c24;
+.reservation-route {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  margin-bottom: var(--space-4);
 }
 
-.route{
-background:#1e3a5f;
-color:white;
-display:inline-block;
-padding:10px 16px;
-border-radius:20px;
-margin-top:10px;
-font-size:14px;
+.reservation-route i {
+  font-size: var(--fs-base);
 }
 
-.info{
-margin:10px 0;
+.reservation-details {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-4);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-2);
 }
 
-.info b{
-color:#1e3a5f;
+.reservation-details li {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
 }
 
-.actions{
-display:flex;
-gap:10px;
-margin-top:20px;
-flex-wrap:wrap;
+.reservation-details strong {
+  color: var(--color-text);
 }
 
-.btn{
-padding:12px 18px;
-border:none;
-border-radius:8px;
-cursor:pointer;
-font-weight:bold;
-text-decoration:none;
-display:inline-block;
+.reservation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
 }
 
-.ticket-btn{
-background:green;
-color:white;
+.reservation-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.clear-btn{
-background:red;
-color:white;
-}
+@media (max-width: 480px) {
+  .reservation-details {
+    grid-template-columns: 1fr;
+  }
 
-.empty{
-background:white;
-padding:30px;
-border-radius:12px;
-text-align:center;
-font-size:18px;
-box-shadow:0 0 10px rgba(0,0,0,.08);
+  .reservation-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

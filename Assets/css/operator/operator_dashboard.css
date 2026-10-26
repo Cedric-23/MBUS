@@ -1,87 +1,93 @@
-body{
-    font-family:Arial;
-    background:#f4f4f4;
-    margin:0;
-    position:relative;
+/* Operator Dashboard — page-specific overrides using responsive.css tokens */
+
+.welcome {
+  /* Uses .card from responsive.css + these overrides */
+  margin-bottom: var(--space-6);
 }
 
-/* BACKGROUND */
-body::before{
-    content:"";
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background:url("../../images/mbus_background.png") no-repeat center center;
-    background-size:cover;
-    opacity:0.5;
-    z-index:-1;
+.welcome h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  color: var(--color-primary-dark);
 }
 
-/* MAIN */
-.main{
-    margin-left:290px;
-    padding:30px;
+.welcome p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-base);
 }
 
-/* ✅ WELCOME (EXACT COPY) */
-.welcome{
-    background:white;
-    padding:25px;
-    border-radius:10px;
-    box-shadow:0 0 10px rgba(0,0,0,0.1);
-    margin-bottom:30px;
+/* Cards grid */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-5);
 }
 
-.welcome h2{
-    margin:0;
-    font-size:26px;
-    color:#1e3a5f;
+.card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
 }
 
-.welcome p{
-    margin-top:10px;
-    color:#555;
+.card-link:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
 }
 
-/* CARDS */
-.cards{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
-    gap:20px;
+.card {
+  /* Uses .card from responsive.css + these overrides */
+  padding: var(--space-6);
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-.card-link{
-    text-decoration:none;
-    color:inherit;
+.card h3 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--color-primary-dark);
 }
 
-.card{
-    background:white;
-    padding:25px;
-    border-radius:10px;
-    box-shadow:0 0 30px rgba(0,0,0,0.1);
-    transition:0.3s;
-    min-height:180px;
+.card-number {
+  font-size: var(--fs-4xl);
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1;
+  margin-bottom: var(--space-3);
 }
 
-.card:hover{
-    transform:translateY(-5px);
+.card p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
 }
 
-.card h3{
-    margin-top:0;
-    color:#1e3a5f;
-}
-
-.card p{
-    color:#555;
-}
-
-.card-number{
-    font-size:32px;
-    font-weight:bold;
-    margin-top:10px;
-    color:#1e3a5f;
+@media (max-width: 768px) {
+  .welcome {
+    padding: var(--space-4);
+  }
+  
+  .welcome h2 {
+    font-size: var(--fs-xl);
+  }
+  
+  .cards {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+  
+  .card {
+    padding: var(--space-4);
+  }
+  
+  .card-number {
+    font-size: var(--fs-3xl);
+  }
 }

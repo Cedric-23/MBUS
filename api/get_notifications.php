@@ -23,9 +23,9 @@ $notifications = [];
 while($row = mbus_db_fetch_assoc($query)){
     $notifications[] = [
         'id' => $row['notification_id'],
-        'message' => $row['message'],
+        'message' => htmlspecialchars($row['message'], ENT_QUOTES, 'UTF-8'),
         'date' => $row['notification_date'],
-        'status' => $row['status'],
+        'status' => htmlspecialchars($row['status'], ENT_QUOTES, 'UTF-8'),
         'time_ago' => time_ago($row['notification_date'])
     ];
 }

@@ -3,6 +3,7 @@ session_start();
 include "../config/db_connect.php";
 include "../Includes/activity_log.php";
 include "../Includes/email_helper.php";
+include "../Includes/csrf.php";
 
 /* AUTO EXPIRE - 10 MINUTE RESERVATION EXPIRATION */
 mbus_db_query($conn,"
@@ -41,6 +42,23 @@ $user_id=$_SESSION['user_id'];
 if(!isset($_GET['schedule_id'])){die("Schedule not found.");}
 
 $schedule_id=mbus_db_escape($conn,$_GET['schedule_id']);
+
+// Authorization check - verify schedule exists and is bookable
+$schedule_check = mbus_db_prepare($conn,"
+    SELECT schedule_id, schedule_status, trip_status, departure_time
+    FROM schedule
+    WHERE schedule_id = ?
+", [$schedule_id]);
+
+$schedule_info = mbus_db_fetch_assoc($schedule_check);
+
+if(!$schedule_info){
+    die("Invalid schedule.");
+}
+
+if($schedule_info['schedule_status'] != 'Active'){
+    die("Schedule is not available for booking.");
+}
 
 /* STOPS */
 $stops=["MORONG TERMINAL","BINARITAN","POBLACION","HILLTOP","SABANG","ANVAYA","MABAYO","MINANGA","MORONG GATE","GROUP 6","IDESS","APPAREL","GATE 2","TRIBOA","TOWER","KORYO","TECHNO","UA","NSD","PETRON","INDUSTRIAL","HARBOR POINT","MAIN GATE"];
@@ -107,6 +125,10 @@ $available_seats=28-count($reserved);
 
 /* RESERVE */
 if(isset($_POST['confirm_reserve'])){
+    // Validate CSRF token
+    if(!csrf_validate_token()){
+        die("Security validation failed. Please refresh the page and try again.");
+    }
 
 $pickup=mbus_db_escape($conn,$_POST['pickup']);
 $destination=mbus_db_escape($conn,$_POST['destination']);
@@ -116,24 +138,39 @@ foreach($seats as $seat){
 
 $seat=intval($seat);
 
-$check=mbus_db_query($conn,"
+// Use transaction to prevent race condition
+$conn->pdo->beginTransaction();
+
+try{
+    $check=mbus_db_prepare($conn,"
 SELECT reservation_id FROM reservation
-WHERE schedule_id='$schedule_id'
-AND seat_number='$seat'
+WHERE schedule_id = ?
+AND seat_number = ?
 AND(status='Paid' OR status='Boarded' OR(status='Pending' AND created_at>NOW()-INTERVAL 10 MINUTE))
-");
+FOR UPDATE
+", [$schedule_id, $seat]);
 
-if(mbus_db_num_rows($check)>0){continue;}
+    if(mbus_db_num_rows($check)>0){
+        $conn->pdo->rollBack();
+        continue;
+    }
 
-do{
-$ticket_code=rand(1000,9999);
-$check_code=mbus_db_query($conn,"SELECT reservation_id FROM reservation WHERE ticket_code='$ticket_code'");
-}while(mbus_db_num_rows($check_code)>0);
+    do{
+        $ticket_code=rand(1000,9999);
+        $check_code=mbus_db_prepare($conn,"SELECT reservation_id FROM reservation WHERE ticket_code = ?", [$ticket_code]);
+    }while(mbus_db_num_rows($check_code)>0);
 
-mbus_db_query($conn,"
+    mbus_db_prepare($conn,"
 INSERT INTO reservation(ticket_code,user_id,schedule_id,seat_number,pickup_location,destination,reservation_date,created_at,status)
-VALUES('$ticket_code','$user_id','$schedule_id','$seat','$pickup','$destination',NOW(),NOW(),'Pending')
-");
+VALUES(?, ?, ?, ?, ?, ?, NOW(), NOW(), 'Pending')
+", [$ticket_code, $user_id, $schedule_id, $seat, $pickup, $destination]);
+
+    $conn->pdo->commit();
+
+} catch(Exception $e){
+    $conn->pdo->rollBack();
+    continue;
+}
 
 // Log reservation creation
 log_activity($conn, $user_id, ACTION_RESERVATION_CREATE, "Reservation created for schedule $schedule_id, seat $seat, ticket code: $ticket_code");
@@ -158,7 +195,7 @@ exit();
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 
 <meta charset="UTF-8">
@@ -167,125 +204,196 @@ exit();
 <title>Reserve Seat</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<link rel="stylesheet" href="../Assets/css/modern_theme.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../Assets/css/responsive.css">
 <link rel="stylesheet" href="../Assets/css/commuter_sidebar.css">
 <link rel="stylesheet" href="../Assets/css/commuter_reserve.css">
 
 <!-- Google Maps API -->
 <script async defer
-src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initReserveMap">
+src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_API_KEY') ?: 'YOUR_API_KEY'; ?>&callback=initReserveMap">
 </script>
 
 </head>
 
-<body>
+<body class="has-sidebar">
 
-<div class="sidebar">
+<!-- Mobile Sidebar Toggle -->
+<button class="sidebar-toggle btn btn-icon" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
+    <i class="fa fa-bars" aria-hidden="true"></i>
+</button>
+
+<!-- Sidebar Overlay -->
+<div class="sidebar-overlay" onclick="toggleSidebar()" aria-hidden="true"></div>
+
+<aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
 
 <div class="logo-container">
-<img src="../Assets/images/mbus_logo.png" class="logo">
+<img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo">
 </div>
 
 <h2>Commuter</h2>
 
-<div class="menu-top">
-<a href="commuter_dashboard.php"><i class="fa fa-home"></i> Dashboard</a>
-<a href="my_reservations.php"><i class="fa fa-ticket"></i> My Reservations</a>
-<a href="history.php"><i class="fa fa-history"></i> History</a>
-</div>
+<nav class="menu-top" aria-label="Commuter menu">
+<a href="commuter_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+<a href="my_reservations.php"><i class="fa fa-ticket" aria-hidden="true"></i> My Reservations</a>
+<a href="history.php"><i class="fa fa-history" aria-hidden="true"></i> History</a>
+<a href="profile.php"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+<a href="verification.php"><i class="fa fa-id-card" aria-hidden="true"></i> Verification</a>
+</nav>
 
-<a href="../logout.php" class="logout-btn">
-<i class="fa fa-sign-out"></i> Logout
+<a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+<i class="fa fa-sign-out" aria-hidden="true"></i> Logout
 </a>
 
-</div>
+</aside>
 
-<div class="main">
+<main class="main" role="main">
 
-<div class="page-title">Select Your Seat</div>
+<header class="page-header">
+    <h1>Select Your Seat</h1>
+    <a href="schedule.php" class="btn btn-outline btn-sm">
+        <i class="fa fa-arrow-left" aria-hidden="true"></i> Back to Schedules
+    </a>
+</header>
 
-<a href="schedule.php" class="back-btn">← Back to Bus Schedules</a>
+<div class="reserve-layout">
 
-<div class="layout">
+<!-- LEFT PANEL -->
+<div class="reserve-panel reserve-panel-main">
 
-<div class="left-panel">
+<div class="card trip-info-card">
 
-<div class="container">
-
-<div class="top-info glass-card">
-<div class="route-box"><?= $route_data['origin']; ?> → <?= $route_data['destination']; ?></div>
-<div class="counter">Available Seats: <?= $available_seats; ?>/28</div>
+<div class="route-header">
+    <span class="route-badge"><?php echo htmlspecialchars($route_data['origin']); ?> &#8594; <?php echo htmlspecialchars($route_data['destination']); ?></span>
+    <span class="seat-counter"><?php echo $available_seats; ?>/28 seats available</span>
 </div>
 
 <?php if($route_data['origin_lat'] && $route_data['origin_lng'] && $route_data['destination_lat'] && $route_data['destination_lng']){ ?>
 <div class="route-map-container">
-    <div id="reserveMap" style="height: 300px; width: 100%; border-radius: 8px;"></div>
+    <div id="reserveMap" class="map-canvas" style="height: 250px;"></div>
 </div>
 <?php } ?>
 
-<div class="legend">
-<div><div class="box available-box"></div>Available</div>
-<div><div class="box selected-box"></div>Selected</div>
-<div><div class="box reserved-box"></div>Reserved</div>
+<div class="seat-legend" role="list" aria-label="Seat status legend">
+    <div class="legend-item" role="listitem">
+        <span class="legend-box legend-available" aria-hidden="true"></span>
+        <span>Available</span>
+    </div>
+    <div class="legend-item" role="listitem">
+        <span class="legend-box legend-selected" aria-hidden="true"></span>
+        <span>Selected</span>
+    </div>
+    <div class="legend-item" role="listitem">
+        <span class="legend-box legend-reserved" aria-hidden="true"></span>
+        <span>Reserved</span>
+    </div>
 </div>
+
+</div>
+
+<div class="card seat-map-card">
+
+<div class="seat-map" role="grid" aria-label="Bus seat map">
 
 <?php
 $seat=1;
 for($r=1;$r<=7;$r++){
-echo "<div class='row'>";
+echo "<div class='seat-row' role='row'>";
 for($c=1;$c<=4;$c++){
 if($seat<=28){
-$class="seat";$disabled="";
-if(in_array($seat,$reserved)){$class.=" reserved";$disabled="disabled";}
-echo "<button type='button' class='$class' data-seat='$seat' $disabled>$seat</button>";
+$class="seat-btn";
+$disabled="";
+$aria_disabled="false";
+if(in_array($seat,$reserved)){
+$class.=" reserved";
+$disabled="disabled";
+$aria_disabled="true";
+}
+echo "<button type='button' class='$class' data-seat='$seat' role='gridcell' $disabled aria-disabled='$aria_disabled' aria-label='Seat $seat'>$seat</button>";
 $seat++;
 }
-if($c==2){echo "<div class='aisle'></div>";}
+if($c==2){echo "<div class='aisle' role='separator' aria-label='Aisle'></div>";}
 }
 echo "</div>";
 }
 ?>
 
-<label>Pickup Location</label>
-<select id="pickup">
-<option value="">Select Pickup</option>
-<?php foreach($pickup_stops as $stop){echo "<option value='$stop'>$stop</option>";} ?>
-</select>
+</div>
 
-<label>Destination</label>
-<select id="destination">
-<option value="">Select Destination</option>
-</select>
+</div>
 
-<button type="button" id="doneBtn">Done</button>
+<div class="card pickup-card">
+
+<div class="form-group">
+    <label for="pickup">Pickup Location</label>
+    <select id="pickup" class="form-control" required>
+        <option value="">Select Pickup</option>
+        <?php foreach($pickup_stops as $stop){echo "<option value='$stop'>$stop</option>";} ?>
+    </select>
+</div>
+
+<div class="form-group">
+    <label for="destination">Destination</label>
+    <select id="destination" class="form-control" required disabled>
+        <option value="">Select pickup first</option>
+    </select>
+</div>
+
+<button type="button" id="doneBtn" class="btn btn-primary btn-block">
+    <i class="fa fa-check" aria-hidden="true"></i> Done Selecting Seats
+</button>
 
 </div>
 
 </div>
 
-<div class="right-panel" id="summaryPanel">
+<!-- RIGHT PANEL -->
+<div class="reserve-panel reserve-panel-sidebar">
 
-<h2>Reservation Summary</h2>
+<div class="card summary-card" id="summaryPanel">
 
-<div class="notice success" id="successBox"></div>
-<div class="notice error" id="errorBox"></div>
+<header class="summary-header">
+    <h2>Reservation Summary</h2>
+</header>
 
-<p><b>Bus:</b> <?= $route_data['bus_number']; ?></p>
-<p><b>Departure:</b> <?= $route_data['departure_time']; ?></p>
-<p><b>Seats:</b> <span id="summarySeats">-</span></p>
-<p><b>Pickup:</b> <span id="summaryPickup">-</span></p>
-<p><b>Destination:</b> <span id="summaryDestination">-</span></p>
+<div class="alert alert-success" id="successBox" style="display:none;" role="alert"></div>
+<div class="alert alert-error" id="errorBox" style="display:none;" role="alert"></div>
 
-<div id="passengerTypes"></div>
+<dl class="summary-details">
+    <dt>Bus</dt>
+    <dd><?php echo htmlspecialchars($route_data['bus_number']); ?></dd>
+    
+    <dt>Departure</dt>
+    <dd><?php echo date("F d, Y g:i A", strtotime($route_data['departure_time'])); ?></dd>
+    
+    <dt>Seats</dt>
+    <dd id="summarySeats">-</dd>
+    
+    <dt>Pickup</dt>
+    <dd id="summaryPickup">-</dd>
+    
+    <dt>Destination</dt>
+    <dd id="summaryDestination">-</dd>
+</dl>
 
-<button type="button" id="calculateBtn">Calculate Fare</button>
+<div id="passengerTypes" class="passenger-types"></div>
 
-<div class="breakdown" id="fareBreakdown">
-<div id="fareDetails"></div>
-<hr>
-<h3>Total: ₱<span id="totalAmount">0.00</span></h3>
-<button type="button" id="reserveBtn">Reserve For 10 Minutes</button>
-<button type="button" id="payBtn">Pay Now</button>
+<button type="button" id="calculateBtn" class="btn btn-secondary btn-block">
+    <i class="fa fa-calculator" aria-hidden="true"></i> Calculate Fare
+</button>
+
+<div class="fare-breakdown" id="fareBreakdown" style="display:none;">
+    <div id="fareDetails"></div>
+    <div class="fare-total">
+        <strong>Total: <span id="totalAmount">&#8369;0.00</span></strong>
+    </div>
+    <button type="button" id="reserveBtn" class="btn btn-primary btn-block">
+        <i class="fa fa-clock" aria-hidden="true"></i> Reserve For 10 Minutes
+    </button>
+    <a href="payment.php?schedule_id=<?php echo $schedule_id; ?>&total=0" id="payBtn" class="btn btn-success btn-block" style="display:none;">
+        <i class="fa fa-credit-card" aria-hidden="true"></i> Pay Now
+    </a>
 </div>
 
 </div>
@@ -293,11 +401,13 @@ echo "</div>";
 </div>
 
 </div>
+
+</main>
 
 <script>
-const scheduleId = <?= $schedule_id; ?>;
-const route = <?= json_encode($stops); ?>;
-const fareTable = <?= json_encode($fare_table); ?>;
+const scheduleId = <?php echo $schedule_id; ?>;
+const route = <?php echo json_encode($stops); ?>;
+const fareTable = <?php echo json_encode($fare_table); ?>;
 </script>
 
 <script>
@@ -307,10 +417,10 @@ let reserveDirectionsRenderer;
 
 function initReserveMap() {
     <?php if($route_data['origin_lat'] && $route_data['origin_lng'] && $route_data['destination_lat'] && $route_data['destination_lng']){ ?>
-    const originLat = <?= $route_data['origin_lat']; ?>;
-    const originLng = <?= $route_data['origin_lng']; ?>;
-    const destLat = <?= $route_data['destination_lat']; ?>;
-    const destLng = <?= $route_data['destination_lng']; ?>;
+    const originLat = <?php echo $route_data['origin_lat']; ?>;
+    const originLng = <?php echo $route_data['origin_lng']; ?>;
+    const destLat = <?php echo $route_data['destination_lat']; ?>;
+    const destLng = <?php echo $route_data['destination_lng']; ?>;
 
     reserveMap = new google.maps.Map(document.getElementById("reserveMap"), {
         center: { lat: (originLat + destLat) / 2, lng: (originLng + destLng) / 2 },
@@ -326,14 +436,14 @@ function initReserveMap() {
     const originMarker = new google.maps.Marker({
         position: { lat: originLat, lng: originLng },
         map: reserveMap,
-        title: "<?= $route_data['origin']; ?>",
+        title: "<?php echo $route_data['origin']; ?>",
         label: "A"
     });
 
     const destMarker = new google.maps.Marker({
         position: { lat: destLat, lng: destLng },
         map: reserveMap,
-        title: "<?= $route_data['destination']; ?>",
+        title: "<?php echo $route_data['destination']; ?>",
         label: "B"
     });
 
@@ -360,6 +470,141 @@ function initReserveMap() {
 </script>
 
 <script src="../Assets/js/commuter_reserve.js"></script>
+
+<script>
+let notificationDropdownOpen = false;
+
+// Toggle sidebar for mobile
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    const toggle = document.querySelector('.sidebar-toggle');
+    
+    const isOpen = sidebar.classList.toggle('open');
+    overlay.classList.toggle('active');
+    
+    if (toggle) {
+        toggle.setAttribute('aria-expanded', isOpen);
+    }
+    
+    // Add/remove body class for CSS to hide hamburger
+    document.body.classList.toggle('sidebar-open', isOpen);
+    
+    // Trap focus when sidebar is open on mobile
+    if (isOpen) {
+        document.body.style.overflow = 'hidden';
+        const firstLink = sidebar.querySelector('a, button');
+        if (firstLink) firstLink.focus();
+    } else {
+        document.body.style.overflow = '';
+    }
+}
+
+// Toggle notification dropdown
+function toggleNotifications() {
+    const dropdown = document.getElementById('notificationDropdown');
+    const bell = document.querySelector('.notification-bell');
+    notificationDropdownOpen = !notificationDropdownOpen;
+    
+    if (notificationDropdownOpen) {
+        dropdown.classList.add('active');
+        if (bell) bell.setAttribute('aria-expanded', 'true');
+        loadNotifications();
+    } else {
+        dropdown.classList.remove('active');
+        if (bell) bell.setAttribute('aria-expanded', 'false');
+    }
+}
+
+// Load notifications
+function loadNotifications() {
+    fetch('../api/get_notifications.php')
+        .then(response => response.json())
+        .then(data => {
+            updateNotificationBadge(data.unread_count);
+            renderNotifications(data.notifications);
+        })
+        .catch(error => {
+            console.error('Error loading notifications:', error);
+        });
+}
+
+// Update notification badge
+function updateNotificationBadge(count) {
+    const badge = document.getElementById('notificationBadge');
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'flex' : 'none';
+}
+
+// Render notifications
+function renderNotifications(notifications) {
+    const list = document.getElementById('notificationList');
+    
+    if (notifications.length === 0) {
+        list.innerHTML = '<div class="notification-empty">No notifications</div>';
+        return;
+    }
+    
+    list.innerHTML = notifications.map(notif => `
+        <div class="notification-item ${notif.status === 'Unread' ? 'unread' : ''}" 
+             onclick="markAsRead(${notif.id})" role="listitem">
+            <div class="notification-message">${notif.message}</div>
+            <div class="notification-time">${notif.time_ago}</div>
+        </div>
+    `).join('');
+}
+
+// Mark notification as read
+function markAsRead(notificationId) {
+    const formData = new FormData();
+    formData.append('notification_id', notificationId);
+    
+    fetch('../api/mark_notification_read.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadNotifications();
+        }
+    })
+    .catch(error => {
+        console.error('Error marking notification as read:', error);
+    });
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const container = document.querySelector('.notification-container');
+    if (!container.contains(event.target) && notificationDropdownOpen) {
+        toggleNotifications();
+    }
+});
+
+// Close sidebar when clicking a nav link on mobile
+document.querySelectorAll('.menu-top a').forEach(link => {
+    link.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+            toggleSidebar();
+        }
+    });
+});
+
+// Auto-refresh notifications every 30 seconds
+setInterval(loadNotifications, 30000);
+
+// Initial load
+loadNotifications();
+
+// Handle keyboard navigation for sidebar
+document.addEventListener('keydown', function(e) {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar.classList.contains('open') && e.key === 'Escape') {
+        toggleSidebar();
+    }
+});
+</script>
 
 </body>
 </html>
