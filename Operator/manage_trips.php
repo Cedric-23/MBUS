@@ -12,8 +12,6 @@ if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type']) !== 'opera
 
 $operator_id = $_SESSION['user_id'];
 
-$conn = mbus_db_connect();
-
 // Handle status update
 if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])){
     if(!csrf_validate_token()){

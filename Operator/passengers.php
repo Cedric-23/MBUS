@@ -12,8 +12,6 @@ if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type']) !== 'opera
 
 $operator_id = $_SESSION['user_id'];
 
-$conn = mbus_db_connect();
-
 // Authorization check
 $operator_check = mbus_db_prepare($conn, "
     SELECT user_id FROM users WHERE user_id = ? AND LOWER(user_type) = 'operator'
