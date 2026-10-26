@@ -1,8 +1,9 @@
 <?php
 session_start();
 require_once "../config/db_connect.php";
+require_once "../config/mysqli_compat.php";
 require_once "../Includes/csrf.php";
-require_once "../Includes/functions.php";
+require_once "../Includes/activity_log.php";
 
 if(!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'Operator'){
     header("Location: ../login.php");
