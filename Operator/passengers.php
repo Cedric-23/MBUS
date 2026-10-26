@@ -314,6 +314,7 @@ function toggleSidebar() {
     
     const isOpen = sidebar.classList.toggle('open');
     overlay.classList.toggle('active');
+    document.body.classList.toggle('sidebar-open', isOpen);
     
     if (toggle) {
         toggle.setAttribute('aria-expanded', isOpen);

@@ -5,13 +5,13 @@
 }
 
 .page-header {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-5);
 }
 
 .page-header h1 {
   margin: 0;
-  font-size: var(--fs-2xl);
-  font-weight: 700;
+  font-size: var(--fs-xl);
+  font-weight: 600;
   color: var(--color-primary-dark);
 }
 
@@ -24,28 +24,28 @@
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-4);
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 .form-group label {
   font-weight: 500;
   color: var(--color-text);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
 }
 
 .form-control {
   width: 100%;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
-  font-size: var(--fs-base);
+  font-size: var(--fs-sm);
   font-family: inherit;
   background: var(--color-bg);
   color: var(--color-text);
@@ -62,18 +62,20 @@
 
 .form-actions {
   display: flex;
-  gap: var(--space-3);
+  gap: var(--space-2);
   margin-top: var(--space-2);
 }
 
 .form-actions .btn {
   min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--fs-sm);
 }
 
 /* Table responsive */
 .table-responsive {
   overflow-x: auto;
-  margin-top: var(--space-4);
+  margin-top: var(--space-3);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
 }
@@ -86,7 +88,7 @@
 
 .table-responsive th,
 .table-responsive td {
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   text-align: left;
   border-bottom: 1px solid var(--color-border);
 }
@@ -95,7 +97,7 @@
   background: var(--color-primary-dark);
   color: var(--color-on-primary);
   font-weight: 600;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   white-space: nowrap;
 }
 
@@ -111,7 +113,7 @@
 /* Badges using responsive.css tokens */
 .badge {
   display: inline-block;
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-full);
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -151,8 +153,8 @@
     background: var(--color-bg);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    margin-bottom: var(--space-3);
-    padding: var(--space-3);
+    margin-bottom: var(--space-2);
+    padding: var(--space-2);
     box-shadow: var(--shadow-sm);
   }
   
@@ -160,9 +162,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-2) 0;
-    border-bottom: 1px solid var(--color-border);
-    border: none;
+    padding: var(--space-1) 0;
+    border-bottom: 1px solid var(--color-border-light);
+    font-size: var(--fs-sm);
   }
   
   .table-responsive td:last-child {
@@ -172,8 +174,8 @@
   .table-responsive td::before {
     content: attr(data-label);
     font-weight: 600;
-    color: var(--color-text-muted);
-    font-size: var(--fs-sm);
+    color: var(--color-text-secondary);
+    font-size: var(--fs-xs);
   }
   
   .form-grid {
@@ -186,5 +188,10 @@
   
   .form-actions .btn {
     width: 100%;
+  }
+  
+  .form-control {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--fs-sm);
   }
 }

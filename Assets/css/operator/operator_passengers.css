@@ -1,43 +1,44 @@
 /* Operator Passengers — page-specific overrides using responsive.css tokens */
 
 .page-header {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-5);
 }
 
 .page-header h1 {
-  margin: 0 0 var(--space-2);
-  font-size: var(--fs-2xl);
-  font-weight: 700;
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-xl);
+  font-weight: 600;
   color: var(--color-primary-dark);
 }
 
 .page-header p {
   margin: 0;
   color: var(--color-text-muted);
+  font-size: var(--fs-sm);
 }
 
 /* Stats Cards */
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--space-4);
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-4);
 }
 
 .card {
   /* Uses .card from responsive.css */
-  padding: var(--space-5);
+  padding: var(--space-4);
 }
 
 .card h3 {
-  margin: 0 0 var(--space-2);
-  font-size: var(--fs-sm);
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--color-text-muted);
 }
 
 .card .number {
-  font-size: var(--fs-4xl);
+  font-size: var(--fs-3xl);
   font-weight: 700;
   color: var(--color-primary);
   line-height: 1;
@@ -54,20 +55,22 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
 }
 
 .filter-btn {
   display: inline-block;
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-1) var(--space-3);
   background: var(--color-primary-light);
   color: var(--color-primary-dark);
   border-radius: var(--radius-full);
   text-decoration: none;
   font-weight: 600;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   transition: all var(--transition-fast);
-  min-height: 44px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .filter-btn:hover {
@@ -84,19 +87,21 @@
 .search-box {
   display: flex;
   gap: var(--space-2);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
   flex-wrap: wrap;
 }
 
 .search-box .form-control {
   flex: 1;
-  min-width: 250px;
+  min-width: 200px;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--fs-sm);
 }
 
 /* Route badge */
 .route-badge {
   display: inline-block;
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-1) var(--space-2);
   background: var(--color-primary);
   color: var(--color-on-primary);
   border-radius: var(--radius-full);
@@ -107,7 +112,7 @@
 /* Status badge */
 .status-badge {
   display: inline-block;
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-full);
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -142,7 +147,7 @@
   font-weight: 600;
   letter-spacing: 0.5px;
   font-family: var(--font-mono);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
 }
 
 /* Table responsive */
@@ -160,7 +165,7 @@
 
 .table-responsive th,
 .table-responsive td {
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   text-align: left;
   border-bottom: 1px solid var(--color-border);
 }
@@ -169,7 +174,7 @@
   background: var(--color-primary-dark);
   color: var(--color-on-primary);
   font-weight: 600;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   white-space: nowrap;
 }
 
@@ -186,6 +191,15 @@
 @media (max-width: 768px) {
   .cards {
     grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+  
+  .card {
+    padding: var(--space-3);
+  }
+  
+  .card .number {
+    font-size: var(--fs-2xl);
   }
   
   .table-responsive {
@@ -209,8 +223,8 @@
     background: var(--color-bg);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    margin-bottom: var(--space-3);
-    padding: var(--space-3);
+    margin-bottom: var(--space-2);
+    padding: var(--space-2);
     box-shadow: var(--shadow-sm);
   }
   
@@ -218,9 +232,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-2) 0;
-    border-bottom: 1px solid var(--color-border);
-    border: none;
+    padding: var(--space-1) 0;
+    border-bottom: 1px solid var(--color-border-light);
+    font-size: var(--fs-sm);
   }
   
   .table-responsive td:last-child {
@@ -230,8 +244,8 @@
   .table-responsive td::before {
     content: attr(data-label);
     font-weight: 600;
-    color: var(--color-text-muted);
-    font-size: var(--fs-sm);
+    color: var(--color-text-secondary);
+    font-size: var(--fs-xs);
   }
   
   .search-box {
@@ -247,11 +261,11 @@
   }
   
   .filters {
-    width: 100%;
+    justify-content: center;
   }
   
   .filter-btn {
-    flex: 1;
-    text-align: center;
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--fs-xs);
   }
 }

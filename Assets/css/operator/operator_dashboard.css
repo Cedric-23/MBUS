@@ -2,27 +2,27 @@
 
 .welcome {
   /* Uses .card from responsive.css + these overrides */
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-5);
 }
 
 .welcome h2 {
-  margin: 0 0 var(--space-2);
-  font-size: var(--fs-2xl);
-  font-weight: 700;
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-xl);
+  font-weight: 600;
   color: var(--color-primary-dark);
 }
 
 .welcome p {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: var(--fs-base);
+  font-size: var(--fs-sm);
 }
 
 /* Cards grid */
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: var(--space-6);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
 }
 
 .card-link {
@@ -35,59 +35,59 @@
 }
 
 .card-link:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .card {
   /* Uses .card from responsive.css + these overrides */
-  padding: var(--space-6);
-  min-height: 160px;
+  padding: var(--space-4);
+  min-height: 140px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 }
 
 .card h3 {
-  margin: 0 0 var(--space-3);
-  font-size: var(--fs-base);
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--color-primary-dark);
 }
 
 .card-number {
-  font-size: var(--fs-4xl);
+  font-size: var(--fs-3xl);
   font-weight: 700;
   color: var(--color-primary);
   line-height: 1;
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-2);
 }
 
 .card p {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
 }
 
 @media (max-width: 768px) {
   .welcome {
-    padding: var(--space-4);
+    padding: var(--space-3);
   }
-  
+
   .welcome h2 {
-    font-size: var(--fs-xl);
+    font-size: var(--fs-lg);
   }
-  
+
   .cards {
     grid-template-columns: 1fr;
     gap: var(--space-3);
   }
-  
+
   .card {
-    padding: var(--space-4);
+    padding: var(--space-3);
   }
-  
+
   .card-number {
-    font-size: var(--fs-3xl);
+    font-size: var(--fs-2xl);
   }
 }

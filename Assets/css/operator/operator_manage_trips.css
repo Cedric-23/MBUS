@@ -1,19 +1,20 @@
 /* Operator Manage Trips — page-specific overrides using responsive.css tokens */
 
 .page-header {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-5);
 }
 
 .page-header h1 {
-  margin: 0 0 var(--space-2);
-  font-size: var(--fs-2xl);
-  font-weight: 700;
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-xl);
+  font-weight: 600;
   color: var(--color-primary-dark);
 }
 
 .page-header p {
   margin: 0;
   color: var(--color-text-muted);
+  font-size: var(--fs-sm);
 }
 
 .card {
@@ -25,20 +26,22 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
 }
 
 .filter-btn {
   display: inline-block;
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-1) var(--space-3);
   background: var(--color-primary-light);
   color: var(--color-primary-dark);
   border-radius: var(--radius-full);
   text-decoration: none;
   font-weight: 600;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   transition: all var(--transition-fast);
-  min-height: 44px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .filter-btn:hover {
@@ -54,7 +57,7 @@
 /* Route badge */
 .route-badge {
   display: inline-block;
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-1) var(--space-2);
   background: var(--color-primary);
   color: var(--color-on-primary);
   border-radius: var(--radius-full);
@@ -65,7 +68,7 @@
 /* Status badge */
 .status-badge {
   display: inline-block;
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-full);
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -106,18 +109,18 @@
 }
 
 .status-select {
-  min-width: 140px;
-  padding: var(--space-2) var(--space-3);
+  min-width: 130px;
+  padding: var(--space-1) var(--space-2);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
-  font-size: var(--fs-sm);
-  min-height: 40px;
+  font-size: var(--fs-xs);
+  min-height: 38px;
 }
 
 .update-btn, .view-btn {
-  min-height: 40px;
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--fs-sm);
+  min-height: 38px;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--fs-xs);
 }
 
 /* Manifest */
@@ -130,16 +133,16 @@
 .manifest-wrapper {
   background: var(--color-primary-light);
   border: 2px solid var(--color-primary-lighter);
-  border-radius: var(--radius-xl);
-  padding: var(--space-5);
-  margin: var(--space-4) var(--space-3) var(--space-6);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin: var(--space-3) var(--space-2) var(--space-4);
   box-shadow: var(--shadow-sm);
 }
 
 .manifest-title {
-  margin: 0 0 var(--space-4);
-  font-size: var(--fs-xl);
-  font-weight: 700;
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-lg);
+  font-weight: 600;
   color: var(--color-primary-dark);
   text-align: center;
 }
@@ -147,20 +150,20 @@
 .manifest-table {
   width: 100%;
   border-collapse: separate;
-  border-spacing: 0 var(--space-3);
+  border-spacing: 0 var(--space-2);
 }
 
 .manifest-table th {
   background: var(--color-primary-dark);
   color: var(--color-on-primary);
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--fs-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-xs);
   font-weight: 600;
 }
 
 .manifest-table td {
   background: var(--color-bg);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   text-align: center;
   border: none;
   box-shadow: var(--shadow-sm);
@@ -178,7 +181,7 @@
 /* Badges */
 .badge {
   display: inline-block;
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-full);
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -195,26 +198,26 @@
 }
 
 .boarded-badge, .paid-badge {
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-1) var(--space-2);
 }
 
 .board-btn {
-  min-height: 40px;
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--fs-sm);
+  min-height: 38px;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--fs-xs);
 }
 
 /* Divider */
 .trip-divider {
   height: 2px;
   background: var(--color-border);
-  margin: var(--space-3) 0;
+  margin: var(--space-2) 0;
   border-radius: var(--radius-full);
 }
 
 /* Divider row */
 .divider-row td {
-  padding: var(--space-2) 0 !important;
+  padding: var(--space-1) 0 !important;
   border: none !important;
 }
 
@@ -233,7 +236,7 @@
 
 .table-responsive th,
 .table-responsive td {
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   text-align: left;
   border-bottom: 1px solid var(--color-border);
 }
@@ -242,7 +245,7 @@
   background: var(--color-primary-dark);
   color: var(--color-on-primary);
   font-weight: 600;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   white-space: nowrap;
 }
 
@@ -257,10 +260,10 @@
 
 /* Alert */
 .alert {
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   font-size: var(--fs-sm);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -295,18 +298,17 @@
     background: var(--color-bg);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    margin-bottom: var(--space-3);
-    padding: var(--space-3);
-    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--space-2);
+    padding: var(--space-2);
   }
   
   .table-responsive td {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-2) 0;
-    border-bottom: 1px solid var(--color-border);
-    border: none;
+    padding: var(--space-1) 0;
+    border-bottom: 1px solid var(--color-border-light);
+    font-size: var(--fs-sm);
   }
   
   .table-responsive td:last-child {
@@ -316,26 +318,8 @@
   .table-responsive td::before {
     content: attr(data-label);
     font-weight: 600;
-    color: var(--color-text-muted);
-    font-size: var(--fs-sm);
-  }
-  
-  .manifest-row {
-    display: none !important;
-  }
-  
-  .manifest-row:not([style*="display: none"]) {
-    display: block !important;
-  }
-  
-  .manifest-row td[colspan] {
-    display: block;
-    padding: 0 !important;
-  }
-  
-  .manifest-wrapper {
-    margin: var(--space-2) 0;
-    padding: var(--space-3);
+    color: var(--color-text-secondary);
+    font-size: var(--fs-xs);
   }
   
   .action-form {
@@ -349,11 +333,33 @@
   
   .update-btn, .view-btn {
     width: 100%;
+    justify-content: center;
+  }
+  
+  .manifest-wrapper {
+    margin: var(--space-2) 0 var(--space-3);
+    padding: var(--space-3);
+  }
+  
+  .manifest-title {
+    font-size: var(--fs-md);
+  }
+  
+  .manifest-table th,
+  .manifest-table td {
+    padding: var(--space-2) var(--space-2);
+    font-size: var(--fs-xs);
   }
   
   .filters {
-    width: 100%;
+    justify-content: center;
   }
+  
+  .filter-btn {
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--fs-xs);
+  }
+}
   
   .filter-btn {
     flex: 1;

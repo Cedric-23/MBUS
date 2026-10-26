@@ -3,7 +3,7 @@
 .profile-container {
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--space-6);
+  gap: var(--space-5);
   max-width: 800px;
   margin: 0 auto;
 }
@@ -16,17 +16,17 @@
 
 .profile-picture-section {
   text-align: center;
-  padding: var(--space-6);
+  padding: var(--space-5);
 }
 
 .profile-picture-container {
-  width: 140px;
-  height: 140px;
-  margin: 0 auto var(--space-4);
+  width: 120px;
+  height: 120px;
+  margin: 0 auto var(--space-3);
   border-radius: 50%;
   overflow: hidden;
-  border: 4px solid var(--color-primary);
-  box-shadow: var(--shadow-lg);
+  border: 3px solid var(--color-primary);
+  box-shadow: var(--shadow-md);
   background: var(--color-bg-tertiary);
 }
 
@@ -40,7 +40,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .file-input-wrapper {
@@ -76,22 +76,22 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-4);
   color: var(--color-text);
-  font-size: var(--fs-lg);
+  font-size: var(--fs-md);
   font-weight: 600;
-  padding-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
   border-bottom: 2px solid var(--color-primary);
 }
 
 .section-title i {
   color: var(--color-primary);
-  font-size: var(--fs-xl);
+  font-size: var(--fs-lg);
 }
 
 .profile-info-section,
 .password-section {
-  padding: var(--space-6);
+  padding: var(--space-5);
 }
 
 .profile-form,
