@@ -278,4 +278,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<?php include "includes/operator_footer.php"; ?>
+<?php // include "includes/operator_footer.php"; ?>
