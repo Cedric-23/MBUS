@@ -161,9 +161,10 @@ if(isset($_POST['login'])){
                         </button>
         </form>
 
-        <div class="login-footer">
-            <p>Don't have an account? <a href="register.php">Register</a></p>
-        </div>
+                <div class="login-footer">
+                    <p><a href="forgot_password.php" class="forgot-link">Forgot Password?</a></p>
+                    <p>Don't have an account? <a href="register.php">Register</a></p>
+                </div>
     </div>
 
 </div>
