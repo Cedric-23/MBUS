@@ -86,16 +86,43 @@
   }
 }
 
-/* Mobile: menu-bottom is just the last item, no separate border */
+/* Mobile: single scrollable column, logout flows naturally */
 @media (max-width: 768px) {
+  .sidebar {
+    border-radius: 0;
+    width: 280px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .logo-container {
+    padding: var(--space-3) var(--space-4) var(--space-2);
+  }
+  
+  .logo {
+    max-width: 180px;
+  }
+  
+  .sidebar h2 {
+    margin: var(--space-2) 0;
+    padding: var(--space-2) 0;
+    font-size: var(--fs-md);
+  }
+  
   .menu-top {
-    flex: 0 1 auto;
-    overflow-y: visible;
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 var(--space-2);
+  }
+  
+  .menu-top a {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--fs-sm);
   }
   
   .menu-bottom {
-    margin-top: var(--space-3);
-    padding-top: var(--space-3);
+    margin-top: var(--space-5);
+    padding-top: var(--space-4);
     border-top: none;
     padding-left: var(--space-2);
     padding-right: var(--space-2);
@@ -121,30 +148,3 @@
 }
 
 /* Mobile adjustments handled by responsive.css .sidebar-open, .sidebar-overlay */
-@media (max-width: 768px) {
-  .sidebar {
-    border-radius: 0;
-    width: 280px;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  .logo-container {
-    padding: var(--space-3) var(--space-4) var(--space-2);
-  }
-  
-  .logo {
-    max-width: 180px;
-  }
-  
-  .sidebar h2 {
-    margin: var(--space-2) 0;
-    padding: var(--space-2) 0;
-    font-size: var(--fs-md);
-  }
-  
-  .menu-top a {
-    padding: var(--space-2) var(--space-3);
-    font-size: var(--fs-sm);
-  }
-}

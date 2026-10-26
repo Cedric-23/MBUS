@@ -158,8 +158,6 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
 </main>
 
 <script>
-let notificationDropdownOpen = false;
-
 // Toggle sidebar for mobile
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
@@ -168,12 +166,12 @@ function toggleSidebar() {
     
     const isOpen = sidebar.classList.toggle('open');
     overlay.classList.toggle('active');
+    document.body.classList.toggle('sidebar-open', isOpen);
     
     if (toggle) {
         toggle.setAttribute('aria-expanded', isOpen);
     }
     
-    // Trap focus when sidebar is open on mobile
     if (isOpen) {
         document.body.style.overflow = 'hidden';
         const firstLink = sidebar.querySelector('a, button');
