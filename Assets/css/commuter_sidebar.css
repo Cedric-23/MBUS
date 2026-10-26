@@ -216,8 +216,8 @@
 /* Mobile: menu-bottom is just the last item, no separate border/div */
 @media (max-width: 768px) {
   .menu-bottom {
-    margin-top: var(--space-3);
-    padding-top: var(--space-3);
+    margin-top: var(--space-5);
+    padding-top: var(--space-4);
     border-top: none;
   }
   
