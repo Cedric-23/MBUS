@@ -89,27 +89,13 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
 <a href="history.php"><i class="fa fa-history" aria-hidden="true"></i> History</a>
 <a href="profile.php"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
 <a href="verification.php"><i class="fa fa-id-card" aria-hidden="true"></i> Verification</a>
-            
-<!-- Notification Bell -->
-<div class="notification-container">
-    <button class="notification-bell" onclick="toggleNotifications()" aria-label="Notifications" aria-expanded="false" aria-controls="notificationDropdown">
-        <i class="fa fa-bell" aria-hidden="true"></i>
-        <span class="notification-badge" id="notificationBadge" aria-live="polite">0</span>
-    </button>
-    <div class="notification-dropdown" id="notificationDropdown" role="menu" aria-label="Notifications">
-        <div class="notification-dropdown-header">
-            Notifications
-        </div>
-        <div id="notificationList" role="list">
-            <div class="notification-empty">Loading notifications...</div>
-        </div>
-    </div>
-</div>
 </nav>
 
+<div class="menu-bottom">
 <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
 <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
 </a>
+</div>
 
 </aside>
 

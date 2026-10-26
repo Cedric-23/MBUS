@@ -242,9 +242,11 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
 <a href="verification.php"><i class="fa fa-id-card" aria-hidden="true"></i> Verification</a>
 </nav>
 
+<div class="menu-bottom">
 <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
 <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
 </a>
+</div>
 
 </aside>
 

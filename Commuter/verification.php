@@ -126,16 +126,18 @@ $verification_data = mbus_db_fetch_assoc($verification_query);
     <h2>Commuter</h2>
     
     <nav class="menu-top" aria-label="Commuter menu">
-            <a href="commuter_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
-            <a href="my_reservations.php"><i class="fa fa-ticket" aria-hidden="true"></i> My Reservations</a>
-            <a href="history.php"><i class="fa fa-history" aria-hidden="true"></i> History</a>
-            <a href="profile.php"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
-            <a href="verification.php" aria-current="page"><i class="fa fa-id-card" aria-hidden="true"></i> Verification</a>
-        </nav>
-    
-    <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
-        <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
-    </a>
+                <a href="commuter_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+                <a href="my_reservations.php"><i class="fa fa-ticket" aria-hidden="true"></i> My Reservations</a>
+                <a href="history.php"><i class="fa fa-history" aria-hidden="true"></i> History</a>
+                <a href="profile.php"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                <a href="verification.php" aria-current="page"><i class="fa fa-id-card" aria-hidden="true"></i> Verification</a>
+            </nav>
+
+            <div class="menu-bottom">
+                <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+                    <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
+                </a>
+            </div>
 </aside>
 
 <main class="main" role="main">

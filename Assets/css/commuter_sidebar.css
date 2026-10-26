@@ -77,6 +77,8 @@
     border-top-right-radius: var(--radius-xl);
     border-bottom-right-radius: var(--radius-xl);
     box-shadow: var(--shadow-2xl);
+    display: flex;
+    flex-direction: column;
   }
   
   .sidebar.open {
@@ -100,6 +102,18 @@
   .has-sidebar .main {
     margin-left: 0 !important;
     padding: var(--space-16) var(--space-4) var(--space-6);
+  }
+  
+  .menu-top {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-bottom: var(--space-4);
+  }
+  
+  .menu-bottom {
+    margin-top: 0;
+    padding-top: var(--space-3);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
   }
 }
 
@@ -168,15 +182,25 @@
 /* PUSH LOGOUT */
 .menu-top {
   flex-grow: 1;
+  overflow-y: auto;
+  padding-right: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.menu-bottom {
+  margin-top: auto;
+  padding-top: var(--space-4);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .logout-btn {
-  margin-top: auto;
   text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  margin: 0;
 }
 
 /* NOTIFICATION BELL */
