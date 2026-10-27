@@ -1,0 +1,54 @@
+@font-face {
+    font-family: 'Inter-Reg';
+    src: url('/Assets/fonts/Inter_18pt-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Inter-Med';
+    src: url('/Assets/fonts/Inter_18pt-Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Inter-SM';
+    src: url('/Assets/fonts/Inter_18pt-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Inter-Bold';
+    src: url('/Assets/fonts/Inter_18pt-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+
+@font-face {
+    font-family: 'Sans-Reg';
+    src: url('/Assets/fonts/DMSans-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Sans-Bold';
+    src: url('/Assets/fonts/DMSans_18pt-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+
+body {
+    font-family: 'Inter', sans-serif;
+}
+
