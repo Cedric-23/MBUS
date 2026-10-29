@@ -4,12 +4,12 @@ session_start();
 
 /* CHECK ADMIN */
 if(
-!isset($_SESSION['user_type'])
-||
-strtolower($_SESSION['user_type']) != "admin"
+    !isset($_SESSION['user_type'])
+    ||
+    strtolower($_SESSION['user_type']) != "admin"
 ){
-header("Location: ../login.php");
-exit();
+    header("Location: ../login.php");
+    exit();
 }
 
 include "../config/db_connect.php";
@@ -32,6 +32,17 @@ VALUES (?, ?, ?)
 ", [$bus_number, $bus_type, $capacity]);
 
         $success = "Bus added successfully";
+    }
+}
+
+/* DELETE BUS */
+if(isset($_POST['delete_bus'])){
+    if(!csrf_validate_token()){
+        $error = "Security validation failed. Please try again.";
+    } else {
+        $bus_id = (int)$_POST['bus_id'];
+        mbus_db_prepare($conn, "DELETE FROM buses WHERE bus_id = ?", [$bus_id]);
+        $success = "Bus deleted successfully";
     }
 }
 ?>
@@ -68,19 +79,19 @@ VALUES (?, ?, ?)
     <h2>Admin</h2>
 
     <nav class="menu-top" aria-label="Admin menu">
-            <a href="admin_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
-            <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
-            <a href="manage_buses.php" aria-current="page"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
-            <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
-            <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
-        </nav>
+        <a href="admin_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+        <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
+        <a href="manage_buses.php" aria-current="page"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
+        <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
+        <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
+    </nav>
 
-        <div class="menu-bottom">
-            <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
-                <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
-            </a>
-        </div>
-    </aside>
+    <div class="menu-bottom">
+        <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+            <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
+        </a>
+    </div>
+</aside>
 
 <main class="main" role="main">
 
@@ -88,17 +99,16 @@ VALUES (?, ?, ?)
     <h1>Manage Buses</h1>
 </header>
 
-<!-- ADD BUS -->
-<section class="card">
-    <h2>Add New Bus</h2>
+<?php if(isset($success)): ?>
+<div class="alert alert-success" role="alert"><?php echo $success; ?></div>
+<?php endif; ?>
+<?php if(isset($error)): ?>
+<div class="alert alert-error" role="alert"><?php echo $error; ?></div>
+<?php endif; ?>
 
-    <?php if(isset($success)): ?>
-        <div class="alert alert-success" role="alert"><?php echo $success; ?></div>
-    <?php endif; ?>
-    
-    <?php if(isset($error)): ?>
-        <div class="alert alert-error" role="alert"><?php echo $error; ?></div>
-    <?php endif; ?>
+<!-- ADD BUS -->
+<section class="card" style="margin-bottom: var(--space-6);">
+    <h2>Add New Bus</h2>
 
     <form method="POST" class="form-section">
         <?php csrf_field(); ?>
@@ -140,12 +150,13 @@ VALUES (?, ?, ?)
     <h2>Bus List</h2>
 
     <div class="table-responsive">
-        <table>
+        <table class="buses-table">
             <thead>
                 <tr>
-                    <th>Bus Number</th>
-                    <th>Bus Type</th>
-                    <th>Capacity</th>
+                    <th scope="col">Bus Number</th>
+                    <th scope="col">Bus Type</th>
+                    <th scope="col">Capacity</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -159,13 +170,26 @@ VALUES (?, ?, ?)
                     $type_class = strtolower($row['bus_type']) == 'aircon' ? 'badge-primary' : 'badge-success';
                 ?>
                 <tr>
-                    <td data-label="Bus Number"><?php echo htmlspecialchars($row['bus_number']); ?></td>
-                    <td data-label="Bus Type">
-                        <span class="badge <?php echo $type_class; ?>">
-                            <?php echo htmlspecialchars($row['bus_type']); ?>
-                        </span>
-                    </td>
-                    <td data-label="Capacity"><?php echo htmlspecialchars($row['capacity']); ?></td>
+                    <form method="POST" class="bus-form">
+                        <?php csrf_field(); ?>
+                        <input type="hidden" name="bus_id" value="<?php echo $row['bus_id']; ?>">
+                        
+                        <td data-label="Bus Number"><?php echo htmlspecialchars($row['bus_number']); ?></td>
+                        <td data-label="Bus Type">
+                            <span class="badge <?php echo $type_class; ?>">
+                                <?php echo htmlspecialchars($row['bus_type']); ?>
+                            </span>
+                        </td>
+                        <td data-label="Capacity"><?php echo htmlspecialchars($row['capacity']); ?></td>
+                        <td data-label="Actions">
+                            <div class="action-buttons">
+                                <button type="submit" name="delete_bus" class="btn btn-sm btn-danger delete-btn" 
+                                    onclick="return confirm('Delete this bus?')">
+                                    <i class="fa fa-trash" aria-hidden="true"></i> Delete
+                                </button>
+                            </div>
+                        </td>
+                    </form>
                 </tr>
                 <?php } ?>
             </tbody>
@@ -189,7 +213,6 @@ function toggleSidebar() {
         toggle.setAttribute('aria-expanded', isOpen);
     }
     
-    // Trap focus when sidebar is open on mobile
     if (isOpen) {
         document.body.style.overflow = 'hidden';
         const firstLink = sidebar.querySelector('a, button');

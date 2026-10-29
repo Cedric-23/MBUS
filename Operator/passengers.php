@@ -119,10 +119,10 @@ JOIN routes rt ON s.route_id = rt.route_id
 JOIN buses b ON s.bus_id = b.bus_id
 JOIN operator_bus_assignments oba ON s.bus_id = oba.bus_id
 $where
-ORDER BY s.departure_time ASC, r.seat_number ASC
+ORDER BY r.created_at DESC
 ";
 
-$query = mbus_db_prepare($conn, $passenger_sql, $params);
+$passengers = mbus_db_prepare($conn, $passenger_sql, $params);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -136,6 +136,8 @@ $query = mbus_db_prepare($conn, $passenger_sql, $params);
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/operator/operator_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/operator/operator_passengers.css">
+    <link rel="icon" href="../Assets/mbus_icon.png" type="image/png">
+    <link rel="shortcut icon" href="../Assets/mbus_icon.png">
 </head>
 
 <body class="has-sidebar">
@@ -156,117 +158,126 @@ $query = mbus_db_prepare($conn, $passenger_sql, $params);
     <h2>Operator</h2>
 
     <nav class="menu-top" aria-label="Operator menu">
-            <a href="operator_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
-            <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
-            <a href="passengers.php" aria-current="page"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
-        </nav>
+        <a href="operator_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+        <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
+        <a href="passengers.php" aria-current="page"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
+    </nav>
 
-        <div class="menu-bottom">
-            <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
-                <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
-            </a>
-        </div>
-    </aside>
+    <div class="menu-bottom">
+        <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+            <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
+        </a>
+    </div>
+</aside>
 
 <main class="main" role="main">
 
 <header class="page-header">
-    <div class="page-header-left">
-        <h1>Passenger List</h1>
-        <p>Monitor all passengers and trip reservations</p>
-    </div>
+    <h1>Passenger List</h1>
 </header>
 
-<!-- STATS CARDS -->
-<div class="cards">
-    <div class="card">
-        <h3>Total Passengers</h3>
-        <div class="number"><?php echo $total_passengers['total']; ?></div>
-    </div>
-    <div class="card">
-        <h3>Paid Passengers</h3>
-        <div class="number"><?php echo $paid_passengers['total']; ?></div>
-    </div>
-    <div class="card">
-        <h3>Boarded Passengers</h3>
-        <div class="number"><?php echo $boarded_passengers['total']; ?></div>
-    </div>
-    <div class="card">
-        <h3>Trips Today</h3>
-        <div class="number"><?php echo $today_trips['total']; ?></div>
-    </div>
+<!-- Filter Tabs -->
+<nav class="tabs" aria-label="Passenger filters">
+    <a href="?filter=all" class="tab <?php echo $filter==='all' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='all' ? 'page' : 'false'; ?>">All</a>
+    <a href="?filter=today" class="tab <?php echo $filter==='today' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='today' ? 'page' : 'false'; ?>">Today</a>
+    <a href="?filter=tomorrow" class="tab <?php echo $filter==='tomorrow' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='tomorrow' ? 'page' : 'false'; ?>">Tomorrow</a>
+    <a href="?filter=this_week" class="tab <?php echo $filter==='this_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='this_week' ? 'page' : 'false'; ?>">This Week</a>
+    <a href="?filter=next_week" class="tab <?php echo $filter==='next_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='next_week' ? 'page' : 'false'; ?>">Next Week</a>
+</nav>
+
+<!-- Search -->
+<div class="search-wrapper">
+    <form method="GET" class="search-form" role="search">
+        <input type="hidden" name="filter" value="<?php echo htmlspecialchars($filter); ?>">
+        <div class="search-input-group">
+            <i class="fa fa-search search-icon" aria-hidden="true"></i>
+            <input type="search" name="search" class="form-control search-input" placeholder="Search by name, ticket code, or seat..." value="<?php echo htmlspecialchars($search); ?>" aria-label="Search passengers">
+            <?php if($search !== ''): ?>
+            <a href="?filter=<?php echo htmlspecialchars($filter); ?>" class="search-clear" aria-label="Clear search">
+                <i class="fa fa-times" aria-hidden="true"></i>
+            </a>
+            <?php endif; ?>
+        </div>
+    </form>
 </div>
 
-<!-- TABLE CARD -->
-<section class="card table-card">
-
-<div class="filters" role="group" aria-label="Filter passengers">
-    <a href="?filter=all" class="filter-btn <?php echo $filter==='all' ? 'active-filter' : ''; ?>">All</a>
-    <a href="?filter=today" class="filter-btn <?php echo $filter==='today' ? 'active-filter' : ''; ?>">Today</a>
-    <a href="?filter=tomorrow" class="filter-btn <?php echo $filter==='tomorrow' ? 'active-filter' : ''; ?>">Tomorrow</a>
-    <a href="?filter=this_week" class="filter-btn <?php echo $filter==='this_week' ? 'active-filter' : ''; ?>">This Week</a>
-    <a href="?filter=next_week" class="filter-btn <?php echo $filter==='next_week' ? 'active-filter' : ''; ?>">Next Week</a>
-</div>
-
-<form method="GET" class="search-box">
-    <input type="hidden" name="filter" value="<?php echo htmlspecialchars($filter); ?>">
-    <input type="text" name="search" class="form-control" placeholder="Search passenger, ticket code, seat..." value="<?php echo htmlspecialchars($search); ?>">
-    <button type="submit" class="btn btn-primary">Search</button>
-</form>
+<!-- Stats Cards -->
+<section class="cards" aria-labelledby="stats-heading">
+    <h2 id="stats-heading" class="visually-hidden">Passenger Statistics</h2>
+    
+    <article class="card card-animated">
+        <h3 class="day"><?php echo $total_passengers['total']; ?></h3>
+        <p class="date">Total Passengers</p>
+    </article>
+    
+    <article class="card card-animated">
+        <h3 class="day"><?php echo $paid_passengers['total']; ?></h3>
+        <p class="date">Paid</p>
+    </article>
+    
+    <article class="card card-animated">
+        <h3 class="day"><?php echo $boarded_passengers['total']; ?></h3>
+        <p class="date">Boarded</p>
+    </article>
+    
+    <article class="card card-animated">
+        <h3 class="day"><?php echo $today_trips['total']; ?></h3>
+        <p class="date">Trips Today</p>
+    </article>
+</section>
 
 <div class="table-responsive passengers-table-responsive">
     <table class="passengers-table">
         <thead>
             <tr>
-                <th>Passenger</th>
-                <th>Bus</th>
-                <th>Route</th>
-                <th>Seat</th>
-                <th>Pickup</th>
-                <th>Destination</th>
-                <th>Ticket Code</th>
-                <th>Departure</th>
-                <th>Status</th>
+                <th scope="col">Passenger</th>
+                <th scope="col">Bus</th>
+                <th scope="col">Route</th>
+                <th scope="col">Departure</th>
+                <th scope="col">Seat</th>
+                <th scope="col">Ticket Code</th>
+                <th scope="col">Status</th>
             </tr>
         </thead>
         <tbody>
-            <?php
-            if(mbus_db_num_rows($query) > 0){
-                while($row = mbus_db_fetch_assoc($query)){
-                    $status_class = strtolower($row['status']);
+            <?php 
+            mbus_db_data_seek($passengers, 0);
+            while($row=mbus_db_fetch_assoc($passengers)){ 
             ?>
             <tr>
                 <td data-label="Passenger" class="passenger-name"><?php echo htmlspecialchars($row['full_name']); ?></td>
-                <td data-label="Bus"><?php echo htmlspecialchars($row['bus_number']); ?></td>
+                <td data-label="Bus">
+                    <span class="bus-number"><?php echo htmlspecialchars($row['bus_number']); ?></span>
+                </td>
                 <td data-label="Route">
                     <span class="route-badge">
-                        <?php echo htmlspecialchars($row['origin']); ?> &rarr; <?php echo htmlspecialchars($row['destination']); ?>
+                        <i class="fa fa-map-marker-alt" aria-hidden="true"></i>
+                        <span><?php echo htmlspecialchars($row['origin']); ?> → <?php echo htmlspecialchars($row['destination']); ?></span>
                     </span>
                 </td>
+                <td data-label="Departure"><?php echo date('M j, Y g:i A', strtotime($row['departure_time'])); ?></td>
                 <td data-label="Seat"><?php echo $row['seat_number']; ?></td>
-                <td data-label="Pickup"><?php echo htmlspecialchars($row['pickup_location']); ?></td>
-                <td data-label="Destination"><?php echo htmlspecialchars($row['destination']); ?></td>
-                <td data-label="Ticket Code" class="ticket"><?php echo htmlspecialchars($row['ticket_code']); ?></td>
-                <td data-label="Departure"><?php echo date('M j, g:i A', strtotime($row['departure_time'])); ?></td>
+                <td data-label="Ticket Code" class="ticket-code"><?php echo htmlspecialchars($row['ticket_code']); ?></td>
                 <td data-label="Status">
-                    <span class="status-badge status-<?php echo $status_class; ?>">
-                        <?php echo htmlspecialchars($row['status']); ?>
-                    </span>
+                    <?php if($row['status']=="Boarded"){ ?>
+                    <span class="status-badge boarded">Boarded</span>
+                    <?php } else { ?>
+                    <span class="status-badge paid">Paid</span>
+                    <?php } ?>
                 </td>
-            </tr>
-            <?php
-                }
-            }else{
-            ?>
-            <tr>
-                <td colspan="9" data-label="No passengers found">No passengers found.</td>
             </tr>
             <?php } ?>
         </tbody>
     </table>
 </div>
 
-</section>
+<?php if(mbus_db_num_rows($passengers) === 0): ?>
+<div class="empty-state">
+    <i class="fa fa-users" aria-hidden="true"></i>
+    <h3>No passengers found</h3>
+    <p>No passenger records match your current filters.</p>
+</div>
+<?php endif; ?>
 
 </main>
 

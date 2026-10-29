@@ -1,4 +1,5 @@
 <?php
+
 session_start();
 
 if(!isset($_SESSION['user_type']) || strtolower($_SESSION['user_type']) != 'admin'){
@@ -100,13 +101,13 @@ if(isset($_POST['add_schedule'])){
 </header>
 
 <?php if(isset($success)): ?>
-    <div class="alert alert-success" role="alert"><?php echo $success; ?></div>
+<div class="alert alert-success" role="alert"><?php echo $success; ?></div>
 <?php endif; ?>
 <?php if(isset($error)): ?>
-    <div class="alert alert-error" role="alert"><?php echo $error; ?></div>
+<div class="alert alert-error" role="alert"><?php echo $error; ?></div>
 <?php endif; ?>
 
-<section class="card" style="max-width: 600px;">
+<section class="card" style="max-width: 600px; margin: 0 auto;">
     <h2 style="text-align: center; margin-bottom: var(--space-6); color: var(--color-primary-dark);">Add Schedule</h2>
     
     <form method="POST" class="form-section">

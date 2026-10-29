@@ -4,12 +4,12 @@ session_start();
 
 /* CHECK ADMIN */
 if(
-!isset($_SESSION['user_type'])
-||
-strtolower($_SESSION['user_type']) != "admin"
+    !isset($_SESSION['user_type'])
+    ||
+    strtolower($_SESSION['user_type']) != "admin"
 ){
-header("Location: ../login.php");
-exit();
+    header("Location: ../login.php");
+    exit();
 }
 
 include "../config/db_connect.php";
@@ -52,6 +52,17 @@ VALUES
         }
     }
 }
+
+/* DELETE OPERATOR */
+if(isset($_POST['delete_operator'])){
+    if(!csrf_validate_token()){
+        $error = "Security validation failed. Please try again.";
+    } else {
+        $user_id = (int)$_POST['user_id'];
+        mbus_db_prepare($conn, "DELETE FROM users WHERE user_id = ? AND LOWER(user_type) = 'operator'", [$user_id]);
+        $success = "Operator deleted successfully";
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -86,19 +97,19 @@ VALUES
     <h2>Admin</h2>
 
     <nav class="menu-top" aria-label="Admin menu">
-            <a href="admin_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
-            <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
-            <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
-            <a href="manage_operators.php" aria-current="page"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
-            <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
-        </nav>
+        <a href="admin_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+        <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
+        <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
+        <a href="manage_operators.php" aria-current="page"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
+        <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
+    </nav>
 
-        <div class="menu-bottom">
-            <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
-                <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
-            </a>
-        </div>
-    </aside>
+    <div class="menu-bottom">
+        <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+            <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
+        </a>
+    </div>
+</aside>
 
 <main class="main" role="main">
 
@@ -107,14 +118,14 @@ VALUES
 </header>
 
 <?php if(isset($success)): ?>
-    <div class="alert alert-success" role="alert"><?php echo $success; ?></div>
+<div class="alert alert-success" role="alert"><?php echo $success; ?></div>
 <?php endif; ?>
 <?php if(isset($error)): ?>
-    <div class="alert alert-error" role="alert"><?php echo $error; ?></div>
+<div class="alert alert-error" role="alert"><?php echo $error; ?></div>
 <?php endif; ?>
 
 <!-- ADD OPERATOR -->
-<section class="card">
+<section class="card" style="margin-bottom: var(--space-6);">
     <h2>Create Operator Account</h2>
     <form method="POST" class="form-section">
         <?php csrf_field(); ?>
@@ -154,13 +165,14 @@ VALUES
     <h2>Operator List</h2>
 
     <div class="table-responsive">
-        <table>
+        <table class="operators-table">
             <thead>
                 <tr>
-                    <th>Full Name</th>
-                    <th>Email</th>
-                    <th>Phone Number</th>
-                    <th>Role</th>
+                    <th scope="col">Full Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Phone Number</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -174,12 +186,25 @@ VALUES
                 while($row = mbus_db_fetch_assoc($query)){
                 ?>
                 <tr>
-                    <td data-label="Full Name"><?php echo htmlspecialchars($row['full_name']); ?></td>
-                    <td data-label="Email"><?php echo htmlspecialchars($row['email']); ?></td>
-                    <td data-label="Phone Number"><?php echo htmlspecialchars($row['phone_number']); ?></td>
-                    <td data-label="Role">
-                        <span class="badge badge-primary">Operator</span>
-                    </td>
+                    <form method="POST" class="operator-form">
+                        <?php csrf_field(); ?>
+                        <input type="hidden" name="user_id" value="<?php echo $row['user_id']; ?>">
+                        
+                        <td data-label="Full Name"><?php echo htmlspecialchars($row['full_name']); ?></td>
+                        <td data-label="Email"><?php echo htmlspecialchars($row['email']); ?></td>
+                        <td data-label="Phone Number"><?php echo htmlspecialchars($row['phone_number']); ?></td>
+                        <td data-label="Role">
+                            <span class="badge badge-primary">Operator</span>
+                        </td>
+                        <td data-label="Actions">
+                            <div class="action-buttons">
+                                <button type="submit" name="delete_operator" class="btn btn-sm btn-danger delete-btn" 
+                                    onclick="return confirm('Delete this operator?')">
+                                    <i class="fa fa-trash" aria-hidden="true"></i> Delete
+                                </button>
+                            </div>
+                        </td>
+                    </form>
                 </tr>
                 <?php } ?>
             </tbody>

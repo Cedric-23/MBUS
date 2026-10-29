@@ -127,19 +127,19 @@ ORDER BY departure_time ASC
     <h2>Admin</h2>
 
     <nav class="menu-top" aria-label="Admin menu">
-            <a href="admin_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
-            <a href="manage_schedules.php" aria-current="page"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
-            <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
-            <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
-            <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
-        </nav>
+        <a href="admin_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+        <a href="manage_schedules.php" aria-current="page"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
+        <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
+        <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
+        <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
+    </nav>
 
-        <div class="menu-bottom">
-            <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
-                <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
-            </a>
-        </div>
-    </aside>
+    <div class="menu-bottom">
+        <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+            <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
+        </a>
+    </div>
+</aside>
 
 <main class="main" role="main">
 
@@ -148,14 +148,31 @@ ORDER BY departure_time ASC
 </header>
 
 <?php if(isset($success)): ?>
-    <div class="alert alert-success" role="alert"><?php echo $success; ?></div>
+<div class="alert alert-success" role="alert"><?php echo $success; ?></div>
 <?php endif; ?>
 <?php if(isset($error)): ?>
-    <div class="alert alert-error" role="alert"><?php echo $error; ?></div>
+<div class="alert alert-error" role="alert"><?php echo $error; ?></div>
 <?php endif; ?>
 
+<!-- View Toggle -->
+<div class="view-toggle" role="group" aria-label="View options">
+    <button class="btn btn-secondary toggle-btn active" onclick="showListView()" aria-pressed="true">
+        <i class="fa fa-list" aria-hidden="true"></i> List View
+    </button>
+    <button class="btn btn-secondary toggle-btn" onclick="showCalendarView()" aria-pressed="false">
+        <i class="fa fa-calendar" aria-hidden="true"></i> Calendar View
+    </button>
+</div>
+
+<!-- Filter Tabs -->
+<nav class="tabs" aria-label="Schedule filters">
+    <a href="?filter=all" class="tab <?php echo (!isset($_GET['filter']) || $_GET['filter']==='all') ? 'active' : ''; ?>" aria-current="<?php echo (!isset($_GET['filter']) || $_GET['filter']==='all') ? 'page' : 'false'; ?>">All</a>
+    <a href="?filter=morong" class="tab <?php echo (isset($_GET['filter']) && $_GET['filter']==='morong') ? 'active' : ''; ?>" aria-current="<?php echo (isset($_GET['filter']) && $_GET['filter']==='morong') ? 'page' : 'false'; ?>">Morong → SBMA</a>
+    <a href="?filter=sbma" class="tab <?php echo (isset($_GET['filter']) && $_GET['filter']==='sbma') ? 'active' : ''; ?>" aria-current="<?php echo (isset($_GET['filter']) && $_GET['filter']==='sbma') ? 'page' : 'false'; ?>">SBMA → Morong</a>
+</nav>
+
 <!-- ADD SCHEDULE -->
-<section class="card">
+<section class="card" style="margin-bottom: var(--space-6);">
     <h2>Add Schedule</h2>
     <form method="POST" class="form-section">
         <?php csrf_field(); ?>
@@ -218,37 +235,28 @@ ORDER BY departure_time ASC
 
 <!-- SCHEDULE LIST -->
 <section class="card">
-    <div class="top-actions">
-        <h2>Schedule List</h2>
-        <button type="button" class="edit-mode-btn btn btn-secondary" onclick="toggleEditMode()">
-            <i class="fa fa-edit" aria-hidden="true"></i> Edit Mode
-        </button>
-    </div>
-
-    <div class="filter-buttons" role="group" aria-label="Filter schedules">
-        <button type="button" class="filter-btn active-filter" onclick="filterSchedules('all', this)">All</button>
-        <button type="button" class="filter-btn" onclick="filterSchedules('morong', this)">Morong → SBMA</button>
-        <button type="button" class="filter-btn" onclick="filterSchedules('sbma', this)">SBMA → Morong</button>
-    </div>
-
     <div class="table-responsive">
-        <table>
+        <table class="schedules-table">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Bus</th>
-                    <th>Route</th>
-                    <th>Departure</th>
-                    <th>Arrival</th>
-                    <th>Status</th>
-                    <th class="edit-controls-col">Actions</th>
+                    <th scope="col">ID</th>
+                    <th scope="col">Bus</th>
+                    <th scope="col">Route</th>
+                    <th scope="col">Departure</th>
+                    <th scope="col">Arrival</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php 
                 mbus_db_data_seek($query, 0);
-                while($row = mbus_db_fetch_assoc($query)){ 
+                while($row = mbus_db_fetch_assoc($query)){
+                    // Apply filter
+                    $filter = $_GET['filter'] ?? 'all';
                     $route_type = ($row['origin'] == 'Morong Terminal') ? 'morong' : 'sbma';
+                    if($filter !== 'all' && $filter !== $route_type) continue;
+                    
                     $status_class = strtolower($row['schedule_status']);
                 ?>
                 <tr class="schedule-row" data-route="<?php echo $route_type; ?>">
@@ -295,7 +303,7 @@ ORDER BY departure_time ASC
                         </td>
                         
                         <td data-label="Departure">
-                            <span class="view-mode"><?php echo $row['departure_time']; ?></span>
+                            <span class="view-mode"><?php echo date('M j, Y g:i A', strtotime($row['departure_time'])); ?></span>
                             <div class="edit-controls">
                                 <input type="datetime-local" name="departure_time" class="form-control edit-input" 
                                     value="<?php echo date('Y-m-d\TH:i', strtotime($row['departure_time'])); ?>">
@@ -303,7 +311,7 @@ ORDER BY departure_time ASC
                         </td>
                         
                         <td data-label="Arrival">
-                            <span class="view-mode"><?php echo $row['arrival_time']; ?></span>
+                            <span class="view-mode"><?php echo date('M j, Y g:i A', strtotime($row['arrival_time'])); ?></span>
                             <div class="edit-controls">
                                 <input type="datetime-local" name="arrival_time" class="form-control edit-input" 
                                     value="<?php echo date('Y-m-d\TH:i', strtotime($row['arrival_time'])); ?>">
@@ -324,7 +332,7 @@ ORDER BY departure_time ASC
                             </div>
                         </td>
                         
-                        <td class="edit-controls-col" data-label="Actions">
+                        <td class="actions-col" data-label="Actions">
                             <div class="action-buttons">
                                 <button type="submit" name="update_schedule" class="btn btn-sm btn-success save-btn">
                                     <i class="fa fa-save" aria-hidden="true"></i> Save
@@ -345,9 +353,35 @@ ORDER BY departure_time ASC
 
 </main>
 
-<script src="../Assets/js/admin/manage_schedules.js"></script>
-
 <script>
+// View toggle functions
+function showListView() {
+    document.getElementById('listView').style.display = 'block';
+    document.getElementById('calendarView').style.display = 'none';
+    document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector('.toggle-btn[onclick="showListView()"]').classList.add('active');
+}
+
+function showCalendarView() {
+    document.getElementById('listView').style.display = 'none';
+    document.getElementById('calendarView').style.display = 'block';
+    document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector('.toggle-btn[onclick="showCalendarView()"]').classList.add('active');
+}
+
+// Filter schedules
+function filterSchedules(filter, btn) {
+    // Update URL without reload
+    const url = new URL(window.location);
+    if(filter === 'all') {
+        url.searchParams.delete('filter');
+    } else {
+        url.searchParams.set('filter', filter);
+    }
+    window.history.pushState({}, '', url);
+    location.reload();
+}
+
 // Toggle sidebar for mobile
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');

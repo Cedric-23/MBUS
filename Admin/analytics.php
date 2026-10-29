@@ -1,4 +1,5 @@
 <?php
+
 session_start();
 include "../config/db_connect.php";
 include "../Includes/activity_log.php";
@@ -129,83 +130,83 @@ $recent_activity_query = mbus_db_query($conn, "
 
 <main class="main" role="main">
 
-<header class="page-header">
-    <h1>Analytics Dashboard</h1>
+<!-- PAGE HEADER - Part of page flow (scrolls with content), like schedule.php -->
+<header class="page-header" role="banner">
+    <div class="page-header-left">
+        <h1>Analytics Dashboard</h1>
+    </div>
+    <div class="page-header-right">
+        <!-- Notification Bell - Top right, part of header flow -->
+        <div class="notification-container">
+            <button class="notification-bell" onclick="toggleNotifications(event)" aria-label="Notifications" aria-expanded="false" aria-controls="notificationDropdown">
+                <i class="fa fa-bell" aria-hidden="true"></i>
+                <span class="notification-badge" id="notificationBadge" aria-live="polite">0</span>
+            </button>
+            <div class="notification-dropdown" id="notificationDropdown" role="menu" aria-label="Notifications">
+                <div class="notification-dropdown-header" data-count="0">
+                    <span>Notifications</span>
+                </div>
+                <div class="notification-list" id="notificationList" role="list">
+                    <div class="notification-empty">Loading notifications...</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </header>
 
-<!-- Key Metrics -->
-<div class="metrics-grid">
-    <div class="metric-card card">
-        <div class="metric-icon reservations">
-            <i class="fa fa-ticket" aria-hidden="true"></i>
-        </div>
-        <div class="metric-details">
-            <h3>Total Reservations</h3>
-            <p class="metric-value"><?php echo number_format($total_reservations); ?></p>
-            <p class="metric-sub">This month: <?php echo number_format($reservations_this_month); ?></p>
-        </div>
-    </div>
-    
-    <div class="metric-card card">
-        <div class="metric-icon revenue">
-            <i class="fa fa-money-bill-wave" aria-hidden="true"></i>
-        </div>
-        <div class="metric-details">
-            <h3>Total Revenue</h3>
-            <p class="metric-value">₱<?php echo number_format($total_revenue, 2); ?></p>
-            <p class="metric-sub">This month: ₱<?php echo number_format($revenue_this_month, 2); ?></p>
-        </div>
-    </div>
-    
-    <div class="metric-card card">
-        <div class="metric-icon users">
-            <i class="fa fa-users" aria-hidden="true"></i>
-        </div>
-        <div class="metric-details">
-            <h3>Total Users</h3>
-            <p class="metric-value"><?php echo number_format($total_users); ?></p>
-            <p class="metric-sub">Registered accounts</p>
-        </div>
-    </div>
-    
-    <div class="metric-card card">
-        <div class="metric-icon schedules">
-            <i class="fa fa-calendar-alt" aria-hidden="true"></i>
-        </div>
-        <div class="metric-details">
-            <h3>Active Schedules</h3>
-            <p class="metric-value"><?php echo number_format($active_schedules); ?></p>
-            <p class="metric-sub">Currently active</p>
-        </div>
-    </div>
-    
-    <div class="metric-card card">
-        <div class="metric-icon buses">
-            <i class="fa fa-bus" aria-hidden="true"></i>
-        </div>
-        <div class="metric-details">
-            <h3>Total Buses</h3>
-            <p class="metric-value"><?php echo number_format($total_buses); ?></p>
-            <p class="metric-sub">In fleet</p>
-        </div>
-    </div>
-    
-    <div class="metric-card card">
-        <div class="metric-icon pending">
-            <i class="fa fa-clock" aria-hidden="true"></i>
-        </div>
-        <div class="metric-details">
-            <h3>Pending Actions</h3>
-            <p class="metric-value"><?php echo number_format($pending_verifications + $pending_applications); ?></p>
-            <p class="metric-sub"><?php echo $pending_verifications; ?> verifications, <?php echo $pending_applications; ?> applications</p>
-        </div>
-    </div>
-</div>
+<!-- Dashboard Content -->
+<div class="dashboard-content">
 
-<!-- Charts Section -->
-<div class="charts-section">
-    <section class="chart-card card">
-        <h2>Reservations by Status</h2>
+    <!-- KEY METRICS -->
+    <section class="cards" aria-labelledby="metrics-heading">
+        <h2 id="metrics-heading" class="visually-hidden">Key Metrics</h2>
+        
+        <article class="card card-animated">
+            <h3 class="day"><?php echo number_format($total_reservations); ?></h3>
+            <p class="date">Total Reservations</p>
+            <p>This month: <?php echo number_format($reservations_this_month); ?></p>
+            <a href="manage_schedules.php" class="btn btn-primary">View Reservations</a>
+        </article>
+        
+        <article class="card card-animated">
+            <h3 class="day">₱<?php echo number_format($total_revenue, 2); ?></h3>
+            <p class="date">Total Revenue</p>
+            <p>This month: ₱<?php echo number_format($revenue_this_month, 2); ?></p>
+            <a href="manage_schedules.php" class="btn btn-primary">View Revenue</a>
+        </article>
+        
+        <article class="card card-animated">
+            <h3 class="day"><?php echo number_format($total_users); ?></h3>
+            <p class="date">Total Users</p>
+            <p>Registered accounts</p>
+            <a href="manage_users.php" class="btn btn-primary">Manage Users</a>
+        </article>
+        
+        <article class="card card-animated">
+            <h3 class="day"><?php echo number_format($active_schedules); ?></h3>
+            <p class="date">Active Schedules</p>
+            <p>Currently active</p>
+            <a href="manage_schedules.php" class="btn btn-primary">Manage Schedules</a>
+        </article>
+
+        <article class="card card-animated">
+            <h3 class="day"><?php echo number_format($total_buses); ?></h3>
+            <p class="date">Total Buses</p>
+            <p>In fleet</p>
+            <a href="manage_buses.php" class="btn btn-primary">Manage Buses</a>
+        </article>
+        
+        <article class="card card-animated">
+            <h3 class="day"><?php echo number_format($pending_verifications + $pending_applications); ?></h3>
+            <p class="date">Pending Actions</p>
+            <p><?php echo $pending_verifications; ?> verifications, <?php echo $pending_applications; ?> applications</p>
+            <a href="manage_verifications.php" class="btn btn-primary">Review Pending</a>
+        </article>
+    </section>
+
+    <!-- CHARTS SECTION -->
+    <section class="chart-card card" aria-labelledby="status-chart-heading" style="margin-bottom: var(--space-6);">
+        <h2 id="status-chart-heading">Reservations by Status</h2>
         <div class="chart-container">
             <?php if(!empty($reservations_by_status)): ?>
             <div class="bar-chart">
@@ -226,9 +227,10 @@ $recent_activity_query = mbus_db_query($conn, "
             <?php endif; ?>
         </div>
     </section>
-    
-    <section class="chart-card card">
-        <h2>Quick Actions</h2>
+
+    <!-- QUICK ACTIONS -->
+    <section class="chart-card card" aria-labelledby="quick-actions-heading" style="margin-bottom: var(--space-6);">
+        <h2 id="quick-actions-heading">Quick Actions</h2>
         <div class="quick-actions">
             <a href="manage_verifications.php" class="action-btn <?php echo $pending_verifications > 0 ? 'urgent' : ''; ?>">
                 <i class="fa fa-id-card" aria-hidden="true"></i>
@@ -250,38 +252,41 @@ $recent_activity_query = mbus_db_query($conn, "
             </a>
         </div>
     </section>
-</div>
 
-<!-- Recent Activity -->
-<section class="activity-section card">
-    <h2>Recent Activity</h2>
-    <div class="activity-list">
-        <?php if(mbus_db_num_rows($recent_activity_query) > 0): ?>
-        <?php while($activity = mbus_db_fetch_assoc($recent_activity_query)): ?>
-        <div class="activity-item">
-            <div class="activity-icon">
-                <i class="fa fa-circle-info" aria-hidden="true"></i>
+    <!-- RECENT ACTIVITY -->
+    <section class="chart-card card" aria-labelledby="activity-heading">
+        <h2 id="activity-heading">Recent Activity</h2>
+        <div class="activity-list">
+            <?php if(mbus_db_num_rows($recent_activity_query) > 0): ?>
+            <?php while($activity = mbus_db_fetch_assoc($recent_activity_query)): ?>
+            <div class="activity-item">
+                <div class="activity-icon">
+                    <i class="fa fa-circle-info" aria-hidden="true"></i>
+                </div>
+                <div class="activity-details">
+                    <p class="activity-action"><?php echo htmlspecialchars($activity['action']); ?></p>
+                    <p class="activity-description"><?php echo htmlspecialchars($activity['description'] ?? ''); ?></p>
+                    <p class="activity-meta">
+                        <span><?php echo htmlspecialchars($activity['full_name'] ?? 'System'); ?></span>
+                        <span>•</span>
+                        <span><?php echo date('M d, Y g:i A', strtotime($activity['created_at'])); ?></span>
+                    </p>
+                </div>
             </div>
-            <div class="activity-details">
-                <p class="activity-action"><?php echo htmlspecialchars($activity['action']); ?></p>
-                <p class="activity-description"><?php echo htmlspecialchars($activity['description'] ?? ''); ?></p>
-                <p class="activity-meta">
-                    <span><?php echo htmlspecialchars($activity['full_name'] ?? 'System'); ?></span>
-                    <span>•</span>
-                    <span><?php echo date('M d, Y g:i A', strtotime($activity['created_at'])); ?></span>
-                </p>
-            </div>
+            <?php endwhile; ?>
+            <?php else: ?>
+            <p class="empty-state">No recent activity</p>
+            <?php endif; ?>
         </div>
-        <?php endwhile; ?>
-        <?php else: ?>
-        <p class="empty-state">No recent activity</p>
-        <?php endif; ?>
-    </div>
-</section>
+    </section>
+
+</div>
 
 </main>
 
 <script>
+let notificationDropdownOpen = false;
+
 // Toggle sidebar for mobile
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
@@ -295,14 +300,108 @@ function toggleSidebar() {
         toggle.setAttribute('aria-expanded', isOpen);
     }
     
+    // Add/remove body class for CSS to hide hamburger
+    document.body.classList.toggle('sidebar-open', isOpen);
+    
+    // Trap focus when sidebar is open on mobile
     if (isOpen) {
         document.body.style.overflow = 'hidden';
+        // Focus first focusable element in sidebar
         const firstLink = sidebar.querySelector('a, button');
         if (firstLink) firstLink.focus();
     } else {
         document.body.style.overflow = '';
     }
 }
+
+// Toggle notification dropdown
+function toggleNotifications(event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('notificationDropdown');
+    const bell = document.querySelector('.notification-bell');
+    notificationDropdownOpen = !notificationDropdownOpen;
+    
+    if (notificationDropdownOpen) {
+        dropdown.classList.add('active');
+        if (bell) bell.setAttribute('aria-expanded', 'true');
+        loadNotifications();
+    } else {
+        dropdown.classList.remove('active');
+        if (bell) bell.setAttribute('aria-expanded', 'false');
+    }
+}
+
+// Load notifications
+function loadNotifications() {
+    fetch('../api/get_notifications.php')
+        .then(response => response.json())
+        .then(data => {
+            updateNotificationBadge(data.unread_count);
+            renderNotifications(data.notifications);
+        })
+        .catch(error => {
+            console.error('Error loading notifications:', error);
+        });
+}
+
+// Update notification badge
+function updateNotificationBadge(count) {
+    const badge = document.getElementById('notificationBadge');
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'flex' : 'none';
+    
+    // Also update the dropdown header count
+    const header = document.querySelector('.notification-dropdown-header');
+    if (header) {
+        header.setAttribute('data-count', count);
+    }
+}
+
+// Render notifications
+function renderNotifications(notifications) {
+    const list = document.getElementById('notificationList');
+    
+    if (notifications.length === 0) {
+        list.innerHTML = '<div class="notification-empty">No notifications</div>';
+        return;
+    }
+    
+    list.innerHTML = notifications.map(notif => `
+        <div class="notification-item ${notif.status === 'Unread' ? 'unread' : ''}" 
+             onclick="markAsRead(${notif.id})" role="listitem">
+            <div class="notification-message">${notif.message}</div>
+            <div class="notification-time">${notif.time_ago}</div>
+        </div>
+    `).join('');
+}
+
+// Mark notification as read
+function markAsRead(notificationId) {
+    const formData = new FormData();
+    formData.append('notification_id', notificationId);
+    
+    fetch('../api/mark_notification_read.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadNotifications();
+        }
+    })
+    .catch(error => {
+        console.error('Error marking notification as read:', error);
+    });
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const container = document.querySelector('.notification-container');
+    if (!container.contains(event.target) && notificationDropdownOpen) {
+        toggleNotifications();
+    }
+});
 
 // Close sidebar when clicking a nav link on mobile
 document.querySelectorAll('.menu-top a').forEach(link => {
@@ -320,6 +419,12 @@ document.addEventListener('keydown', function(e) {
         toggleSidebar();
     }
 });
+
+// Auto-refresh notifications every 30 seconds
+setInterval(loadNotifications, 30000);
+
+// Initial load
+loadNotifications();
 </script>
 
 </body>

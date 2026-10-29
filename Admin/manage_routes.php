@@ -4,12 +4,12 @@ session_start();
 
 /* CHECK ADMIN */
 if(
-!isset($_SESSION['user_type'])
-||
-strtolower($_SESSION['user_type']) != "admin"
+    !isset($_SESSION['user_type'])
+    ||
+    strtolower($_SESSION['user_type']) != "admin"
 ){
-header("Location: ../login.php");
-exit();
+    header("Location: ../login.php");
+    exit();
 }
 
 include "../config/db_connect.php";
@@ -17,8 +17,8 @@ include "../Includes/csrf.php";
 
 /* ROUTE OPTIONS */
 $places = [
-"Morong Terminal",
-"SBMA"
+    "Morong Terminal",
+    "SBMA"
 ];
 
 /* ADD ROUTE */
@@ -68,6 +68,17 @@ VALUES (?, ?, ?, ?, ?, ?, ?)
         }
     }
 }
+
+/* DELETE ROUTE */
+if(isset($_POST['delete_route'])){
+    if(!csrf_validate_token()){
+        $error = "Security validation failed. Please try again.";
+    } else {
+        $route_id = (int)$_POST['route_id'];
+        mbus_db_prepare($conn, "DELETE FROM routes WHERE route_id = ?", [$route_id]);
+        $success = "Route deleted successfully";
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -107,19 +118,19 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
     <h2>Admin</h2>
 
     <nav class="menu-top" aria-label="Admin menu">
-            <a href="admin_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
-            <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
-            <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
-            <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
-            <a href="manage_routes.php" aria-current="page"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
-        </nav>
+        <a href="admin_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+        <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
+        <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
+        <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
+        <a href="manage_routes.php" aria-current="page"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
+    </nav>
 
-        <div class="menu-bottom">
-            <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
-                <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
-            </a>
-        </div>
-    </aside>
+    <div class="menu-bottom">
+        <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+            <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
+        </a>
+    </div>
+</aside>
 
 <main class="main" role="main">
 
@@ -128,14 +139,14 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
 </header>
 
 <?php if(isset($success)): ?>
-    <div class="alert alert-success" role="alert"><?php echo $success; ?></div>
+<div class="alert alert-success" role="alert"><?php echo $success; ?></div>
 <?php endif; ?>
 <?php if(isset($error)): ?>
-    <div class="alert alert-error" role="alert"><?php echo $error; ?></div>
+<div class="alert alert-error" role="alert"><?php echo $error; ?></div>
 <?php endif; ?>
 
 <!-- ADD ROUTE -->
-<section class="card">
+<section class="card" style="margin-bottom: var(--space-6);">
     <h2>Add Route</h2>
     <form method="POST" class="form-section">
         <?php csrf_field(); ?>
@@ -153,7 +164,7 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
                     <?php } ?>
                     <option value="custom">Custom Route</option>
                 </select>
-                <input type="text" name="custom_origin" id="custom_origin" class="form-control custom-input" placeholder="Enter Custom Origin">
+                <input type="text" name="custom_origin" id="custom_origin" class="form-control custom-input" placeholder="Enter Custom Origin" style="display: none;">
             </div>
 
             <!-- DESTINATION -->
@@ -168,7 +179,7 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
                     <?php } ?>
                     <option value="custom">Custom Route</option>
                 </select>
-                <input type="text" name="custom_destination" id="custom_destination" class="form-control custom-input" placeholder="Enter Custom Destination">
+                <input type="text" name="custom_destination" id="custom_destination" class="form-control custom-input" placeholder="Enter Custom Destination" style="display: none;">
             </div>
 
             <!-- FARE -->
@@ -216,11 +227,12 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
     <h2>Route List</h2>
 
     <div class="table-responsive">
-        <table>
+        <table class="routes-table">
             <thead>
                 <tr>
-                    <th>Route</th>
-                    <th>Fare</th>
+                    <th scope="col">Route</th>
+                    <th scope="col">Fare</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -233,12 +245,25 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
                 while($row = mbus_db_fetch_assoc($query)){
                 ?>
                 <tr>
-                    <td data-label="Route">
-                        <span class="route-badge">
-                            <?php echo htmlspecialchars($row['origin']); ?> → <?php echo htmlspecialchars($row['destination']); ?>
-                        </span>
-                    </td>
-                    <td data-label="Fare">₱<?php echo number_format($row['fare'], 2); ?></td>
+                    <form method="POST" class="route-form">
+                        <?php csrf_field(); ?>
+                        <input type="hidden" name="route_id" value="<?php echo $row['route_id']; ?>">
+                        
+                        <td data-label="Route">
+                            <span class="route-badge">
+                                <?php echo htmlspecialchars($row['origin']); ?> → <?php echo htmlspecialchars($row['destination']); ?>
+                            </span>
+                        </td>
+                        <td data-label="Fare">₱<?php echo number_format($row['fare'], 2); ?></td>
+                        <td data-label="Actions">
+                            <div class="action-buttons">
+                                <button type="submit" name="delete_route" class="btn btn-sm btn-danger delete-btn" 
+                                    onclick="return confirm('Delete this route?')">
+                                    <i class="fa fa-trash" aria-hidden="true"></i> Delete
+                                </button>
+                            </div>
+                        </td>
+                    </form>
                 </tr>
                 <?php } ?>
             </tbody>
