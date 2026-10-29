@@ -120,9 +120,11 @@ $recent_activity_query = mbus_db_query($conn, "
         <a href="activity_logs.php"><i class="fa fa-history" aria-hidden="true"></i> Activity Logs</a>
     </nav>
     
-    <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
-        <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
-    </a>
+    <div class="menu-bottom">
+        <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+            <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
+        </a>
+    </div>
 </aside>
 
 <main class="main" role="main">

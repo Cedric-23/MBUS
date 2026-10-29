@@ -86,9 +86,11 @@ if(isset($_POST['add_schedule'])){
         <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
     </nav>
 
-    <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
-        <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
-    </a>
+    <div class="menu-bottom">
+        <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+            <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
+        </a>
+    </div>
 </aside>
 
 <main class="main" role="main">
