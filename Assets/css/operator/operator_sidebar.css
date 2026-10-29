@@ -128,23 +128,36 @@
     padding-right: var(--space-2);
   }
   
-  .logout-btn .btn {
-    padding: var(--space-2) var(--space-3);
+  .menu-bottom a {
+    padding: var(--space-3) var(--space-4);
     font-size: var(--fs-sm);
   }
 }
 
-.logout-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .menu-top a {
+    animation: none;
+    transition: none;
+  }
+  
+  .menu-top a:hover {
+    transform: none;
+  }
 }
 
-.logout-btn .btn {
-  justify-content: center;
-  min-height: 44px;
-  width: 100%;
+/* High contrast */
+@media (prefers-contrast: high) {
+  .sidebar {
+    border: 2px solid #000;
+  }
+  
+  .menu-top a {
+    border: 1px solid transparent;
+  }
+  
+  .menu-top a:focus-visible {
+    outline-width: 3px;
+  }
 }
-
-/* Mobile adjustments handled by responsive.css .sidebar-open, .sidebar-overlay */
