@@ -89,6 +89,10 @@ $query = mbus_db_prepare($conn, "
     $where
     ORDER BY s.departure_time DESC
 ", $params);
+
+$page_header = "Manage Trips";
+$page_subtitle = "View and update your scheduled trips";
+$active_nav = "manage_trips";
 ?>
 <!DOCTYPE html>
 <html lang="en">

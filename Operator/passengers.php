@@ -60,7 +60,7 @@ if($search !== ''){
     $params[] = $search_term;
 }
 
-// Stats queries
+// Stats queries - handle false return for empty results
 $total_passengers_query = mbus_db_prepare($conn, "
     SELECT COUNT(*) total
     FROM reservation r
@@ -69,7 +69,7 @@ $total_passengers_query = mbus_db_prepare($conn, "
     WHERE oba.operator_id = ?
     AND s.departure_time >= NOW()
 ", [$operator_id]);
-$total_passengers = mbus_db_fetch_assoc($total_passengers_query);
+$total_passengers = mbus_db_fetch_assoc($total_passengers_query) ?: ['total' => 0];
 
 $paid_passengers_query = mbus_db_prepare($conn, "
     SELECT COUNT(*) total
@@ -80,7 +80,7 @@ $paid_passengers_query = mbus_db_prepare($conn, "
     AND r.status = 'Paid'
     AND s.departure_time >= NOW()
 ", [$operator_id]);
-$paid_passengers = mbus_db_fetch_assoc($paid_passengers_query);
+$paid_passengers = mbus_db_fetch_assoc($paid_passengers_query) ?: ['total' => 0];
 
 $boarded_passengers_query = mbus_db_prepare($conn, "
     SELECT COUNT(*) total
@@ -91,7 +91,7 @@ $boarded_passengers_query = mbus_db_prepare($conn, "
     AND r.status = 'Boarded'
     AND s.departure_time >= NOW()
 ", [$operator_id]);
-$boarded_passengers = mbus_db_fetch_assoc($boarded_passengers_query);
+$boarded_passengers = mbus_db_fetch_assoc($boarded_passengers_query) ?: ['total' => 0];
 
 $today_trips_query = mbus_db_prepare($conn, "
     SELECT COUNT(*) total
@@ -101,7 +101,7 @@ $today_trips_query = mbus_db_prepare($conn, "
     AND s.departure_time::date = CURRENT_DATE
     AND s.departure_time >= NOW()
 ", [$operator_id]);
-$today_trips = mbus_db_fetch_assoc($today_trips_query);
+$today_trips = mbus_db_fetch_assoc($today_trips_query) ?: ['total' => 0];
 
 // Fetch passengers
 $passenger_sql = "
