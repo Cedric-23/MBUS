@@ -89,78 +89,126 @@ $query = mbus_db_prepare($conn, "
     $where
     ORDER BY s.departure_time DESC
 ", $params);
-
-$title = "Manage Trips";
-$page_header = "Manage Trips";
-$page_subtitle = "View and update your scheduled trips";
-$active_nav = "manage_trips";
-
-// include "includes/operator_header.php";
 ?>
-<main class="main">
-    <header class="page-header">
-        <div class="page-header-left">
-            <h1><?php echo $page_header; ?></h1>
-            <p><?php echo $page_subtitle; ?></p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Trips</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../Assets/css/responsive.css">
+    <link rel="stylesheet" href="../Assets/css/operator/operator_sidebar.css">
+    <link rel="stylesheet" href="../Assets/css/operator/operator_manage_trips.css">
+</head>
+
+<body class="has-sidebar">
+
+<!-- Mobile Sidebar Toggle -->
+<button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
+    <i class="fa fa-bars" aria-hidden="true"></i>
+</button>
+
+<!-- Sidebar Overlay -->
+<div class="sidebar-overlay" onclick="toggleSidebar()" aria-hidden="true"></div>
+
+<aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="logo-container">
+        <img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo">
+    </div>
+
+    <h2>Operator</h2>
+
+    <nav class="menu-top" aria-label="Operator menu">
+            <a href="operator_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+            <a href="manage_trips.php" aria-current="page"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
+            <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
+        </nav>
+
+        <div class="menu-bottom">
+            <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+                <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
+            </a>
         </div>
-    </header>
+    </aside>
 
-    <?php if(isset($success)): ?>
-    <div class="alert alert-success"><?php echo $success; ?></div>
-    <?php endif; ?>
-    <?php if(isset($error)): ?>
-    <div class="alert alert-error"><?php echo $error; ?></div>
-    <?php endif; ?>
+<main class="main" role="main">
 
-    <section class="card">
-        <div class="card-header">
-            <div class="filters">
-                <a href="?filter=all" class="filter-btn <?php echo $filter==='all' ? 'active' : ''; ?>">All</a>
-                <a href="?filter=today" class="filter-btn <?php echo $filter==='today' ? 'active' : ''; ?>">Today</a>
-                <a href="?filter=tomorrow" class="filter-btn <?php echo $filter==='tomorrow' ? 'active' : ''; ?>">Tomorrow</a>
-                <a href="?filter=this_week" class="filter-btn <?php echo $filter==='this_week' ? 'active' : ''; ?>">This Week</a>
-                <a href="?filter=next_week" class="filter-btn <?php echo $filter==='next_week' ? 'active' : ''; ?>">Next Week</a>
-            </div>
+<header class="page-header">
+    <div class="page-header-left">
+        <h1><?php echo $page_header; ?></h1>
+        <p><?php echo $page_subtitle; ?></p>
+    </div>
+</header>
+
+<?php if(isset($success)): ?>
+<div class="alert alert-success"><?php echo $success; ?></div>
+<?php endif; ?>
+<?php if(isset($error)): ?>
+<div class="alert alert-error"><?php echo $error; ?></div>
+<?php endif; ?>
+
+<section class="card">
+    <div class="card-header">
+        <div class="filters">
+            <a href="?filter=all" class="filter-btn <?php echo $filter==='all' ? 'active' : ''; ?>">All</a>
+            <a href="?filter=today" class="filter-btn <?php echo $filter==='today' ? 'active' : ''; ?>">Today</a>
+            <a href="?filter=tomorrow" class="filter-btn <?php echo $filter==='tomorrow' ? 'active' : ''; ?>">Tomorrow</a>
+            <a href="?filter=this_week" class="filter-btn <?php echo $filter==='this_week' ? 'active' : ''; ?>">This Week</a>
+            <a href="?filter=next_week" class="filter-btn <?php echo $filter==='next_week' ? 'active' : ''; ?>">Next Week</a>
         </div>
+    </div>
 
-        <div class="table-responsive trips-table-responsive">
-            <table class="trips-table">
-                <thead>
-                    <tr>
-                        <th>Schedule ID</th>
-                        <th>Bus</th>
-                        <th>Route</th>
-                        <th>Departure</th>
-                        <th>Arrival</th>
-                        <th>Status</th>
-                        <th>Update</th>
-                        <th>Passengers</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php 
-                    mbus_db_data_seek($query, 0);
-                    while($row=mbus_db_fetch_assoc($query)){ 
-                    ?>
-                    <tr class="trip-row" data-schedule-id="<?php echo $row['schedule_id']; ?>">
+    <div class="table-responsive trips-table-responsive">
+        <table class="trips-table">
+            <thead>
+                <tr>
+                    <th>Schedule ID</th>
+                    <th>Bus</th>
+                    <th>Route</th>
+                    <th>Departure</th>
+                    <th>Arrival</th>
+                    <th>Status</th>
+                    <th>Update</th>
+                    <th>Passengers</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php 
+                mbus_db_data_seek($query, 0);
+                while($row=mbus_db_fetch_assoc($query)){ 
+                ?>
+                <tr class="trip-row" data-schedule-id="<?php echo $row['schedule_id']; ?>">
+                    <form method="POST" class="schedule-form">
+                        <?php csrf_field(); ?>
+                        <input type="hidden" name="schedule_id" value="<?php echo $row['schedule_id']; ?>">
+                        <input type="hidden" name="open_schedule" value="<?php echo $open_schedule ?? $row['schedule_id']; ?>">
+                        
                         <td data-label="Schedule ID"><?php echo $row['schedule_id']; ?></td>
+                        
                         <td data-label="Bus">
                             <div class="bus-info">
                                 <span class="bus-number"><?php echo htmlspecialchars($row['bus_number']); ?></span>
                                 <span class="bus-type"><?php echo htmlspecialchars($row['bus_type']); ?></span>
                             </div>
                         </td>
+                        
                         <td data-label="Route">
                             <div class="route-badge">
                                 <i class="fa fa-map-marker-alt" aria-hidden="true"></i>
                                 <span><?php echo htmlspecialchars($row['origin']); ?> → <?php echo htmlspecialchars($row['destination']); ?></span>
                             </div>
                         </td>
+                        
                         <td data-label="Departure"><?php echo date('M j, Y g:i A', strtotime($row['departure_time'])); ?></td>
                         <td data-label="Arrival"><?php echo date('M j, Y g:i A', strtotime($row['arrival_time'])); ?></td>
+                        
                         <td data-label="Status">
                             <span class="status-badge <?php echo strtolower($row['trip_status']); ?>"><?php echo htmlspecialchars($row['trip_status']); ?></span>
                         </td>
+                        
                         <td data-label="Update">
                             <form method="POST" class="status-form">
                                 <?php csrf_field(); ?>
@@ -176,86 +224,89 @@ $active_nav = "manage_trips";
                                 <input type="hidden" name="update_status" value="1">
                             </form>
                         </td>
+                        
                         <td data-label="Passengers">
                             <button type="button" class="btn btn-sm btn-outline toggle-passengers" data-schedule-id="<?php echo $row['schedule_id']; ?>" aria-expanded="false" aria-controls="passengers-<?php echo $row['schedule_id']; ?>">
                                 <i class="fa fa-users" aria-hidden="true"></i> View
                             </button>
                         </td>
-                    </tr>
-                    <tr id="passengers-<?php echo $row['schedule_id']; ?>" class="manifest-row" style="display: none;">
-                        <td colspan="8">
-                            <div class="manifest-wrapper">
-                                <div class="manifest-table-responsive">
-                                    <table class="manifest-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Passenger</th>
-                                                <th>Seat</th>
-                                                <th>Pickup</th>
-                                                <th>Destination</th>
-                                                <th>Ticket Code</th>
-                                                <th>Status</th>
-                                                <th>Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php
-                                            $sid = $row['schedule_id'];
+                    </form>
+                </tr>
+                <tr id="passengers-<?php echo $row['schedule_id']; ?>" class="manifest-row" style="display: none;">
+                    <td colspan="8">
+                        <div class="manifest-wrapper">
+                            <div class="manifest-table-responsive">
+                                <table class="manifest-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Passenger</th>
+                                            <th>Seat</th>
+                                            <th>Pickup</th>
+                                            <th>Destination</th>
+                                            <th>Ticket Code</th>
+                                            <th>Status</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php
+                                        $sid = $row['schedule_id'];
 
-                                            $sql = "SELECT reservation.*, users.full_name FROM reservation JOIN users ON reservation.user_id = users.user_id WHERE reservation.schedule_id = ? AND (reservation.status = 'Paid' OR reservation.status = 'Boarded') ORDER BY reservation.seat_number ASC";
-                                            $passengers = mbus_db_prepare($conn, $sql, [$sid]);
+                                        $sql = "SELECT reservation.*, users.full_name FROM reservation JOIN users ON reservation.user_id = users.user_id WHERE reservation.schedule_id = ? AND (reservation.status = 'Paid' OR reservation.status = 'Boarded') ORDER BY reservation.seat_number ASC";
+                                        $passengers = mbus_db_prepare($conn, $sql, [$sid]);
 
-                                            if(mbus_db_num_rows($passengers)>0){
-                                                while($passenger=mbus_db_fetch_assoc($passengers)){
-                                            ?>
-                                            <tr>
-                                                <td data-label="Passenger" class="passenger-name"><?php echo htmlspecialchars($passenger['full_name']); ?></td>
-                                                <td data-label="Seat"><?php echo $passenger['seat_number']; ?></td>
-                                                <td data-label="Pickup"><?php echo htmlspecialchars($passenger['pickup_location']); ?></td>
-                                                <td data-label="Destination"><?php echo htmlspecialchars($passenger['destination']); ?></td>
-                                                <td data-label="Ticket Code"><?php echo htmlspecialchars($passenger['ticket_code']); ?></td>
-                                                <td data-label="Status">
-                                                    <?php if($passenger['status']=="Boarded"){ ?>
-                                                    <span class="badge badge-success boarded-badge">Boarded</span>
-                                                    <?php } else { ?>
-                                                    <span class="badge badge-warning paid-badge">Paid</span>
-                                                    <?php } ?>
-                                                </td>
-                                                <td data-label="Action">
-                                                    <?php if($passenger['status']!="Boarded"){ ?>
-                                                    <form method="POST" class="action-form">
-                                                        <?php csrf_field(); ?>
-                                                        <input type="hidden" name="reservation_id" value="<?php echo $passenger['reservation_id']; ?>">
-                                                        <input type="hidden" name="open_schedule" value="<?php echo $row['schedule_id']; ?>">
-                                                        <button type="submit" name="mark_boarded" class="btn btn-sm btn-success board-btn">Board</button>
-                                                    </form>
-                                                    <?php } else { ?>
-                                                    <span class="badge badge-success">✔ Boarded</span>
-                                                    <?php } ?>
-                                                </td>
-                                            </tr>
-                                            <?php
-                                                }
-                                            }else{
-                                            ?>
-                                            <tr>
-                                                <td colspan="7" data-label="No passengers found">No passengers found.</td>
-                                            </tr>
-                                            <?php } ?>
-                                        </tbody>
-                                    </table>
-                                </div>
+                                        if(mbus_db_num_rows($passengers)>0){
+                                            while($passenger=mbus_db_fetch_assoc($passengers)){
+                                        ?>
+                                        <tr>
+                                            <td data-label="Passenger" class="passenger-name"><?php echo htmlspecialchars($passenger['full_name']); ?></td>
+                                            <td data-label="Seat"><?php echo $passenger['seat_number']; ?></td>
+                                            <td data-label="Pickup"><?php echo htmlspecialchars($passenger['pickup_location']); ?></td>
+                                            <td data-label="Destination"><?php echo htmlspecialchars($passenger['destination']); ?></td>
+                                            <td data-label="Ticket Code"><?php echo htmlspecialchars($passenger['ticket_code']); ?></td>
+                                            <td data-label="Status">
+                                                <?php if($passenger['status']=="Boarded"){ ?>
+                                                <span class="badge badge-success boarded-badge">Boarded</span>
+                                                <?php } else { ?>
+                                                <span class="badge badge-warning paid-badge">Paid</span>
+                                                <?php } ?>
+                                            </td>
+                                            <td data-label="Action">
+                                                <?php if($passenger['status']!="Boarded"){ ?>
+                                                <form method="POST" class="action-form">
+                                                    <?php csrf_field(); ?>
+                                                    <input type="hidden" name="reservation_id" value="<?php echo $passenger['reservation_id']; ?>">
+                                                    <input type="hidden" name="open_schedule" value="<?php echo $row['schedule_id']; ?>">
+                                                    <button type="submit" name="mark_boarded" class="btn btn-sm btn-success board-btn">Board</button>
+                                                </form>
+                                                <?php } else { ?>
+                                                <span class="badge badge-success">✔ Boarded</span>
+                                                <?php } ?>
+                                            </td>
+                                        </tr>
+                                        <?php
+                                            }
+                                        }else{
+                                        ?>
+                                        <tr>
+                                            <td colspan="7" data-label="No passengers found">No passengers found.</td>
+                                        </tr>
+                                        <?php } ?>
+                                    </tbody>
+                                </table>
                             </div>
-                        </td>
-                    </tr>
-                    <tr class="divider-row">
-                        <td colspan="8"><div class="trip-divider"></div></td>
-                    </tr>
-                    <?php } ?>
-                </tbody>
-            </table>
-        </div>
-    </section>
+                        </div>
+                    </td>
+                </tr>
+                <tr class="divider-row">
+                    <td colspan="8"><div class="trip-divider"></div></td>
+                </tr>
+                <?php } ?>
+            </tbody>
+        </table>
+    </div>
+</section>
+
 </main>
 
 <script>
@@ -283,6 +334,47 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     <?php endif; ?>
 });
+
+// Toggle sidebar for mobile
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    const toggle = document.querySelector('.sidebar-toggle');
+    
+    const isOpen = sidebar.classList.toggle('open');
+    overlay.classList.toggle('active');
+    document.body.classList.toggle('sidebar-open', isOpen);
+    
+    if (toggle) {
+        toggle.setAttribute('aria-expanded', isOpen);
+    }
+    
+    if (isOpen) {
+        document.body.style.overflow = 'hidden';
+        const firstLink = sidebar.querySelector('a, button');
+        if (firstLink) firstLink.focus();
+    } else {
+        document.body.style.overflow = '';
+    }
+}
+
+// Close sidebar when clicking a nav link on mobile
+document.querySelectorAll('.menu-top a').forEach(link => {
+    link.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+            toggleSidebar();
+        }
+    });
+});
+
+// Handle keyboard navigation for sidebar
+document.addEventListener('keydown', function(e) {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar.classList.contains('open') && e.key === 'Escape') {
+        toggleSidebar();
+    }
+});
 </script>
 
-<?php // include "includes/operator_footer.php"; ?>
+</body>
+</html>

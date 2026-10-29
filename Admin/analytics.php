@@ -94,7 +94,7 @@ $recent_activity_query = mbus_db_query($conn, "
 <body class="has-sidebar">
 
 <!-- Mobile Sidebar Toggle -->
-<button class="sidebar-toggle btn btn-icon" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
+<button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
     <i class="fa fa-bars" aria-hidden="true"></i>
 </button>
 
