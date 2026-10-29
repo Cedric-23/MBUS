@@ -142,7 +142,7 @@
     transition: none;
   }
   
-  .menu-top a:hover {
+  menu-top a:hover {
     transform: none;
   }
 }
