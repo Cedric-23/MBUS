@@ -52,7 +52,7 @@
   font-size: var(--fs-base);
   font-weight: var(--fw-medium);
   transition: background var(--transition-fast), color var(--transition-fast);
-  min-height: 44px;
+  min-height: var(--touch-target-min);
 }
 
 .sidebar a i {
@@ -87,62 +87,13 @@
   }
 }
 
-/* Mobile: single scrollable column, logout flows naturally */
-@media (max-width: 768px) {
-  .sidebar {
-    border-radius: 0;
-    width: 280px;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    transform: translateX(-100%);
-    box-shadow: var(--shadow-2xl);
-    border-top-right-radius: var(--radius-xl);
-    border-bottom-right-radius: var(--radius-xl);
-  }
-
-  .sidebar.open {
-    transform: translateX(0);
-  }
-
-  .logo-container {
-    padding: var(--space-3) 0;
-  }
-
-  .logo {
-    max-width: 200px;
-  }
-
-  .sidebar h2 {
-    margin: var(--space-2) 0;
-    padding: var(--space-2) 0;
-    font-size: var(--fs-lg);
-  }
-
-  .menu-top {
-    flex-grow: 0;
-    overflow-y: visible;
-    padding-bottom: var(--space-3);
-  }
-
-  .menu-bottom {
-    margin-top: var(--space-5);
-    padding-top: var(--space-4);
-    border-top: none;
-    flex-shrink: 0;
-  }
-
-  .sidebar a {
-    padding: var(--space-3) var(--space-4);
-    font-size: var(--fs-sm);
-  }
-}
-
-/* Hide hamburger when sidebar is open on mobile */
-@media (max-width: 768px) {
-  body.sidebar-open .sidebar-toggle {
-    display: none;
-  }
-}
+/* Mobile styles moved to responsive.css to avoid conflicts */
+/* The responsive.css handles: */
+/* - Sidebar transform/overlay on mobile */
+/* - Sidebar toggle button visibility */
+/* - Main content margin/padding */
+/* - Touch target sizing for nav links */
+/* - Hide hamburger when sidebar is open */
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
