@@ -13,11 +13,22 @@ function mbus_bootstrap(): void
         error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
         ini_set('log_errors', '1');
 
-        if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
-            ini_set('session.cookie_secure', '1');
+        // Only set session config if session hasn't started yet
+        if (session_status() === PHP_SESSION_NONE) {
+            if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+                ini_set('session.cookie_secure', '1');
+            }
+            ini_set('session.cookie_httponly', '1');
+            ini_set('session.use_strict_mode', '1');
+            ini_set('session.cookie_samesite', 'Strict');
         }
-        ini_set('session.cookie_httponly', '1');
-        ini_set('session.use_strict_mode', '1');
+    } else {
+        // Development settings
+        if (session_status() === PHP_SESSION_NONE) {
+            ini_set('session.cookie_httponly', '1');
+            ini_set('session.use_strict_mode', '1');
+            ini_set('session.cookie_samesite', 'Lax');
+        }
     }
 }
 

@@ -1,123 +1,256 @@
-.main{
-    margin-left:290px;padding:30px;}
+/* Commuter Schedule — page-specific overrides using responsive.css tokens */
 
-.tabs{
-    display:flex;
-    gap:10px;
-    margin-bottom:15px;
-    flex-wrap:wrap;
+.view-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
 }
 
-.tab{
-    padding:10px 15px;
-    background:white;
-    border-radius:5px;
-    text-decoration:none;
-    color:#1e3a5f;
-    font-weight:bold;
-    box-shadow:0 0 5px rgba(0,0,0,0.1);
+.view-toggle .toggle-btn {
+  flex: 1;
+  min-width: 140px;
 }
 
-.active{
-    background:#1e3a5f;
-    color:white;
+.day-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  -webkit-overflow-scrolling: touch;
 }
 
-.day-tabs{
-    display:flex;
-    gap:10px;
-    margin-bottom:25px;
-    flex-wrap:wrap;
+.day-tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
 }
 
-.day-tab{
-    padding:8px 12px;
-    background:#ddd;
-    border-radius:5px;
-    text-decoration:none;
-    color:black;
-    font-size:14px;
+.day-tab:hover,
+.day-tab:focus {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  text-decoration: none;
 }
 
-.day-active{
-    background:#1e3a5f;
-    color:white;
-    font-weight:bold;
+.day-tab[aria-selected="true"] {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: 600;
 }
 
-table{
-    width:100%;
-    border-collapse:collapse;
-    background:white;
+.route-badge {
+  font-size: var(--fs-sm);
+  padding: var(--space-1) var(--space-3);
 }
 
-th,td{
-    padding:12px;
-    text-align:center;
-    border:1px solid #ddd;
+.seat-availability .badge {
+  font-size: var(--fs-sm);
 }
 
-th{
-    background:#1e3a5f;
-    color:white;
+.view-route-btn {
+  gap: var(--space-1);
+  font-size: var(--fs-xs);
+  padding: var(--space-1) var(--space-3);
 }
 
-.select-btn{
-    background:#1e3a5f;
-    color:white;
-    border:none;
-    padding:8px 16px;
-    border-radius:8px;
-    cursor:pointer;
-    font-weight:bold;
-    transition:.2s;
+.map-container {
+  margin-bottom: var(--space-5);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-bg-tertiary);
 }
 
-.select-btn:hover{
-    background:#2d4f7a;
-    transform:scale(1.05);
+.map-canvas {
+  width: 100%;
+  height: 300px;
+  min-height: 300px;
 }
 
-.available{
-    color:green;
-    font-weight:bold;
+.map-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--color-text-muted);
 }
 
-.full{
-    color:red;
-    font-weight:bold;}
-
-.badge{
-    padding:6px 12px;
-    border-radius:20px;
-    color:white;
-    font-size:13px;
-    font-weight:bold;
+.calendar-view {
+  margin-top: var(--space-5);
 }
 
-.active-badge{
-    background:green;
+.calendar-view .card {
+  padding: 0;
+  overflow: hidden;
 }
 
-.cancelled-badge{
-    background:red;
+.calendar-view .fc {
+  font-family: var(--font-family);
+  font-size: var(--fs-sm);
 }
 
-.delayed-badge{
-    background:orange;
+.calendar-view .fc-toolbar {
+  padding: var(--space-4);
+  flex-wrap: wrap;
+  gap: var(--space-3);
 }
 
-.route-badge{
-    background:#1e3a5f;
-    color:white;
-    padding:8px 14px;
-    border-radius:20px;
-    display:inline-block;
-    font-size:14px;}
+.calendar-view .fc-toolbar-title {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--color-text);
+}
 
-.no-data{
-    background:white;
-    padding:30px;
-    text-align:center;
-    border-radius:10px;
+.calendar-view .fc-button {
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.calendar-view .fc-button:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.calendar-view .fc-button:focus {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.calendar-view .fc-button-active {
+  background: var(--color-primary-active) !important;
+}
+
+.calendar-view .fc-daygrid-day {
+  background: var(--color-bg);
+  border-color: var(--color-border);
+}
+
+.calendar-view .fc-daygrid-day:hover {
+  background: var(--color-bg-secondary);
+}
+
+.calendar-view .fc-day-today {
+  background: var(--color-primary-light) !important;
+}
+
+.calendar-view .fc-event {
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.calendar-view .fc-event:hover {
+  background: var(--color-primary-hover);
+  transform: scale(1.02);
+}
+
+.calendar-view .fc-event:focus {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.calendar-view .fc-col-header-cell {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+  padding: var(--space-3);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--color-text-secondary);
+}
+
+.calendar-view .fc-scrollgrid-sync-inner {
+  border-color: var(--color-border);
+}
+
+@media (max-width: 768px) {
+  .view-toggle {
+    flex-direction: column;
+  }
+
+  .view-toggle .toggle-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .day-tabs {
+    gap: var(--space-1);
+  }
+
+  .day-tab {
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--fs-xs);
+  }
+
+  .map-canvas,
+  .map-placeholder {
+    min-height: 250px;
+    height: 250px;
+  }
+
+  .calendar-view .fc-toolbar {
+    padding: var(--space-3);
+  }
+
+  .calendar-view .fc-toolbar-chunk:last-child {
+    width: 100%;
+    justify-content: center;
+    margin-top: var(--space-2);
+  }
+
+  .calendar-view .fc-button {
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--fs-xs);
+  }
+}
+
+@media (max-width: 480px) {
+  .day-tabs {
+    padding-bottom: var(--space-3);
+  }
+
+  .map-canvas,
+  .map-placeholder {
+    min-height: 200px;
+    height: 200px;
+  }
+
+  .calendar-view .fc-toolbar-title {
+    font-size: var(--fs-base);
+  }
+}
+
+/* Empty state alignment with responsive.css */
+.empty-state {
+  text-align: center;
+  padding: var(--space-10) var(--space-5);
+}
+
+.empty-state h3 {
+  margin-bottom: var(--space-2);
+  color: var(--color-text);
+}
+
+.empty-state p {
+  color: var(--color-text-secondary);
+  max-width: 280px;
+  margin: 0 auto;
 }

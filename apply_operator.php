@@ -5,14 +5,27 @@ include "Includes/activity_log.php";
 
 /* HANDLE OPERATOR APPLICATION SUBMISSION */
 if(isset($_POST['submit_application'])){
-    $full_name = mbus_db_escape($conn, $_POST['full_name']);
-    $email = mbus_db_escape($conn, $_POST['email']);
-    $phone_number = mbus_db_escape($conn, $_POST['phone_number']);
-    $address = mbus_db_escape($conn, $_POST['address']);
-    $license_number = mbus_db_escape($conn, $_POST['license_number']);
-    $license_expiry = mbus_db_escape($conn, $_POST['license_expiry']);
-    $vehicle_type = mbus_db_escape($conn, $_POST['vehicle_type']);
-    $vehicle_plate_number = mbus_db_escape($conn, $_POST['vehicle_plate_number']);
+    $full_name = trim($_POST['full_name']);
+    $email = trim($_POST['email']);
+    $phone_number = trim($_POST['phone_number']);
+    $address = trim($_POST['address']);
+    $license_number = trim($_POST['license_number']);
+    $license_expiry = trim($_POST['license_expiry']);
+    $vehicle_type = trim($_POST['vehicle_type']);
+    $vehicle_plate_number = trim($_POST['vehicle_plate_number']);
+    
+    // Validate phone number
+    if(!preg_match('/^09\d{9}$/', $phone_number)){
+        $error = "Phone number must be 11 digits starting with 09 (e.g., 09123456789).";
+    } else {
+        $full_name = mbus_db_escape($conn, $full_name);
+        $email = mbus_db_escape($conn, $email);
+        $phone_number = mbus_db_escape($conn, $phone_number);
+        $address = mbus_db_escape($conn, $address);
+        $license_number = mbus_db_escape($conn, $license_number);
+        $license_expiry = mbus_db_escape($conn, $license_expiry);
+        $vehicle_type = mbus_db_escape($conn, $vehicle_type);
+        $vehicle_plate_number = mbus_db_escape($conn, $vehicle_plate_number);
     
     // Handle license document upload
     $license_document = '';
@@ -63,6 +76,7 @@ if(isset($_POST['submit_application'])){
     ");
     
     $success = "Application submitted successfully. Please wait for admin approval.";
+    }
 }
 ?>
 
@@ -118,7 +132,8 @@ if(isset($_POST['submit_application'])){
             
             <div class="form-group">
                 <label>Phone Number</label>
-                <input type="tel" name="phone_number" class="input-modern" required placeholder="Enter your phone number">
+                <input type="tel" name="phone_number" class="input-modern" pattern="09\d{9}" maxlength="11" placeholder="09XXXXXXXXX" required>
+                <small>Format: 11 digits starting with 09 (e.g., 09123456789)</small>
             </div>
             
             <div class="form-group">

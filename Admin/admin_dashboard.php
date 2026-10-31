@@ -21,7 +21,7 @@ include "../config/db_connect.php";
    TOTAL BUSES
 ========================= */
 
-$bus_query = mbus_db_query($conn,"
+$bus_query = mbus_db_query($conn, "
     SELECT COUNT(*) AS total
     FROM buses
 ");
@@ -32,7 +32,7 @@ $bus_data = mbus_db_fetch_assoc($bus_query);
    TOTAL OPERATORS
 ========================= */
 
-$operator_query = mbus_db_query($conn,"
+$operator_query = mbus_db_query($conn, "
     SELECT COUNT(*) AS total
     FROM users
     WHERE LOWER(user_type)='operator'
@@ -44,7 +44,7 @@ $operator_data = mbus_db_fetch_assoc($operator_query);
    TOTAL SCHEDULES
 ========================= */
 
-$schedule_query = mbus_db_query($conn,"
+$schedule_query = mbus_db_query($conn, "
     SELECT COUNT(*) AS total
     FROM schedule
 ");
@@ -55,7 +55,7 @@ $schedule_data = mbus_db_fetch_assoc($schedule_query);
    TOTAL RESERVATIONS
 ========================= */
 
-$reservation_query = mbus_db_query($conn,"
+$reservation_query = mbus_db_query($conn, "
     SELECT COUNT(*) AS total
     FROM reservation
 ");
@@ -63,136 +63,278 @@ $reservation_query = mbus_db_query($conn,"
 $reservation_data = mbus_db_fetch_assoc($reservation_query);
 
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../Assets/css/responsive.css">
+    <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
+    <link rel="stylesheet" href="../Assets/css/admin/admin_dashboard.css">
+    <link rel="icon" href="../Assets/mbus_icon.png" type="image/png">
+    <link rel="shortcut icon" href="../Assets/mbus_icon.png">
 
-<title>Admin Dashboard</title>
-
-<!-- CSS -->
-<link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
-<link rel="stylesheet" href="../Assets/css/admin/admin_dashboard.css">
-
-<!-- ICONS -->
-<link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
+    <title>Admin Dashboard</title>
 </head>
 
-<body>
+<body class="has-sidebar">
 
-<!-- SIDEBAR -->
-<div class="sidebar">
+    <!-- Mobile Sidebar Toggle - Fixed, always accessible -->
+    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
+        <i class="fa fa-bars" aria-hidden="true"></i>
+    </button>
 
-<div class="logo-container">
-    <img src="../Assets/images/mbus_logo.png" class="logo">
-</div>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()" aria-hidden="true"></div>
 
-<h2>Admin</h2>
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
 
-<div class="menu-top">
+        <div class="logo-container">
+            <img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo">
+        </div>
 
-<a href="admin_dashboard.php">
-<i class="fa-solid fa-house"></i> Dashboard
-</a>
+        <h2>Admin</h2>
 
-<a href="manage_schedules.php">
-<i class="fa-solid fa-calendar"></i> Manage Schedules
-</a>
+        <nav class="menu-top" aria-label="Admin menu">
+            <a href="admin_dashboard.php" aria-current="page"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+            <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
+            <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
+            <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
+            <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
+        </nav>
 
-<a href="manage_buses.php">
-<i class="fa-solid fa-bus"></i> Manage Buses
-</a>
+        <div class="menu-bottom">
+            <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+                <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
+            </a>
+        </div>
 
-<a href="manage_operators.php">
-<i class="fa-solid fa-user-gear"></i> Manage Operators
-</a>
+    </aside>
 
-<a href="manage_routes.php">
-<i class="fa-solid fa-route"></i> Manage Routes
-</a>
+    <!-- MAIN -->
+    <main class="main" role="main">
 
-</div>
+        <!-- PAGE HEADER - Part of page flow (scrolls with content), like schedule.php -->
+        <header class="page-header" role="banner">
+            <div class="page-header-left">
+                <h1>Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?>!</h1>
+            </div>
+            <div class="page-header-right">
+                <!-- Notification Bell - Top right, part of header flow -->
+                <div class="notification-container">
+                    <button class="notification-bell" onclick="toggleNotifications(event)" aria-label="Notifications" aria-expanded="false" aria-controls="notificationDropdown">
+                        <i class="fa fa-bell" aria-hidden="true"></i>
+                        <span class="notification-badge" id="notificationBadge" aria-live="polite">0</span>
+                    </button>
+                    <div class="notification-dropdown" id="notificationDropdown" role="menu" aria-label="Notifications">
+                        <div class="notification-dropdown-header" data-count="0">
+                            <span>Notifications</span>
+                        </div>
+                        <div class="notification-list" id="notificationList" role="list">
+                            <div class="notification-empty">Loading notifications...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
 
-<div class="logout-btn">
-<a href="../logout.php">
-<i class="fa-solid fa-right-from-bracket"></i> Logout
-</a>
-</div>
+        <!-- Dashboard Content -->
+        <div class="dashboard-content">
 
-</div>
+            <!-- QUICK ACTIONS -->
+            <section class="cards" aria-labelledby="cards-heading">
+                <h2 id="cards-heading" class="visually-hidden">Quick Actions</h2>
 
-<!-- MAIN -->
-<div class="main">
+                <!-- TOTAL BUSES -->
+                <article class="card card-animated">
+                    <h3 class="day">Total Buses</h3>
+                    <p class="date"><?php echo $bus_data['total']; ?> registered</p>
+                    <p>All buses in the system</p>
+                    <a href="manage_buses.php" class="btn btn-primary">Manage Buses</a>
+                </article>
 
-<!-- WELCOME -->
-<div class="welcome">
+                <!-- TOTAL OPERATORS -->
+                <article class="card card-animated">
+                    <h3 class="day">Total Operators</h3>
+                    <p class="date"><?php echo $operator_data['total']; ?> operators</p>
+                    <p>Active operator accounts</p>
+                    <a href="manage_operators.php" class="btn btn-primary">Manage Operators</a>
+                </article>
 
-<h1>
-Welcome, <?php echo $_SESSION['full_name']; ?>!
-</h1>
+                <!-- TOTAL SCHEDULES -->
+                <article class="card card-animated">
+                    <h3 class="day">Total Schedules</h3>
+                    <p class="date"><?php echo $schedule_data['total']; ?> schedules</p>
+                    <p>All scheduled trips</p>
+                    <a href="manage_schedules.php" class="btn btn-primary">Manage Schedules</a>
+                </article>
 
-<p>
-Manage buses, operators, routes, and overall system operations.
-</p>
+                <!-- TOTAL RESERVATIONS -->
+                <article class="card card-animated">
+                    <h3 class="day">Total Reservations</h3>
+                    <p class="date"><?php echo $reservation_data['total']; ?> bookings</p>
+                    <p>All passenger reservations</p>
+                    <a href="manage_schedules.php" class="btn btn-primary">View Reservations</a>
+                </article>
 
-</div>
+            </section>
 
-<!-- CARDS -->
-<div class="cards">
+            <!-- NOTICE -->
+            <section class="notice card" aria-labelledby="notice-heading">
+                <h3 id="notice-heading">System Notice</h3>
+                <p>Only authorized administrators can manage buses, operators, and system configurations.</p>
+            </section>
 
-<!-- TOTAL BUSES -->
-<div class="card">
-<h3>Total Buses</h3>
-<div class="number">
-<?php echo $bus_data['total']; ?>
-</div>
-</div>
+        </div>
 
-<!-- TOTAL OPERATORS -->
-<div class="card">
-<h3>Total Operators</h3>
-<div class="number">
-<?php echo $operator_data['total']; ?>
-</div>
-</div>
+    </main>
 
-<!-- TOTAL SCHEDULES -->
-<div class="card">
-<h3>Total Schedules</h3>
-<div class="number">
-<?php echo $schedule_data['total']; ?>
-</div>
-</div>
+<script>
+let notificationDropdownOpen = false;
 
-<!-- TOTAL RESERVATIONS -->
-<div class="card">
-<h3>Total Reservations</h3>
-<div class="number">
-<?php echo $reservation_data['total']; ?>
-</div>
-</div>
+// Toggle sidebar for mobile
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    const toggle = document.querySelector('.sidebar-toggle');
+    
+    const isOpen = sidebar.classList.toggle('open');
+    overlay.classList.toggle('active');
+    
+    if (toggle) {
+        toggle.setAttribute('aria-expanded', isOpen);
+    }
+    
+    // Add/remove body class for CSS to hide hamburger
+    document.body.classList.toggle('sidebar-open', isOpen);
+    
+    // Trap focus when sidebar is open on mobile
+    if (isOpen) {
+        document.body.style.overflow = 'hidden';
+        // Focus first focusable element in sidebar
+        const firstLink = sidebar.querySelector('a, button');
+        if (firstLink) firstLink.focus();
+    } else {
+        document.body.style.overflow = '';
+    }
+}
 
-</div>
+// Toggle notification dropdown
+function toggleNotifications(event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('notificationDropdown');
+    const bell = document.querySelector('.notification-bell');
+    notificationDropdownOpen = !notificationDropdownOpen;
+    
+    if (notificationDropdownOpen) {
+        dropdown.classList.add('active');
+        if (bell) bell.setAttribute('aria-expanded', 'true');
+        loadNotifications();
+    } else {
+        dropdown.classList.remove('active');
+        if (bell) bell.setAttribute('aria-expanded', 'false');
+    }
+}
 
-<!-- NOTICE -->
-<div class="notice">
+// Load notifications
+function loadNotifications() {
+    fetch('../api/get_notifications.php')
+        .then(response => response.json())
+        .then(data => {
+            updateNotificationBadge(data.unread_count);
+            renderNotifications(data.notifications);
+        })
+        .catch(error => {
+            console.error('Error loading notifications:', error);
+        });
+}
 
-<h3>System Notice</h3>
+// Update notification badge
+function updateNotificationBadge(count) {
+    const badge = document.getElementById('notificationBadge');
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'flex' : 'none';
+    
+    // Also update the dropdown header count
+    const header = document.querySelector('.notification-dropdown-header');
+    if (header) {
+        header.setAttribute('data-count', count);
+    }
+}
 
-<p>
-Only authorized administrators can manage buses, operators, and system configurations.
-</p>
+// Render notifications
+function renderNotifications(notifications) {
+    const list = document.getElementById('notificationList');
+    
+    if (notifications.length === 0) {
+        list.innerHTML = '<div class="notification-empty">No notifications</div>';
+        return;
+    }
+    
+    list.innerHTML = notifications.map(notif => `
+        <div class="notification-item ${notif.status === 'Unread' ? 'unread' : ''}" 
+             onclick="markAsRead(${notif.id})" role="listitem">
+            <div class="notification-message">${notif.message}</div>
+            <div class="notification-time">${notif.time_ago}</div>
+        </div>
+    `).join('');
+}
 
-</div>
+// Mark notification as read
+function markAsRead(notificationId) {
+    const formData = new FormData();
+    formData.append('notification_id', notificationId);
+    
+    fetch('../api/mark_notification_read.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadNotifications();
+        }
+    })
+    .catch(error => {
+        console.error('Error marking notification as read:', error);
+    });
+}
 
-</div>
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const container = document.querySelector('.notification-container');
+    if (!container.contains(event.target) && notificationDropdownOpen) {
+        toggleNotifications();
+    }
+});
+
+// Close sidebar when clicking a nav link on mobile
+document.querySelectorAll('.menu-top a').forEach(link => {
+    link.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+            toggleSidebar();
+        }
+    });
+});
+
+// Handle keyboard navigation for sidebar
+document.addEventListener('keydown', function(e) {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar.classList.contains('open') && e.key === 'Escape') {
+        toggleSidebar();
+    }
+});
+
+// Auto-refresh notifications every 30 seconds
+setInterval(loadNotifications, 30000);
+
+// Initial load
+loadNotifications();
+</script>
 
 </body>
-
 </html>

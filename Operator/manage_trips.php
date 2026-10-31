@@ -1,538 +1,376 @@
 <?php
 session_start();
+require_once "../config/db_connect.php";
+require_once "../config/mysqli_compat.php";
+require_once "../Includes/csrf.php";
+require_once "../Includes/activity_log.php";
 
-if(
-!isset($_SESSION['user_type'])
-||
-strtolower($_SESSION['user_type'])!='operator'
-){
-header("Location: ../login.php");
-exit();
+if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type']) !== 'operator'){
+    header("Location: ../login.php");
+    exit();
 }
 
-include("../config/db_connect.php");
+$operator_id = $_SESSION['user_id'];
 
-$open_schedule=isset($_GET['open'])
-?$_GET['open']
-:'';
-
-/* FILTER */
-
-$filter=isset($_GET['filter'])
-?$_GET['filter']
-:'all';
-
-$where_filter="";
-
-if($filter=="today"){
-
-$where_filter="
-AND DATE(schedule.departure_time)=CURDATE()
-";
-
-}elseif($filter=="tomorrow"){
-
-$where_filter="
-AND DATE(schedule.departure_time)=DATE_ADD(CURDATE(),INTERVAL 1 DAY)
-";
-
-}elseif($filter=="this_week"){
-
-$where_filter="
-AND YEARWEEK(schedule.departure_time,1)=YEARWEEK(CURDATE(),1)
-";
-
-}elseif($filter=="next_week"){
-
-$where_filter="
-AND YEARWEEK(schedule.departure_time,1)=YEARWEEK(CURDATE(),1)+1
-";
-
+// Handle status update
+if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])){
+    if(!csrf_validate_token()){
+        $error = "Invalid CSRF token";
+    } else {
+        $schedule_id = (int)$_POST['schedule_id'];
+        $trip_status = $_POST['trip_status'];
+        $allowed_statuses = ['Scheduled','Boarding','Departed','Arrived','Cancelled'];
+        if(in_array($trip_status, $allowed_statuses)){
+            $stmt = mbus_db_prepare($conn, "UPDATE schedules SET trip_status=? WHERE schedule_id=? AND operator_id=?", [$trip_status, $schedule_id, $operator_id]);
+            if(mbus_db_execute($stmt)){
+                $success = "Trip status updated";
+            } else {
+                $error = "Failed to update status";
+            }
+        } else {
+            $error = "Invalid status";
+        }
+    }
 }
 
-/* UPDATE TRIP STATUS */
-
-if(isset($_POST['update_status'])){
-
-$schedule_id=$_POST['schedule_id'];
-$trip_status=$_POST['trip_status'];
-
-mbus_db_query($conn,"
-UPDATE schedule
-SET trip_status='$trip_status'
-WHERE schedule_id='$schedule_id'
-");
-
-header("Location: manage_trips.php?filter=".$filter);
-exit();
+// Handle mark boarded
+if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_boarded'])){
+    if(!csrf_validate_token()){
+        $error = "Invalid CSRF token";
+    } else {
+        $reservation_id = (int)$_POST['reservation_id'];
+        $stmt = mbus_db_prepare($conn, "UPDATE reservation SET status='Boarded' WHERE reservation_id=?", [$reservation_id]);
+        if(mbus_db_execute($stmt)){
+            $success = "Passenger marked as boarded";
+        } else {
+            $error = "Failed to update passenger";
+        }
+    }
 }
 
-/* BOARD PASSENGER */
+// Filters
+$filter = $_GET['filter'] ?? 'all';
+$open_schedule = isset($_GET['open_schedule']) ? (int)$_GET['open_schedule'] : null;
 
-if(isset($_POST['mark_boarded'])){
+$where = "WHERE s.operator_id = ?";
+$params = [$operator_id];
 
-$reservation_id=$_POST['reservation_id'];
-
-mbus_db_query($conn,"
-UPDATE reservation
-SET status='Boarded'
-WHERE reservation_id='$reservation_id'
-");
-
-header("Location: manage_trips.php?filter=".$filter."&open=".$_POST['open_schedule']);
-exit();
+switch($filter){
+    case 'today':
+        $where .= " AND s.departure_time::date = CURRENT_DATE";
+        break;
+    case 'tomorrow':
+        $where .= " AND s.departure_time::date = CURRENT_DATE + INTERVAL '1 day'";
+        break;
+    case 'this_week':
+        $where .= " AND s.departure_time >= DATE_TRUNC('week', CURRENT_DATE) AND s.departure_time < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '1 week'";
+        break;
+    case 'next_week':
+        $where .= " AND s.departure_time >= DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '1 week' AND s.departure_time < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '2 week'";
+        break;
+    default:
+        // all
+        break;
 }
 
-/* FETCH TRIPS */
-
-$operator_id=$_SESSION['user_id'];
-
-$query=mbus_db_query($conn,"
-SELECT
-
-schedule.schedule_id,
-schedule.departure_time,
-schedule.arrival_time,
-schedule.trip_status,
-
-routes.origin,
-routes.destination,
-
-buses.bus_number,
-buses.bus_type
-
-FROM schedule
-
-LEFT JOIN routes
-ON schedule.route_id=routes.route_id
-
-LEFT JOIN buses
-ON schedule.bus_id=buses.bus_id
-
-LEFT JOIN operator_bus_assignments
-ON schedule.bus_id=operator_bus_assignments.bus_id
-
-WHERE operator_bus_assignments.operator_id='$operator_id'
-
-$where_filter
-
-ORDER BY schedule.departure_time ASC
-");
-
+$query = mbus_db_prepare($conn, "
+    SELECT 
+        s.schedule_id,
+        s.departure_time,
+        s.arrival_time,
+        s.trip_status,
+        b.bus_number,
+        b.bus_type,
+        r.origin,
+        r.destination
+    FROM schedules s
+    JOIN buses b ON s.bus_id = b.bus_id
+    JOIN routes r ON s.route_id = r.route_id
+    $where
+    ORDER BY s.departure_time DESC
+", $params);
 ?>
-
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Trips</title>
 
-<title>Manage Trips</title>
-
-<!-- ✅ SIDEBAR CSS -->
-<link rel="stylesheet" href="../Assets/css/operator/operator_sidebar.css">
-
-<!-- ✅ PAGE CSS -->
-<link rel="stylesheet" href="../Assets/css/operator/operator_manage_trips.css">
-
-<!-- ✅ ICONS -->
-<link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../Assets/css/responsive.css">
+    <link rel="stylesheet" href="../Assets/css/operator/operator_sidebar.css">
+    <link rel="stylesheet" href="../Assets/css/operator/operator_manage_trips.css">
+    <link rel="icon" href="../Assets/mbus_icon.png" type="image/png">
+    <link rel="shortcut icon" href="../Assets/mbus_icon.png">
 </head>
 
-<body>
+<body class="has-sidebar">
 
-<!-- ✅ UPDATED SIDEBAR (MATCH DASHBOARD) -->
-<div class="sidebar">
-
-<div class="logo-container">
-<img src="../Assets/images/mbus_logo.png" class="logo">
-</div>
-
-<h2>Operator</h2>
-
-<div class="menu-top">
-
-<a href="operator_dashboard.php">
-<i class="fa-solid fa-house"></i> Dashboard
-</a>
-
-<a href="manage_trips.php">
-<i class="fa-solid fa-bus"></i> Manage Trips
-</a>
-
-<a href="passengers.php">
-<i class="fa-solid fa-users"></i> Passenger List
-</a>
-
-</div>
-
-<div class="logout-btn">
-<a href="../logout.php">
-<i class="fa-solid fa-right-from-bracket"></i> Logout
-</a>
-</div>
-
-</div>
-
-<div class="main">
-
-<div class="page-title">
-
-<h1>Manage Trips</h1>
-
-<p>
-Monitor and manage passenger boarding.
-</p>
-
-</div>
-
-<div class="card">
-
-<!-- FILTER BUTTONS -->
-
-<div class="filters">
-
-<a
-href="?filter=all"
-class="filter-btn <?= ($filter=='all')?'active-filter':''; ?>"
->
-All
-</a>
-
-<a
-href="?filter=today"
-class="filter-btn <?= ($filter=='today')?'active-filter':''; ?>"
->
-Today
-</a>
-
-<a
-href="?filter=tomorrow"
-class="filter-btn <?= ($filter=='tomorrow')?'active-filter':''; ?>"
->
-Tomorrow
-</a>
-
-<a
-href="?filter=this_week"
-class="filter-btn <?= ($filter=='this_week')?'active-filter':''; ?>"
->
-This Week
-</a>
-
-<a
-href="?filter=next_week"
-class="filter-btn <?= ($filter=='next_week')?'active-filter':''; ?>"
->
-Next Week
-</a>
-
-</div>
-
-<table>
-
-<tr>
-
-<th>Schedule ID</th>
-<th>Bus</th>
-<th>Route</th>
-<th>Departure</th>
-<th>Arrival</th>
-<th>Status</th>
-<th>Update</th>
-<th>Passengers</th>
-
-</tr>
-
-<?php while($row=mbus_db_fetch_assoc($query)){ ?>
-
-<tr>
-
-<td><?= $row['schedule_id']; ?></td>
-
-<td>
-
-<?= $row['bus_number']; ?>
-
-<br>
-
-<small><?= $row['bus_type']; ?></small>
-
-</td>
-
-<td>
-
-<span class="route-badge">
-
-<?= $row['origin']; ?>
-→
-<?= $row['destination']; ?>
-
-</span>
-
-</td>
-
-<td><?= $row['departure_time']; ?></td>
-
-<td><?= $row['arrival_time']; ?></td>
-
-<td>
-
-<span class="status <?= strtolower($row['trip_status']); ?>">
-
-<?= $row['trip_status']; ?>
-
-</span>
-
-</td>
-
-<td>
-
-<form method="POST" class="action-form">
-
-<input
-type="hidden"
-name="schedule_id"
-value="<?= $row['schedule_id']; ?>"
->
-
-<select
-name="trip_status"
-class="status-select"
->
-
-<option value="Scheduled" <?= ($row['trip_status']=="Scheduled")?'selected':''; ?>>
-Scheduled
-</option>
-
-<option value="Boarding" <?= ($row['trip_status']=="Boarding")?'selected':''; ?>>
-Boarding
-</option>
-
-<option value="Departed" <?= ($row['trip_status']=="Departed")?'selected':''; ?>>
-Departed
-</option>
-
-<option value="Arrived" <?= ($row['trip_status']=="Arrived")?'selected':''; ?>>
-Arrived
-</option>
-
-<option value="Cancelled" <?= ($row['trip_status']=="Cancelled")?'selected':''; ?>>
-Cancelled
-</option>
-
-</select>
-
-<button
-type="submit"
-name="update_status"
-class="update-btn"
->
-Update
+<!-- Mobile Sidebar Toggle -->
+<button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
+    <i class="fa fa-bars" aria-hidden="true"></i>
 </button>
 
-</form>
+<!-- Sidebar Overlay -->
+<div class="sidebar-overlay" onclick="toggleSidebar()" aria-hidden="true"></div>
 
-</td>
+<aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="logo-container">
+        <img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo">
+    </div>
 
-<td>
+    <h2>Operator</h2>
 
-<button
-class="view-btn"
-onclick="togglePassengers(<?= $row['schedule_id']; ?>)"
->
-View
-</button>
+    <nav class="menu-top" aria-label="Operator menu">
+        <a href="operator_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+        <a href="manage_trips.php" aria-current="page"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
+        <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
+    </nav>
 
-</td>
+    <div class="menu-bottom">
+        <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+            <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
+        </a>
+    </div>
+</aside>
 
-</tr>
+<main class="main" role="main">
 
-<tr
-id="passengers-<?= $row['schedule_id']; ?>"
-class="manifest-row"
-<?= ($open_schedule==$row['schedule_id'])?"":"style='display:none;'"; ?>
->
+<header class="page-header">
+    <h1>Manage Trips</h1>
+</header>
 
-<td colspan="8">
+<?php if(isset($success)): ?>
+<div class="alert alert-success"><?php echo $success; ?></div>
+<?php endif; ?>
+<?php if(isset($error)): ?>
+<div class="alert alert-error"><?php echo $error; ?></div>
+<?php endif; ?>
 
-<div class="manifest-wrapper">
+<!-- Filter Tabs -->
+<nav class="tabs" aria-label="Trip filters">
+    <a href="?filter=all" class="tab <?php echo $filter==='all' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='all' ? 'page' : 'false'; ?>">All</a>
+    <a href="?filter=today" class="tab <?php echo $filter==='today' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='today' ? 'page' : 'false'; ?>">Today</a>
+    <a href="?filter=tomorrow" class="tab <?php echo $filter==='tomorrow' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='tomorrow' ? 'page' : 'false'; ?>">Tomorrow</a>
+    <a href="?filter=this_week" class="tab <?php echo $filter==='this_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='this_week' ? 'page' : 'false'; ?>">This Week</a>
+    <a href="?filter=next_week" class="tab <?php echo $filter==='next_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='next_week' ? 'page' : 'false'; ?>">Next Week</a>
+</nav>
 
-<h3 class="manifest-title">
-Passenger Manifest
-</h3>
+<div class="table-responsive trips-table-responsive">
+    <table class="trips-table">
+        <thead>
+            <tr>
+                <th scope="col">Schedule ID</th>
+                <th scope="col">Bus</th>
+                <th scope="col">Route</th>
+                <th scope="col">Departure</th>
+                <th scope="col">Arrival</th>
+                <th scope="col">Status</th>
+                <th scope="col">Update</th>
+                <th scope="col">Passengers</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php 
+            mbus_db_data_seek($query, 0);
+            while($row=mbus_db_fetch_assoc($query)){ 
+            ?>
+            <tr class="trip-row" data-schedule-id="<?php echo $row['schedule_id']; ?>">
+                <form method="POST" class="schedule-form">
+                    <?php csrf_field(); ?>
+                    <input type="hidden" name="schedule_id" value="<?php echo $row['schedule_id']; ?>">
+                    <input type="hidden" name="open_schedule" value="<?php echo $open_schedule ?? $row['schedule_id']; ?>">
+                    
+                    <td data-label="Schedule ID"><?php echo $row['schedule_id']; ?></td>
+                    
+                    <td data-label="Bus">
+                        <div class="bus-info">
+                            <span class="bus-number"><?php echo htmlspecialchars($row['bus_number']); ?></span>
+                            <span class="bus-type"><?php echo htmlspecialchars($row['bus_type']); ?></span>
+                        </div>
+                    </td>
+                    
+                    <td data-label="Route">
+                        <span class="route-badge">
+                            <i class="fa fa-map-marker-alt" aria-hidden="true"></i>
+                            <span><?php echo htmlspecialchars($row['origin']); ?> → <?php echo htmlspecialchars($row['destination']); ?></span>
+                        </span>
+                    </td>
+                    
+                    <td data-label="Departure"><?php echo date('M j, Y g:i A', strtotime($row['departure_time'])); ?></td>
+                    <td data-label="Arrival"><?php echo date('M j, Y g:i A', strtotime($row['arrival_time'])); ?></td>
+                    
+                    <td data-label="Status">
+                        <span class="status-badge <?php echo strtolower($row['trip_status']); ?>"><?php echo htmlspecialchars($row['trip_status']); ?></span>
+                    </td>
+                    
+                    <td data-label="Update">
+                        <form method="POST" class="status-form">
+                            <?php csrf_field(); ?>
+                            <input type="hidden" name="schedule_id" value="<?php echo $row['schedule_id']; ?>">
+                            <input type="hidden" name="open_schedule" value="<?php echo $open_schedule ?? $row['schedule_id']; ?>">
+                            <select name="trip_status" class="form-control status-select" onchange="this.form.submit()">
+                                <option value="Scheduled" <?php echo $row['trip_status']==='Scheduled' ? 'selected' : ''; ?>>Scheduled</option>
+                                <option value="Boarding" <?php echo $row['trip_status']==='Boarding' ? 'selected' : ''; ?>>Boarding</option>
+                                <option value="Departed" <?php echo $row['trip_status']==='Departed' ? 'selected' : ''; ?>>Departed</option>
+                                <option value="Arrived" <?php echo $row['trip_status']==='Arrived' ? 'selected' : ''; ?>>Arrived</option>
+                                <option value="Cancelled" <?php echo $row['trip_status']==='Cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                            </select>
+                            <input type="hidden" name="update_status" value="1">
+                        </form>
+                    </td>
+                    
+                    <td data-label="Passengers">
+                        <button type="button" class="btn btn-sm btn-outline toggle-passengers" data-schedule-id="<?php echo $row['schedule_id']; ?>" aria-expanded="false" aria-controls="passengers-<?php echo $row['schedule_id']; ?>">
+                            <i class="fa fa-users" aria-hidden="true"></i> View
+                        </button>
+                    </td>
+                </form>
+            </tr>
+            <tr id="passengers-<?php echo $row['schedule_id']; ?>" class="manifest-row" style="display: none;">
+                <td colspan="8">
+                    <div class="manifest-wrapper">
+                        <div class="manifest-table-responsive">
+                            <table class="manifest-table">
+                                <thead>
+                                    <tr>
+                                        <th>Passenger</th>
+                                        <th>Seat</th>
+                                        <th>Pickup</th>
+                                        <th>Destination</th>
+                                        <th>Ticket Code</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php
+                                    $sid = $row['schedule_id'];
 
-<table class="manifest-table">
+                                    $sql = "SELECT reservation.*, users.full_name FROM reservation JOIN users ON reservation.user_id = users.user_id WHERE reservation.schedule_id = ? AND (reservation.status = 'Paid' OR reservation.status = 'Boarded') ORDER BY reservation.seat_number ASC";
+                                    $passengers = mbus_db_prepare($conn, $sql, [$sid]);
 
-<tr>
+                                    if(mbus_db_num_rows($passengers)>0){
+                                        while($passenger=mbus_db_fetch_assoc($passengers)){
+                                    ?>
+                                    <tr>
+                                        <td data-label="Passenger" class="passenger-name"><?php echo htmlspecialchars($passenger['full_name']); ?></td>
+                                        <td data-label="Seat"><?php echo $passenger['seat_number']; ?></td>
+                                        <td data-label="Pickup"><?php echo htmlspecialchars($passenger['pickup_location']); ?></td>
+                                        <td data-label="Destination"><?php echo htmlspecialchars($passenger['destination']); ?></td>
+                                        <td data-label="Ticket Code"><?php echo htmlspecialchars($passenger['ticket_code']); ?></td>
+                                        <td data-label="Status">
+                                            <?php if($passenger['status']=="Boarded"){ ?>
+                                            <span class="badge badge-success boarded-badge">Boarded</span>
+                                            <?php } else { ?>
+                                            <span class="badge badge-warning paid-badge">Paid</span>
+                                            <?php } ?>
+                                        </td>
+                                        <td data-label="Action">
+                                            <?php if($passenger['status']!="Boarded"){ ?>
+                                            <form method="POST" class="action-form">
+                                                <?php csrf_field(); ?>
+                                                <input type="hidden" name="reservation_id" value="<?php echo $passenger['reservation_id']; ?>">
+                                                <input type="hidden" name="open_schedule" value="<?php echo $row['schedule_id']; ?>">
+                                                <button type="submit" name="mark_boarded" class="btn btn-sm btn-success board-btn">Board</button>
+                                            </form>
+                                            <?php } else { ?>
+                                            <span class="badge badge-success">✔ Boarded</span>
+                                            <?php } ?>
+                                        </td>
+                                    </tr>
+                                    <?php
+                                        }
+                                    }else{
+                                    ?>
+                                    <tr>
+                                        <td colspan="7" data-label="No passengers found">No passengers found.</td>
+                                    </tr>
+                                    <?php } ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <tr class="divider-row">
+                <td colspan="8"><div class="trip-divider"></div></td>
+            </tr>
+            <?php } ?>
+        </tbody>
+    </table>
+</div>
 
-<th>Passenger</th>
-<th>Seat</th>
-<th>Pickup</th>
-<th>Destination</th>
-<th>Ticket Code</th>
-<th>Status</th>
-<th>Action</th>
+</main>
 
-</tr>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle passenger manifest rows
+    document.querySelectorAll('.toggle-passengers').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var scheduleId = this.dataset.scheduleId;
+            var manifestRow = document.getElementById('passengers-' + scheduleId);
+            var isOpen = manifestRow.style.display !== 'none';
+            manifestRow.style.display = isOpen ? 'none' : 'table-row';
+            this.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+            this.innerHTML = isOpen ? '<i class="fa fa-users" aria-hidden="true"></i> View' : '<i class="fa fa-chevron-up" aria-hidden="true"></i> Hide';
+        });
+    });
+    
+    // Auto-open manifest if open_schedule parameter is set
+    <?php if($open_schedule): ?>
+    var openRow = document.getElementById('passengers-<?php echo $open_schedule; ?>');
+    var openBtn = document.querySelector('.toggle-passengers[data-schedule-id="<?php echo $open_schedule; ?>"]');
+    if(openRow && openBtn) {
+        openRow.style.display = 'table-row';
+        openBtn.setAttribute('aria-expanded', 'true');
+        openBtn.innerHTML = '<i class="fa fa-chevron-up" aria-hidden="true"></i> Hide';
+    }
+    <?php endif; ?>
+});
 
-<?php
-
-$schedule_id=$row['schedule_id'];
-
-$passengers=mbus_db_query($conn,"
-SELECT
-reservation.*,
-users.full_name
-
-FROM reservation
-
-JOIN users
-ON reservation.user_id=users.user_id
-
-WHERE reservation.schedule_id='$schedule_id'
-
-AND(
-reservation.status='Paid'
-OR reservation.status='Boarded'
-)
-
-ORDER BY reservation.seat_number ASC
-");
-
-if(mbus_db_num_rows($passengers)>0){
-
-while($passenger=mbus_db_fetch_assoc($passengers)){
-
-?>
-
-<tr>
-
-<td class="passenger-name">
-<?= $passenger['full_name']; ?>
-</td>
-
-<td>
-<?= $passenger['seat_number']; ?>
-</td>
-
-<td>
-<?= $passenger['pickup_location']; ?>
-</td>
-
-<td>
-<?= $passenger['destination']; ?>
-</td>
-
-<td>
-<?= $passenger['ticket_code']; ?>
-</td>
-
-<td>
-
-<?php if($passenger['status']=="Boarded"){ ?>
-
-<span class="boarded-badge">
-Boarded
-</span>
-
-<?php } else { ?>
-
-<span class="paid-badge">
-Paid
-</span>
-
-<?php } ?>
-
-</td>
-
-<td>
-
-<?php if($passenger['status']!="Boarded"){ ?>
-
-<form
-method="POST"
->
-
-<input
-type="hidden"
-name="reservation_id"
-value="<?= $passenger['reservation_id']; ?>"
->
-
-<input
-type="hidden"
-name="open_schedule"
-value="<?= $row['schedule_id']; ?>"
->
-
-<button
-type="submit"
-name="mark_boarded"
-class="board-btn"
->
-Boarded
-</button>
-
-</form>
-
-<?php } else { ?>
-
-<span class="boarded-badge">
-✔ Boarded
-</span>
-
-<?php } ?>
-
-</td>
-
-</tr>
-
-<?php
-
+// Toggle sidebar for mobile
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    const toggle = document.querySelector('.sidebar-toggle');
+    
+    const isOpen = sidebar.classList.toggle('open');
+    overlay.classList.toggle('active');
+    document.body.classList.toggle('sidebar-open', isOpen);
+    
+    if (toggle) {
+        toggle.setAttribute('aria-expanded', isOpen);
+    }
+    
+    if (isOpen) {
+        document.body.style.overflow = 'hidden';
+        const firstLink = sidebar.querySelector('a, button');
+        if (firstLink) firstLink.focus();
+    } else {
+        document.body.style.overflow = '';
+    }
 }
 
-}else{
+// Close sidebar when clicking a nav link on mobile
+document.querySelectorAll('.menu-top a').forEach(link => {
+    link.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+            toggleSidebar();
+        }
+    });
+});
 
-?>
-
-<tr>
-
-<td colspan="7">
-No passengers found.
-</td>
-
-</tr>
-
-<?php } ?>
-
-</table>
-
-</div>
-
-</td>
-
-</tr>
-
-<tr>
-
-<td colspan="8">
-<div class="trip-divider"></div>
-</td>
-
-</tr>
-
-<?php } ?>
-
-</table>
-
-</div>
-
-</div>
-
-<script src="../Assets/js/operator/manage_trips.js"></script>
+// Handle keyboard navigation for sidebar
+document.addEventListener('keydown', function(e) {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar.classList.contains('open') && e.key === 'Escape') {
+        toggleSidebar();
+    }
+});
+</script>
 
 </body>
-
 </html>

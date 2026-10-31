@@ -10,161 +10,327 @@ if(
 }
 
 include("../config/db_connect.php");
+include("../Includes/activity_log.php");
 
 $operator_id = $_SESSION['user_id'];
 
 /* TRIPS TODAY */
-$trips_today_query = mbus_db_query($conn,"
+$trips_today_query = mbus_db_prepare($conn, "
 SELECT COUNT(*) as total
 FROM schedule
 LEFT JOIN operator_bus_assignments
 ON schedule.bus_id = operator_bus_assignments.bus_id
-WHERE operator_bus_assignments.operator_id='$operator_id'
-AND DATE(schedule.departure_time)=CURDATE()
-");
+WHERE operator_bus_assignments.operator_id = ?
+AND DATE(schedule.departure_time) = CURDATE()
+", [$operator_id]);
+
 $trips_today = mbus_db_fetch_assoc($trips_today_query)['total'];
 
 /* TOTAL PASSENGERS */
-$passengers_query = mbus_db_query($conn,"
+$passengers_query = mbus_db_prepare($conn, "
 SELECT COUNT(*) as total
 FROM reservation
 JOIN schedule ON reservation.schedule_id = schedule.schedule_id
 JOIN operator_bus_assignments ON schedule.bus_id = operator_bus_assignments.bus_id
-WHERE operator_bus_assignments.operator_id='$operator_id'
-AND (reservation.status='Paid' OR reservation.status='Boarded')
-");
+WHERE operator_bus_assignments.operator_id = ?
+AND (reservation.status = 'Paid' OR reservation.status = 'Boarded')
+", [$operator_id]);
+
 $total_passengers = mbus_db_fetch_assoc($passengers_query)['total'];
 
 /* BOARDED */
-$boarded_query = mbus_db_query($conn,"
+$boarded_query = mbus_db_prepare($conn, "
 SELECT COUNT(*) as total
 FROM reservation
 JOIN schedule ON reservation.schedule_id = schedule.schedule_id
 JOIN operator_bus_assignments ON schedule.bus_id = operator_bus_assignments.bus_id
-WHERE operator_bus_assignments.operator_id='$operator_id'
-AND reservation.status='Boarded'
-");
+WHERE operator_bus_assignments.operator_id = ?
+AND reservation.status = 'Boarded'
+", [$operator_id]);
+
 $total_boarded = mbus_db_fetch_assoc($boarded_query)['total'];
 
 /* ACTIVE */
-$active_query = mbus_db_query($conn,"
+$active_query = mbus_db_prepare($conn, "
 SELECT COUNT(*) as total
 FROM schedule
 JOIN operator_bus_assignments ON schedule.bus_id = operator_bus_assignments.bus_id
-WHERE operator_bus_assignments.operator_id='$operator_id'
-AND (schedule.trip_status='Scheduled' OR schedule.trip_status='Boarding')
-");
+WHERE operator_bus_assignments.operator_id = ?
+AND (schedule.trip_status = 'Scheduled' OR schedule.trip_status = 'Boarding')
+", [$operator_id]);
+
 $active_trips = mbus_db_fetch_assoc($active_query)['total'];
 ?>
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Operator Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../Assets/css/responsive.css">
+    <link rel="stylesheet" href="../Assets/css/operator/operator_sidebar.css">
+    <link rel="stylesheet" href="../Assets/css/operator/operator_dashboard.css">
+    <link rel="icon" href="../Assets/mbus_icon.png" type="image/png">
+    <link rel="shortcut icon" href="../Assets/mbus_icon.png">
 
-<link rel="stylesheet" href="../Assets/css/operator/operator_sidebar.css">
-<link rel="stylesheet" href="../Assets/css/operator/operator_dashboard.css">
-
-<!-- ICONS -->
-<link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
+    <title>Operator Dashboard</title>
 </head>
 
-<body>
+<body class="has-sidebar">
 
-<!-- SIDEBAR -->
-<div class="sidebar">
+    <!-- Mobile Sidebar Toggle - Fixed, always accessible -->
+    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
+        <i class="fa fa-bars" aria-hidden="true"></i>
+    </button>
 
-<div class="logo-container">
-<img src="../Assets/images/mbus_logo.png" class="logo">
-</div>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()" aria-hidden="true"></div>
 
-<h2>Operator</h2>
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
 
-<div class="menu-top">
+        <div class="logo-container">
+            <img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo">
+        </div>
 
-<a href="operator_dashboard.php">
-<i class="fa-solid fa-house"></i> Dashboard
-</a>
+        <h2>Operator</h2>
 
-<a href="manage_trips.php">
-<i class="fa-solid fa-bus"></i> Manage Trips
-</a>
+        <nav class="menu-top" aria-label="Operator menu">
+            <a href="operator_dashboard.php" aria-current="page"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+            <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
+            <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
+        </nav>
 
-<a href="passengers.php">
-<i class="fa-solid fa-users"></i> Passenger List
-</a>
+        <div class="menu-bottom">
+            <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+                <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
+            </a>
+        </div>
 
-</div>
+    </aside>
 
-<div class="logout-btn">
-<a href="../logout.php">
-<i class="fa-solid fa-right-from-bracket"></i> Logout
-</a>
-</div>
+    <!-- MAIN -->
+    <main class="main" role="main">
 
-</div>
+        <!-- PAGE HEADER - Part of page flow (scrolls with content), like schedule.php -->
+        <header class="page-header" role="banner">
+            <div class="page-header-left">
+                <h1>Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?>!</h1>
+            </div>
+            <div class="page-header-right">
+                <!-- Notification Bell - Top right, part of header flow -->
+                <div class="notification-container">
+                    <button class="notification-bell" onclick="toggleNotifications(event)" aria-label="Notifications" aria-expanded="false" aria-controls="notificationDropdown">
+                        <i class="fa fa-bell" aria-hidden="true"></i>
+                        <span class="notification-badge" id="notificationBadge" aria-live="polite">0</span>
+                    </button>
+                    <div class="notification-dropdown" id="notificationDropdown" role="menu" aria-label="Notifications">
+                        <div class="notification-dropdown-header" data-count="0">
+                            <span>Notifications</span>
+                        </div>
+                        <div class="notification-list" id="notificationList" role="list">
+                            <div class="notification-empty">Loading notifications...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
 
-<!-- MAIN -->
-<div class="main">
+        <!-- Dashboard Content -->
+        <div class="dashboard-content">
 
-<!-- ✅ WELCOME (MATCH COMMUTER) -->
-<div class="welcome">
+            <!-- QUICK ACTIONS -->
+            <section class="cards" aria-labelledby="cards-heading">
+                <h2 id="cards-heading" class="visually-hidden">Quick Actions</h2>
 
-<h2>
-Welcome, <?= $_SESSION['full_name']; ?>!
-</h2>
+                <!-- TRIPS TODAY -->
+                <article class="card card-animated">
+                    <h3 class="day">Trips Today</h3>
+                    <p class="date"><?php echo $trips_today; ?> scheduled</p>
+                    <p>Assigned trips scheduled today</p>
+                    <a href="manage_trips.php?filter=today" class="btn btn-primary">View Trips</a>
+                </article>
 
-<p>
-Manage assigned trips, monitor passengers, and track boarding status in real-time.
-</p>
+                <!-- PAID PASSENGERS -->
+                <article class="card card-animated">
+                    <h3 class="day">Paid Passengers</h3>
+                    <p class="date"><?php echo $total_passengers; ?> confirmed</p>
+                    <p>Passengers with confirmed bookings</p>
+                    <a href="passengers.php?status=Paid" class="btn btn-primary">View Passengers</a>
+                </article>
 
-</div>
+                <!-- BOARDED PASSENGERS -->
+                <article class="card card-animated">
+                    <h3 class="day">Boarded Passengers</h3>
+                    <p class="date"><?php echo $total_boarded; ?> boarded</p>
+                    <p>Passengers already boarded</p>
+                    <a href="passengers.php?status=Boarded" class="btn btn-primary">View Boarded</a>
+                </article>
 
-<!-- ✅ CARDS (CLICKABLE) -->
-<div class="cards">
+                <!-- ACTIVE TRIPS -->
+                <article class="card card-animated">
+                    <h3 class="day">Active Trips</h3>
+                    <p class="date"><?php echo $active_trips; ?> active</p>
+                    <p>Scheduled or boarding trips</p>
+                    <a href="manage_trips.php?filter=active" class="btn btn-primary">View Active</a>
+                </article>
 
-<!-- TRIPS TODAY -->
-<a href="manage_trips.php?filter=today" class="card-link">
-<div class="card">
-<h3>Trips Today</h3>
-<div class="card-number"><?= $trips_today; ?></div>
-<p>Assigned trips scheduled today</p>
-</div>
-</a>
+            </section>
 
-<!-- PAID -->
-<a href="passengers.php?status=Paid" class="card-link">
-<div class="card">
-<h3>Paid Passengers</h3>
-<div class="card-number"><?= $total_passengers; ?></div>
-<p>Passengers with confirmed bookings</p>
-</div>
-</a>
+            <!-- NOTICE -->
+            <section class="notice card" aria-labelledby="notice-heading">
+                <h3 id="notice-heading">Operator Notice</h3>
+                <p>Monitor your assigned trips and passenger boarding status in real-time.</p>
+            </section>
 
-<!-- BOARDED -->
-<a href="passengers.php?status=Boarded" class="card-link">
-<div class="card">
-<h3>Boarded Passengers</h3>
-<div class="card-number"><?= $total_boarded; ?></div>
-<p>Passengers already boarded</p>
-</div>
-</a>
+        </div>
 
-<!-- ACTIVE -->
-<a href="manage_trips.php?filter=active" class="card-link">
-<div class="card">
-<h3>Active Trips</h3>
-<div class="card-number"><?= $active_trips; ?></div>
-<p>Scheduled or boarding trips</p>
-</div>
-</a>
+    </main>
 
-</div>
+<script>
+let notificationDropdownOpen = false;
 
-</div>
+// Toggle sidebar for mobile
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    const toggle = document.querySelector('.sidebar-toggle');
+    
+    const isOpen = sidebar.classList.toggle('open');
+    overlay.classList.toggle('active');
+    
+    if (toggle) {
+        toggle.setAttribute('aria-expanded', isOpen);
+    }
+    
+    // Add/remove body class for CSS to hide hamburger
+    document.body.classList.toggle('sidebar-open', isOpen);
+    
+    // Trap focus when sidebar is open on mobile
+    if (isOpen) {
+        document.body.style.overflow = 'hidden';
+        // Focus first focusable element in sidebar
+        const firstLink = sidebar.querySelector('a, button');
+        if (firstLink) firstLink.focus();
+    } else {
+        document.body.style.overflow = '';
+    }
+}
+
+// Toggle notification dropdown
+function toggleNotifications(event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('notificationDropdown');
+    const bell = document.querySelector('.notification-bell');
+    notificationDropdownOpen = !notificationDropdownOpen;
+    
+    if (notificationDropdownOpen) {
+        dropdown.classList.add('active');
+        if (bell) bell.setAttribute('aria-expanded', 'true');
+        loadNotifications();
+    } else {
+        dropdown.classList.remove('active');
+        if (bell) bell.setAttribute('aria-expanded', 'false');
+    }
+}
+
+// Load notifications
+function loadNotifications() {
+    fetch('../api/get_notifications.php')
+        .then(response => response.json())
+        .then(data => {
+            updateNotificationBadge(data.unread_count);
+            renderNotifications(data.notifications);
+        })
+        .catch(error => {
+            console.error('Error loading notifications:', error);
+        });
+}
+
+// Update notification badge
+function updateNotificationBadge(count) {
+    const badge = document.getElementById('notificationBadge');
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'flex' : 'none';
+    
+    // Also update the dropdown header count
+    const header = document.querySelector('.notification-dropdown-header');
+    if (header) {
+        header.setAttribute('data-count', count);
+    }
+}
+
+// Render notifications
+function renderNotifications(notifications) {
+    const list = document.getElementById('notificationList');
+    
+    if (notifications.length === 0) {
+        list.innerHTML = '<div class="notification-empty">No notifications</div>';
+        return;
+    }
+    
+    list.innerHTML = notifications.map(notif => `
+        <div class="notification-item ${notif.status === 'Unread' ? 'unread' : ''}" 
+             onclick="markAsRead(${notif.id})" role="listitem">
+            <div class="notification-message">${notif.message}</div>
+            <div class="notification-time">${notif.time_ago}</div>
+        </div>
+    `).join('');
+}
+
+// Mark notification as read
+function markAsRead(notificationId) {
+    const formData = new FormData();
+    formData.append('notification_id', notificationId);
+    
+    fetch('../api/mark_notification_read.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadNotifications();
+        }
+    })
+    .catch(error => {
+        console.error('Error marking notification as read:', error);
+    });
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const container = document.querySelector('.notification-container');
+    if (!container.contains(event.target) && notificationDropdownOpen) {
+        toggleNotifications();
+    }
+});
+
+// Close sidebar when clicking a nav link on mobile
+document.querySelectorAll('.menu-top a').forEach(link => {
+    link.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+            toggleSidebar();
+        }
+    });
+});
+
+// Handle keyboard navigation for sidebar
+document.addEventListener('keydown', function(e) {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar.classList.contains('open') && e.key === 'Escape') {
+        toggleSidebar();
+    }
+});
+
+// Auto-refresh notifications every 30 seconds
+setInterval(loadNotifications, 30000);
+
+// Initial load
+loadNotifications();
+</script>
 
 </body>
 </html>
