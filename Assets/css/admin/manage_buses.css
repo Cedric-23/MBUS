@@ -134,10 +134,12 @@
 @media (max-width: 768px) {
   .table-responsive {
     border: none;
+    overflow: visible;
   }
   
   .table-responsive table {
     display: block;
+    min-width: auto;
   }
   
   .table-responsive thead {
@@ -149,26 +151,24 @@
   }
   
   .table-responsive tr {
-    display: block;
+    display: flex;
+    flex-direction: column;
     background: var(--color-bg);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     margin-bottom: var(--space-2);
-    padding: var(--space-2);
+    padding: var(--space-3);
     box-shadow: var(--shadow-sm);
+    gap: var(--space-2);
   }
   
   .table-responsive td {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--space-1) 0;
-    border-bottom: 1px solid var(--color-border-light);
-    font-size: var(--fs-sm);
-  }
-  
-  .table-responsive td:last-child {
+    flex-direction: column;
+    padding: 0;
     border-bottom: none;
+    font-size: var(--fs-sm);
+    gap: var(--space-1);
   }
   
   .table-responsive td::before {
@@ -176,6 +176,20 @@
     font-weight: 600;
     color: var(--color-text-secondary);
     font-size: var(--fs-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  
+  .table-responsive .action-buttons {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin-top: var(--space-2);
+  }
+  
+  .table-responsive .btn-sm {
+    flex: 1;
+    min-width: 0;
   }
   
   .form-grid {
