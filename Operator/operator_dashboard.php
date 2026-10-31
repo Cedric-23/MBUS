@@ -21,7 +21,7 @@ FROM schedule
 LEFT JOIN operator_bus_assignments
 ON schedule.bus_id = operator_bus_assignments.bus_id
 WHERE operator_bus_assignments.operator_id = ?
-AND DATE(schedule.departure_time) = CURDATE()
+AND DATE(schedule.departure_time) = CURRENT_DATE
 ", [$operator_id]);
 
 $trips_today = mbus_db_fetch_assoc($trips_today_query)['total'];
