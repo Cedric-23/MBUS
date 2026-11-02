@@ -12,6 +12,7 @@ input {
     height: 40px;
     font-family: "Inter-Med";
     padding-left: 45px;
+    padding-right: 10px;
 }
 
 label {
@@ -109,13 +110,12 @@ body {
     flex: 1.5;
     justify-content: center;
     align-items: center;
-
+    padding: 40px 20px;   
 }
 
 .form-container {
     display: flex;
     height: 100%;
-    max-height: 620px;
     min-height: 500px;
     width: 100%;
     max-width: 600px;
@@ -160,32 +160,62 @@ body {
 
 }
 
-.picker-passenger {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex: 1;
+.form-header-picker {
+    position: relative;
+}
+
+.option-bar {
+    position: absolute;
+    z-index: 1;
     background-color: #FFFFFF;
     border-radius: 8px;
     padding: 9px;
+    width: 300px;
+    height: 39px;
+    bottom: 35px;
+    left: 8px;
+    transition: transform 0.5s ease;
 }
-.picker-driver {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex: 1;
+
+.option-bar.active {
+    transform: translateX(285px);
 }
-.picker-passenger p {
-    color: #086FCF;
+
+.option-bar.disabled {
+    transform: translateX(0px);
+}
+
+.form-header-picker {
     font-family: "Sans-Bold";
     font-size: 0.8em;
 }
 
+.picker-passenger {
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    /* background-color: #FFFFFF; */
+    border-radius: 8px;
+    padding: 9px;
+    cursor: pointer;
+}
+.picker-driver {
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    cursor: pointer;
+}
+
+.picker-passenger p {
+    color: #086FCF;
+}
 .picker-driver p {
     color: #101828;
-    opacity: 50%;
-    font-family: "Sans-Bold";
-    font-size: 0.8em;
+    opacity: 50%; 
 }
 
 .picker-container-text {
@@ -200,7 +230,7 @@ body {
 .form-body {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 15px;
     flex: 1;
     margin-top: 10px;
 }
@@ -264,20 +294,6 @@ body {
     color: #667085;
 }
 
-.submit-button {
-    font-family: "Sans-Bold";
-    color: #FFFFFF;
-    background: linear-gradient(135deg, #148bf2 0%, #0373DB 100%);
-    border-radius: 10px;
-    height: 50px;
-    font-size: 0.9em;
-    border: none;
-    box-shadow: #148bf2 1px 1px 10px;
-    cursor: pointer;
-}
-
-
-
 .fn-input, 
 .ln-input, 
 .form-email-input, 
@@ -300,7 +316,7 @@ body {
 input[placeholder] {
     font-family: "Sans-Reg";
     opacity: 70%;
-    font-size: 0.9em;
+    font-size: 0.8em;
 }
 
 .footer {
@@ -317,4 +333,258 @@ input[placeholder] {
 
 .footer :nth-child(2) {
     font-size: 10px;
+}
+
+.full-name, .email-address, .phone-number, .home-address {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+/* lICENSE INFORMATION*/
+.driver-input-group {
+    background-color: #FFFFFF;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    border: 1px solid #D7DEE8;
+    border-radius: 10px;
+}
+
+.group-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.group-count {
+    background-color: #0373DB;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.group-name {
+    font-family: "Inter-Bold";
+    font-size: 0.8em;
+    color: #16304d;
+}
+
+.form-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+} 
+
+.input-group {
+    display: flex;
+    gap: 10px;
+}
+
+/*  UPLOAD GROUP */
+.upload-document-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px;
+    background-color: #f8fafd;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 14px;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.upload-document-group:hover {
+    border-color: #0373db;
+    background-color: #f1f7fe;
+}
+
+/* Icon box */
+.upload-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    background-color: #e6f1fd;
+    color: #0373db;
+    border-radius: 12px;
+}
+
+.upload-icon svg {
+    width: 15px;
+    height: 15px;
+}
+
+/* Text */
+.document-desc {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.document-desc span:first-child {
+    font-size: 11px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.document-desc span:last-child {
+    font-size: 9px;
+    color: #94a3b8;
+}
+
+/* Browse button */
+.document-input-button {
+    flex-shrink: 0;
+}
+
+.document-input-button button {
+    padding: 10px 20px;
+    background-color: #e6f1fd;
+    color: #0373db;
+    font-size: 10px;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    pointer-events: none; /* clicks pass through to the file input */
+}
+
+/* Hidden file input stretched over the whole box */
+.document-input-button input[type="file"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+}
+
+.input-label { /*Labels*/
+    display: block;
+    margin-bottom: 3px;
+    font-size: 0.8em;
+    font-weight: 300;
+    color: #344054d7;
+    line-height: 19.5px;
+    font-family: "Sans-Bold";
+}
+
+
+/* GROUP 2*/
+.license-number, .license-expiry {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    position: relative;
+}
+
+/*Group 3*/
+.vehicle-type, .vehicle-plate-number {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    position: relative;
+}
+
+.vehicle-selection {
+    border: 1px solid #D7DEE8;
+    border-radius: 10px;
+    height: 40px;
+    font-family: "Inter-Med";
+    padding-left: 45px;
+}
+
+.vehicle-selection option:first-child {
+    color: #A0AAB8;
+}
+
+
+.vehicle-selection:valid {
+    color: #263445;
+}
+
+.driver-footer {
+    display: flex;
+    flex-direction: column;
+}
+
+.terms-conditions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.terms-conditions p {
+    font-family: "Inter-Reg";
+    color: #667085;
+    font-size: 0.7em;
+}
+
+.button-container {
+    display: flex;
+}
+
+.submit-button {
+    font-family: "Sans-Bold";
+    color: #FFFFFF;
+    background: linear-gradient(135deg, #148bf2 0%, #0373DB 100%);
+    border-radius: 10px;
+    height: 50px;
+    width: 100%;
+    font-size: 0.9em;
+    border: none;
+    box-shadow: #148bf2 1px 1px 10px;
+    cursor: pointer;
+}
+
+.redirect-footer {
+    display: flex;
+    flex-direction: column;
+    font-family: "Inter-Med";
+    color: #667085;
+    font-size: 0.8em;
+    margin-top: 6px;
+    gap: 6px;
+}
+
+.contacts {
+    display: flex;
+    justify-content: center;
+    font-size: 0.8em;
+    margin-top: 8px;
+}
+
+.accounts-redirect {
+    display: flex; 
+    flex-direction: column;
+    justify-content: center;
+    align-items: center; 
+}
+
+.driver {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    margin-top: 5px;
+
+}
+
+.passenger {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    margin-top: 5px;
 }
