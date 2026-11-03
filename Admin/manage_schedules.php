@@ -156,16 +156,6 @@ ORDER BY departure_time ASC
 <div class="alert alert-error" role="alert"><?php echo $error; ?></div>
 <?php endif; ?>
 
-<!-- View Toggle -->
-<div class="view-toggle" role="group" aria-label="View options">
-    <button class="btn btn-secondary toggle-btn active" onclick="showListView()" aria-pressed="true">
-        <i class="fa fa-list" aria-hidden="true"></i> List View
-    </button>
-    <button class="btn btn-secondary toggle-btn" onclick="showCalendarView()" aria-pressed="false">
-        <i class="fa fa-calendar" aria-hidden="true"></i> Calendar View
-    </button>
-</div>
-
 <!-- Filter Tabs -->
 <div class="route-filters" aria-label="Schedule filters">
 <a href="?filter=all" class="route-chip <?php echo (!isset($_GET['filter']) || $_GET['filter']==='all') ? 'active' : ''; ?>" aria-current="<?php echo (!isset($_GET['filter']) || $_GET['filter']==='all') ? 'page' : 'false'; ?>">All Routes</a>

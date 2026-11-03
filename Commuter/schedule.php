@@ -107,16 +107,6 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
     <h1>Bus Schedules</h1>
 </header>
 
-<!-- View Toggle -->
-<div class="view-toggle" role="group" aria-label="View options">
-    <button class="btn btn-secondary toggle-btn active" onclick="showListView()" aria-pressed="true">
-        <i class="fa fa-list" aria-hidden="true"></i> List View
-    </button>
-    <button class="btn btn-secondary toggle-btn" onclick="showCalendarView()" aria-pressed="false">
-        <i class="fa fa-calendar" aria-hidden="true"></i> Calendar View
-    </button>
-</div>
-
 <!-- Route Map Container -->
 <div id="scheduleMapContainer" class="map-container">
     <div id="scheduleMap" class="map-canvas" style="display: none;"></div>

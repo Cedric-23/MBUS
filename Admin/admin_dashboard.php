@@ -75,6 +75,7 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_dashboard.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
+    <link rel="stylesheet" href="../Assets/css/professional-notifications.css">
     <link rel="icon" href="../Assets/mbus_icon.png" type="image/png">
     <link rel="shortcut icon" href="../Assets/mbus_icon.png">
 
@@ -125,18 +126,26 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
                 <h1>Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?>!</h1>
             </div>
             <div class="page-header-right">
-                <!-- Notification Bell - Top right, part of header flow -->
+                <!-- Notification Bell - Modern Professional Design -->
                 <div class="notification-container">
                     <button class="notification-bell" onclick="toggleNotifications(event)" aria-label="Notifications" aria-expanded="false" aria-controls="notificationDropdown">
                         <i class="fa fa-bell" aria-hidden="true"></i>
-                        <span class="notification-badge" id="notificationBadge" aria-live="polite">0</span>
+                        <span class="notification-badge hidden" id="notificationBadge" aria-live="polite">0</span>
                     </button>
                     <div class="notification-dropdown" id="notificationDropdown" role="menu" aria-label="Notifications">
                         <div class="notification-dropdown-header" data-count="0">
                             <span>Notifications</span>
                         </div>
                         <div class="notification-list" id="notificationList" role="list">
-                            <div class="notification-empty">Loading notifications...</div>
+                            <div class="notification-empty">No notifications</div>
+                        </div>
+                        <div class="notification-actions">
+                            <button class="notification-btn" onclick="markAllAsRead()">
+                                <i class="fa fa-check-double" aria-hidden="true"></i> Mark All Read
+                            </button>
+                            <button class="notification-btn" onclick="clearAllNotifications()">
+                                <i class="fa fa-trash" aria-hidden="true"></i> Clear All
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -303,6 +312,40 @@ function markAsRead(notificationId) {
     .catch(error => {
         console.error('Error marking notification as read:', error);
     });
+}
+
+// Mark all notifications as read
+function markAllAsRead() {
+    fetch('../api/mark_all_read.php', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadNotifications();
+        }
+    })
+    .catch(error => {
+        console.error('Error marking all as read:', error);
+    });
+}
+
+// Clear all notifications
+function clearAllNotifications() {
+    if (confirm('Are you sure you want to clear all notifications?')) {
+        fetch('../api/clear_notifications.php', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                loadNotifications();
+            }
+        })
+        .catch(error => {
+            console.error('Error clearing notifications:', error);
+        });
+    }
 }
 
 // Close dropdown when clicking outside
