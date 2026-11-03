@@ -107,6 +107,7 @@ ORDER BY departure_time ASC
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/manage_schedules.css">
+    <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
 </head>
 
 <body class="has-sidebar">

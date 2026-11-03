@@ -77,6 +77,7 @@ if(isset($_POST['delete_operator'])){
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/manage_operators.css">
+    <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
 </head>
 
 <body class="has-sidebar">

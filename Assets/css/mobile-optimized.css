@@ -1,0 +1,491 @@
+/* ============================================================================
+   MBUS — Ultimate Mobile Optimization
+   Zero Horizontal Scrolling - All Screen Sizes
+   Target: 360x640, 375x667, 414x896, and all larger sizes
+   ============================================================================ */
+
+/* Reset and Base - Force No Horizontal Scroll */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  max-width: 100vw;
+}
+
+html,
+body {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden !important;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* Container Constraints */
+.main,
+.page-content,
+.card,
+section,
+article {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden !important;
+  overflow-y: visible;
+}
+
+/* Table Responsive - Ultimate Mobile Fix */
+.table-responsive,
+.passengers-table-responsive,
+.buses-table,
+.operators-table,
+.routes-table,
+.schedules-table {
+  width: 100% !important;
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
+  overflow-y: visible;
+  border: none !important;
+}
+
+.table-responsive table,
+.passengers-table-responsive table {
+  width: 100% !important;
+  max-width: 100vw !important;
+  min-width: auto !important;
+  display: block;
+}
+
+.table-responsive thead,
+.passengers-table-responsive thead {
+  display: none !important;
+}
+
+.table-responsive tbody,
+.passengers-table-responsive tbody {
+  display: block;
+  width: 100%;
+}
+
+.table-responsive tr,
+.passengers-table-responsive tr {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100vw;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+  padding: var(--space-3);
+  gap: var(--space-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.table-responsive td,
+.passengers-table-responsive td {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100vw;
+  padding: 0;
+  border: none;
+  gap: var(--space-1);
+  font-size: var(--fs-sm);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.table-responsive td::before,
+.passengers-table-responsive td::before {
+  content: attr(data-label);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-secondary);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-1);
+  white-space: normal;
+}
+
+/* Action Buttons in Mobile Cards */
+.table-responsive .action-buttons,
+.passengers-table-responsive .action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  width: 100%;
+}
+
+.table-responsive .btn-sm,
+.passengers-table-responsive .btn-sm {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Forms inside tables */
+.table-responsive form,
+.passengers-table-responsive form {
+  width: 100%;
+  max-width: 100vw;
+}
+
+/* Form Grid - Single Column */
+.form-grid,
+.form-row {
+  display: flex;
+  flex-direction: column;
+  grid-template-columns: 1fr !important;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 100vw;
+}
+
+.form-group {
+  width: 100%;
+  max-width: 100vw;
+}
+
+input,
+select,
+textarea {
+  width: 100% !important;
+  max-width: 100vw !important;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--fs-md);
+  box-sizing: border-box;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234a4a5a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  background-size: 24px;
+  padding-right: var(--space-10);
+}
+
+/* Coordinate Inputs */
+.coord-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.coord-inputs input {
+  width: 100%;
+}
+
+/* Cards */
+.card {
+  width: 100%;
+  max-width: 100vw;
+  padding: var(--space-4);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 100vw;
+}
+
+/* Badges */
+.badge,
+.route-badge,
+.status-badge {
+  display: inline-block;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+/* Tabs and Filters */
+.tabs,
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tab,
+.filter-btn {
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+/* Search Box */
+.search-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 100vw;
+}
+
+.search-box .form-control {
+  width: 100%;
+}
+
+.search-box .btn {
+  width: 100%;
+}
+
+/* Page Header */
+.page-header {
+  width: 100%;
+  max-width: 100vw;
+  padding: var(--space-3);
+  box-sizing: border-box;
+}
+
+.page-header h1 {
+  font-size: var(--fs-lg);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 100vw;
+}
+
+.form-actions .btn {
+  width: 100%;
+}
+
+/* Sidebar Toggle */
+.sidebar-toggle {
+  position: fixed;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: var(--z-fixed);
+  background: var(--color-primary);
+  color: var(--color-white);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  min-width: 44px;
+  min-height: 44px;
+  box-shadow: var(--shadow-md);
+}
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  max-width: 85vw;
+  height: 100vh;
+  z-index: var(--z-fixed);
+  transform: translateX(-100%);
+  transition: transform var(--transition-normal);
+  overflow-y: auto;
+}
+
+.sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-overlay);
+  z-index: calc(var(--z-fixed) - 1);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-normal);
+}
+
+.sidebar-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Main Content */
+.main {
+  margin-left: 0;
+  padding: var(--space-3);
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden !important;
+}
+
+/* Alerts */
+.alert {
+  width: 100%;
+  max-width: 100vw;
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* View Toggle */
+.view-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 100vw;
+  margin-bottom: var(--space-3);
+}
+
+.view-toggle .btn {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Map Canvas */
+.map-canvas {
+  width: 100%;
+  max-width: 100vw;
+  height: 300px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+/* Hide hamburger when sidebar is open */
+body.sidebar-open .sidebar-toggle {
+  display: none;
+}
+
+/* Specific screen size optimizations */
+@media (max-width: 360px) {
+  :root {
+    --fs-base: 0.8125rem; /* 13px */
+    --fs-sm: 0.75rem;    /* 12px */
+    --fs-xs: 0.6875rem;  /* 11px */
+  }
+
+  .sidebar {
+    width: 260px;
+    max-width: 90vw;
+  }
+
+  .page-header h1 {
+    font-size: var(--fs-md);
+  }
+
+  .card {
+    padding: var(--space-3);
+  }
+
+  .table-responsive tr,
+  .passengers-table-responsive tr {
+    padding: var(--space-2);
+    gap: var(--space-1);
+  }
+}
+
+@media (min-width: 361px) and (max-width: 414px) {
+  .sidebar {
+    width: 280px;
+    max-width: 85vw;
+  }
+}
+
+@media (min-width: 415px) and (max-width: 767px) {
+  .sidebar {
+    width: 300px;
+    max-width: 80vw;
+  }
+
+  .cards {
+    grid-template-columns: repeat(2, 1fr);
+    display: grid;
+  }
+}
+
+/* Desktop - restore normal layout */
+@media (min-width: 768px) {
+  .sidebar {
+    position: relative;
+    transform: none;
+    width: var(--sidebar-width);
+    max-width: none;
+  }
+
+  .sidebar-toggle {
+    display: none;
+  }
+
+  .sidebar-overlay {
+    display: none;
+  }
+
+  .main {
+    margin-left: var(--sidebar-width);
+    padding: var(--space-6);
+    width: calc(100% - var(--sidebar-width));
+  }
+
+  .table-responsive table,
+  .passengers-table-responsive table {
+    display: table;
+    min-width: 600px;
+  }
+
+  .table-responsive thead,
+  .passengers-table-responsive thead {
+    display: table-header-group;
+  }
+
+  .table-responsive tbody,
+  .passengers-table-responsive tbody {
+    display: table-row-group;
+  }
+
+  .table-responsive tr,
+  .passengers-table-responsive tr {
+    display: table-row;
+  }
+
+  .table-responsive td,
+  .passengers-table-responsive td {
+    display: table-cell;
+  }
+
+  .table-responsive td::before,
+  .passengers-table-responsive td::before {
+    display: none;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+
+  .coord-inputs {
+    flex-direction: row;
+  }
+}

@@ -74,6 +74,7 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_dashboard.css">
+    <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="icon" href="../Assets/mbus_icon.png" type="image/png">
     <link rel="shortcut icon" href="../Assets/mbus_icon.png">
 

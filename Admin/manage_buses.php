@@ -59,6 +59,7 @@ if(isset($_POST['delete_bus'])){
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/manage_buses.css">
+    <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
 </head>
 
 <body class="has-sidebar">

@@ -93,6 +93,7 @@ if(isset($_POST['delete_route'])){
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/manage_routes.css">
+    <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
 
     <!-- GOOGLE MAPS API -->
     <script async defer

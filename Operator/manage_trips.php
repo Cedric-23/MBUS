@@ -102,6 +102,7 @@ $query = mbus_db_prepare($conn, "
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/operator/operator_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/operator/operator_manage_trips.css">
+    <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="icon" href="../Assets/mbus_icon.png" type="image/png">
     <link rel="shortcut icon" href="../Assets/mbus_icon.png">
 </head>
