@@ -103,6 +103,7 @@ $query = mbus_db_prepare($conn, "
     <link rel="stylesheet" href="../Assets/css/operator/operator_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/operator/operator_manage_trips.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
+    <link rel="stylesheet" href="../Assets/css/professional-filters.css">
     <link rel="icon" href="../Assets/mbus_icon.png" type="image/png">
     <link rel="shortcut icon" href="../Assets/mbus_icon.png">
 </head>
@@ -151,13 +152,25 @@ $query = mbus_db_prepare($conn, "
 <?php endif; ?>
 
 <!-- Filter Tabs -->
-<nav class="tabs" aria-label="Trip filters">
-    <a href="?filter=all" class="tab <?php echo $filter==='all' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='all' ? 'page' : 'false'; ?>">All</a>
-    <a href="?filter=today" class="tab <?php echo $filter==='today' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='today' ? 'page' : 'false'; ?>">Today</a>
-    <a href="?filter=tomorrow" class="tab <?php echo $filter==='tomorrow' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='tomorrow' ? 'page' : 'false'; ?>">Tomorrow</a>
-    <a href="?filter=this_week" class="tab <?php echo $filter==='this_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='this_week' ? 'page' : 'false'; ?>">This Week</a>
-    <a href="?filter=next_week" class="tab <?php echo $filter==='next_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='next_week' ? 'page' : 'false'; ?>">Next Week</a>
+<div class="date-filter-container">
+<nav class="date-filters" aria-label="Trip filters">
+<a href="?filter=all" class="date-filter-btn <?php echo $filter==='all' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='all' ? 'page' : 'false'; ?>">
+<i class="fa fa-bus" aria-hidden="true"></i> All
+</a>
+<a href="?filter=today" class="date-filter-btn <?php echo $filter==='today' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='today' ? 'page' : 'false'; ?>">
+<i class="fa fa-calendar-day" aria-hidden="true"></i> Today
+</a>
+<a href="?filter=tomorrow" class="date-filter-btn <?php echo $filter==='tomorrow' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='tomorrow' ? 'page' : "false"; ?>">
+<i class="fa fa-calendar-plus" aria-hidden="true"></i> Tomorrow
+</a>
+<a href="?filter=this_week" class="date-filter-btn <?php echo $filter==='this_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='this_week' ? 'page' : "false"; ?>">
+<i class="fa fa-calendar-week" aria-hidden="true"></i> This Week
+</a>
+<a href="?filter=next_week" class="date-filter-btn <?php echo $filter==='next_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='next_week' ? 'page' : "false"; ?>">
+<i class="fa fa-calendar-alt" aria-hidden="true"></i> Next Week
+</a>
 </nav>
+</div>
 
 <div class="table-responsive trips-table-responsive">
     <table class="trips-table">

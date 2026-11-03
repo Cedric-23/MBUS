@@ -108,6 +108,7 @@ ORDER BY departure_time ASC
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/manage_schedules.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
+    <link rel="stylesheet" href="../Assets/css/professional-filters.css">
 </head>
 
 <body class="has-sidebar">
@@ -166,11 +167,11 @@ ORDER BY departure_time ASC
 </div>
 
 <!-- Filter Tabs -->
-<nav class="tabs" aria-label="Schedule filters">
-    <a href="?filter=all" class="tab <?php echo (!isset($_GET['filter']) || $_GET['filter']==='all') ? 'active' : ''; ?>" aria-current="<?php echo (!isset($_GET['filter']) || $_GET['filter']==='all') ? 'page' : 'false'; ?>">All</a>
-    <a href="?filter=morong" class="tab <?php echo (isset($_GET['filter']) && $_GET['filter']==='morong') ? 'active' : ''; ?>" aria-current="<?php echo (isset($_GET['filter']) && $_GET['filter']==='morong') ? 'page' : 'false'; ?>">Morong → SBMA</a>
-    <a href="?filter=sbma" class="tab <?php echo (isset($_GET['filter']) && $_GET['filter']==='sbma') ? 'active' : ''; ?>" aria-current="<?php echo (isset($_GET['filter']) && $_GET['filter']==='sbma') ? 'page' : 'false'; ?>">SBMA → Morong</a>
-</nav>
+<div class="route-filters" aria-label="Schedule filters">
+<a href="?filter=all" class="route-chip <?php echo (!isset($_GET['filter']) || $_GET['filter']==='all') ? 'active' : ''; ?>" aria-current="<?php echo (!isset($_GET['filter']) || $_GET['filter']==='all') ? 'page' : 'false'; ?>">All Routes</a>
+<a href="?filter=morong" class="route-chip <?php echo (isset($_GET['filter']) && $_GET['filter']==='morong') ? 'active' : ''; ?>" aria-current="<?php echo (isset($_GET['filter']) && $_GET['filter']==='morong') ? 'page' : 'false'; ?>">Morong → SBMA</a>
+<a href="?filter=sbma" class="route-chip <?php echo (isset($_GET['filter']) && $_GET['filter']==='sbma') ? 'active' : ''; ?>" aria-current="<?php echo (isset($_GET['filter']) && $_GET['filter']==='sbma') ? 'page' : 'false'; ?>">SBMA → Morong</a>
+</div>
 
 <!-- ADD SCHEDULE -->
 <section class="card" style="margin-bottom: var(--space-6);">

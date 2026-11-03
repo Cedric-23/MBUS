@@ -51,6 +51,8 @@ elseif($filter=="nextweek"){
 <link rel="stylesheet" href="../Assets/css/responsive.css">
 <link rel="stylesheet" href="../Assets/css/commuter_sidebar.css">
 <link rel="stylesheet" href="../Assets/css/commuter_schedule.css">
+<link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
+<link rel="stylesheet" href="../Assets/css/professional-filters.css">
 
 <!-- FullCalendar CSS -->
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet'>
@@ -125,15 +127,26 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
 
 <!-- List View -->
 <div id="listView">
-<nav class="tabs" aria-label="Schedule filters">
-<a href="schedule.php?filter=today" class="tab <?php if($filter=="today")echo"active"; ?>" aria-current="<?php echo $filter=="today" ? "page" : "false"; ?>">Today</a>
-<a href="schedule.php?filter=tomorrow" class="tab <?php if($filter=="tomorrow")echo"active"; ?>" aria-current="<?php echo $filter=="tomorrow" ? "page" : "false"; ?>">Tomorrow</a>
-<a href="schedule.php?filter=thisweek" class="tab <?php if($filter=="thisweek")echo"active"; ?>" aria-current="<?php echo $filter=="thisweek" ? "page" : "false"; ?>">This Week</a>
-<a href="schedule.php?filter=nextweek" class="tab <?php if($filter=="nextweek")echo"active"; ?>" aria-current="<?php echo $filter=="nextweek" ? "page" : "false"; ?>">Next Week</a>
+<div class="date-filter-container">
+<nav class="date-filters" aria-label="Schedule filters">
+<a href="schedule.php?filter=today" class="date-filter-btn <?php if($filter=="today")echo"active"; ?>" aria-current="<?php echo $filter=="today" ? "page" : "false"; ?>">
+<i class="fa fa-calendar-day" aria-hidden="true"></i> Today
+</a>
+<a href="schedule.php?filter=tomorrow" class="date-filter-btn <?php if($filter=="tomorrow")echo"active"; ?>" aria-current="<?php echo $filter=="tomorrow" ? "page" : "false"; ?>">
+<i class="fa fa-calendar-plus" aria-hidden="true"></i> Tomorrow
+</a>
+<a href="schedule.php?filter=thisweek" class="date-filter-btn <?php if($filter=="thisweek")echo"active"; ?>" aria-current="<?php echo $filter=="thisweek" ? "page" : "false"; ?>">
+<i class="fa fa-calendar-week" aria-hidden="true"></i> This Week
+</a>
+<a href="schedule.php?filter=nextweek" class="date-filter-btn <?php if($filter=="nextweek")echo"active"; ?>" aria-current="<?php echo $filter=="nextweek" ? "page" : "false"; ?>">
+<i class="fa fa-calendar-alt" aria-hidden="true"></i> Next Week
+</a>
 </nav>
+</div>
 
 <?php if($filter=="thisweek"){ ?>
 
+<div class="day-tabs-container">
 <div class="day-tabs" role="tablist" aria-label="Days this week">
 <?php
 $current_day=date("N");
@@ -145,6 +158,7 @@ for($i=$current_day;$i<=7;$i++){
 <?php echo $days[$i]; ?>
 </a>
 <?php } ?>
+</div>
 </div>
 
 <?php } elseif($filter=="nextweek"){ ?>

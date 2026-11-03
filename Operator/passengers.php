@@ -137,6 +137,7 @@ $passengers = mbus_db_prepare($conn, $passenger_sql, $params);
     <link rel="stylesheet" href="../Assets/css/operator/operator_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/operator/operator_passengers.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
+    <link rel="stylesheet" href="../Assets/css/professional-filters.css">
     <link rel="icon" href="../Assets/mbus_icon.png" type="image/png">
     <link rel="shortcut icon" href="../Assets/mbus_icon.png">
 </head>
@@ -178,28 +179,33 @@ $passengers = mbus_db_prepare($conn, $passenger_sql, $params);
 </header>
 
 <!-- Filter Tabs -->
-<nav class="tabs" aria-label="Passenger filters">
-    <a href="?filter=all" class="tab <?php echo $filter==='all' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='all' ? 'page' : 'false'; ?>">All</a>
-    <a href="?filter=today" class="tab <?php echo $filter==='today' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='today' ? 'page' : 'false'; ?>">Today</a>
-    <a href="?filter=tomorrow" class="tab <?php echo $filter==='tomorrow' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='tomorrow' ? 'page' : 'false'; ?>">Tomorrow</a>
-    <a href="?filter=this_week" class="tab <?php echo $filter==='this_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='this_week' ? 'page' : 'false'; ?>">This Week</a>
-    <a href="?filter=next_week" class="tab <?php echo $filter==='next_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='next_week' ? 'page' : 'false'; ?>">Next Week</a>
+<div class="date-filter-container">
+<nav class="date-filters" aria-label="Passenger filters">
+<a href="?filter=all" class="date-filter-btn <?php echo $filter==='all' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='all' ? 'page' : 'false'; ?>">
+<i class="fa fa-users" aria-hidden="true"></i> All
+</a>
+<a href="?filter=today" class="date-filter-btn <?php echo $filter==='today' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='today' ? 'page' : 'false'; ?>">
+<i class="fa fa-calendar-day" aria-hidden="true"></i> Today
+</a>
+<a href="?filter=tomorrow" class="date-filter-btn <?php echo $filter==='tomorrow' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='tomorrow' ? 'page' : 'false'; ?>">
+<i class="fa fa-calendar-plus" aria-hidden="true"></i> Tomorrow
+</a>
+<a href="?filter=this_week" class="date-filter-btn <?php echo $filter==='this_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='this_week' ? 'page' : 'false'; ?>">
+<i class="fa fa-calendar-week" aria-hidden="true"></i> This Week
+</a>
+<a href="?filter=next_week" class="date-filter-btn <?php echo $filter==='next_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='next_week' ? 'page' : 'false'; ?>">
+<i class="fa fa-calendar-alt" aria-hidden="true"></i> Next Week
+</a>
 </nav>
+</div>
 
 <!-- Search -->
-<div class="search-wrapper">
-    <form method="GET" class="search-form" role="search">
-        <input type="hidden" name="filter" value="<?php echo htmlspecialchars($filter); ?>">
-        <div class="search-input-group">
-            <i class="fa fa-search search-icon" aria-hidden="true"></i>
-            <input type="search" name="search" class="form-control search-input" placeholder="Search by name, ticket code, or seat..." value="<?php echo htmlspecialchars($search); ?>" aria-label="Search passengers">
-            <?php if($search !== ''): ?>
-            <a href="?filter=<?php echo htmlspecialchars($filter); ?>" class="search-clear" aria-label="Clear search">
-                <i class="fa fa-times" aria-hidden="true"></i>
-            </a>
-            <?php endif; ?>
-        </div>
-    </form>
+<div class="search-modern">
+<i class="fa fa-search" aria-hidden="true"></i>
+<form method="GET" role="search">
+<input type="hidden" name="filter" value="<?php echo htmlspecialchars($filter); ?>">
+<input type="search" name="search" placeholder="Search by name, ticket code, or seat..." value="<?php echo htmlspecialchars($search); ?>" aria-label="Search passengers">
+</form>
 </div>
 
 <!-- Stats Cards -->
