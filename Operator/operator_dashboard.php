@@ -82,6 +82,7 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
+    <link rel="stylesheet" href="../Assets/css/dashboard-home.css">
 </head>
 
 <body class="has-sidebar">
@@ -110,7 +111,7 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
     </aside>
 
     <!-- MAIN -->
-    <main class="main" role="main">
+    <main class="main dashboard-home" role="main">
 
         <!-- PAGE HEADER - Part of page flow (scrolls with content), like schedule.php -->
         <header class="page-header" role="banner">
@@ -137,10 +138,11 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
 
         <!-- Dashboard Content -->
         <div class="dashboard-content">
+            <p class="dashboard-intro">Keep today's trips and passenger movement on track.</p>
 
             <!-- QUICK ACTIONS -->
             <section class="cards" aria-labelledby="cards-heading">
-                <h2 id="cards-heading" class="visually-hidden">Quick Actions</h2>
+                <h2 id="cards-heading" class="dashboard-section-title">Operations overview</h2>
 
                 <!-- TRIPS TODAY -->
                 <article class="card card-animated">
@@ -177,7 +179,7 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
             </section>
 
             <!-- NOTICE -->
-            <section class="notice card" aria-labelledby="notice-heading">
+            <section class="notice card dashboard-notice" aria-labelledby="notice-heading">
                 <h3 id="notice-heading">Operator Notice</h3>
                 <p>Monitor your assigned trips and passenger boarding status in real-time.</p>
             </section>

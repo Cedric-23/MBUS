@@ -1,0 +1,88 @@
+/* Minimal professional home dashboards. Scoped so tables and inner pages keep their own layouts. */
+.dashboard-home .dashboard-content {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+.dashboard-home .dashboard-intro {
+  margin: -8px 0 var(--space-6);
+  color: var(--minimal-muted, #667085);
+  font-size: var(--fs-sm);
+}
+.dashboard-home .dashboard-section-title {
+  margin: 0 0 var(--space-3);
+  color: var(--minimal-ink, #172b4d);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+.dashboard-home .cards {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4) !important;
+  margin-bottom: var(--space-5);
+}
+.dashboard-home .cards > .dashboard-section-title {
+  grid-column: 1 / -1;
+}
+.dashboard-home .cards .card {
+  display: flex;
+  min-height: 188px !important;
+  flex-direction: column;
+  padding: var(--space-5);
+  border-top: 3px solid var(--color-accent);
+  background: var(--color-white);
+}
+.dashboard-home .cards .day {
+  order: 0;
+  margin: 0 0 var(--space-3);
+  color: var(--minimal-muted, #667085);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.dashboard-home .cards .date {
+  order: 1;
+  margin: 0 0 var(--space-2);
+  color: var(--minimal-ink, #172b4d);
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  font-weight: var(--fw-bold);
+  line-height: 1.15;
+}
+.dashboard-home .cards .card > p:not(.date) {
+  order: 2;
+  min-height: 2.5em;
+  margin: 0 0 var(--space-4);
+  color: var(--minimal-muted, #667085);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+.dashboard-home .cards .card .btn {
+  order: 3;
+  align-self: flex-start;
+  min-height: 36px;
+  margin-top: auto;
+  padding: 8px 12px;
+  font-size: var(--fs-xs);
+}
+.dashboard-home .dashboard-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-left: 3px solid var(--color-accent);
+  background: #f7f9fc;
+}
+.dashboard-home .dashboard-notice h3 { margin: 0; color: var(--minimal-ink, #172b4d); font-size: var(--fs-sm); white-space: nowrap; }
+.dashboard-home .dashboard-notice p { margin: 0; color: var(--minimal-muted, #667085); font-size: var(--fs-sm); }
+
+@media (max-width: 1024px) {
+  .dashboard-home .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .dashboard-home .cards { grid-template-columns: 1fr; gap: var(--space-3) !important; }
+  .dashboard-home .cards .card { min-height: 0 !important; padding: var(--space-4); }
+  .dashboard-home .dashboard-notice { align-items: flex-start; flex-direction: column; gap: var(--space-1); }
+}

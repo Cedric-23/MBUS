@@ -31,12 +31,13 @@ include "../Includes/csrf.php";
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
+    <link rel="stylesheet" href="../Assets/css/dashboard-home.css">
 </head>
 
 <body class="has-bottom-nav">
 
     <!-- MAIN -->
-    <main class="main" role="main">
+    <main class="main dashboard-home" role="main">
 
         <!-- PAGE HEADER - Part of page flow (scrolls with content), like schedule.php -->
         <header class="page-header" role="banner">
@@ -64,10 +65,11 @@ include "../Includes/csrf.php";
 
         <!-- Dashboard Content -->
         <div class="dashboard-content">
+            <p class="dashboard-intro">Choose a travel window to see available bus schedules.</p>
 
             <!-- QUICK ACTIONS -->
             <section class="cards" aria-labelledby="cards-heading">
-                <h2 id="cards-heading" class="visually-hidden">Quick Actions</h2>
+                <h2 id="cards-heading" class="dashboard-section-title">Plan your next trip</h2>
 
                 <!-- TODAY -->
                 <article class="card card-animated">
@@ -110,7 +112,7 @@ include "../Includes/csrf.php";
             </section>
 
             <!-- NOTICE -->
-            <section class="notice card" aria-labelledby="notice-heading">
+            <section class="notice card dashboard-notice" aria-labelledby="notice-heading">
                 <h3 id="notice-heading">Travel Reminder</h3>
                 <p>Please arrive at least 15 minutes before your departure time.</p>
             </section>

@@ -84,6 +84,7 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
+    <link rel="stylesheet" href="../Assets/css/dashboard-home.css">
 </head>
 
 <body class="has-sidebar">
@@ -114,7 +115,7 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
     </aside>
 
     <!-- MAIN -->
-    <main class="main" role="main">
+    <main class="main dashboard-home" role="main">
 
         <!-- PAGE HEADER - Part of page flow (scrolls with content), like schedule.php -->
         <header class="page-header" role="banner">
@@ -141,10 +142,11 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
 
         <!-- Dashboard Content -->
         <div class="dashboard-content">
+            <p class="dashboard-intro">Monitor the core MBUS system resources from one place.</p>
 
             <!-- QUICK ACTIONS -->
             <section class="cards" aria-labelledby="cards-heading">
-                <h2 id="cards-heading" class="visually-hidden">Quick Actions</h2>
+                <h2 id="cards-heading" class="dashboard-section-title">System overview</h2>
 
                 <!-- TOTAL BUSES -->
                 <article class="card card-animated">
@@ -181,7 +183,7 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
             </section>
 
             <!-- NOTICE -->
-            <section class="notice card" aria-labelledby="notice-heading">
+            <section class="notice card dashboard-notice" aria-labelledby="notice-heading">
                 <h3 id="notice-heading">System Notice</h3>
                 <p>Only authorized administrators can manage buses, operators, and system configurations.</p>
             </section>
