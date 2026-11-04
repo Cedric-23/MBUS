@@ -107,6 +107,7 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
             <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
             <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
             <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
+            <a href="notifications.php"><i class="fa fa-bell" aria-hidden="true"></i> Notifications</a>
         </nav>
 
         <div class="menu-bottom">
@@ -124,31 +125,6 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
         <header class="page-header" role="banner">
             <div class="page-header-left">
                 <h1>Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?>!</h1>
-            </div>
-            <div class="page-header-right">
-                <!-- Notification Bell - Modern Professional Design -->
-                <div class="notification-container">
-                    <button class="notification-bell" onclick="toggleNotifications(event)" aria-label="Notifications" aria-expanded="false" aria-controls="notificationDropdown">
-                        <i class="fa fa-bell" aria-hidden="true"></i>
-                        <span class="notification-badge hidden" id="notificationBadge" aria-live="polite">0</span>
-                    </button>
-                    <div class="notification-dropdown" id="notificationDropdown" role="menu" aria-label="Notifications">
-                        <div class="notification-dropdown-header" data-count="0">
-                            <span>Notifications</span>
-                        </div>
-                        <div class="notification-list" id="notificationList" role="list">
-                            <div class="notification-empty">No notifications</div>
-                        </div>
-                        <div class="notification-actions">
-                            <button class="notification-btn" onclick="markAllAsRead()">
-                                <i class="fa fa-check-double" aria-hidden="true"></i> Mark All Read
-                            </button>
-                            <button class="notification-btn" onclick="clearAllNotifications()">
-                                <i class="fa fa-trash" aria-hidden="true"></i> Clear All
-                            </button>
-                        </div>
-                    </div>
-                </div>
             </div>
         </header>
 

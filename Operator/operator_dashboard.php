@@ -103,6 +103,7 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
             <a href="operator_dashboard.php" aria-current="page"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
             <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
             <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
+            <a href="notifications.php"><i class="fa fa-bell" aria-hidden="true"></i> Notifications</a>
         </nav>
 
         <div class="menu-bottom">
@@ -120,31 +121,6 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
         <header class="page-header" role="banner">
             <div class="page-header-left">
                 <h1>Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?>!</h1>
-            </div>
-            <div class="page-header-right">
-                <!-- Notification Bell - Modern Professional Design -->
-                <div class="notification-container">
-                    <button class="notification-bell" onclick="toggleNotifications(event)" aria-label="Notifications" aria-expanded="false" aria-controls="notificationDropdown">
-                        <i class="fa fa-bell" aria-hidden="true"></i>
-                        <span class="notification-badge hidden" id="notificationBadge" aria-live="polite">0</span>
-                    </button>
-                    <div class="notification-dropdown" id="notificationDropdown" role="menu" aria-label="Notifications">
-                        <div class="notification-dropdown-header" data-count="0">
-                            <span>Notifications</span>
-                        </div>
-                        <div class="notification-list" id="notificationList" role="list">
-                            <div class="notification-empty">No notifications</div>
-                        </div>
-                        <div class="notification-actions">
-                            <button class="notification-btn" onclick="markAllAsRead()">
-                                <i class="fa fa-check-double" aria-hidden="true"></i> Mark All Read
-                            </button>
-                            <button class="notification-btn" onclick="clearAllNotifications()">
-                                <i class="fa fa-trash" aria-hidden="true"></i> Clear All
-                            </button>
-                        </div>
-                    </div>
-                </div>
             </div>
         </header>
 
