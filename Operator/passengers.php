@@ -148,6 +148,7 @@ $passengers = mbus_db_prepare($conn, $passenger_sql, $params);
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
+    <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
 </head>
 
 <body class="has-sidebar">
@@ -195,7 +196,6 @@ $passengers = mbus_db_prepare($conn, $passenger_sql, $params);
                             <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
                             <span class="profile-menu-role">Operator account</span>
                         </div>
-                        <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>
                 </div>
@@ -209,16 +209,16 @@ $passengers = mbus_db_prepare($conn, $passenger_sql, $params);
 <i class="fa fa-users" aria-hidden="true"></i> All
 </a>
 <a href="?filter=today" class="date-filter-btn <?php echo $filter==='today' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='today' ? 'page' : 'false'; ?>">
-<i class="fa fa-calendar-day" aria-hidden="true"></i> Today
+<i class="fa fa-calendar-day" aria-hidden="true"></i><span>Today</span><small><?php echo date("M j"); ?></small>
 </a>
 <a href="?filter=tomorrow" class="date-filter-btn <?php echo $filter==='tomorrow' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='tomorrow' ? 'page' : 'false'; ?>">
-<i class="fa fa-calendar-plus" aria-hidden="true"></i> Tomorrow
+<i class="fa fa-calendar-plus" aria-hidden="true"></i><span>Tomorrow</span><small><?php echo date("M j", strtotime("+1 day")); ?></small>
 </a>
 <a href="?filter=this_week" class="date-filter-btn <?php echo $filter==='this_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='this_week' ? 'page' : 'false'; ?>">
-<i class="fa fa-calendar-week" aria-hidden="true"></i> This Week
+<i class="fa fa-calendar-week" aria-hidden="true"></i><span>This Week</span><small><?php echo date("M j", strtotime("monday this week")); ?> – <?php echo date("M j", strtotime("sunday this week")); ?></small>
 </a>
 <a href="?filter=next_week" class="date-filter-btn <?php echo $filter==='next_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='next_week' ? 'page' : 'false'; ?>">
-<i class="fa fa-calendar-alt" aria-hidden="true"></i> Next Week
+<i class="fa fa-calendar-alt" aria-hidden="true"></i><span>Next Week</span><small><?php echo date("M j", strtotime("monday next week")); ?> – <?php echo date("M j", strtotime("sunday next week")); ?></small>
 </a>
 </nav>
 </div>

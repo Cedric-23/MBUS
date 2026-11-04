@@ -30,6 +30,7 @@ include "../Includes/csrf.php";
     <title>Commuter Dashboard</title>
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
+    <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
 </head>
 
 <body class="has-bottom-nav">
@@ -71,7 +72,7 @@ include "../Includes/csrf.php";
                 <!-- TODAY -->
                 <article class="card card-animated">
                     <h3 class="day">Today</h3>
-                    <p class="date"><?php echo date("F d"); ?></p>
+                    <p class="date"><?php echo date("M j, Y"); ?></p>
                     <p>View today's available bus schedules.</p>
                     <a href="schedule.php?filter=today" class="btn btn-primary">Open Schedule</a>
                 </article>
@@ -79,7 +80,7 @@ include "../Includes/csrf.php";
                 <!-- TOMORROW -->
                 <article class="card card-animated">
                     <h3 class="day">Tomorrow</h3>
-                    <p class="date"><?php echo date("F d", strtotime("+1 day")); ?></p>
+                    <p class="date"><?php echo date("M j, Y", strtotime("+1 day")); ?></p>
                     <p>Check schedules for tomorrow.</p>
                     <a href="schedule.php?filter=tomorrow" class="btn btn-primary">Open Schedule</a>
                 </article>
@@ -88,8 +89,8 @@ include "../Includes/csrf.php";
                 <article class="card card-animated">
                     <h3 class="day">This Week</h3>
                     <p class="date">
-                        <?php echo date("M d"); ?> -
-                        <?php echo date("M d", strtotime("+6 days")); ?>
+                        <?php echo date("M j"); ?> -
+                        <?php echo date("M j", strtotime("+6 days")); ?>
                     </p>
                     <p>Browse schedules available this week.</p>
                     <a href="schedule.php?filter=thisweek" class="btn btn-primary">Open Schedule</a>
@@ -99,8 +100,8 @@ include "../Includes/csrf.php";
                 <article class="card card-animated">
                     <h3 class="day">Next Week</h3>
                     <p class="date">
-                        <?php echo date("M d", strtotime("+7 days")); ?> -
-                        <?php echo date("M d", strtotime("+13 days")); ?>
+                        <?php echo date("M j", strtotime("+7 days")); ?> -
+                        <?php echo date("M j", strtotime("+13 days")); ?>
                     </p>
                     <p>View upcoming schedules for next week.</p>
                     <a href="schedule.php?filter=nextweek" class="btn btn-primary">Open Schedule</a>

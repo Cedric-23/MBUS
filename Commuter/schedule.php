@@ -68,6 +68,7 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
 
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
+    <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
 </head>
 
 <body class="has-bottom-nav">
@@ -107,16 +108,16 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
 <div class="date-filter-container">
 <nav class="date-filters" aria-label="Schedule filters">
 <a href="schedule.php?filter=today" class="date-filter-btn <?php if($filter=="today")echo"active"; ?>" aria-current="<?php echo $filter=="today" ? "page" : "false"; ?>">
-<i class="fa fa-calendar-day" aria-hidden="true"></i> Today
+<i class="fa fa-calendar-day" aria-hidden="true"></i><span>Today</span><small><?php echo date("M j"); ?></small>
 </a>
 <a href="schedule.php?filter=tomorrow" class="date-filter-btn <?php if($filter=="tomorrow")echo"active"; ?>" aria-current="<?php echo $filter=="tomorrow" ? "page" : "false"; ?>">
-<i class="fa fa-calendar-plus" aria-hidden="true"></i> Tomorrow
+<i class="fa fa-calendar-plus" aria-hidden="true"></i><span>Tomorrow</span><small><?php echo date("M j", strtotime("+1 day")); ?></small>
 </a>
 <a href="schedule.php?filter=thisweek" class="date-filter-btn <?php if($filter=="thisweek")echo"active"; ?>" aria-current="<?php echo $filter=="thisweek" ? "page" : "false"; ?>">
-<i class="fa fa-calendar-week" aria-hidden="true"></i> This Week
+<i class="fa fa-calendar-week" aria-hidden="true"></i><span>This Week</span><small><?php echo date("M j", strtotime("monday this week")); ?> – <?php echo date("M j", strtotime("sunday this week")); ?></small>
 </a>
 <a href="schedule.php?filter=nextweek" class="date-filter-btn <?php if($filter=="nextweek")echo"active"; ?>" aria-current="<?php echo $filter=="nextweek" ? "page" : "false"; ?>">
-<i class="fa fa-calendar-alt" aria-hidden="true"></i> Next Week
+<i class="fa fa-calendar-alt" aria-hidden="true"></i><span>Next Week</span><small><?php echo date("M j", strtotime("monday next week")); ?> – <?php echo date("M j", strtotime("sunday next week")); ?></small>
 </a>
 </nav>
 </div>
