@@ -111,6 +111,7 @@ ORDER BY departure_time ASC
     <link rel="stylesheet" href="../Assets/css/professional-filters.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
+    <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
 </head>
 
 <body class="has-sidebar">
@@ -149,6 +150,22 @@ ORDER BY departure_time ASC
 
 <header class="page-header">
     <h1>Manage Schedules</h1>
+
+            <div class="page-header-right">
+                <div class="profile-menu-wrap">
+                    <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
+                        <span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></span>
+                    </button>
+                    <div class="profile-menu" id="profileMenu" role="menu">
+                        <div class="profile-menu-header">
+                            <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
+                            <span class="profile-menu-role">Admin account</span>
+                        </div>
+                        <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                        <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
+                    </div>
+                </div>
+            </div>
 </header>
 
 <?php if(isset($success)): ?>
@@ -416,5 +433,23 @@ document.addEventListener('keydown', function(e) {
 });
 </script>
 
+<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
+    <a href="admin_dashboard.php" class="bottom-nav-item">
+        <i class="fa fa-home" aria-hidden="true"></i><span>Home</span>
+    </a>
+    <a href="manage_schedules.php" class="bottom-nav-item active" aria-current="page">
+        <i class="fa fa-calendar" aria-hidden="true"></i><span>Schedules</span>
+    </a>
+    <a href="manage_buses.php" class="bottom-nav-item">
+        <i class="fa fa-bus" aria-hidden="true"></i><span>Buses</span>
+    </a>
+    <a href="manage_operators.php" class="bottom-nav-item">
+        <i class="fa fa-users" aria-hidden="true"></i><span>Operators</span>
+    </a>
+    <a href="notifications.php" class="bottom-nav-item">
+        <i class="fa fa-bell" aria-hidden="true"></i><span>Alerts</span>
+    </a>
+</nav>
+<script src="../Assets/js/app-header.js"></script>
 </body>
 </html>

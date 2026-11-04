@@ -1,216 +1,47 @@
-/* MBUS app-style footer navigation: replaces sidebar and hamburger navigation. */
-:root {
-  --bottom-nav-height: 76px;
-  --bottom-nav-bg: rgba(255, 255, 255, 0.96);
-  --bottom-nav-border: rgba(30, 58, 95, 0.12);
-}
+/* Shared role navigation contract.
+   Desktop: keep the real sidebar. Mobile: hide it and use one standalone .bottom-nav. */
 
-body.has-sidebar {
-  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
-}
-
-body.has-sidebar .sidebar {
-  position: fixed !important;
-  inset: auto 0 0 0 !important;
-  width: 100% !important;
-  height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom)) !important;
-  min-height: var(--bottom-nav-height) !important;
-  max-height: 96px !important;
-  padding: 0 var(--space-3) env(safe-area-inset-bottom) !important;
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: stretch !important;
-  gap: var(--space-2) !important;
-  overflow: visible !important;
-  background: var(--bottom-nav-bg) !important;
-  color: var(--color-text-primary) !important;
-  border-radius: 0 !important;
-  border-top: 1px solid var(--bottom-nav-border) !important;
-  box-shadow: 0 -8px 24px rgba(30, 58, 95, 0.12) !important;
-  transform: none !important;
-  z-index: var(--z-fixed) !important;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-}
-
-body.has-sidebar .sidebar .logo-container,
-body.has-sidebar .sidebar > h2,
-body.has-sidebar .sidebar-toggle,
-body.has-sidebar .sidebar-overlay {
-  display: none !important;
-}
-
-body.has-sidebar .sidebar .menu-top,
-body.has-sidebar .sidebar .menu-bottom {
-  display: flex !important;
-  flex: 1 1 auto !important;
-  align-items: stretch !important;
-  justify-content: center !important;
-  gap: var(--space-1) !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  padding: var(--space-2) 0 !important;
-  overflow: visible !important;
-  border: 0 !important;
-}
-
-body.has-sidebar .sidebar .menu-top a,
-body.has-sidebar .sidebar .menu-bottom a {
-  position: relative;
-  display: flex !important;
-  flex: 1 1 0 !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 3px !important;
-  min-width: 58px !important;
-  min-height: 60px !important;
-  margin: 0 !important;
-  padding: var(--space-1) var(--space-2) !important;
-  border-radius: var(--radius-lg) !important;
-  color: var(--color-text-muted) !important;
-  font-size: var(--fs-xs) !important;
-  font-weight: var(--fw-semibold) !important;
-  line-height: 1.15 !important;
-  text-align: center !important;
-  text-decoration: none !important;
-  white-space: nowrap !important;
-  transition: color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast) !important;
-}
-
-body.has-sidebar .sidebar .menu-top a i,
-body.has-sidebar .sidebar .menu-bottom a i {
-  min-width: 0 !important;
-  font-size: 1.2rem !important;
-  line-height: 1 !important;
-}
-
-body.has-sidebar .sidebar .menu-top a:hover,
-body.has-sidebar .sidebar .menu-bottom a:hover,
-body.has-sidebar .sidebar .menu-top a[aria-current="page"] {
-  color: var(--color-primary) !important;
-  background: var(--color-primary-light-bg) !important;
-  transform: translateY(-2px) !important;
-}
-
-body.has-sidebar .sidebar .menu-top a[aria-current="page"]::after {
-  content: '';
-  position: absolute;
-  left: 25%;
-  right: 25%;
-  bottom: 2px;
-  height: 3px;
-  border-radius: var(--radius-full);
-  background: var(--color-accent);
-}
-
-body.has-sidebar .sidebar .notification-container {
-  position: relative !important;
-  display: flex !important;
-  flex: 0 1 92px !important;
-  align-items: stretch !important;
-  width: auto !important;
-  min-width: 70px !important;
-  margin: 0 !important;
-}
-
-body.has-sidebar .sidebar .notification-bell {
-  position: relative !important;
-  flex: 1 1 auto !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 3px !important;
-  min-width: 70px !important;
-  min-height: 60px !important;
-  height: auto !important;
-  margin: var(--space-2) 0 !important;
-  padding: var(--space-1) var(--space-2) !important;
-  border-radius: var(--radius-lg) !important;
-  color: var(--color-text-muted) !important;
-  font-size: var(--fs-xs) !important;
-  font-weight: var(--fw-semibold) !important;
-  line-height: 1.15 !important;
-  text-align: center !important;
-}
-
-body.has-sidebar .sidebar .notification-bell i {
-  min-width: 0 !important;
-  font-size: 1.2rem !important;
-}
-
-body.has-sidebar .sidebar .notification-label {
-  flex: 0 0 auto !important;
-  text-align: center !important;
-}
-
-body.has-sidebar .sidebar .notification-bell:hover,
-body.has-sidebar .sidebar .notification-bell[aria-expanded="true"] {
-  color: var(--color-primary) !important;
-  background: var(--color-primary-light-bg) !important;
-}
-
-body.has-sidebar .sidebar .notification-badge {
-  position: absolute !important;
-  top: 1px !important;
-  right: 8px !important;
-  min-width: 18px !important;
-  height: 18px !important;
-  font-size: 10px !important;
-  border: 2px solid var(--color-surface) !important;
-}
-
-body.has-sidebar .sidebar .notification-dropdown {
-  position: absolute !important;
-  right: 0 !important;
-  bottom: calc(100% + var(--space-2)) !important;
-  top: auto !important;
-  width: min(340px, calc(100vw - var(--space-4))) !important;
-  max-height: min(60vh, 440px) !important;
-  margin: 0 !important;
-  transform: translateY(8px) !important;
-  z-index: var(--z-popover) !important;
-}
-
-body.has-sidebar .sidebar .notification-dropdown.active {
-  transform: translateY(0) !important;
-}
-
-body.has-sidebar .sidebar .notification-actions {
-  flex-direction: row !important;
-}
-
-body.has-sidebar .main,
-body.has-sidebar .has-sidebar .main {
-  margin-left: 0 !important;
-  padding-bottom: calc(var(--space-8) + var(--bottom-nav-height)) !important;
-}
-
-@media (max-width: 520px) {
-  :root { --bottom-nav-height: 70px; }
+@media (min-width: 769px) {
   body.has-sidebar .sidebar {
-    padding-left: var(--space-1) !important;
-    padding-right: var(--space-1) !important;
-    gap: 0 !important;
+    position: fixed !important;
+    inset: 0 auto 0 0 !important;
+    width: var(--sidebar-width) !important;
+    height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    z-index: var(--z-fixed) !important;
   }
-  body.has-sidebar .sidebar .menu-top,
-  body.has-sidebar .sidebar .menu-bottom { gap: 0 !important; }
-  body.has-sidebar .sidebar .menu-top a,
-  body.has-sidebar .sidebar .menu-bottom a,
-  body.has-sidebar .sidebar .notification-bell {
-    min-width: 48px !important;
-    font-size: 10px !important;
+
+  body.has-sidebar .sidebar .menu-top {
+    display: block !important;
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    min-height: 0;
   }
-  body.has-sidebar .sidebar .notification-container {
-    min-width: 52px !important;
-    flex-basis: 52px !important;
+
+  body.has-sidebar .sidebar .menu-bottom {
+    display: block !important;
+    flex: 0 0 auto !important;
   }
-  body.has-sidebar .sidebar .notification-bell { min-width: 52px !important; }
+
+  body.has-sidebar .main {
+    margin-left: var(--sidebar-width) !important;
+    width: calc(100% - var(--sidebar-width)) !important;
+    padding-bottom: var(--space-6) !important;
+  }
 }
 
-@media (prefers-reduced-motion: reduce) {
+@media (max-width: 768px) {
   body.has-sidebar .sidebar,
-  body.has-sidebar .sidebar a,
-  body.has-sidebar .sidebar .notification-bell { transition: none !important; }
+  body.has-sidebar .sidebar-toggle,
+  body.has-sidebar .sidebar-overlay {
+    display: none !important;
+  }
+
+  body.has-sidebar .main {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding-bottom: calc(var(--bottom-nav-height, 60px) + var(--space-8) + env(safe-area-inset-bottom)) !important;
+  }
 }

@@ -29,6 +29,7 @@ include "../Includes/csrf.php";
 
     <title>Commuter Dashboard</title>
     <link rel="stylesheet" href="../Assets/css/app-header.css">
+    <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
 </head>
 
 <body class="has-bottom-nav">
@@ -54,7 +55,6 @@ include "../Includes/csrf.php";
                             <span class="profile-menu-role">Commuter account</span>
                         </div>
                         <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
-                        <a href="notifications.php" role="menuitem"><i class="fa fa-bell" aria-hidden="true"></i> Notifications</a>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>
                 </div>
@@ -135,10 +135,6 @@ include "../Includes/csrf.php";
     <a href="notifications.php" class="bottom-nav-item">
         <i class="fa fa-bell" aria-hidden="true"></i>
         <span>Alerts</span>
-    </a>
-    <a href="profile.php" class="bottom-nav-item">
-        <i class="fa fa-user" aria-hidden="true"></i>
-        <span>Profile</span>
     </a>
 </nav>
 

@@ -80,6 +80,7 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
     <title>Operator Dashboard</title>
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
+    <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
 </head>
 
 <body class="has-sidebar">
@@ -127,6 +128,7 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
                             <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
                             <span class="profile-menu-role">Operator account</span>
                         </div>
+                        <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>
                 </div>
@@ -186,5 +188,19 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
 
 
 <script src="../Assets/js/app-header.js"></script>
+<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
+    <a href="operator_dashboard.php" class="bottom-nav-item active" aria-current="page">
+        <i class="fa fa-home" aria-hidden="true"></i><span>Home</span>
+    </a>
+    <a href="manage_trips.php" class="bottom-nav-item">
+        <i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span>
+    </a>
+    <a href="passengers.php" class="bottom-nav-item">
+        <i class="fa fa-users" aria-hidden="true"></i><span>Passengers</span>
+    </a>
+    <a href="notifications.php" class="bottom-nav-item">
+        <i class="fa fa-bell" aria-hidden="true"></i><span>Alerts</span>
+    </a>
+</nav>
 </body>
 </html>
