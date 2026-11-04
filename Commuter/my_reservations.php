@@ -55,44 +55,17 @@ $sql = mbus_db_prepare($conn, "
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/commuter_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/my_reservation.css">
+    <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
+    <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
 </head>
 
-<body class="has-sidebar">
-
-<!-- Mobile Sidebar Toggle -->
-<button class="sidebar-toggle btn btn-icon" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
-    <i class="fa fa-bars" aria-hidden="true"></i>
-</button>
-
-<!-- Sidebar Overlay -->
-<div class="sidebar-overlay" onclick="toggleSidebar()" aria-hidden="true"></div>
-
-<aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
-    <div class="logo-container">
-        <img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo">
-    </div>
-
-    <h2>Commuter</h2>
-
-    <nav class="menu-top" aria-label="Commuter menu">
-                <a href="commuter_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
-                <a href="my_reservations.php" aria-current="page"><i class="fa fa-ticket" aria-hidden="true"></i> My Reservations</a>
-                <a href="history.php"><i class="fa fa-history" aria-hidden="true"></i> History</a>
-                <a href="profile.php"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
-                <a href="verification.php"><i class="fa fa-id-card" aria-hidden="true"></i> Verification</a>
-            </nav>
-
-            <div class="menu-bottom">
-                <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
-                    <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
-                </a>
-            </div>
-</aside>
+<body class="has-bottom-nav">
 
 <main class="main" role="main">
 
 <header class="page-header">
     <h1>My Reservations</h1>
+</header>
 </header>
 
 <?php if(mbus_db_num_rows($sql) > 0){ ?>
@@ -401,6 +374,30 @@ document.addEventListener('DOMContentLoaded', startCountdowns);
     }
 }
 </style>
+
+<!-- Bottom Navigation -->
+<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
+    <a href="commuter_dashboard.php" class="bottom-nav-item">
+        <i class="fa fa-home" aria-hidden="true"></i>
+        <span>Home</span>
+    </a>
+    <a href="schedule.php" class="bottom-nav-item">
+        <i class="fa fa-calendar" aria-hidden="true"></i>
+        <span>Schedule</span>
+    </a>
+    <a href="my_reservations.php" class="bottom-nav-item active" aria-current="page">
+        <i class="fa fa-ticket" aria-hidden="true"></i>
+        <span>Trips</span>
+    </a>
+    <a href="notifications.php" class="bottom-nav-item">
+        <i class="fa fa-bell" aria-hidden="true"></i>
+        <span>Alerts</span>
+    </a>
+    <a href="profile.php" class="bottom-nav-item">
+        <i class="fa fa-user" aria-hidden="true"></i>
+        <span>Profile</span>
+    </a>
+</nav>
 
 </body>
 </html>
