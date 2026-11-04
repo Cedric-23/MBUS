@@ -84,6 +84,7 @@ $unread_count = mbus_db_fetch_assoc($unread_count)['count'];
     <link rel="stylesheet" href="../Assets/css/professional-notifications.css">
     <link rel="icon" href="../Assets/mbus_icon.png" type="image/png">
     <link rel="shortcut icon" href="../Assets/mbus_icon.png">
+    <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
 </head>
 
 <body class="has-sidebar">

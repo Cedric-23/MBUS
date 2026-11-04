@@ -91,6 +91,7 @@ $recent_activity_query = mbus_db_query($conn, "
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/analytics.css">
+    <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
 </head>
 <body class="has-sidebar">
 

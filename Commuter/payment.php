@@ -198,6 +198,7 @@ if(isset($_POST['cancel_reservation'])){
 <link rel="stylesheet" href="../Assets/css/commuter_sidebar.css">
 <link rel="stylesheet" href="../Assets/css/commuter_payment.css">
 
+    <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
 </head>
 
 <body class="has-sidebar">

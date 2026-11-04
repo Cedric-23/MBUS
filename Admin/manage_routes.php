@@ -99,6 +99,7 @@ if(isset($_POST['delete_route'])){
     <script async defer
 src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_API_KEY') ?: 'YOUR_API_KEY'; ?>&callback=initMap">
     </script>
+    <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
 </head>
 
 <body class="has-sidebar">

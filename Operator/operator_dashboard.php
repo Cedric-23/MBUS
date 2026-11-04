@@ -78,6 +78,7 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
     <link rel="shortcut icon" href="../Assets/mbus_icon.png">
 
     <title>Operator Dashboard</title>
+    <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
 </head>
 
 <body class="has-sidebar">

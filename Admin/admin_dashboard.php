@@ -80,6 +80,7 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
     <link rel="shortcut icon" href="../Assets/mbus_icon.png">
 
     <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
 </head>
 
 <body class="has-sidebar">

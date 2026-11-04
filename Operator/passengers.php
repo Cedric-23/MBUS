@@ -140,6 +140,7 @@ $passengers = mbus_db_prepare($conn, $passenger_sql, $params);
     <link rel="stylesheet" href="../Assets/css/professional-filters.css">
     <link rel="icon" href="../Assets/mbus_icon.png" type="image/png">
     <link rel="shortcut icon" href="../Assets/mbus_icon.png">
+    <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
 </head>
 
 <body class="has-sidebar">
