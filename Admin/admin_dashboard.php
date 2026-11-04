@@ -142,7 +142,6 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
 
         <!-- Dashboard Content -->
         <div class="dashboard-content">
-            <p class="dashboard-intro">Monitor the core MBUS system resources from one place.</p>
 
             <!-- QUICK ACTIONS -->
             <section class="cards" aria-labelledby="cards-heading">
@@ -152,7 +151,6 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
                 <article class="card card-animated">
                     <h3 class="day">Total Buses</h3>
                     <p class="date"><?php echo $bus_data['total']; ?> registered</p>
-                    <p>All buses in the system</p>
                     <a href="manage_buses.php" class="btn btn-primary">Manage Buses</a>
                 </article>
 
@@ -160,7 +158,6 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
                 <article class="card card-animated">
                     <h3 class="day">Total Operators</h3>
                     <p class="date"><?php echo $operator_data['total']; ?> operators</p>
-                    <p>Active operator accounts</p>
                     <a href="manage_operators.php" class="btn btn-primary">Manage Operators</a>
                 </article>
 
@@ -168,7 +165,6 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
                 <article class="card card-animated">
                     <h3 class="day">Total Schedules</h3>
                     <p class="date"><?php echo $schedule_data['total']; ?> schedules</p>
-                    <p>All scheduled trips</p>
                     <a href="manage_schedules.php" class="btn btn-primary">Manage Schedules</a>
                 </article>
 
@@ -176,16 +172,9 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
                 <article class="card card-animated">
                     <h3 class="day">Total Reservations</h3>
                     <p class="date"><?php echo $reservation_data['total']; ?> bookings</p>
-                    <p>All passenger reservations</p>
                     <a href="manage_schedules.php" class="btn btn-primary">Review Schedules</a>
                 </article>
 
-            </section>
-
-            <!-- NOTICE -->
-            <section class="notice card dashboard-notice" aria-labelledby="notice-heading">
-                <h3 id="notice-heading">System Notice</h3>
-                <p>Only authorized administrators can manage buses, operators, and system configurations.</p>
             </section>
 
         </div>

@@ -138,7 +138,6 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
 
         <!-- Dashboard Content -->
         <div class="dashboard-content">
-            <p class="dashboard-intro">Keep today's trips and passenger movement on track.</p>
 
             <!-- QUICK ACTIONS -->
             <section class="cards" aria-labelledby="cards-heading">
@@ -148,7 +147,6 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
                 <article class="card card-animated">
                     <h3 class="day">Trips Today</h3>
                     <p class="date"><?php echo $trips_today; ?> scheduled</p>
-                    <p>Assigned trips scheduled today</p>
                     <a href="manage_trips.php?filter=today" class="btn btn-primary">View Trips</a>
                 </article>
 
@@ -156,7 +154,6 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
                 <article class="card card-animated">
                     <h3 class="day">Paid Passengers</h3>
                     <p class="date"><?php echo $total_passengers; ?> confirmed</p>
-                    <p>Passengers with confirmed bookings</p>
                     <a href="passengers.php?status=Paid" class="btn btn-primary">View Passengers</a>
                 </article>
 
@@ -164,7 +161,6 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
                 <article class="card card-animated">
                     <h3 class="day">Boarded Passengers</h3>
                     <p class="date"><?php echo $total_boarded; ?> boarded</p>
-                    <p>Passengers already boarded</p>
                     <a href="passengers.php?status=Boarded" class="btn btn-primary">View Boarded</a>
                 </article>
 
@@ -172,16 +168,9 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
                 <article class="card card-animated">
                     <h3 class="day">Active Trips</h3>
                     <p class="date"><?php echo $active_trips; ?> active</p>
-                    <p>Scheduled or boarding trips</p>
                     <a href="manage_trips.php?filter=active" class="btn btn-primary">View Active</a>
                 </article>
 
-            </section>
-
-            <!-- NOTICE -->
-            <section class="notice card dashboard-notice" aria-labelledby="notice-heading">
-                <h3 id="notice-heading">Operator Notice</h3>
-                <p>Monitor your assigned trips and passenger boarding status in real-time.</p>
             </section>
 
         </div>

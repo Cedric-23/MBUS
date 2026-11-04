@@ -65,7 +65,6 @@ include "../Includes/csrf.php";
 
         <!-- Dashboard Content -->
         <div class="dashboard-content">
-            <p class="dashboard-intro">Choose a travel window to see available bus schedules.</p>
 
             <!-- QUICK ACTIONS -->
             <section class="cards" aria-labelledby="cards-heading">
@@ -75,7 +74,6 @@ include "../Includes/csrf.php";
                 <article class="card card-animated">
                     <h3 class="day">Today</h3>
                     <p class="date"><?php echo date("F d"); ?></p>
-                    <p>View today's available bus schedules.</p>
                     <a href="schedule.php?filter=today" class="btn btn-primary">Open Schedule</a>
                 </article>
 
@@ -83,7 +81,6 @@ include "../Includes/csrf.php";
                 <article class="card card-animated">
                     <h3 class="day">Tomorrow</h3>
                     <p class="date"><?php echo date("F d", strtotime("+1 day")); ?></p>
-                    <p>Check schedules for tomorrow.</p>
                     <a href="schedule.php?filter=tomorrow" class="btn btn-primary">Open Schedule</a>
                 </article>
 
@@ -94,7 +91,6 @@ include "../Includes/csrf.php";
                         <?php echo date("M d"); ?> -
                         <?php echo date("M d", strtotime("+6 days")); ?>
                     </p>
-                    <p>Browse schedules available this week.</p>
                     <a href="schedule.php?filter=thisweek" class="btn btn-primary">Open Schedule</a>
                 </article>
 
@@ -105,16 +101,9 @@ include "../Includes/csrf.php";
                         <?php echo date("M d", strtotime("+7 days")); ?> -
                         <?php echo date("M d", strtotime("+13 days")); ?>
                     </p>
-                    <p>View upcoming schedules for next week.</p>
                     <a href="schedule.php?filter=nextweek" class="btn btn-primary">Open Schedule</a>
                 </article>
 
-            </section>
-
-            <!-- NOTICE -->
-            <section class="notice card dashboard-notice" aria-labelledby="notice-heading">
-                <h3 id="notice-heading">Travel Reminder</h3>
-                <p>Please arrive at least 15 minutes before your departure time.</p>
             </section>
 
         </div>
