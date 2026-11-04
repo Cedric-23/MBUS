@@ -182,12 +182,6 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
 
             </section>
 
-            <!-- NOTICE -->
-            <section class="notice card dashboard-notice" aria-labelledby="notice-heading">
-                <h3 id="notice-heading">System Notice</h3>
-                <p>Only authorized administrators can manage buses, operators, and system configurations.</p>
-            </section>
-
         </div>
 
     </main>

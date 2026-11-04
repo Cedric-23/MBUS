@@ -178,12 +178,6 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
 
             </section>
 
-            <!-- NOTICE -->
-            <section class="notice card dashboard-notice" aria-labelledby="notice-heading">
-                <h3 id="notice-heading">Operator Notice</h3>
-                <p>Monitor your assigned trips and passenger boarding status in real-time.</p>
-            </section>
-
         </div>
 
     </main>

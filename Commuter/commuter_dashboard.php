@@ -111,12 +111,6 @@ include "../Includes/csrf.php";
 
             </section>
 
-            <!-- NOTICE -->
-            <section class="notice card dashboard-notice" aria-labelledby="notice-heading">
-                <h3 id="notice-heading">Travel Reminder</h3>
-                <p>Please arrive at least 15 minutes before your departure time.</p>
-            </section>
-
         </div>
 
     </main>
