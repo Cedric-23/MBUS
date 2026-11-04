@@ -61,6 +61,7 @@ if(isset($_POST['add_schedule'])){
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/manage_schedules.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
+    <link rel="stylesheet" href="../Assets/css/app-header.css">
 </head>
 
 <body class="has-sidebar">

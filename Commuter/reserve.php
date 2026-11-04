@@ -215,6 +215,7 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
 </script>
 
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
+    <link rel="stylesheet" href="../Assets/css/app-header.css">
 </head>
 
 <body class="has-sidebar">

@@ -92,6 +92,7 @@ $recent_activity_query = mbus_db_query($conn, "
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/analytics.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
+    <link rel="stylesheet" href="../Assets/css/app-header.css">
 </head>
 <body class="has-sidebar">
 
@@ -116,10 +117,10 @@ $recent_activity_query = mbus_db_query($conn, "
         <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
         <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
         <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
-        <a href="manage_users.php"><i class="fa fa-users" aria-hidden="true"></i> Manage Users</a>
-        <a href="manage_verifications.php"><i class="fa fa-id-card" aria-hidden="true"></i> Verifications</a>
-        <a href="manage_applications.php"><i class="fa fa-user-plus" aria-hidden="true"></i> Applications</a>
-        <a href="activity_logs.php"><i class="fa fa-history" aria-hidden="true"></i> Activity Logs</a>
+        <a href="manage_operators.php"><i class="fa fa-users" aria-hidden="true"></i> Manage Users</a>
+        <a href="manage_operators.php"><i class="fa fa-id-card" aria-hidden="true"></i> Verifications</a>
+        <a href="manage_operators.php"><i class="fa fa-user-plus" aria-hidden="true"></i> Applications</a>
+        <a href="admin_dashboard.php"><i class="fa fa-history" aria-hidden="true"></i> Activity Logs</a>
     </nav>
     
     <div class="menu-bottom">
@@ -180,7 +181,7 @@ $recent_activity_query = mbus_db_query($conn, "
             <h3 class="day"><?php echo number_format($total_users); ?></h3>
             <p class="date">Total Users</p>
             <p>Registered accounts</p>
-            <a href="manage_users.php" class="btn btn-primary">Manage Users</a>
+            <a href="manage_operators.php" class="btn btn-primary">Manage Operators</a>
         </article>
         
         <article class="card card-animated">
@@ -201,7 +202,7 @@ $recent_activity_query = mbus_db_query($conn, "
             <h3 class="day"><?php echo number_format($pending_verifications + $pending_applications); ?></h3>
             <p class="date">Pending Actions</p>
             <p><?php echo $pending_verifications; ?> verifications, <?php echo $pending_applications; ?> applications</p>
-            <a href="manage_verifications.php" class="btn btn-primary">Review Pending</a>
+            <a href="manage_operators.php" class="btn btn-primary">Open Admin Dashboard</a>
         </article>
     </section>
 
@@ -233,12 +234,12 @@ $recent_activity_query = mbus_db_query($conn, "
     <section class="chart-card card" aria-labelledby="quick-actions-heading" style="margin-bottom: var(--space-6);">
         <h2 id="quick-actions-heading">Quick Actions</h2>
         <div class="quick-actions">
-            <a href="manage_verifications.php" class="action-btn <?php echo $pending_verifications > 0 ? 'urgent' : ''; ?>">
+            <a href="manage_operators.php" class="action-btn <?php echo $pending_verifications > 0 ? 'urgent' : ''; ?>">
                 <i class="fa fa-id-card" aria-hidden="true"></i>
                 <span>Review Verifications</span>
                 <span class="badge badge-primary"><?php echo $pending_verifications; ?></span>
             </a>
-            <a href="manage_applications.php" class="action-btn <?php echo $pending_applications > 0 ? 'urgent' : ''; ?>">
+            <a href="manage_operators.php" class="action-btn <?php echo $pending_applications > 0 ? 'urgent' : ''; ?>">
                 <i class="fa fa-user-plus" aria-hidden="true"></i>
                 <span>Review Applications</span>
                 <span class="badge badge-primary"><?php echo $pending_applications; ?></span>

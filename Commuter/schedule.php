@@ -66,6 +66,7 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
 <!-- FullCalendar JS -->
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
 
+    <link rel="stylesheet" href="../Assets/css/app-header.css">
 </head>
 
 <body class="has-bottom-nav">
@@ -315,9 +316,7 @@ function viewRoute(originLat, originLng, destLat, destLng, originName, destName)
     // Scroll to map
     document.getElementById("scheduleMapContainer").scrollIntoView({ behavior: "smooth" });
 }
-</script>
 
-    
     calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         headerToolbar: {

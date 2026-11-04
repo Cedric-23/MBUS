@@ -82,9 +82,10 @@ $unread_count = mbus_db_fetch_assoc($unread_count)['count'];
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/professional-notifications.css">
-    <link rel="icon" href="../Assets/mbus_icon.png" type="image/png">
-    <link rel="shortcut icon" href="../Assets/mbus_icon.png">
+    <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
+    <link rel="shortcut icon" href="../Assets/images/mbus_icon.png">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
+    <link rel="stylesheet" href="../Assets/css/app-header.css">
 </head>
 
 <body class="has-sidebar">

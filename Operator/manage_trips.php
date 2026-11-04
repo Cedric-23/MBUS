@@ -68,6 +68,9 @@ switch($filter){
     case 'next_week':
         $where .= " AND s.departure_time >= DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '1 week' AND s.departure_time < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '2 week'";
         break;
+    case 'active':
+        $where .= " AND s.trip_status IN ('Scheduled', 'Boarding')";
+        break;
     default:
         // all
         break;
@@ -104,9 +107,10 @@ $query = mbus_db_prepare($conn, "
     <link rel="stylesheet" href="../Assets/css/operator/operator_manage_trips.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/professional-filters.css">
-    <link rel="icon" href="../Assets/mbus_icon.png" type="image/png">
-    <link rel="shortcut icon" href="../Assets/mbus_icon.png">
+    <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
+    <link rel="shortcut icon" href="../Assets/images/mbus_icon.png">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
+    <link rel="stylesheet" href="../Assets/css/app-header.css">
 </head>
 
 <body class="has-sidebar">

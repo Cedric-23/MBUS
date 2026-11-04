@@ -24,6 +24,7 @@ if(!mbus_db_fetch_assoc($operator_check)){
 // Filters
 $filter = $_GET['filter'] ?? 'all';
 $search = $_GET['search'] ?? '';
+$status = $_GET['status'] ?? '';
 
 // Build WHERE clause
 $where = "
@@ -47,6 +48,10 @@ elseif($filter === 'next_week'){
     $where .= " AND s.departure_time >= DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '1 week' AND s.departure_time < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '2 week'";
 }
 
+if(in_array($status, ['Paid', 'Boarded'], true)){
+    $where .= " AND r.status = ?";
+    $params[] = $status;
+}
 // Search logic
 if($search !== ''){
     $where .= " AND (
@@ -138,9 +143,10 @@ $passengers = mbus_db_prepare($conn, $passenger_sql, $params);
     <link rel="stylesheet" href="../Assets/css/operator/operator_passengers.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/professional-filters.css">
-    <link rel="icon" href="../Assets/mbus_icon.png" type="image/png">
-    <link rel="shortcut icon" href="../Assets/mbus_icon.png">
+    <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
+    <link rel="shortcut icon" href="../Assets/images/mbus_icon.png">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
+    <link rel="stylesheet" href="../Assets/css/app-header.css">
 </head>
 
 <body class="has-sidebar">

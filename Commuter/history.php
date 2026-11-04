@@ -50,6 +50,7 @@ $sql = mbus_db_prepare($conn, "
     <link rel="stylesheet" href="../Assets/css/commuter_history.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
+    <link rel="stylesheet" href="../Assets/css/app-header.css">
 </head>
 
 <body class="has-bottom-nav">
