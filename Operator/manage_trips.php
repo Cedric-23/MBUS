@@ -180,16 +180,16 @@ $query = mbus_db_prepare($conn, "
 <i class="fa fa-bus" aria-hidden="true"></i> All
 </a>
 <a href="?filter=today" class="date-filter-btn <?php echo $filter==='today' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='today' ? 'page' : 'false'; ?>">
-<i class="fa fa-calendar-day" aria-hidden="true"></i><span>Today</span><small><?php echo date("M j"); ?></small>
+<i class="fa fa-calendar-day" aria-hidden="true"></i>Today
 </a>
 <a href="?filter=tomorrow" class="date-filter-btn <?php echo $filter==='tomorrow' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='tomorrow' ? 'page' : "false"; ?>">
-<i class="fa fa-calendar-plus" aria-hidden="true"></i><span>Tomorrow</span><small><?php echo date("M j", strtotime("+1 day")); ?></small>
+<i class="fa fa-calendar-plus" aria-hidden="true"></i>Tomorrow
 </a>
 <a href="?filter=this_week" class="date-filter-btn <?php echo $filter==='this_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='this_week' ? 'page' : "false"; ?>">
-<i class="fa fa-calendar-week" aria-hidden="true"></i><span>This Week</span><small><?php echo date("M j", strtotime("monday this week")); ?> – <?php echo date("M j", strtotime("sunday this week")); ?></small>
+<i class="fa fa-calendar-week" aria-hidden="true"></i>This Week
 </a>
 <a href="?filter=next_week" class="date-filter-btn <?php echo $filter==='next_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='next_week' ? 'page' : "false"; ?>">
-<i class="fa fa-calendar-alt" aria-hidden="true"></i><span>Next Week</span><small><?php echo date("M j", strtotime("monday next week")); ?> – <?php echo date("M j", strtotime("sunday next week")); ?></small>
+<i class="fa fa-calendar-alt" aria-hidden="true"></i>Next Week
 </a>
 </nav>
 </div>

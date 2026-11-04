@@ -108,16 +108,16 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
 <div class="date-filter-container">
 <nav class="date-filters" aria-label="Schedule filters">
 <a href="schedule.php?filter=today" class="date-filter-btn <?php if($filter=="today")echo"active"; ?>" aria-current="<?php echo $filter=="today" ? "page" : "false"; ?>">
-<i class="fa fa-calendar-day" aria-hidden="true"></i><span>Today</span><small><?php echo date("M j"); ?></small>
+<i class="fa fa-calendar-day" aria-hidden="true"></i>Today
 </a>
 <a href="schedule.php?filter=tomorrow" class="date-filter-btn <?php if($filter=="tomorrow")echo"active"; ?>" aria-current="<?php echo $filter=="tomorrow" ? "page" : "false"; ?>">
-<i class="fa fa-calendar-plus" aria-hidden="true"></i><span>Tomorrow</span><small><?php echo date("M j", strtotime("+1 day")); ?></small>
+<i class="fa fa-calendar-plus" aria-hidden="true"></i>Tomorrow
 </a>
 <a href="schedule.php?filter=thisweek" class="date-filter-btn <?php if($filter=="thisweek")echo"active"; ?>" aria-current="<?php echo $filter=="thisweek" ? "page" : "false"; ?>">
-<i class="fa fa-calendar-week" aria-hidden="true"></i><span>This Week</span><small><?php echo date("M j", strtotime("monday this week")); ?> – <?php echo date("M j", strtotime("sunday this week")); ?></small>
+<i class="fa fa-calendar-week" aria-hidden="true"></i>This Week
 </a>
 <a href="schedule.php?filter=nextweek" class="date-filter-btn <?php if($filter=="nextweek")echo"active"; ?>" aria-current="<?php echo $filter=="nextweek" ? "page" : "false"; ?>">
-<i class="fa fa-calendar-alt" aria-hidden="true"></i><span>Next Week</span><small><?php echo date("M j", strtotime("monday next week")); ?> – <?php echo date("M j", strtotime("sunday next week")); ?></small>
+<i class="fa fa-calendar-alt" aria-hidden="true"></i>Next Week
 </a>
 </nav>
 </div>

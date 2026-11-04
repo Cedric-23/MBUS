@@ -29,36 +29,39 @@
 .date-filter-container { margin: 0 0 var(--space-5); }
 .date-filters {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: 4px;
+  width: 100%;
+  overflow-x: auto;
   padding: 4px;
   border: 1px solid var(--minimal-border);
   border-radius: 10px;
   background: var(--color-white);
   box-shadow: none;
+  scrollbar-width: none;
 }
+.date-filters::-webkit-scrollbar { display: none; }
 .date-filter-btn {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 7px;
   min-height: 38px;
-  padding: 7px 12px;
+  padding: 8px 14px;
   border: 0;
   border-radius: 7px;
   color: var(--minimal-muted);
   font-size: var(--fs-sm);
-  flex-wrap: wrap;
   font-weight: var(--fw-medium);
   line-height: 1.1;
-  white-space: normal;
+  white-space: nowrap;
   transition: background 160ms ease, color 160ms ease;
 }
 .date-filter-btn::before { display: none; }
 .date-filter-btn:hover { transform: none; box-shadow: none; color: var(--minimal-ink); background: #f4f7fb; }
 .date-filter-btn.active { border: 0; background: var(--color-primary); color: var(--color-white); box-shadow: none; }
-.date-filter-btn span { display: inline-block; }
-.date-filter-btn small { flex-basis: 100%; display: block; opacity: .75; font-size: .68rem; font-weight: var(--fw-normal); line-height: 1.1; }
+.date-filter-btn i { font-size: .82rem; opacity: .8; }
 
 .day-tabs-container { margin: 0 0 var(--space-5); }
 .day-tabs { gap: 4px; padding: 0 0 6px; border-bottom: 1px solid var(--minimal-border); }
@@ -88,9 +91,7 @@ input[type="date"]:focus, input[type="time"]:focus, input[type="datetime-local"]
 .search-modern input:focus, select:focus, textarea:focus { border-color: var(--color-accent) !important; box-shadow: 0 0 0 3px rgba(30, 144, 255, .12) !important; }
 
 @media (max-width: 600px) {
-  .date-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .date-filter-btn { min-width: 0; min-height: 50px; padding: 6px 5px; }
-  .date-filter-btn i { display: none; }
+  .date-filter-btn { min-height: 40px; padding-inline: 12px; }
   .day-tabs { overflow-x: auto; }
   .day-tab { min-width: 68px; }
 }
