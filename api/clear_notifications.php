@@ -14,10 +14,14 @@ $user_id = $_SESSION['user_id'];
 try {
     // Delete all notifications for this user
     $stmt = mbus_db_prepare($conn, "DELETE FROM notification WHERE user_id = ?", [$user_id]);
-    mbus_db_execute($stmt);
-    
+    if ($stmt === false) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Database update failed']);
+        exit();
+    }
     echo json_encode(['success' => true]);
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Database operation failed']);
 }
 ?>

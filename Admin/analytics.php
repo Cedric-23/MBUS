@@ -10,41 +10,54 @@ if(!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'admin'){
 }
 
 /* GET ANALYTICS DATA */
+function mbus_analytics_row($result): array
+{
+    if($result === false){
+        http_response_code(500);
+        die("Analytics data is temporarily unavailable.");
+    }
+    return mbus_db_fetch_assoc($result) ?: [];
+}
+
 
 // Total reservations
 $total_reservations_query = mbus_db_query($conn, "SELECT COUNT(*) as count FROM reservation");
-$total_reservations = mbus_db_fetch_assoc($total_reservations_query)['count'];
+$total_reservations = mbus_analytics_row($total_reservations_query)['count'] ?? 0;
 
 // Total revenue (paid reservations)
-$total_revenue_query = mbus_db_query($conn, "SELECT SUM(amount) as total FROM payment WHERE status = 'Completed'");
-$total_revenue = mbus_db_fetch_assoc($total_revenue_query)['total'] ?? 0;
+$total_revenue_query = mbus_db_query($conn, "SELECT SUM(amount) as total FROM payment WHERE payment_status = 'Paid'");
+$total_revenue = mbus_analytics_row($total_revenue_query)['total'] ?? 0;
 
 // Total users
 $total_users_query = mbus_db_query($conn, "SELECT COUNT(*) as count FROM users");
-$total_users = mbus_db_fetch_assoc($total_users_query)['count'];
+$total_users = mbus_analytics_row($total_users_query)['count'] ?? 0;
 
 // Active schedules
 $active_schedules_query = mbus_db_query($conn, "SELECT COUNT(*) as count FROM schedule WHERE schedule_status = 'Active'");
-$active_schedules = mbus_db_fetch_assoc($active_schedules_query)['count'];
+$active_schedules = mbus_analytics_row($active_schedules_query)['count'] ?? 0;
 
 // Total buses
 $total_buses_query = mbus_db_query($conn, "SELECT COUNT(*) as count FROM buses");
-$total_buses = mbus_db_fetch_assoc($total_buses_query)['count'];
+$total_buses = mbus_analytics_row($total_buses_query)['count'] ?? 0;
 
 // Pending verifications
 $pending_verifications_query = mbus_db_query($conn, "SELECT COUNT(*) as count FROM commuter_verification WHERE verification_status = 'Pending'");
-$pending_verifications = mbus_db_fetch_assoc($pending_verifications_query)['count'];
+$pending_verifications = mbus_analytics_row($pending_verifications_query)['count'] ?? 0;
 
 // Pending operator applications
 $pending_applications_query = mbus_db_query($conn, "SELECT COUNT(*) as count FROM operator_application WHERE application_status = 'Pending'");
-$pending_applications = mbus_db_fetch_assoc($pending_applications_query)['count'];
+$pending_applications = mbus_analytics_row($pending_applications_query)['count'] ?? 0;
 
 // Reservations by status
 $reservations_by_status_query = mbus_db_query($conn, "
-    SELECT status, COUNT(*) as count 
-    FROM reservation 
+    SELECT status, COUNT(*) as count
+    FROM reservation
     GROUP BY status
 ");
+if($reservations_by_status_query === false){
+    http_response_code(500);
+    die("Analytics data is temporarily unavailable.");
+}
 $reservations_by_status = [];
 while($row = mbus_db_fetch_assoc($reservations_by_status_query)){
     $reservations_by_status[$row['status']] = $row['count'];
@@ -52,31 +65,35 @@ while($row = mbus_db_fetch_assoc($reservations_by_status_query)){
 
 // Reservations this month
 $reservations_this_month_query = mbus_db_query($conn, "
-    SELECT COUNT(*) as count 
-    FROM reservation 
-    WHERE MONTH(reservation_date) = MONTH(CURRENT_DATE) 
-    AND YEAR(reservation_date) = YEAR(CURRENT_DATE)
+    SELECT COUNT(*) as count
+    FROM reservation
+    WHERE reservation_date >= DATE_TRUNC('month', CURRENT_DATE)
+    AND reservation_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
 ");
-$reservations_this_month = mbus_db_fetch_assoc($reservations_this_month_query)['count'];
+$reservations_this_month = mbus_analytics_row($reservations_this_month_query)['count'] ?? 0;
 
 // Revenue this month
 $revenue_this_month_query = mbus_db_query($conn, "
-    SELECT SUM(amount) as total 
-    FROM payment 
-    WHERE MONTH(payment_date) = MONTH(CURRENT_DATE) 
-    AND YEAR(payment_date) = YEAR(CURRENT_DATE)
-    AND status = 'Completed'
+    SELECT SUM(amount) as total
+    FROM payment
+    WHERE payment_date >= DATE_TRUNC('month', CURRENT_DATE)
+    AND payment_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+    AND payment_status = 'Paid'
 ");
-$revenue_this_month = mbus_db_fetch_assoc($revenue_this_month_query)['total'] ?? 0;
+$revenue_this_month = mbus_analytics_row($revenue_this_month_query)['total'] ?? 0;
 
 // Recent activity logs
 $recent_activity_query = mbus_db_query($conn, "
-    SELECT al.*, u.full_name 
+    SELECT al.*, u.full_name
     FROM activity_logs al
     LEFT JOIN users u ON al.user_id = u.user_id
     ORDER BY al.created_at DESC
     LIMIT 10
 ");
+if($recent_activity_query === false){
+    http_response_code(500);
+    die("Analytics activity is temporarily unavailable.");
+}
 ?>
 
 <!DOCTYPE html>
@@ -85,7 +102,7 @@ $recent_activity_query = mbus_db_query($conn, "
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analytics Dashboard - MBUS Admin</title>
-    
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../Assets/css/responsive.css">
@@ -110,9 +127,9 @@ $recent_activity_query = mbus_db_query($conn, "
     <div class="logo-container">
         <img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo">
     </div>
-    
+
     <h2>Admin</h2>
-    
+
     <nav class="menu-top" aria-label="Admin menu">
         <a href="admin_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
         <a href="analytics.php" aria-current="page"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a>
@@ -124,7 +141,7 @@ $recent_activity_query = mbus_db_query($conn, "
         <a href="manage_operators.php"><i class="fa fa-user-plus" aria-hidden="true"></i> Applications</a>
         <a href="admin_dashboard.php"><i class="fa fa-history" aria-hidden="true"></i> Activity Logs</a>
     </nav>
-    
+
     <div class="menu-bottom">
         <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
             <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
@@ -179,28 +196,28 @@ $recent_activity_query = mbus_db_query($conn, "
     <!-- KEY METRICS -->
     <section class="cards" aria-labelledby="metrics-heading">
         <h2 id="metrics-heading" class="visually-hidden">Key Metrics</h2>
-        
+
         <article class="card card-animated">
             <h3 class="day"><?php echo number_format($total_reservations); ?></h3>
             <p class="date">Total Reservations</p>
             <p>This month: <?php echo number_format($reservations_this_month); ?></p>
             <a href="manage_schedules.php" class="btn btn-primary">View Reservations</a>
         </article>
-        
+
         <article class="card card-animated">
             <h3 class="day">₱<?php echo number_format($total_revenue, 2); ?></h3>
             <p class="date">Total Revenue</p>
             <p>This month: ₱<?php echo number_format($revenue_this_month, 2); ?></p>
             <a href="manage_schedules.php" class="btn btn-primary">View Revenue</a>
         </article>
-        
+
         <article class="card card-animated">
             <h3 class="day"><?php echo number_format($total_users); ?></h3>
             <p class="date">Total Users</p>
             <p>Registered accounts</p>
             <a href="manage_operators.php" class="btn btn-primary">Manage Operators</a>
         </article>
-        
+
         <article class="card card-animated">
             <h3 class="day"><?php echo number_format($active_schedules); ?></h3>
             <p class="date">Active Schedules</p>
@@ -214,7 +231,7 @@ $recent_activity_query = mbus_db_query($conn, "
             <p>In fleet</p>
             <a href="manage_buses.php" class="btn btn-primary">Manage Buses</a>
         </article>
-        
+
         <article class="card card-animated">
             <h3 class="day"><?php echo number_format($pending_verifications + $pending_applications); ?></h3>
             <p class="date">Pending Actions</p>
@@ -229,7 +246,7 @@ $recent_activity_query = mbus_db_query($conn, "
         <div class="chart-container">
             <?php if(!empty($reservations_by_status)): ?>
             <div class="bar-chart">
-                <?php foreach($reservations_by_status as $status => $count): 
+                <?php foreach($reservations_by_status as $status => $count):
                     $percentage = $total_reservations > 0 ? ($count / $total_reservations) * 100 : 0;
                 ?>
                 <div class="bar-item">
@@ -311,17 +328,17 @@ function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
     const toggle = document.querySelector('.sidebar-toggle');
-    
+
     const isOpen = sidebar.classList.toggle('open');
     overlay.classList.toggle('active');
-    
+
     if (toggle) {
         toggle.setAttribute('aria-expanded', isOpen);
     }
-    
+
     // Add/remove body class for CSS to hide hamburger
     document.body.classList.toggle('sidebar-open', isOpen);
-    
+
     // Trap focus when sidebar is open on mobile
     if (isOpen) {
         document.body.style.overflow = 'hidden';
@@ -339,7 +356,7 @@ function toggleNotifications(event) {
     const dropdown = document.getElementById('notificationDropdown');
     const bell = document.querySelector('.notification-bell');
     notificationDropdownOpen = !notificationDropdownOpen;
-    
+
     if (notificationDropdownOpen) {
         dropdown.classList.add('active');
         if (bell) bell.setAttribute('aria-expanded', 'true');
@@ -368,7 +385,7 @@ function updateNotificationBadge(count) {
     const badge = document.getElementById('notificationBadge');
     badge.textContent = count;
     badge.style.display = count > 0 ? 'flex' : 'none';
-    
+
     // Also update the dropdown header count
     const header = document.querySelector('.notification-dropdown-header');
     if (header) {
@@ -379,14 +396,14 @@ function updateNotificationBadge(count) {
 // Render notifications
 function renderNotifications(notifications) {
     const list = document.getElementById('notificationList');
-    
+
     if (notifications.length === 0) {
         list.innerHTML = '<div class="notification-empty">No notifications</div>';
         return;
     }
-    
+
     list.innerHTML = notifications.map(notif => `
-        <div class="notification-item ${notif.status === 'Unread' ? 'unread' : ''}" 
+        <div class="notification-item ${notif.status === 'Unread' ? 'unread' : ''}"
              onclick="markAsRead(${notif.id})" role="listitem">
             <div class="notification-message">${notif.message}</div>
             <div class="notification-time">${notif.time_ago}</div>
@@ -398,7 +415,7 @@ function renderNotifications(notifications) {
 function markAsRead(notificationId) {
     const formData = new FormData();
     formData.append('notification_id', notificationId);
-    
+
     fetch('../api/mark_notification_read.php', {
         method: 'POST',
         body: formData

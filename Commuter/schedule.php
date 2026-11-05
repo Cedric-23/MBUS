@@ -155,7 +155,7 @@ foreach($days as $d){
 <?php } ?>
 
 <?php
-$sql="SELECT schedule.schedule_id,buses.bus_number,routes.origin,routes.destination,
+$sql="SELECT schedule.schedule_id,buses.bus_number,buses.capacity,routes.origin,routes.destination,
 schedule.departure_time,schedule.arrival_time,schedule.schedule_status,
 routes.origin_lat,routes.origin_lng,routes.destination_lat,routes.destination_lng
 FROM schedule
@@ -189,12 +189,15 @@ $result=mbus_db_query($conn,$sql);
 <?php while($row=mbus_db_fetch_assoc($result)){
 $schedule_id=$row['schedule_id'];
 
-$seat_sql="SELECT COUNT(*) AS total_reserved FROM reservation WHERE schedule_id='$schedule_id' AND status!='Cancelled'";
-$seat_result=mbus_db_query($conn,$seat_sql);
-$seat_data=mbus_db_fetch_assoc($seat_result);
-
-$reserved=$seat_data['total_reserved'];
-$available=28-$reserved;
+$seat_sql="SELECT COUNT(*) AS total_reserved FROM reservation
+WHERE schedule_id=?
+AND status IN ('Pending', 'Paid', 'Confirmed', 'Boarded')
+AND (status <> 'Pending' OR created_at > NOW()-INTERVAL '10 minutes')";
+$seat_result=mbus_db_prepare($conn,$seat_sql,[$schedule_id]);
+$seat_data=$seat_result === false ? false : mbus_db_fetch_assoc($seat_result);
+$reserved=(int)($seat_data['total_reserved'] ?? 0);
+$capacity=(int)$row['capacity'];
+$available=max(0,$capacity-$reserved);
 ?>
 
 <tr data-schedule-id="<?php echo $schedule_id; ?>">
@@ -221,7 +224,7 @@ else{echo"<span class='badge badge-secondary'>".htmlspecialchars($row['schedule_
 <td data-label="Available Seats" class="seat-availability">
 <?php
 if($available<=0){echo"<span class='badge badge-error'>FULL</span>";}
-else{echo"<span class='badge badge-success'>$available / 28</span>";}
+else{echo"<span class='badge badge-success'>$available / $capacity</span>";}
 ?>
 </td>
 
@@ -355,12 +358,12 @@ function viewRoute(originLat, originLng, destLat, destLng, originName, destName)
         },
         eventDidMount: function(info) {
             const props = info.event.extendedProps;
-            info.el.title = `${props.bus_number} - ${props.origin} \u2192 ${props.destination}\nDeparture: ${props.departure_time}\nAvailable: ${props.available_seats}/28`;
+            info.el.title = `${props.bus_number} - ${props.origin} \u2192 ${props.destination}\nDeparture: ${props.departure_time}\nAvailable: ${props.available_seats}/${props.capacity}`;
         },
         height: 'auto',
         eventColor: '#1e90ff'
     });
-    
+
     calendar.render();
 }
 

@@ -17,18 +17,24 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])){
     if(!csrf_validate_token()){
         $error = "Invalid CSRF token";
     } else {
+        if(!isset($_POST['schedule_id'], $_POST['trip_status']) || !is_scalar($_POST['schedule_id']) || !is_scalar($_POST['trip_status'])){
+            $error = "Invalid trip update.";
+            $schedule_id = 0;
+            $trip_status = '';
+        } else {
         $schedule_id = (int)$_POST['schedule_id'];
-        $trip_status = $_POST['trip_status'];
+        $trip_status = (string)$_POST['trip_status'];
         $allowed_statuses = ['Scheduled','Boarding','Departed','Arrived','Cancelled'];
         if(in_array($trip_status, $allowed_statuses)){
-            $stmt = mbus_db_prepare($conn, "UPDATE schedules SET trip_status=? WHERE schedule_id=? AND operator_id=?", [$trip_status, $schedule_id, $operator_id]);
-            if(mbus_db_execute($stmt)){
+            $stmt = mbus_db_prepare($conn, "UPDATE schedule SET trip_status=? WHERE schedule_id=? AND bus_id IN (SELECT bus_id FROM operator_bus_assignments WHERE operator_id=?)", [$trip_status, $schedule_id, $operator_id]);
+            if($stmt !== false && $conn->affectedRows > 0){
                 $success = "Trip status updated";
             } else {
                 $error = "Failed to update status";
             }
         } else {
             $error = "Invalid status";
+        }
         }
     }
 }
@@ -38,12 +44,24 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_boarded'])){
     if(!csrf_validate_token()){
         $error = "Invalid CSRF token";
     } else {
+        if(!isset($_POST['reservation_id']) || !is_scalar($_POST['reservation_id'])){
+            $error = "Invalid reservation.";
+            $reservation_id = 0;
+        } else {
         $reservation_id = (int)$_POST['reservation_id'];
-        $stmt = mbus_db_prepare($conn, "UPDATE reservation SET status='Boarded' WHERE reservation_id=?", [$reservation_id]);
-        if(mbus_db_execute($stmt)){
+        $stmt = mbus_db_prepare($conn, "UPDATE reservation r SET status='Boarded'
+            WHERE r.reservation_id = ?
+              AND r.status = 'Paid'
+              AND r.schedule_id IN (
+                  SELECT s.schedule_id FROM schedule s
+                  JOIN operator_bus_assignments oba ON oba.bus_id = s.bus_id
+                  WHERE oba.operator_id = ? AND s.trip_status IN ('Scheduled', 'Boarding')
+              )", [$reservation_id, $operator_id]);
+        if($stmt !== false && $conn->affectedRows > 0){
             $success = "Passenger marked as boarded";
         } else {
             $error = "Failed to update passenger";
+        }
         }
     }
 }
@@ -52,7 +70,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_boarded'])){
 $filter = $_GET['filter'] ?? 'all';
 $open_schedule = isset($_GET['open_schedule']) ? (int)$_GET['open_schedule'] : null;
 
-$where = "WHERE s.operator_id = ?";
+$where = "WHERE oba.operator_id = ?";
 $params = [$operator_id];
 
 switch($filter){
@@ -86,9 +104,10 @@ $query = mbus_db_prepare($conn, "
         b.bus_type,
         r.origin,
         r.destination
-    FROM schedules s
+    FROM schedule s
     JOIN buses b ON s.bus_id = b.bus_id
     JOIN routes r ON s.route_id = r.route_id
+    JOIN operator_bus_assignments oba ON oba.bus_id = s.bus_id
     $where
     ORDER BY s.departure_time DESC
 ", $params);

@@ -6,28 +6,37 @@ include "../Includes/email_helper.php";
 include "../Includes/csrf.php";
 
 /* AUTO EXPIRE - 10 MINUTE RESERVATION EXPIRATION */
-mbus_db_query($conn,"
+$expiry_result = mbus_db_prepare($conn,"
 UPDATE reservation
 SET status='Cancelled'
 WHERE status='Pending'
-AND created_at<=NOW()-INTERVAL 10 MINUTE
-");
+AND created_at<=NOW()-INTERVAL '10 minutes'
+", []);
+if($expiry_result === false){
+    die("Reservation service is temporarily unavailable. Please try again.");
+}
 
 /* NOTIFY USER OF EXPIRED RESERVATIONS */
-$expired_query = mbus_db_query($conn,"
+$expired_query = mbus_db_prepare($conn,"
 SELECT reservation_id, user_id, ticket_code
 FROM reservation
 WHERE status='Cancelled'
-AND created_at<=NOW()-INTERVAL 10 MINUTE
-AND created_at>NOW()-INTERVAL 10 MINUTE 30 SECOND
-");
+AND created_at<=NOW()-INTERVAL '10 minutes'
+AND created_at>NOW()-INTERVAL '10 minutes 30 seconds'
+", []);
+if($expired_query === false){
+    die("Reservation service is temporarily unavailable. Please try again.");
+}
 
-while($expired = mbus_db_fetch_assoc($expired_query)){
+while($expired_query !== false && ($expired = mbus_db_fetch_assoc($expired_query))){
     $notification_msg = "Your reservation (Ticket: {$expired['ticket_code']}) has expired due to non-payment within 10 minutes.";
-    mbus_db_query($conn,"
+    $notification_result = mbus_db_prepare($conn,"
     INSERT INTO notification(user_id, message, notification_date, status)
-    VALUES({$expired['user_id']}, '$notification_msg', NOW(), 'Unread')
-    ");
+    VALUES(?, ?, NOW(), 'Unread')
+    ", [(int)$expired['user_id'], $notification_msg]);
+    if($notification_result === false){
+        die("Reservation service is temporarily unavailable. Please try again.");
+    }
 }
 
 /* AUTH */
@@ -39,9 +48,9 @@ if(!isset($_SESSION['user_id'])){
 $user_id=$_SESSION['user_id'];
 
 /* SCHEDULE */
-if(!isset($_GET['schedule_id'])){die("Schedule not found.");}
+if(!isset($_GET['schedule_id']) || !is_scalar($_GET['schedule_id'])){die("Schedule not found.");}
 
-$schedule_id=mbus_db_escape($conn,$_GET['schedule_id']);
+$schedule_id=(int)$_GET['schedule_id'];
 
 // Authorization check - verify schedule exists and is bookable
 $schedule_check = mbus_db_prepare($conn,"
@@ -73,14 +82,14 @@ $fare_table=[
 ];
 
 /* ROUTE */
-$route_query=mbus_db_query($conn,"
-SELECT routes.origin,routes.destination,buses.bus_number,schedule.departure_time,schedule.trip_status,
+$route_query=mbus_db_prepare($conn,"
+SELECT routes.origin,routes.destination,buses.bus_number,buses.capacity,schedule.departure_time,schedule.trip_status,
 routes.origin_lat,routes.origin_lng,routes.destination_lat,routes.destination_lng
 FROM schedule
 JOIN routes ON schedule.route_id=routes.route_id
 JOIN buses ON schedule.bus_id=buses.bus_id
-WHERE schedule.schedule_id='$schedule_id'
-");
+WHERE schedule.schedule_id=?
+", [$schedule_id]);
 
 $route_data=mbus_db_fetch_assoc($route_query);
 
@@ -112,16 +121,21 @@ array_pop($pickup_stops);
 array_pop($pickup_stops);
 
 /* RESERVED */
-$reserved=[];
-$seat_sql="SELECT COUNT(*) AS total_reserved FROM reservation
-WHERE schedule_id='$schedule_id'
-AND(status='Paid' OR status='Boarded' OR(status='Pending' AND created_at>NOW()-INTERVAL 10 MINUTE))
+$seat_sql="SELECT seat_number FROM reservation
+WHERE schedule_id=?
+AND(status='Paid' OR status='Confirmed' OR status='Boarded' OR(status='Pending' AND created_at>NOW()-INTERVAL '10 minutes'))
 ";
-$reserved_query=mbus_db_query($conn,$seat_sql);
-
-while($r=mbus_db_fetch_assoc($reserved_query)){$reserved[]=$r['total_reserved'];}
-
-$available_seats=28-count($reserved);
+$reserved_query=mbus_db_prepare($conn,$seat_sql,[$schedule_id]);
+if($reserved_query === false){
+    die("Unable to check seat availability. Please try again.");
+}
+$reserved=[];
+while($reserved_row=mbus_db_fetch_assoc($reserved_query)){
+    $reserved[]=(int)$reserved_row['seat_number'];
+}
+$reserved_count=count($reserved);
+$capacity=(int)($route_data['capacity'] ?? 0);
+$available_seats=max(0,$capacity-$reserved_count);
 
 /* RESERVE */
 if(isset($_POST['confirm_reserve'])){
@@ -130,65 +144,81 @@ if(isset($_POST['confirm_reserve'])){
         die("Security validation failed. Please refresh the page and try again.");
     }
 
-$pickup=mbus_db_escape($conn,$_POST['pickup']);
-$destination=mbus_db_escape($conn,$_POST['destination']);
-$seats=explode(",",$_POST['seats']);
-
-foreach($seats as $seat){
-
-$seat=intval($seat);
-
-// Use transaction to prevent race condition
-$conn->pdo->beginTransaction();
-
+$pickup_input=$_POST['pickup'] ?? '';
+$destination_input=$_POST['destination'] ?? '';
+$seats_input=$_POST['seats'] ?? '';
+if(!is_string($pickup_input) || !is_string($destination_input) || !is_string($seats_input) || trim($pickup_input) === '' || trim($destination_input) === ''){
+    die("Invalid reservation details.");
+}
+$pickup=mbus_db_escape($conn,$pickup_input);
+$destination=mbus_db_escape($conn,$destination_input);
+$raw_seats = array_map('trim', explode(',', $seats_input));
+if(empty($raw_seats) || count(array_filter($raw_seats, function($seat){ return $seat === '' || !preg_match('/^\d+$/', $seat); })) > 0){
+    die("Invalid seat selection.");
+}
+$requested_seats = array_values(array_unique(array_map('intval', $raw_seats)));
+if($capacity <= 0 || empty($requested_seats) || count($requested_seats) > $available_seats || count(array_filter($requested_seats, function($seat) use ($capacity){ return $seat < 1 || $seat > $capacity; })) > 0){
+    die("Invalid seat selection or insufficient capacity.");
+}
+$seats=$requested_seats;
+$created_reservations=[];
 try{
-    $check=mbus_db_prepare($conn,"
+    $conn->pdo->beginTransaction();
+    foreach($seats as $seat){
+        $check=mbus_db_prepare($conn,"
 SELECT reservation_id FROM reservation
 WHERE schedule_id = ?
 AND seat_number = ?
-AND(status='Paid' OR status='Boarded' OR(status='Pending' AND created_at>NOW()-INTERVAL 10 MINUTE))
+AND(status='Paid' OR status='Confirmed' OR status='Boarded' OR(status='Pending' AND created_at>NOW()-INTERVAL '10 minutes'))
 FOR UPDATE
 ", [$schedule_id, $seat]);
-
-    if(mbus_db_num_rows($check)>0){
-        $conn->pdo->rollBack();
-        continue;
-    }
-
-    do{
-        $ticket_code=rand(1000,9999);
-        $check_code=mbus_db_prepare($conn,"SELECT reservation_id FROM reservation WHERE ticket_code = ?", [$ticket_code]);
-    }while(mbus_db_num_rows($check_code)>0);
-
-    mbus_db_prepare($conn,"
+        if($check === false){
+            throw new RuntimeException("Seat availability check failed");
+        }
+        if(mbus_db_num_rows($check)>0){
+            throw new RuntimeException("Selected seat is no longer available");
+        }
+        do{
+            $ticket_code=random_int(1000,9999);
+            $check_code=mbus_db_prepare($conn,"SELECT reservation_id FROM reservation WHERE ticket_code = ?", [$ticket_code]);
+            if($check_code === false){
+                throw new RuntimeException("Ticket code check failed");
+            }
+        }while(mbus_db_num_rows($check_code)>0);
+        $inserted = mbus_db_prepare($conn,"
 INSERT INTO reservation(ticket_code,user_id,schedule_id,seat_number,pickup_location,destination,reservation_date,created_at,status)
 VALUES(?, ?, ?, ?, ?, ?, NOW(), NOW(), 'Pending')
 ", [$ticket_code, $user_id, $schedule_id, $seat, $pickup, $destination]);
-
+        if($inserted === false){
+            throw new RuntimeException("Reservation insert failed");
+        }
+        $created_reservations[]=['seat'=>$seat,'ticket_code'=>$ticket_code];
+    }
     $conn->pdo->commit();
-
-} catch(Exception $e){
-    $conn->pdo->rollBack();
-    continue;
+} catch(Throwable $e){
+    if($conn->pdo->inTransaction()){
+        $conn->pdo->rollBack();
+    }
+    http_response_code(409);
+    echo "Reservation could not be completed. Please refresh and select available seats.";
+    exit();
 }
 
-// Log reservation creation
-log_activity($conn, $user_id, ACTION_RESERVATION_CREATE, "Reservation created for schedule $schedule_id, seat $seat, ticket code: $ticket_code");
-
-// Send email notification
-$user_email_query = mbus_db_query($conn, "SELECT email FROM users WHERE user_id = '$user_id'");
-$user_email_data = mbus_db_fetch_assoc($user_email_query);
-$user_email = $user_email_data['email'];
-
+$user_email_query = mbus_db_prepare($conn, "SELECT email FROM users WHERE user_id = ?", [$user_id]);
+$user_email_data = $user_email_query === false ? false : mbus_db_fetch_assoc($user_email_query);
+$user_email = $user_email_data['email'] ?? '';
 $route_info = "$route_data[origin] → $route_data[destination]";
 $departure_formatted = date('F d, Y g:i A', strtotime($route_data['departure_time']));
-
-$email_subject = "Reservation Created - Ticket: $ticket_code";
-$email_message = get_reservation_created_email($ticket_code, $departure_formatted, $route_info);
-send_email_notification($user_email, $email_subject, $email_message);
-
+foreach($created_reservations as $created){
+    $seat=$created['seat'];
+    $ticket_code=$created['ticket_code'];
+    log_activity($conn, $user_id, ACTION_RESERVATION_CREATE, "Reservation created for schedule $schedule_id, seat $seat, ticket code: $ticket_code");
+    if($user_email !== ''){
+        $email_subject = "Reservation Created - Ticket: $ticket_code";
+        $email_message = get_reservation_created_email($ticket_code, $departure_formatted, $route_info);
+        send_email_notification($user_email, $email_subject, $email_message);
+    }
 }
-
 echo "ok";
 exit();
 }
@@ -288,7 +318,7 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
 
 <div class="route-header">
     <span class="route-badge"><?php echo htmlspecialchars($route_data['origin']); ?> &#8594; <?php echo htmlspecialchars($route_data['destination']); ?></span>
-    <span class="seat-counter"><?php echo $available_seats; ?>/28 seats available</span>
+    <span class="seat-counter"><?php echo $available_seats; ?>/<?php echo $capacity; ?> seats available</span>
 </div>
 
 <?php if($route_data['origin_lat'] && $route_data['origin_lng'] && $route_data['destination_lat'] && $route_data['destination_lng']){ ?>
@@ -320,10 +350,11 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
 
 <?php
 $seat=1;
-for($r=1;$r<=7;$r++){
+$seat_rows=(int)ceil($capacity / 4);
+for($r=1;$r<=$seat_rows;$r++){
 echo "<div class='seat-row' role='row'>";
 for($c=1;$c<=4;$c++){
-if($seat<=28){
+if($seat<=$capacity){
 $class="seat-btn";
 $disabled="";
 $aria_disabled="false";

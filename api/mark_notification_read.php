@@ -1,5 +1,6 @@
 <?php
 session_start();
+header('Content-Type: application/json');
 include "../config/db_connect.php";
 
 if(!isset($_SESSION['user_id'])){
@@ -8,20 +9,22 @@ if(!isset($_SESSION['user_id'])){
     exit();
 }
 
-if(!isset($_POST['notification_id'])){
+$notification_id = isset($_POST['notification_id']) && is_scalar($_POST['notification_id']) ? (int)$_POST['notification_id'] : 0;
+if($notification_id <= 0){
     http_response_code(400);
     echo json_encode(['error' => 'Missing notification_id']);
     exit();
 }
 
-$user_id = $_SESSION['user_id'];
-$notification_id = mbus_db_escape($conn, $_POST['notification_id']);
+$result = mbus_db_prepare($conn,
+    "UPDATE notification SET status = 'Read' WHERE notification_id = ? AND user_id = ?",
+    [$notification_id, $_SESSION['user_id']]
+);
 
-// Mark as read
-mbus_db_query($conn,"
-    UPDATE notification
-    SET status = 'Read'
-    WHERE notification_id = '$notification_id' AND user_id = '$user_id'
-");
+if($result === false){
+    http_response_code(500);
+    echo json_encode(['error' => 'Database update failed']);
+    exit();
+}
 
 echo json_encode(['success' => true]);

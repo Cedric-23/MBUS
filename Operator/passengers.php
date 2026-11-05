@@ -69,7 +69,7 @@ if($search !== ''){
 $total_passengers_query = mbus_db_prepare($conn, "
     SELECT COUNT(*) total
     FROM reservation r
-    JOIN schedules s ON r.schedule_id = s.schedule_id
+    JOIN schedule s ON r.schedule_id = s.schedule_id
     JOIN operator_bus_assignments oba ON s.bus_id = oba.bus_id
     WHERE oba.operator_id = ?
     AND s.departure_time >= NOW()
@@ -79,7 +79,7 @@ $total_passengers = mbus_db_fetch_assoc($total_passengers_query) ?: ['total' => 
 $paid_passengers_query = mbus_db_prepare($conn, "
     SELECT COUNT(*) total
     FROM reservation r
-    JOIN schedules s ON r.schedule_id = s.schedule_id
+    JOIN schedule s ON r.schedule_id = s.schedule_id
     JOIN operator_bus_assignments oba ON s.bus_id = oba.bus_id
     WHERE oba.operator_id = ?
     AND r.status = 'Paid'
@@ -90,7 +90,7 @@ $paid_passengers = mbus_db_fetch_assoc($paid_passengers_query) ?: ['total' => 0]
 $boarded_passengers_query = mbus_db_prepare($conn, "
     SELECT COUNT(*) total
     FROM reservation r
-    JOIN schedules s ON r.schedule_id = s.schedule_id
+    JOIN schedule s ON r.schedule_id = s.schedule_id
     JOIN operator_bus_assignments oba ON s.bus_id = oba.bus_id
     WHERE oba.operator_id = ?
     AND r.status = 'Boarded'
@@ -100,7 +100,7 @@ $boarded_passengers = mbus_db_fetch_assoc($boarded_passengers_query) ?: ['total'
 
 $today_trips_query = mbus_db_prepare($conn, "
     SELECT COUNT(*) total
-    FROM schedules s
+    FROM schedule s
     JOIN operator_bus_assignments oba ON s.bus_id = oba.bus_id
     WHERE oba.operator_id = ?
     AND s.departure_time::date = CURRENT_DATE
@@ -119,7 +119,7 @@ SELECT
     b.bus_number
 FROM reservation r
 JOIN users u ON r.user_id = u.user_id
-JOIN schedules s ON r.schedule_id = s.schedule_id
+JOIN schedule s ON r.schedule_id = s.schedule_id
 JOIN routes rt ON s.route_id = rt.route_id
 JOIN buses b ON s.bus_id = b.bus_id
 JOIN operator_bus_assignments oba ON s.bus_id = oba.bus_id

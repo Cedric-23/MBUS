@@ -1,5 +1,6 @@
 <?php
 session_start();
+header('Content-Type: application/json');
 include "../config/db_connect.php";
 
 if(!isset($_SESSION['user_id'])){
@@ -11,13 +12,19 @@ if(!isset($_SESSION['user_id'])){
 $user_id = $_SESSION['user_id'];
 
 // Get notifications
-$query = mbus_db_query($conn,"
+$query = mbus_db_prepare($conn,"
     SELECT notification_id, message, notification_date, status
     FROM notification
-    WHERE user_id = '$user_id'
+    WHERE user_id = ?
     ORDER BY notification_date DESC
     LIMIT 20
-");
+", [$user_id]);
+
+if($query === false){
+    http_response_code(500);
+    echo json_encode(['error' => 'Database query failed']);
+    exit();
+}
 
 $notifications = [];
 while($row = mbus_db_fetch_assoc($query)){
@@ -31,17 +38,23 @@ while($row = mbus_db_fetch_assoc($query)){
 }
 
 // Get unread count
-$count_query = mbus_db_query($conn,"
+$count_query = mbus_db_prepare($conn,"
     SELECT COUNT(*) as unread_count
     FROM notification
-    WHERE user_id = '$user_id' AND status = 'Unread'
-");
+    WHERE user_id = ? AND status = 'Unread'
+", [$user_id]);
+
+if($count_query === false){
+    http_response_code(500);
+    echo json_encode(['error' => 'Database query failed']);
+    exit();
+}
 
 $count_data = mbus_db_fetch_assoc($count_query);
 
 echo json_encode([
     'notifications' => $notifications,
-    'unread_count' => $count_data['unread_count']
+    'unread_count' => (int)($count_data['unread_count'] ?? 0)
 ]);
 
 function time_ago($datetime){

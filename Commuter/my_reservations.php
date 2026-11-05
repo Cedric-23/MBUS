@@ -8,7 +8,7 @@ mbus_db_prepare($conn, "
     UPDATE reservation
     SET status='Cancelled'
     WHERE status='Pending'
-    AND created_at <= NOW() - INTERVAL 5 MINUTE
+    AND created_at <= NOW() - INTERVAL '5 minutes'
 ", []);
 
 /* AUTH */
@@ -186,17 +186,17 @@ function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
     const toggle = document.querySelector('.sidebar-toggle');
-    
+
     const isOpen = sidebar.classList.toggle('open');
     overlay.classList.toggle('active');
-    
+
     if (toggle) {
         toggle.setAttribute('aria-expanded', isOpen);
     }
-    
+
     // Add/remove body class for CSS to hide hamburger
     document.body.classList.toggle('sidebar-open', isOpen);
-    
+
     if (isOpen) {
         document.body.style.overflow = 'hidden';
         const firstLink = sidebar.querySelector('a, button');
@@ -228,7 +228,7 @@ function startCountdowns() {
     document.querySelectorAll('.countdown').forEach(el => {
         let seconds = parseInt(el.dataset.seconds, 10);
         if (isNaN(seconds) || seconds <= 0) return;
-        
+
         const update = () => {
             if (seconds <= 0) {
                 el.textContent = 'Expired';
@@ -250,13 +250,13 @@ function startCountdowns() {
 // Cancel reservation via AJAX
 function cancelReservation(reservationId, btn) {
     if (!confirm('Cancel this reservation?')) return;
-    
+
     btn.disabled = true;
     btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Cancelling...';
-    
+
     // Get CSRF token from a hidden input or meta tag
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-    
+
     fetch('cancel_reservation.php', {
         method: 'POST',
         headers: {
@@ -290,17 +290,17 @@ function showToast(message) {
     // Remove existing toast
     const existing = document.querySelector('.toast');
     if (existing) existing.remove();
-    
+
     const toast = document.createElement('div');
     toast.className = 'toast';
     toast.textContent = message;
     toast.setAttribute('role', 'alert');
     toast.setAttribute('aria-live', 'polite');
     document.body.appendChild(toast);
-    
+
     // Animate in
     requestAnimationFrame(() => toast.classList.add('show'));
-    
+
     // Remove after 3s
     setTimeout(() => {
         toast.classList.remove('show');
@@ -348,13 +348,13 @@ document.addEventListener('DOMContentLoaded', startCountdowns);
     .reservation-card {
         padding: var(--space-4);
     }
-    
+
     .reservation-header {
         flex-direction: column;
         align-items: flex-start;
         gap: var(--space-2);
     }
-    
+
     .reservation-timer {
         display: flex;
         align-items: center;
@@ -364,29 +364,29 @@ document.addEventListener('DOMContentLoaded', startCountdowns);
         border-radius: var(--radius-md);
         margin-top: var(--space-3);
     }
-    
+
     .timer-label {
         font-size: var(--fs-xs);
         font-weight: 600;
         color: var(--color-warning-dark);
     }
-    
+
     .timer-value {
         font-family: var(--font-mono);
         font-size: var(--fs-lg);
         font-weight: 700;
         color: var(--color-warning-dark);
     }
-    
+
     .reservation-actions {
         margin-top: var(--space-3);
     }
-    
+
     .btn-group {
         flex-direction: column;
         width: 100%;
     }
-    
+
     .btn-group .btn {
         width: 100%;
         justify-content: center;

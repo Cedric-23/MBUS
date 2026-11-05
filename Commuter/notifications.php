@@ -14,9 +14,10 @@ if(isset($_POST['mark_read'])){
     if(!csrf_validate_token()){
         $error = "Security validation failed";
     } else {
-        $notification_id = (int)$_POST['notification_id'];
-        mbus_db_prepare($conn, "UPDATE notification SET status = 'Read' WHERE notification_id = ?", [$notification_id]);
-        $success = "Notification marked as read";
+        $notification_id = (isset($_POST['notification_id']) && is_scalar($_POST['notification_id'])) ? (int)$_POST['notification_id'] : 0;
+        $result = mbus_db_prepare($conn, "UPDATE notification SET status = 'Read' WHERE notification_id = ? AND user_id = ?", [$notification_id, $_SESSION['user_id']]);
+        if($result === false){ $error = "Failed to update notification"; }
+        else { $success = "Notification marked as read"; }
     }
 }
 
@@ -26,8 +27,9 @@ if(isset($_POST['mark_all_read'])){
         $error = "Security validation failed";
     } else {
         $user_id = $_SESSION['user_id'];
-        mbus_db_prepare($conn, "UPDATE notification SET status = 'Read' WHERE user_id = ? AND status = 'Unread'", [$user_id]);
-        $success = "All notifications marked as read";
+        $result = mbus_db_prepare($conn, "UPDATE notification SET status = 'Read' WHERE user_id = ? AND status = 'Unread'", [$user_id]);
+        if($result === false){ $error = "Failed to update notifications"; }
+        else { $success = "All notifications marked as read"; }
     }
 }
 
@@ -36,9 +38,10 @@ if(isset($_POST['delete'])){
     if(!csrf_validate_token()){
         $error = "Security validation failed";
     } else {
-        $notification_id = (int)$_POST['notification_id'];
-        mbus_db_prepare($conn, "DELETE FROM notification WHERE notification_id = ?", [$notification_id]);
-        $success = "Notification deleted";
+        $notification_id = (isset($_POST['notification_id']) && is_scalar($_POST['notification_id'])) ? (int)$_POST['notification_id'] : 0;
+        $result = mbus_db_prepare($conn, "DELETE FROM notification WHERE notification_id = ? AND user_id = ?", [$notification_id, $_SESSION['user_id']]);
+        if($result === false){ $error = "Failed to delete notification"; }
+        else { $success = "Notification deleted"; }
     }
 }
 
@@ -48,25 +51,35 @@ if(isset($_POST['clear_all'])){
         $error = "Security validation failed";
     } else {
         $user_id = $_SESSION['user_id'];
-        mbus_db_prepare($conn, "DELETE FROM notification WHERE user_id = ?", [$user_id]);
-        $success = "All notifications cleared";
+        $result = mbus_db_prepare($conn, "DELETE FROM notification WHERE user_id = ?", [$user_id]);
+        if($result === false){ $error = "Failed to clear notifications"; }
+        else { $success = "All notifications cleared"; }
     }
 }
 
 // Fetch notifications
 $user_id = $_SESSION['user_id'];
 $notifications = mbus_db_prepare($conn, "
-    SELECT * FROM notification 
-    WHERE user_id = ? 
-    ORDER BY created_at DESC 
+    SELECT * FROM notification
+    WHERE user_id = ?
+    ORDER BY notification_date DESC
     LIMIT 50
 ", [$user_id]);
 
-$unread_count = mbus_db_prepare($conn, "
-    SELECT COUNT(*) as count FROM notification 
+if($notifications === false){
+    http_response_code(500);
+    die("Unable to load notifications. Please try again.");
+}
+$unread_result = mbus_db_prepare($conn, "
+    SELECT COUNT(*) as count FROM notification
     WHERE user_id = ? AND status = 'Unread'
 ", [$user_id]);
-$unread_count = mbus_db_fetch_assoc($unread_count)['count'];
+if($unread_result === false){
+    http_response_code(500);
+    die("Unable to load notification count. Please try again.");
+}
+$unread_row = mbus_db_fetch_assoc($unread_result);
+$unread_count = (int)($unread_row['count'] ?? 0);
 ?>
 
 <!DOCTYPE html>
@@ -156,7 +169,7 @@ $unread_count = mbus_db_fetch_assoc($unread_count)['count'];
             <div class="notification-item-page <?php echo $notif['status'] === 'Unread' ? 'unread' : ''; ?>">
                 <div class="notification-content">
                     <div class="notification-message"><?php echo htmlspecialchars($notif['message']); ?></div>
-                    <div class="notification-time"><?php echo date('M j, Y g:i A', strtotime($notif['created_at'])); ?></div>
+                    <div class="notification-time"><?php echo date('M j, Y g:i A', strtotime($notif['notification_date'])); ?></div>
                 </div>
                 <div class="notification-actions-page">
                     <?php if($notif['status'] === 'Unread'): ?>

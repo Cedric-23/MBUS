@@ -35,6 +35,7 @@ class MbusConnection
 {
     public PDO $pdo;
     public string $lastError = '';
+    public int $affectedRows = 0;
 
     public function __construct(PDO $pdo)
     {
@@ -50,6 +51,7 @@ class MbusConnection
             if ($stmt === false) {
                 return false;
             }
+            $this->affectedRows = $stmt->rowCount();
 
             if (preg_match('/^\s*(SELECT|WITH)\b/is', $sql)) {
                 return new MbusResult($stmt->fetchAll(PDO::FETCH_ASSOC));
@@ -74,6 +76,7 @@ class MbusConnection
             }
 
             $stmt->execute($params);
+            $this->affectedRows = $stmt->rowCount();
 
             if (preg_match('/^\s*(SELECT|WITH)\b/is', $sql)) {
                 return new MbusResult($stmt->fetchAll(PDO::FETCH_ASSOC));

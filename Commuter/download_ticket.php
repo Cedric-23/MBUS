@@ -10,35 +10,39 @@ if(!isset($_SESSION['user_id'])){
 
 $user_id = $_SESSION['user_id'];
 
-if(!isset($_GET['schedule_id'])){
+if(!isset($_GET['schedule_id']) || !is_scalar($_GET['schedule_id'])){
     die("Schedule not found.");
 }
 
-$schedule_id = mbus_db_escape($conn, $_GET['schedule_id']);
+$schedule_id = (int)$_GET['schedule_id'];
+if($schedule_id <= 0){ die("Schedule not found."); }
 
 /* =========================
    USER
 ========================= */
-$user_query = mbus_db_query($conn,"
+$user_query = mbus_db_prepare($conn,"
 SELECT full_name
 FROM users
-WHERE user_id='$user_id'
-");
+WHERE user_id=?
+", [$user_id]);
 
+if($user_query === false){ die("Ticket data unavailable."); }
 $user = mbus_db_fetch_assoc($user_query);
+if(!$user){ die("User data unavailable."); }
 
 /* =========================
    RESERVATIONS (PAID)
 ========================= */
-$res_query = mbus_db_query($conn,"
+$res_query = mbus_db_prepare($conn,"
 SELECT *
 FROM reservation
-WHERE user_id='$user_id'
-AND schedule_id='$schedule_id'
-AND status='Paid'
+WHERE user_id=?
+AND schedule_id=?
+AND status IN ('Paid', 'Boarded')
 ORDER BY reservation_id DESC
-");
+", [$user_id, $schedule_id]);
 
+if($res_query === false){ die("Ticket data unavailable."); }
 if(mbus_db_num_rows($res_query) <= 0){
     die("No paid reservation found.");
 }
@@ -46,17 +50,21 @@ if(mbus_db_num_rows($res_query) <= 0){
 /* =========================
    PAYMENT (FIXED)
 ========================= */
-$payment_query = mbus_db_query($conn,"
+$payment_query = mbus_db_prepare($conn,"
 SELECT p.*
 FROM payment p
 JOIN reservation r ON p.reservation_id = r.reservation_id
-WHERE r.user_id='$user_id'
-AND r.schedule_id='$schedule_id'
+WHERE r.user_id=?
+AND r.schedule_id=?
+AND r.status IN ('Paid', 'Boarded')
+AND p.payment_status = 'Paid'
 ORDER BY p.payment_id DESC
 LIMIT 1
-");
+", [$user_id, $schedule_id]);
 
+if($payment_query === false){ die("Payment data unavailable."); }
 $payment = mbus_db_fetch_assoc($payment_query);
+if(!$payment){ die("Payment data unavailable."); }
 
 /* SAFE VARIABLES */
 $payment_method   = isset($payment['payment_method']) ? $payment['payment_method'] : '';
@@ -92,14 +100,16 @@ $seat_list = implode(", ", $seats);
 /* =========================
    BUS + SCHEDULE
 ========================= */
-$schedule_query = mbus_db_query($conn,"
+$schedule_query = mbus_db_prepare($conn,"
 SELECT buses.bus_number, schedule.departure_time
 FROM schedule
 JOIN buses ON schedule.bus_id = buses.bus_id
-WHERE schedule.schedule_id='$schedule_id'
-");
+WHERE schedule.schedule_id=?
+", [$schedule_id]);
 
+if($schedule_query === false){ die("Schedule data unavailable."); }
 $data = mbus_db_fetch_assoc($schedule_query);
+if(!$data){ die("Schedule not found."); }
 
 /* =========================
    PDF GENERATION
