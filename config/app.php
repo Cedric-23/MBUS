@@ -5,6 +5,12 @@ function mbus_is_production(): bool
     return strtolower(getenv('MBUS_ENV') ?: '') === 'production';
 }
 
+function mbus_timezone(): string
+{
+    $timezone = getenv('MBUS_TIMEZONE') ?: 'Asia/Manila';
+    return in_array($timezone, timezone_identifiers_list(), true) ? $timezone : 'Asia/Manila';
+}
+
 function mbus_bootstrap(): void
 {
     if (mbus_is_production()) {
@@ -33,3 +39,4 @@ function mbus_bootstrap(): void
 }
 
 mbus_bootstrap();
+date_default_timezone_set(mbus_timezone());

@@ -1,7 +1,7 @@
 <?php
 
-require_once __DIR__ . '/app.php';
 require_once __DIR__ . '/load_env.php';
+require_once __DIR__ . '/app.php';
 require_once __DIR__ . '/mysqli_compat.php';
 
 $host = getenv('SUPABASE_DB_HOST') ?: 'aws-1-ap-south-1.pooler.supabase.com';
@@ -24,6 +24,7 @@ try {
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     ]);
+    $pdo->exec("SET TIME ZONE '" . str_replace("'", "''", mbus_timezone()) . "'");
     $conn = new MbusConnection($pdo);
 } catch (PDOException $e) {
     $GLOBALS['mbus_connect_error'] = $e->getMessage();
