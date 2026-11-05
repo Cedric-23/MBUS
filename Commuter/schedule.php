@@ -23,24 +23,39 @@ if($filter=="thisweek" && $day==""){
     $day=$currentDayName;
 }
 
-/* WHERE */
+/* WHERE
+ * Schedule times are stored as local (Asia/Manila) timestamps, so the date
+ * boundaries are computed here in PHP (app timezone) instead of using the
+ * database's NOW()/CURRENT_DATE, which follow the DB session timezone and can
+ * be UTC behind a connection pooler. These values are server-generated, not user input.
+ */
+$tzNow = new DateTimeImmutable('now');
+$nowSql = $tzNow->format('Y-m-d H:i:s');
+$todayStart = $tzNow->setTime(0, 0, 0);
+$tomorrowStart = $todayStart->modify('+1 day');
+$dayAfterStart = $todayStart->modify('+2 days');
+$weekStart = $todayStart->modify('monday this week');      // ISO week starts Monday
+$nextWeekStart = $weekStart->modify('+7 days');
+$weekAfterNextStart = $weekStart->modify('+14 days');
+$fmt = function(DateTimeImmutable $d){ return $d->format('Y-m-d H:i:s'); };
+
 $where="";
 
 if($filter=="all"){
-    $where="WHERE schedule.schedule_status='Active' AND schedule.departure_time >= NOW()";
+    $where="WHERE schedule.schedule_status='Active' AND schedule.departure_time >= '$nowSql'";
 }
 elseif($filter=="today"){
-    $where="WHERE schedule.schedule_status='Active' AND schedule.departure_time >= NOW() AND DATE(schedule.departure_time)=CURRENT_DATE";
+    $where="WHERE schedule.schedule_status='Active' AND schedule.departure_time >= '$nowSql' AND schedule.departure_time < '" . $fmt($tomorrowStart) . "'";
 }
 elseif($filter=="tomorrow"){
-    $where="WHERE schedule.schedule_status='Active' AND DATE(schedule.departure_time)=CURRENT_DATE + INTERVAL '1 day'";
+    $where="WHERE schedule.schedule_status='Active' AND schedule.departure_time >= '" . $fmt($tomorrowStart) . "' AND schedule.departure_time < '" . $fmt($dayAfterStart) . "'";
 }
 elseif($filter=="thisweek"){
-    $where="WHERE schedule.schedule_status='Active' AND schedule.departure_time >= NOW() AND " . mbus_iso_year_week('schedule.departure_time') . " = " . mbus_iso_year_week('CURRENT_DATE::timestamp');
+    $where="WHERE schedule.schedule_status='Active' AND schedule.departure_time >= '$nowSql' AND schedule.departure_time < '" . $fmt($nextWeekStart) . "'";
     if($day!=""){$where.=" AND LOWER(TRIM(TO_CHAR(schedule.departure_time, 'FMDay')))='".strtolower($day)."'";}
 }
 elseif($filter=="nextweek"){
-    $where="WHERE schedule.schedule_status='Active' AND " . mbus_iso_year_week('schedule.departure_time') . " = " . mbus_iso_year_week("(CURRENT_DATE + INTERVAL '1 week')::timestamp");
+    $where="WHERE schedule.schedule_status='Active' AND schedule.departure_time >= '" . $fmt($nextWeekStart) . "' AND schedule.departure_time < '" . $fmt($weekAfterNextStart) . "'";
     if($day!=""){$where.=" AND LOWER(TRIM(TO_CHAR(schedule.departure_time, 'FMDay')))='".strtolower($day)."'";}
 }
 ?>

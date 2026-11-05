@@ -47,10 +47,12 @@ $sql = "SELECT schedule.schedule_id, buses.bus_number, buses.capacity, routes.or
         WHERE schedule.departure_time >= ?
         AND schedule.departure_time <= ?
         AND schedule.schedule_status = 'Active'
-        AND schedule.departure_time >= NOW()
+        AND schedule.departure_time >= ?
         ORDER BY schedule.departure_time ASC";
 
-$result = mbus_db_prepare($conn, $sql, [$start, $end]);
+// Use the app timezone (Asia/Manila) for "now" rather than the DB session clock
+$now_local = (new DateTimeImmutable('now'))->format('Y-m-d H:i:s');
+$result = mbus_db_prepare($conn, $sql, [$start, $end, $now_local]);
 if($result === false){
     http_response_code(500);
     echo json_encode(['error' => 'Database query failed']);
