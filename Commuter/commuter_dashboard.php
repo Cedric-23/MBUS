@@ -7,6 +7,8 @@ if(!isset($_SESSION['user_id'])){
     exit();
 }
 
+/* Load app config so date() uses the app timezone (Asia/Manila), not the server's UTC default */
+require_once __DIR__ . "/../config/app.php";
 include "../Includes/csrf.php";
 ?>
 
