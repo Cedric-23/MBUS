@@ -8,8 +8,13 @@ if(!isset($_SESSION['user_id'])){
 }
 
 /* FILTERS */
-$filter = isset($_GET['filter']) ? $_GET['filter'] : "today";
-$day = isset($_GET['day']) ? $_GET['day'] : "";
+$filter = isset($_GET['filter']) ? $_GET['filter'] : "all";
+$allowed_filters=["all","today","tomorrow","thisweek","nextweek"];
+if(!in_array($filter, $allowed_filters, true)){ $filter="all"; }
+$day = isset($_GET['day']) && is_scalar($_GET['day']) ? trim((string)$_GET['day']) : "";
+$allowed_days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+$day_match=array_values(array_filter($allowed_days, function($name) use ($day){ return strtolower($name) === strtolower($day); }));
+$day=$day_match[0] ?? "";
 
 /* AUTO CURRENT DAY */
 $currentDayName = date("l");
@@ -21,14 +26,17 @@ if($filter=="thisweek" && $day==""){
 /* WHERE */
 $where="";
 
-if($filter=="today"){
-    $where="WHERE schedule.schedule_status='Active' AND DATE(schedule.departure_time)=CURRENT_DATE";
+if($filter=="all"){
+    $where="WHERE schedule.schedule_status='Active' AND schedule.departure_time >= NOW()";
+}
+elseif($filter=="today"){
+    $where="WHERE schedule.schedule_status='Active' AND schedule.departure_time >= NOW() AND DATE(schedule.departure_time)=CURRENT_DATE";
 }
 elseif($filter=="tomorrow"){
     $where="WHERE schedule.schedule_status='Active' AND DATE(schedule.departure_time)=CURRENT_DATE + INTERVAL '1 day'";
 }
 elseif($filter=="thisweek"){
-    $where="WHERE schedule.schedule_status='Active' AND " . mbus_iso_year_week('schedule.departure_time') . " = " . mbus_iso_year_week('CURRENT_DATE::timestamp');
+    $where="WHERE schedule.schedule_status='Active' AND schedule.departure_time >= NOW() AND " . mbus_iso_year_week('schedule.departure_time') . " = " . mbus_iso_year_week('CURRENT_DATE::timestamp');
     if($day!=""){$where.=" AND LOWER(TRIM(TO_CHAR(schedule.departure_time, 'FMDay')))='".strtolower($day)."'";}
 }
 elseif($filter=="nextweek"){
@@ -107,6 +115,9 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
 <div id="listView">
 <div class="date-filter-container">
 <nav class="date-filters" aria-label="Schedule filters">
+<a href="schedule.php?filter=all" class="date-filter-btn <?php if($filter=="all")echo"active"; ?>" aria-current="<?php echo $filter=="all" ? "page" : "false"; ?>">
+<i class="fa fa-list" aria-hidden="true"></i>All Upcoming
+</a>
 <a href="schedule.php?filter=today" class="date-filter-btn <?php if($filter=="today")echo"active"; ?>" aria-current="<?php echo $filter=="today" ? "page" : "false"; ?>">
 <i class="fa fa-calendar-day" aria-hidden="true"></i>Today
 </a>
@@ -338,7 +349,10 @@ function viewRoute(originLat, originLng, destLat, destLng, originName, destName)
     document.getElementById("scheduleMapContainer").scrollIntoView({ behavior: "smooth" });
 }
 
-    calendar = new FullCalendar.Calendar(calendarEl, {
+function initScheduleCalendar() {
+    const calendarEl = document.getElementById('calendar');
+    if (!calendarEl || typeof FullCalendar === 'undefined') return;
+    const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         headerToolbar: {
             left: 'prev,next today',
@@ -363,11 +377,10 @@ function viewRoute(originLat, originLng, destLat, destLng, originName, destName)
         height: 'auto',
         eventColor: '#1e90ff'
     });
-
     calendar.render();
 }
 
-}
+document.addEventListener('DOMContentLoaded', initScheduleCalendar);
 </script>
 
 <!-- Bottom Navigation -->

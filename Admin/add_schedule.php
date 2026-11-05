@@ -29,21 +29,53 @@ if(isset($_POST['add_schedule'])){
     if(!csrf_validate_token()){
         $error = "Security validation failed. Please try again.";
     } else {
-        $bus_id = mbus_db_escape($conn, $_POST['bus_id']);
-        $route_id = mbus_db_escape($conn, $_POST['route_id']);
-        $departure = $_POST['departure_date'] . ' ' . $_POST['departure_time'];
-        $arrival = $_POST['arrival_date'] . ' ' . $_POST['arrival_time'];
-        $status = "Active";
+        $required = ['bus_id','route_id','departure_date','departure_time','arrival_date','arrival_time'];
+        $valid = true;
+        foreach($required as $field){
+            if(!isset($_POST[$field]) || !is_scalar($_POST[$field]) || trim((string)$_POST[$field]) === ''){
+                $valid = false;
+                break;
+            }
+        }
+        if(!$valid){
+            $error = "Please complete all schedule fields.";
+        } else {
+            if(filter_var($_POST['bus_id'], FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]) === false || filter_var($_POST['route_id'], FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]) === false){
+                $error = "Please select a valid bus and route.";
+                $valid = false;
+            }
+        }
+        if($valid){
+            $bus_id = (int)$_POST['bus_id'];
+            $route_id = (int)$_POST['route_id'];
+            $departure = $_POST['departure_date'] . ' ' . $_POST['departure_time'];
+            $arrival = $_POST['arrival_date'] . ' ' . $_POST['arrival_time'];
+            $status = "Active";
+            $departure_dt = DateTimeImmutable::createFromFormat('!Y-m-d H:i', $departure);
+            $departure_errors = DateTimeImmutable::getLastErrors();
+            $arrival_dt = DateTimeImmutable::createFromFormat('!Y-m-d H:i', $arrival);
+            $arrival_errors = DateTimeImmutable::getLastErrors();
+            $date_invalid = $departure_dt === false || $arrival_dt === false
+                || ($departure_errors !== false && ($departure_errors['warning_count'] > 0 || $departure_errors['error_count'] > 0))
+                || ($arrival_errors !== false && ($arrival_errors['warning_count'] > 0 || $arrival_errors['error_count'] > 0));
+            if($bus_id <= 0 || $route_id <= 0 || $date_invalid || $arrival_dt <= $departure_dt){
+                $error = "Please provide valid bus, route, departure, and arrival values.";
+            } else {
 
-        mbus_db_prepare($conn, "
-            INSERT INTO schedule
-            (bus_id, route_id, departure_time, arrival_time, schedule_status)
-            VALUES (?, ?, ?, ?, ?)
-        ", [$bus_id, $route_id, $departure, $arrival, $status]);
+                $inserted = mbus_db_prepare($conn, "
+                INSERT INTO schedule
+                (bus_id, route_id, departure_time, arrival_time, schedule_status)
+                VALUES (?, ?, ?, ?, ?)
+                ", [$bus_id, $route_id, $departure, $arrival, $status]);
 
-        $success = "Schedule Added Successfully";
-        header("Location: manage_schedules.php");
-        exit();
+                if($inserted === false){
+                    $error = "Schedule could not be saved. Please verify the bus, route, and date/time.";
+                } else {
+                    header("Location: manage_schedules.php");
+                    exit();
+                }
+            }
+        }
     }
 }
 ?>
@@ -128,15 +160,15 @@ if(isset($_POST['add_schedule'])){
 
 <section class="card" style="max-width: 600px; margin: 0 auto;">
     <h2 style="text-align: center; margin-bottom: var(--space-6); color: var(--color-primary-dark);">Add Schedule</h2>
-    
+
     <form method="POST" class="form-section">
         <?php csrf_field(); ?>
-        
+
         <div class="form-group">
             <label for="bus_id">Select Bus</label>
             <select name="bus_id" id="bus_id" class="form-control" required>
                 <option value="">Select Bus</option>
-                <?php 
+                <?php
                 mbus_db_data_seek($buses, 0);
                 while($bus = mbus_db_fetch_assoc($buses)){ ?>
                     <option value="<?php echo $bus['bus_id']; ?>">
@@ -150,7 +182,7 @@ if(isset($_POST['add_schedule'])){
             <label for="route_id">Select Route</label>
             <select name="route_id" id="route_id" class="form-control" required>
                 <option value="">Select Route</option>
-                <?php 
+                <?php
                 mbus_db_data_seek($routes, 0);
                 while($route = mbus_db_fetch_assoc($routes)){ ?>
                     <option value="<?php echo $route['route_id']; ?>">
@@ -198,14 +230,14 @@ function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
     const toggle = document.querySelector('.sidebar-toggle');
-    
+
     const isOpen = sidebar.classList.toggle('open');
     overlay.classList.toggle('active');
-    
+
     if (toggle) {
         toggle.setAttribute('aria-expanded', isOpen);
     }
-    
+
     if (isOpen) {
         document.body.style.overflow = 'hidden';
         const firstLink = sidebar.querySelector('a, button');

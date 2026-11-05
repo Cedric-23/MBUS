@@ -1,89 +1,65 @@
 <?php
 session_start();
-
 if(!isset($_SESSION['user_type']) || strtolower($_SESSION['user_type']) != 'admin'){
     header("Location: ../login.php");
     exit();
 }
-
 include("../config/db_connect.php");
 include("../Includes/csrf.php");
 
+function mbus_admin_schedule_valid(array $data, bool $with_id=false): bool
+{
+    $fields=$with_id ? ['schedule_id','bus_id','route_id','departure_time','arrival_time','schedule_status'] : ['bus_id','route_id','departure_time','arrival_time','schedule_status'];
+    foreach($fields as $field){
+        if(!isset($data[$field]) || !is_scalar($data[$field]) || trim((string)$data[$field]) === '') return false;
+    }
+    if($with_id && filter_var($data['schedule_id'], FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]) === false) return false;
+    if(filter_var($data['bus_id'], FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]) === false || filter_var($data['route_id'], FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]) === false || !in_array((string)$data['schedule_status'], ['Active','Cancelled','Completed'], true)) return false;
+    $departure=DateTimeImmutable::createFromFormat('!Y-m-d\TH:i', (string)$data['departure_time']);
+    $arrival=DateTimeImmutable::createFromFormat('!Y-m-d\TH:i', (string)$data['arrival_time']);
+    $departure_errors=DateTimeImmutable::getLastErrors();
+    $arrival_errors=DateTimeImmutable::getLastErrors();
+    if($departure === false || $arrival === false || ($departure_errors !== false && ($departure_errors['warning_count'] > 0 || $departure_errors['error_count'] > 0)) || ($arrival_errors !== false && ($arrival_errors['warning_count'] > 0 || $arrival_errors['error_count'] > 0))) return false;
+    return $arrival > $departure;
+}
+
 /* UPDATE */
 if(isset($_POST['update_schedule'])){
-    if(!csrf_validate_token()){
-        $error = "Security validation failed. Please try again.";
-    } else {
-        $schedule_id = mbus_db_escape($conn, $_POST['schedule_id']);
-        $bus_id = mbus_db_escape($conn, $_POST['bus_id']);
-        $route_id = mbus_db_escape($conn, $_POST['route_id']);
-        $departure_time = mbus_db_escape($conn, $_POST['departure_time']);
-        $arrival_time = mbus_db_escape($conn, $_POST['arrival_time']);
-        $schedule_status = mbus_db_escape($conn, $_POST['schedule_status']);
-
-        mbus_db_prepare($conn, "
-            UPDATE schedule SET
-            bus_id = ?,
-            route_id = ?,
-            departure_time = ?,
-            arrival_time = ?,
-            schedule_status = ?
-            WHERE schedule_id = ?
-        ", [$bus_id, $route_id, $departure_time, $arrival_time, $schedule_status, $schedule_id]);
-
-        $success = "Schedule updated successfully";
-        header("Location: manage_schedules.php");
-        exit();
+    if(!csrf_validate_token()) $error = "Security validation failed. Please try again.";
+    elseif(!mbus_admin_schedule_valid($_POST, true)) $error = "Please provide valid schedule values.";
+    else {
+        $schedule_id=(int)$_POST['schedule_id']; $bus_id=(int)$_POST['bus_id']; $route_id=(int)$_POST['route_id'];
+        $departure_time=(string)$_POST['departure_time']; $arrival_time=(string)$_POST['arrival_time']; $schedule_status=(string)$_POST['schedule_status'];
+        $updated=mbus_db_prepare($conn,"UPDATE schedule SET bus_id=?, route_id=?, departure_time=?, arrival_time=?, schedule_status=? WHERE schedule_id=?",[$bus_id,$route_id,$departure_time,$arrival_time,$schedule_status,$schedule_id]);
+        if($updated===false) $error="Schedule could not be updated. Please verify the selected values.";
+        else { header("Location: manage_schedules.php"); exit(); }
     }
 }
 
 /* DELETE */
 if(isset($_POST['delete_schedule'])){
-    if(!csrf_validate_token()){
-        $error = "Security validation failed. Please try again.";
-    } else {
-        $schedule_id = mbus_db_escape($conn, $_POST['schedule_id']);
-        
-        mbus_db_prepare($conn, "
-            DELETE FROM schedule
-            WHERE schedule_id = ?
-        ", [$schedule_id]);
-
-        $success = "Schedule deleted successfully";
-        header("Location: manage_schedules.php");
-        exit();
+    if(!csrf_validate_token()) $error="Security validation failed. Please try again.";
+    elseif(!isset($_POST['schedule_id']) || !is_scalar($_POST['schedule_id']) || filter_var($_POST['schedule_id'], FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]) === false) $error="Invalid schedule.";
+    else {
+        $deleted=mbus_db_prepare($conn,"DELETE FROM schedule WHERE schedule_id=?",[(int)$_POST['schedule_id']]);
+        if($deleted===false) $error="Schedule could not be deleted.";
+        else { header("Location: manage_schedules.php"); exit(); }
     }
 }
 
 /* ADD */
 if(isset($_POST['add_schedule'])){
-    if(!csrf_validate_token()){
-        $error = "Security validation failed. Please try again.";
-    } else {
-        $bus_id = mbus_db_escape($conn, $_POST['bus_id']);
-        $route_id = mbus_db_escape($conn, $_POST['route_id']);
-        $departure_time = mbus_db_escape($conn, $_POST['departure_time']);
-        $arrival_time = mbus_db_escape($conn, $_POST['arrival_time']);
-        $schedule_status = mbus_db_escape($conn, $_POST['schedule_status']);
-
-        mbus_db_prepare($conn, "
-            INSERT INTO schedule(
-                bus_id, route_id,
-                departure_time, arrival_time,
-                schedule_status
-            )
-            VALUES(
-                ?, ?, ?, ?, ?
-            )
-        ", [$bus_id, $route_id, $departure_time, $arrival_time, $schedule_status]);
-
-        $success = "Schedule added successfully";
-        header("Location: manage_schedules.php");
-        exit();
+    if(!csrf_validate_token()) $error="Security validation failed. Please try again.";
+    elseif(!mbus_admin_schedule_valid($_POST)) $error="Please provide valid schedule values.";
+    else {
+        $inserted=mbus_db_prepare($conn,"INSERT INTO schedule(bus_id,route_id,departure_time,arrival_time,schedule_status) VALUES(?,?,?,?,?)",[(int)$_POST['bus_id'],(int)$_POST['route_id'],(string)$_POST['departure_time'],(string)$_POST['arrival_time'],(string)$_POST['schedule_status']]);
+        if($inserted===false) $error="Schedule could not be added. Please verify the selected values.";
+        else { header("Location: manage_schedules.php"); exit(); }
     }
 }
 
 /* FETCH */
+
 $routes = mbus_db_query($conn, "SELECT * FROM routes ORDER BY origin ASC");
 $buses  = mbus_db_query($conn, "SELECT * FROM buses ORDER BY bus_id ASC");
 
@@ -187,14 +163,14 @@ ORDER BY departure_time ASC
     <h2>Add Schedule</h2>
     <form method="POST" class="form-section">
         <?php csrf_field(); ?>
-        
+
         <div class="form-grid">
             <div class="form-group">
                 <label for="bus_id">Select Bus</label>
                 <select name="bus_id" id="bus_id" class="form-control" required>
                     <option value="">Select Bus</option>
-                    <?php 
-                    mbus_db_data_seek($buses, 0); 
+                    <?php
+                    mbus_db_data_seek($buses, 0);
                     while($bus = mbus_db_fetch_assoc($buses)){ ?>
                         <option value="<?php echo $bus['bus_id']; ?>">
                             <?php echo htmlspecialchars($bus['bus_number']); ?> - <?php echo htmlspecialchars($bus['bus_type']); ?> - <?php echo $bus['capacity']; ?> Seats
@@ -207,8 +183,8 @@ ORDER BY departure_time ASC
                 <label for="route_id">Select Route</label>
                 <select name="route_id" id="route_id" class="form-control" required>
                     <option value="">Select Route</option>
-                    <?php 
-                    mbus_db_data_seek($routes, 0); 
+                    <?php
+                    mbus_db_data_seek($routes, 0);
                     while($route = mbus_db_fetch_assoc($routes)){ ?>
                         <option value="<?php echo $route['route_id']; ?>">
                             <?php echo htmlspecialchars($route['origin']); ?> → <?php echo htmlspecialchars($route['destination']); ?>
@@ -231,7 +207,8 @@ ORDER BY departure_time ASC
                 <label for="schedule_status">Status</label>
                 <select name="schedule_status" id="schedule_status" class="form-control">
                     <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
+                    <option value="Cancelled">Cancelled</option>
+                    <option value="Completed">Completed</option>
                 </select>
             </div>
         </div>
@@ -260,31 +237,31 @@ ORDER BY departure_time ASC
                 </tr>
             </thead>
             <tbody>
-                <?php 
+                <?php
                 mbus_db_data_seek($query, 0);
                 while($row = mbus_db_fetch_assoc($query)){
                     // Apply filter
                     $filter = $_GET['filter'] ?? 'all';
                     $route_type = ($row['origin'] == 'Morong Terminal') ? 'morong' : 'sbma';
                     if($filter !== 'all' && $filter !== $route_type) continue;
-                    
+
                     $status_class = strtolower($row['schedule_status']);
                 ?>
                 <tr class="schedule-row" data-route="<?php echo $route_type; ?>">
                     <form method="POST" class="schedule-form">
                         <?php csrf_field(); ?>
                         <input type="hidden" name="schedule_id" value="<?php echo $row['schedule_id']; ?>">
-                        
+
                         <td data-label="ID"><?php echo $row['schedule_id']; ?></td>
-                        
+
                         <td data-label="Bus">
                             <span class="view-mode">Bus <?php echo $row['bus_id']; ?></span>
                             <div class="edit-controls">
                                 <select name="bus_id" class="form-control edit-input">
-                                    <?php 
-                                    mbus_db_data_seek($buses, 0); 
+                                    <?php
+                                    mbus_db_data_seek($buses, 0);
                                     while($bus = mbus_db_fetch_assoc($buses)){ ?>
-                                        <option value="<?php echo $bus['bus_id']; ?>" 
+                                        <option value="<?php echo $bus['bus_id']; ?>"
                                             <?php echo ($bus['bus_id'] == $row['bus_id']) ? 'selected' : ''; ?>>
                                             <?php echo htmlspecialchars($bus['bus_number']); ?> - <?php echo htmlspecialchars($bus['bus_type']); ?>
                                         </option>
@@ -292,7 +269,7 @@ ORDER BY departure_time ASC
                                 </select>
                             </div>
                         </td>
-                        
+
                         <td data-label="Route">
                             <span class="view-mode">
                                 <span class="route-badge">
@@ -301,10 +278,10 @@ ORDER BY departure_time ASC
                             </span>
                             <div class="edit-controls">
                                 <select name="route_id" class="form-control edit-input">
-                                    <?php 
-                                    mbus_db_data_seek($routes, 0); 
+                                    <?php
+                                    mbus_db_data_seek($routes, 0);
                                     while($route = mbus_db_fetch_assoc($routes)){ ?>
-                                        <option value="<?php echo $route['route_id']; ?>" 
+                                        <option value="<?php echo $route['route_id']; ?>"
                                             <?php echo ($route['route_id'] == $row['route_id']) ? 'selected' : ''; ?>>
                                             <?php echo htmlspecialchars($route['origin']); ?> → <?php echo htmlspecialchars($route['destination']); ?>
                                         </option>
@@ -312,23 +289,23 @@ ORDER BY departure_time ASC
                                 </select>
                             </div>
                         </td>
-                        
+
                         <td data-label="Departure">
                             <span class="view-mode"><?php echo date('M j, Y g:i A', strtotime($row['departure_time'])); ?></span>
                             <div class="edit-controls">
-                                <input type="datetime-local" name="departure_time" class="form-control edit-input" 
+                                <input type="datetime-local" name="departure_time" class="form-control edit-input"
                                     value="<?php echo date('Y-m-d\TH:i', strtotime($row['departure_time'])); ?>">
                             </div>
                         </td>
-                        
+
                         <td data-label="Arrival">
                             <span class="view-mode"><?php echo date('M j, Y g:i A', strtotime($row['arrival_time'])); ?></span>
                             <div class="edit-controls">
-                                <input type="datetime-local" name="arrival_time" class="form-control edit-input" 
+                                <input type="datetime-local" name="arrival_time" class="form-control edit-input"
                                     value="<?php echo date('Y-m-d\TH:i', strtotime($row['arrival_time'])); ?>">
                             </div>
                         </td>
-                        
+
                         <td data-label="Status">
                             <span class="view-mode">
                                 <span class="status-badge status-<?php echo $status_class; ?>">
@@ -338,17 +315,18 @@ ORDER BY departure_time ASC
                             <div class="edit-controls">
                                 <select name="schedule_status" class="form-control edit-input">
                                     <option value="Active" <?php echo ($row['schedule_status'] == "Active") ? 'selected' : ''; ?>>Active</option>
-                                    <option value="Inactive" <?php echo ($row['schedule_status'] == "Inactive") ? 'selected' : ''; ?>>Inactive</option>
+                                    <option value="Cancelled" <?php echo ($row['schedule_status'] == "Cancelled") ? 'selected' : ''; ?>>Cancelled</option>
+                                    <option value="Completed" <?php echo ($row['schedule_status'] == "Completed") ? 'selected' : ''; ?>>Completed</option>
                                 </select>
                             </div>
                         </td>
-                        
+
                         <td class="actions-col" data-label="Actions">
                             <div class="action-buttons">
                                 <button type="submit" name="update_schedule" class="btn btn-sm btn-success save-btn">
                                     <i class="fa fa-save" aria-hidden="true"></i> Save
                                 </button>
-                                <button type="submit" name="delete_schedule" class="btn btn-sm btn-danger delete-btn" 
+                                <button type="submit" name="delete_schedule" class="btn btn-sm btn-danger delete-btn"
                                     onclick="return confirm('Delete this schedule?')">
                                     <i class="fa fa-trash" aria-hidden="true"></i> Delete
                                 </button>
@@ -398,14 +376,14 @@ function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
     const toggle = document.querySelector('.sidebar-toggle');
-    
+
     const isOpen = sidebar.classList.toggle('open');
     overlay.classList.toggle('active');
-    
+
     if (toggle) {
         toggle.setAttribute('aria-expanded', isOpen);
     }
-    
+
     if (isOpen) {
         document.body.style.overflow = 'hidden';
         const firstLink = sidebar.querySelector('a, button');
