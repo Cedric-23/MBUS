@@ -26,26 +26,29 @@ $filter = $_GET['filter'] ?? 'all';
 $search = $_GET['search'] ?? '';
 $status = $_GET['status'] ?? '';
 
+// App-timezone date boundaries (schedule times are local; don't use the DB clock)
+$b = mbus_local_bounds();
+
 // Build WHERE clause
 $where = "
 WHERE oba.operator_id = ?
-AND s.departure_time >= NOW()
+AND s.departure_time >= '{$b['now']}'
 ";
 
 $params = [$operator_id];
 
 // Filter logic (PostgreSQL compatible)
 if($filter === 'today'){
-    $where .= " AND s.departure_time::date = CURRENT_DATE";
+    $where .= " AND s.departure_time < '{$b['tomorrow']}'";
 }
 elseif($filter === 'tomorrow'){
-    $where .= " AND s.departure_time::date = CURRENT_DATE + INTERVAL '1 day'";
+    $where .= " AND s.departure_time >= '{$b['tomorrow']}' AND s.departure_time < '{$b['day_after']}'";
 }
 elseif($filter === 'this_week'){
-    $where .= " AND s.departure_time >= DATE_TRUNC('week', CURRENT_DATE) AND s.departure_time < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '1 week'";
+    $where .= " AND s.departure_time >= '{$b['week_start']}' AND s.departure_time < '{$b['next_week']}'";
 }
 elseif($filter === 'next_week'){
-    $where .= " AND s.departure_time >= DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '1 week' AND s.departure_time < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '2 week'";
+    $where .= " AND s.departure_time >= '{$b['next_week']}' AND s.departure_time < '{$b['week_after_next']}'";
 }
 
 if(in_array($status, ['Paid', 'Boarded'], true)){
@@ -72,7 +75,7 @@ $total_passengers_query = mbus_db_prepare($conn, "
     JOIN schedule s ON r.schedule_id = s.schedule_id
     JOIN operator_bus_assignments oba ON s.bus_id = oba.bus_id
     WHERE oba.operator_id = ?
-    AND s.departure_time >= NOW()
+    AND s.departure_time >= '{$b['now']}'
 ", [$operator_id]);
 $total_passengers = mbus_db_fetch_assoc($total_passengers_query) ?: ['total' => 0];
 
@@ -83,7 +86,7 @@ $paid_passengers_query = mbus_db_prepare($conn, "
     JOIN operator_bus_assignments oba ON s.bus_id = oba.bus_id
     WHERE oba.operator_id = ?
     AND r.status = 'Paid'
-    AND s.departure_time >= NOW()
+    AND s.departure_time >= '{$b['now']}'
 ", [$operator_id]);
 $paid_passengers = mbus_db_fetch_assoc($paid_passengers_query) ?: ['total' => 0];
 
@@ -94,7 +97,7 @@ $boarded_passengers_query = mbus_db_prepare($conn, "
     JOIN operator_bus_assignments oba ON s.bus_id = oba.bus_id
     WHERE oba.operator_id = ?
     AND r.status = 'Boarded'
-    AND s.departure_time >= NOW()
+    AND s.departure_time >= '{$b['now']}'
 ", [$operator_id]);
 $boarded_passengers = mbus_db_fetch_assoc($boarded_passengers_query) ?: ['total' => 0];
 
@@ -103,8 +106,8 @@ $today_trips_query = mbus_db_prepare($conn, "
     FROM schedule s
     JOIN operator_bus_assignments oba ON s.bus_id = oba.bus_id
     WHERE oba.operator_id = ?
-    AND s.departure_time::date = CURRENT_DATE
-    AND s.departure_time >= NOW()
+    AND s.departure_time >= '{$b['now']}'
+    AND s.departure_time < '{$b['tomorrow']}'
 ", [$operator_id]);
 $today_trips = mbus_db_fetch_assoc($today_trips_query) ?: ['total' => 0];
 

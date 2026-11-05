@@ -14,14 +14,16 @@ include("../Includes/activity_log.php");
 
 $operator_id = $_SESSION['user_id'];
 
-/* TRIPS TODAY */
+/* TRIPS TODAY (app-timezone day boundaries, not the DB clock) */
+$b = mbus_local_bounds();
 $trips_today_query = mbus_db_prepare($conn, "
 SELECT COUNT(*) as total
 FROM schedule
 LEFT JOIN operator_bus_assignments
 ON schedule.bus_id = operator_bus_assignments.bus_id
 WHERE operator_bus_assignments.operator_id = ?
-AND DATE(schedule.departure_time) = CURRENT_DATE
+AND schedule.departure_time >= '{$b['today']}'
+AND schedule.departure_time < '{$b['tomorrow']}'
 ", [$operator_id]);
 
 $trips_today = mbus_db_fetch_assoc($trips_today_query)['total'];

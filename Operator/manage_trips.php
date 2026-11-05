@@ -73,18 +73,20 @@ $open_schedule = isset($_GET['open_schedule']) ? (int)$_GET['open_schedule'] : n
 $where = "WHERE oba.operator_id = ?";
 $params = [$operator_id];
 
+$b = mbus_local_bounds(); // app-timezone date boundaries (not the DB clock)
+
 switch($filter){
     case 'today':
-        $where .= " AND s.departure_time::date = CURRENT_DATE";
+        $where .= " AND s.departure_time >= '{$b['today']}' AND s.departure_time < '{$b['tomorrow']}'";
         break;
     case 'tomorrow':
-        $where .= " AND s.departure_time::date = CURRENT_DATE + INTERVAL '1 day'";
+        $where .= " AND s.departure_time >= '{$b['tomorrow']}' AND s.departure_time < '{$b['day_after']}'";
         break;
     case 'this_week':
-        $where .= " AND s.departure_time >= DATE_TRUNC('week', CURRENT_DATE) AND s.departure_time < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '1 week'";
+        $where .= " AND s.departure_time >= '{$b['week_start']}' AND s.departure_time < '{$b['next_week']}'";
         break;
     case 'next_week':
-        $where .= " AND s.departure_time >= DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '1 week' AND s.departure_time < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '2 week'";
+        $where .= " AND s.departure_time >= '{$b['next_week']}' AND s.departure_time < '{$b['week_after_next']}'";
         break;
     case 'active':
         $where .= " AND s.trip_status IN ('Scheduled', 'Boarding')";
