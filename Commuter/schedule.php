@@ -22,17 +22,17 @@ if($filter=="thisweek" && $day==""){
 $where="";
 
 if($filter=="today"){
-    $where="WHERE schedule.departure_time >= NOW() + INTERVAL '30 minutes' AND DATE(schedule.departure_time)=CURRENT_DATE";
+    $where="WHERE schedule.schedule_status='Active' AND DATE(schedule.departure_time)=CURRENT_DATE";
 }
 elseif($filter=="tomorrow"){
-    $where="WHERE DATE(schedule.departure_time)=CURRENT_DATE + INTERVAL '1 day'";
+    $where="WHERE schedule.schedule_status='Active' AND DATE(schedule.departure_time)=CURRENT_DATE + INTERVAL '1 day'";
 }
 elseif($filter=="thisweek"){
-    $where="WHERE " . mbus_iso_year_week('schedule.departure_time') . " = " . mbus_iso_year_week('CURRENT_DATE::timestamp') . " AND schedule.departure_time >= NOW() + INTERVAL '30 minutes'";
+    $where="WHERE schedule.schedule_status='Active' AND " . mbus_iso_year_week('schedule.departure_time') . " = " . mbus_iso_year_week('CURRENT_DATE::timestamp');
     if($day!=""){$where.=" AND LOWER(TRIM(TO_CHAR(schedule.departure_time, 'FMDay')))='".strtolower($day)."'";}
 }
 elseif($filter=="nextweek"){
-    $where="WHERE " . mbus_iso_year_week('schedule.departure_time') . " = " . mbus_iso_year_week("(CURRENT_DATE + INTERVAL '1 week')::timestamp") . "";
+    $where="WHERE schedule.schedule_status='Active' AND " . mbus_iso_year_week('schedule.departure_time') . " = " . mbus_iso_year_week("(CURRENT_DATE + INTERVAL '1 week')::timestamp");
     if($day!=""){$where.=" AND LOWER(TRIM(TO_CHAR(schedule.departure_time, 'FMDay')))='".strtolower($day)."'";}
 }
 ?>
