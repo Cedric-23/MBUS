@@ -1,262 +1,135 @@
-/* Live pickup shares a location only on an explicit form submission. */
+/* Commuter live trip map and explicitly confirmed waiting-location sharing. */
 (function () {
     'use strict';
     const config = window.mbusLive || {};
     const el = id => document.getElementById(id);
-    const form = el('pickupForm');
-    if (!form) return;
     const select = el('liveSchedule');
-    const destination = el('liveDestination');
-    const waitButton = el('waitBtn');
-    const message = el('liveMessage');
-    let schedules = [];
-    let requests = [];
-    let csrf = config.csrfToken || '';
-    let ready = false;
-    let busy = false;
-    let firstLoad = true;
-    let pin = null;
-    let marker = null;
-    let map = null;
-    let routeLayer = null;
-    let selectedTripKey = '';
-    let serverOffset = 0;
-    let timer = null;
-    let getController = null;
-    let requestVersion = 0;
-
-    const statusKey = status => String(status || '').toLowerCase().replace(/[_-]/g, ' ');
-    const currentTrip = () => schedules.find(s => String(s.schedule_id) === select.value);
-    const requestForTrip = () => requests.find(r => String(r.schedule_id) === select.value);
-    const textNode = text => { const p = document.createElement('span'); p.textContent = text; return p; };
-    function notify(text, type) {
-        message.textContent = text;
-        message.className = 'live-notice' + (type ? ' live-notice-' + type : '');
+    if (!select) return;
+    let trips = [], requests = [], csrf = config.csrfToken || '', chosen = '', point = null;
+    let map = null, routeLayer = null, busMarker = null, userMarker = null, pollTimer = null, busy = false, loading = false, version = 0;
+    const visible = () => !document.hidden;
+    function notify(text, type) { el('liveMessage').textContent = text; el('liveMessage').className = 'live-notice' + (type ? ' live-notice-' + type : ''); }
+    function number(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }
+    function coords(obj) {
+        if (!obj) return null;
+        const lat = number(obj.latitude ?? obj.lat ?? obj.bus_latitude ?? obj.bus_lat);
+        const lng = number(obj.longitude ?? obj.lng ?? obj.lon ?? obj.bus_longitude ?? obj.bus_lng);
+        return lat !== null && lng !== null && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 ? [lat, lng] : null;
     }
-    function parseTime(value) {
-        if (!value) return NaN;
-        let normalized = String(value).replace(' ', 'T');
-        // PostgreSQL local timestamps need the app offset, not the phone's timezone.
-        if (!/(Z|[+-]\d{2}:?\d{2})$/.test(normalized)) normalized += config.timezoneOffset || '+08:00';
-        return Date.parse(normalized);
-    }
-    function effectiveStatus(request) {
-        let status = statusKey(request.status);
-        if (status === 'waiting' && parseTime(request.expires_at) <= Date.now() + serverOffset) status = 'expired';
-        return status;
-    }
-    function refreshButton() {
-        const trip = currentTrip();
-        waitButton.disabled = !ready || busy || !trip || trip.action !== 'pickup' || !pin || !destination.value || !el('pickupLabel').value.trim();
-        const waiting = requests.some(r => effectiveStatus(r) === 'waiting');
-        waitButton.textContent = busy ? 'Saving…' : waiting ? 'Update my waiting request' : 'I’m waiting here';
-    }
-    function setPin(latitude, longitude, moveMap) {
-        const lat = Number(latitude), lng = Number(longitude);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-            notify('Enter valid latitude and longitude coordinates.', 'error');
-            return;
-        }
-        pin = { lat, lng };
-        el('coordinateText').textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
-        el('manualLatitude').value = lat.toFixed(6);
-        el('manualLongitude').value = lng.toFixed(6);
-        if (map) {
-            if (!marker) {
-                marker = L.marker([lat, lng], {
-                    draggable: true,
-                    title: 'Your waiting spot — drag to adjust',
-                    icon: L.divIcon({ className: 'live-pin', html: '<i class="fa fa-person" aria-hidden="true"></i>', iconSize: [28, 28], iconAnchor: [14, 14] })
-                }).addTo(map).bindPopup(textNode('Your waiting spot'));
-                marker.on('dragend', function () { const point = marker.getLatLng(); setPin(point.lat, point.lng, false); });
-            } else marker.setLatLng([lat, lng]);
-            if (moveMap) map.setView([lat, lng], 16);
-        }
-        refreshButton();
-    }
-    if (typeof L !== 'undefined') {
-        map = L.map('pickupMap').setView([14.676, 120.27], 12);
-        const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-        tiles.on('tileerror', function () { el('mapMessage').textContent = 'Map tiles could not load. Retry your connection, or enter your waiting coordinates below.'; });
-        map.on('click', event => setPin(event.latlng.lat, event.latlng.lng, false));
+    function setStatus(text, live) { el('trackingStatus').textContent = text; el('trackingStatus').className = 'live-status' + (live ? '' : ' is-ended'); }
+    if (typeof L !== 'undefined' && el('trackingMap')) {
+        map = L.map('trackingMap').setView([14.676, 120.27], 11);
+        const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
+        tiles.on('tileerror', () => { el('mapMessage').textContent = 'Map tiles could not load. Route and bus status remain available below; try again when your connection improves.'; });
         routeLayer = L.layerGroup().addTo(map);
-    } else {
-        el('pickupMap').hidden = true;
-        el('centerPinBtn').disabled = true;
-        el('mapMessage').textContent = 'The map could not load. Use GPS or enter coordinates below to choose your waiting spot.';
-    }
-    function drawRoute(trip) {
-        if (!map || !routeLayer) return;
-        routeLayer.clearLayers();
-        const points = [];
-        [['origin_lat', 'origin_lng', trip.origin], ['destination_lat', 'destination_lng', trip.destination]].forEach(function (stop) {
-            if (trip[stop[0]] === null || trip[stop[0]] === undefined || trip[stop[0]] === '' || trip[stop[1]] === null || trip[stop[1]] === undefined || trip[stop[1]] === '') return;
-            const lat = Number(trip[stop[0]]), lng = Number(trip[stop[1]]);
-            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-            points.push([lat, lng]);
-            L.circleMarker([lat, lng], { radius: 6, color: '#18365d', fillOpacity: .8 }).addTo(routeLayer).bindPopup(textNode(stop[2] || 'Route stop'));
-        });
-        if (points.length && !pin) map.fitBounds(L.latLngBounds(points), { padding: [28, 28], maxZoom: 13 });
-    }
-    function syncTrip(restore) {
-        const trip = currentTrip();
-        const key = trip ? String(trip.schedule_id) + ':' + JSON.stringify(trip.stops || []) : '';
-        if (key !== selectedTripKey) {
-            selectedTripKey = key;
-            const previous = destination.value;
-            destination.replaceChildren(new Option('Select a destination', ''));
-            let stops = trip && Array.isArray(trip.stops) ? trip.stops : [];
-            if (!stops.length && trip && trip.destination) stops = [trip.destination];
-            stops.forEach(stop => destination.add(new Option(stop, stop)));
-            if (stops.includes(previous)) destination.value = previous;
-            if (trip) drawRoute(trip);
+        map.on('click', e => setPoint(e.latlng.lat, e.latlng.lng, false));
+    } else { el('trackingMap').hidden = true; el('mapMessage').textContent = 'The map could not load. Live trip status is still available; map pin selection is unavailable.'; }
+    function setPoint(lat, lng, pan) {
+        lat = number(lat); lng = number(lng);
+        if (lat === null || lng === null || lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+        point = { latitude: lat, longitude: lng };
+        el('coordinateText').textContent = 'Selected point: ' + lat.toFixed(5) + ', ' + lng.toFixed(5);
+        if (map) {
+            if (!userMarker) {
+                userMarker = L.marker([lat, lng], { draggable: true, title: 'Your selected waiting point' }).addTo(map).bindPopup('Selected waiting point');
+                userMarker.on('dragend', () => { const p = userMarker.getLatLng(); setPoint(p.lat, p.lng, false); });
+            } else userMarker.setLatLng([lat, lng]);
+            if (pan) map.setView([lat, lng], 16);
         }
-        destination.disabled = !ready || !trip;
-        const reserve = el('reserveInstead');
-        reserve.hidden = !trip || trip.action !== 'reserve';
-        if (trip) reserve.href = 'reserve.php?schedule_id=' + encodeURIComponent(trip.schedule_id);
-        el('tripStatus').textContent = !trip ? 'No active trip selected.' : trip.action === 'reserve'
-            ? 'Reservations are still open for this bus. Reserve a seat before the 30-minute cutoff.'
-            : trip.trip_status === 'Departed' ? 'Bus departed · pickup requests are available.'
-            : 'Seat reservations are closed · pickup requests are available.';
-        if (restore && trip && String(restore.schedule_id) === String(trip.schedule_id)) {
-            destination.value = restore.destination || '';
-            el('pickupLabel').value = restore.pickup_label || '';
-            setPin(restore.latitude, restore.longitude, true);
+        el('waitBtn').disabled = !chosen || busy;
+    }
+    function getTrip() { return trips.find(t => String(t.schedule_id) === String(chosen)); }
+    function draw(trip, location) {
+        const loc = coords(location);
+        if (routeLayer) routeLayer.clearLayers();
+        if (busMarker && map) { map.removeLayer(busMarker); busMarker = null; }
+        const bounds = [];
+        if (trip && routeLayer) {
+            const stops = [
+                { name: trip.origin || trip.origin_name || 'Route origin', lat: trip.origin_lat, lng: trip.origin_lng },
+                { name: trip.destination || trip.destination_name || 'Route endpoint', lat: trip.destination_lat, lng: trip.destination_lng }
+            ];
+            stops.forEach(stop => { const lat = number(stop.lat), lng = number(stop.lng); if (lat === null || lng === null || lat < -90 || lat > 90 || lng < -180 || lng > 180) return; const p = [lat, lng]; bounds.push(p); L.circleMarker(p, { radius: 7, color: '#18365d', fillColor: '#fff', fillOpacity: 1, weight: 3 }).addTo(routeLayer).bindPopup(document.createTextNode(stop.name)); });
         }
-        refreshButton();
+        if (loc && map) { busMarker = L.marker(loc, { title: 'Bus location' }).addTo(map).bindPopup('Bus location'); bounds.push(loc); }
+        if (bounds.length && map) map.fitBounds(bounds, { padding: [28, 28], maxZoom: 14 });
+        return loc;
     }
-    function renderWaiting() {
-        const request = requests.find(r => effectiveStatus(r) === 'waiting') || requests[0];
-        el('waitingCard').hidden = !request;
-        if (!request) { el('cancelWaitingBtn').hidden = true; return; }
-        const status = effectiveStatus(request);
-        const labels = { waiting: 'Waiting', 'picked up': 'Picked up', cancelled: 'Cancelled', expired: 'Expired' };
-        el('waitingStatus').textContent = labels[status] || request.status;
-        el('waitingStatus').className = 'live-status' + (status === 'waiting' ? '' : ' is-ended');
-        el('waitingTrip').textContent = (request.bus_number || 'Bus') + ' · ' + (request.origin || '') + ' → ' + (request.route_destination || request.destination || '');
-        el('waitingDetails').textContent = (request.pickup_label || 'Pinned spot') + ' → ' + request.destination;
-        const minutes = Math.max(0, Math.ceil((parseTime(request.expires_at) - Date.now() - serverOffset) / 60000));
-        el('waitingExpiry').textContent = status === 'waiting'
-            ? 'Visible to your operator and admins. Expires in ' + minutes + ' min unless you confirm again.'
-            : status === 'picked up' ? 'Your operator marked you picked up. Have a safe trip.'
-            : status === 'expired' ? 'This request is no longer in the waiting queue. Confirm again if you are still waiting.'
-            : 'Your waiting location is no longer in the active queue.';
-        el('cancelWaitingBtn').hidden = status !== 'waiting';
-        el('cancelWaitingBtn').disabled = busy;
-        el('cancelWaitingBtn').dataset.requestId = request.request_id;
+    function updateWaiting() {
+        const active = requests.find(r => ['waiting','active','pending'].includes(String(r.status || '').toLowerCase()));
+        el('waitingCard').hidden = !active;
+        el('markWaitingPanel').hidden = !!active;
+        if (!active) return;
+        el('waitingStatus').textContent = active.status || 'Waiting';
+        el('waitingDetails').textContent = (active.pickup_label || 'Pinned location') + (active.latitude != null && active.longitude != null ? ' · ' + Number(active.latitude).toFixed(5) + ', ' + Number(active.longitude).toFixed(5) : '');
+        el('waitingExpiry').textContent = 'Shared with operators for this trip only.';
+        el('cancelWaitingBtn').dataset.requestId = active.request_id || '';
     }
-    async function api(options) {
-        const controller = options && options.signal ? null : new AbortController();
-        const timeout = controller ? setTimeout(() => controller.abort(), 15000) : null;
-        try {
-            const response = await fetch('../api/pickup.php', Object.assign({ credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }, signal: controller ? controller.signal : undefined }, options || {}));
-            let data;
-            try { data = await response.json(); } catch (_) { throw new Error('Pickup service is unavailable. Please try again shortly.'); }
-            if (!response.ok || !data.ok) throw new Error(data.message || 'Unable to load pickup information.');
-            return data;
-        } catch (error) {
-            if (controller && error.name === 'AbortError') throw new Error('The request timed out. Refresh to check its status before trying again.');
-            throw error;
-        } finally { if (timeout) clearTimeout(timeout); }
+    async function request(url, options) {
+        const response = await fetch(url, Object.assign({ credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } }, options || {}));
+        let data; try { data = await response.json(); } catch (_) { throw new Error('Live tracking service returned an unreadable response.'); }
+        if (!response.ok || !data.ok) throw new Error(data.message || 'Unable to update live tracking.');
+        return data;
+    }
+    function activeTrips(data) {
+        const src = Array.isArray(data.active) ? data.active : Array.isArray(data.schedules) ? data.schedules : data.schedule ? [data.schedule] : data.active && typeof data.active === 'object' ? [data.active] : [];
+        return src.filter(t => t && t.schedule_id != null);
     }
     async function load() {
-        if (busy) return;
-        clearTimeout(timer);
-        const version = ++requestVersion;
-        if (getController) getController.abort();
-        getController = new AbortController();
-        const timeout = setTimeout(() => getController && getController.abort(), 15000);
+        if (loading || busy || !visible()) return;
+        loading = true; const thisVersion = ++version;
         try {
-            const data = await api({ signal: getController.signal });
-            if (version !== requestVersion) return;
-            ready = data.ready === true;
-            schedules = Array.isArray(data.schedules) ? data.schedules : [];
-            requests = Array.isArray(data.requests) ? data.requests : [];
+            const data = await request('../api/live_tracking.php' + (chosen ? '?schedule_id=' + encodeURIComponent(chosen) : ''), {});
+            if (thisVersion !== version) return;
+            trips = activeTrips(data);
             if (data.csrf_token) csrf = data.csrf_token;
-            const serverTime = Date.parse(data.server_time);
-            if (Number.isFinite(serverTime)) serverOffset = serverTime - Date.now();
-            const waiting = requests.find(r => effectiveStatus(r) === 'waiting');
-            let chosen = select.value;
-            if (firstLoad) chosen = String(config.scheduleId || (waiting && waiting.schedule_id) || '');
-            if (!schedules.some(s => String(s.schedule_id) === chosen)) chosen = String((schedules.find(s => s.action === 'pickup') || schedules[0] || {}).schedule_id || '');
-            select.replaceChildren(new Option(schedules.length ? 'Choose a bus' : 'No active trips available', ''));
-            schedules.forEach(s => select.add(new Option(s.bus_number + ' · ' + s.origin + ' → ' + s.destination + ' · ' + (s.action === 'pickup' ? 'Pick up' : 'Reserve'), String(s.schedule_id))));
-            select.value = chosen;
-            select.disabled = !ready || !schedules.length;
-            syncTrip(firstLoad && waiting ? waiting : null);
-            renderWaiting();
-            if (!ready) notify(data.message || 'Live pickup needs a database update. Please contact the administrator.', 'error');
-            else if (!schedules.length) notify('No active trips right now. Check the schedule for your next bus.');
-            else if (firstLoad && config.scheduleId && !schedules.some(s => String(s.schedule_id) === String(config.scheduleId))) notify('That trip is no longer available. Choose another active bus.', 'error');
-            else if (firstLoad || message.classList.contains('live-notice-error')) notify('Choose your bus, pin a safe spot and confirm when you’re ready.');
-            firstLoad = false;
-        } catch (error) {
-            if (version !== requestVersion) return;
-            ready = false;
-            if (error.name !== 'AbortError') notify(error.message, 'error');
-            else notify('The pickup service took too long to respond. Retrying shortly.', 'error');
-        } finally {
-            clearTimeout(timeout);
-            refreshButton();
-            if (version === requestVersion) timer = setTimeout(load, 15000);
-        }
+            if (!trips.some(t => String(t.schedule_id) === String(chosen))) chosen = String(config.scheduleId || (trips[0] && trips[0].schedule_id) || '');
+            if (!trips.some(t => String(t.schedule_id) === String(chosen))) chosen = String((trips[0] || {}).schedule_id || '');
+            select.replaceChildren(new Option(trips.length ? 'Choose a trip' : 'No active reservations', ''));
+            trips.forEach(t => { const o = new Option((t.bus_number || 'Bus') + ' · ' + (t.origin || 'Origin') + ' → ' + (t.destination || t.route_destination || 'Endpoint'), String(t.schedule_id)); select.add(o); });
+            select.value = chosen; select.disabled = !trips.length;
+            const trip = getTrip();
+            el('tripRoute').textContent = trip ? (trip.bus_number || 'Bus') + ' · ' + (trip.origin || 'Origin') + ' → ' + (trip.destination || trip.route_destination || 'Endpoint') : 'No active paid, confirmed, or boarded reservation is available.';
+            const selectedSchedule = data.schedule && String(data.schedule.schedule_id) === String(chosen) ? data.schedule : trip;
+            const location = data.location;
+            const busLocation = location && (location.schedule_id == null || String(location.schedule_id) === String(chosen)) ? coords(location) : null;
+            draw(selectedSchedule, busLocation);
+            const serverNow = Date.parse(data.server_time || Date.now());
+            const updated = location && (location.updated_at || location.recorded_at || location.timestamp || location.created_at);
+            const age = updated ? Math.max(0, serverNow - Date.parse(updated)) : Infinity;
+            const fresh = busLocation && Number.isFinite(age) && age <= 120000;
+            el('updatedAt').textContent = 'Location update: ' + (updated ? new Date(updated).toLocaleString() : 'Not available');
+            el('freshness').textContent = fresh ? 'Updated ' + Math.max(0, Math.floor(age / 1000)) + ' sec ago' : busLocation ? 'Location is stale' : 'No bus GPS available';
+            setStatus(fresh ? 'Live location' : busLocation ? 'Stale location' : trip ? 'No bus GPS' : 'No active trip', !!fresh);
+            el('mapMessage').textContent = fresh ? 'Bus location is being shared by the operator.' : busLocation ? 'Last reported bus location may be out of date. Do not rely on it as current.' : trip ? 'The operator has not shared a bus GPS location. No bus marker is shown.' : 'Select one of your active reservations to view its route.';
+            requests = Array.isArray(data.requests) ? data.requests : data.waiting ? [data.waiting] : [];
+            updateWaiting();
+            if (!trips.length) notify('No active paid, confirmed, or boarded reservations were found. Book or check your trip from Schedule.', '');
+            else if (!busLocation) notify('Trip loaded. Bus GPS is not currently available; no live bus marker is shown.', '');
+            else if (!fresh) notify('The last bus location is stale. Wait for a fresh operator update.', 'error');
+            else notify('Live bus location updated.', 'success');
+        } catch (e) { if (thisVersion === version) { setStatus('Connection issue', false); notify(e.message, 'error'); } }
+        finally { loading = false; if (thisVersion === version && visible()) pollTimer = setTimeout(load, 9000); }
     }
-    async function mutate(values) {
-        if (busy || !ready) return;
-        busy = true;
-        ++requestVersion;
-        if (getController) getController.abort();
-        clearTimeout(timer);
-        refreshButton();
-        renderWaiting();
-        let outcome = null;
-        try {
-            const payload = new URLSearchParams(Object.assign({ csrf_token: csrf }, values));
-            const data = await api({ method: 'POST', body: payload });
-            outcome = { text: data.message || 'Your pickup request has been updated.', type: 'success' };
-        } catch (error) { outcome = { text: error.message, type: 'error' }; }
-        finally {
-            busy = false;
-            await load();
-            if (ready && outcome) notify(outcome.text, outcome.type);
-        }
+    async function mutate(action) {
+        if (busy || !chosen) return;
+        if (action === 'mark_waiting' && !point) { notify('Use GPS or tap the map to choose your waiting point first.', 'error'); return; }
+        busy = true; el('waitBtn').disabled = true;
+        const params = new URLSearchParams({ csrf_token: csrf, action, schedule_id: chosen });
+        if (action === 'mark_waiting') { params.set('latitude', point.latitude); params.set('longitude', point.longitude); if (el('pickupLabel').value.trim()) params.set('pickup_label', el('pickupLabel').value.trim().slice(0, 100)); }
+        else if (el('cancelWaitingBtn').dataset.requestId) params.set('request_id', el('cancelWaitingBtn').dataset.requestId);
+        try { const data = await request('../api/live_tracking.php', { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }, body: params }); notify(data.message || (action === 'mark_waiting' ? 'Waiting location shared with your operator.' : 'Waiting request cancelled.'), 'success'); }
+        catch (e) { notify(e.message, 'error'); }
+        finally { busy = false; await load(); }
     }
-    form.addEventListener('submit', function (event) {
-        event.preventDefault();
-        const trip = currentTrip();
-        if (!trip || trip.action !== 'pickup' || !pin || !form.reportValidity()) return;
-        mutate({ action: 'wait', schedule_id: trip.schedule_id, latitude: pin.lat, longitude: pin.lng, pickup_label: el('pickupLabel').value.trim(), destination: destination.value });
+    select.addEventListener('change', () => { chosen = select.value; point = null; el('coordinateText').textContent = 'Choose a point using GPS or tap the map.'; el('waitBtn').disabled = !chosen; clearTimeout(pollTimer); load(); });
+    el('waitBtn').addEventListener('click', () => mutate('mark_waiting'));
+    el('cancelWaitingBtn').addEventListener('click', () => mutate('cancel_waiting'));
+    el('locateBtn').addEventListener('click', () => {
+        if (!navigator.geolocation) { notify('GPS is unavailable. Tap the map to select your location.', 'error'); return; }
+        el('locateBtn').disabled = true;
+        navigator.geolocation.getCurrentPosition(p => { el('locateBtn').disabled = false; setPoint(p.coords.latitude, p.coords.longitude, true); }, () => { el('locateBtn').disabled = false; notify('Could not access GPS. Tap the map to select your location.', 'error'); }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
     });
-    select.addEventListener('change', () => syncTrip(requestForTrip()));
-    destination.addEventListener('change', refreshButton);
-    el('pickupLabel').addEventListener('input', refreshButton);
-    el('cancelWaitingBtn').addEventListener('click', function () { mutate({ action: 'cancel', request_id: this.dataset.requestId }); });
-    el('centerPinBtn').addEventListener('click', function () { if (map) { const center = map.getCenter(); setPin(center.lat, center.lng, false); } });
-    el('manualPinBtn').addEventListener('click', function () {
-        if (el('manualLatitude').value === '' || el('manualLongitude').value === '') { notify('Enter both latitude and longitude.', 'error'); return; }
-        setPin(el('manualLatitude').value, el('manualLongitude').value, true);
-    });
-    el('locateBtn').addEventListener('click', function () {
-        const button = this;
-        if (!navigator.geolocation) { notify('GPS is not available. Tap the map or enter coordinates to mark your spot.', 'error'); return; }
-        button.disabled = true;
-        el('mapMessage').textContent = 'Finding your location…';
-        navigator.geolocation.getCurrentPosition(function (position) {
-            button.disabled = false;
-            setPin(position.coords.latitude, position.coords.longitude, true);
-            el('mapMessage').textContent = 'Location found. Check the pin, then confirm to share your waiting spot.';
-        }, function () {
-            button.disabled = false;
-            el('mapMessage').textContent = 'Location access was denied or timed out. Tap the map or enter coordinates instead.';
-        }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
-    });
-    document.addEventListener('visibilitychange', function () {
-        if (document.hidden) { clearTimeout(timer); }
-        else if (!busy) load();
-    });
+    document.addEventListener('visibilitychange', () => { if (!visible()) clearTimeout(pollTimer); else load(); });
     load();
 })();

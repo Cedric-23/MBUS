@@ -106,20 +106,22 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_boarded'])){
 $allowed_filters = ['upcoming','active','today','tomorrow','this_week','next_week','history','all'];
 $filter = isset($_GET['filter']) && is_scalar($_GET['filter']) ? (string)$_GET['filter'] : 'upcoming';
 if(!in_array($filter, $allowed_filters, true)) $filter='upcoming';
-$open_schedule = isset($_GET['open_schedule']) && is_scalar($_GET['open_schedule']) ? (int)$_GET['open_schedule'] : null;
+$open_schedule_input = $_POST['open_schedule'] ?? $_GET['open_schedule'] ?? null;
+$open_schedule = is_scalar($open_schedule_input) && filter_var($open_schedule_input, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false ? (int)$open_schedule_input : null;
 $where = "WHERE oba.operator_id = ?";
 $params = [(int)$operator_id];
 if($archive_table_ready) $where .= " AND NOT EXISTS (SELECT 1 FROM operator_trip_archives ota WHERE ota.operator_id=oba.operator_id AND ota.schedule_id=s.schedule_id)";
 $b = mbus_local_bounds();
+$live_since = $b['today']; // Keep today's departed trip visible so its operator GPS watch can continue.
 switch($filter){
     case 'today': $where .= " AND s.departure_time >= '{$b['today']}' AND s.departure_time < '{$b['tomorrow']}'"; break;
     case 'tomorrow': $where .= " AND s.departure_time >= '{$b['tomorrow']}' AND s.departure_time < '{$b['day_after']}'"; break;
     case 'this_week': $where .= " AND s.departure_time >= '{$b['week_start']}' AND s.departure_time < '{$b['next_week']}'"; break;
     case 'next_week': $where .= " AND s.departure_time >= '{$b['next_week']}' AND s.departure_time < '{$b['week_after_next']}'"; break;
     case 'history': $where .= " AND (s.trip_status IN ('Arrived','Cancelled') OR s.schedule_status IN ('Completed','Cancelled'))"; break;
-    case 'active': $where .= " AND s.departure_time >= NOW() AND s.trip_status IN ('Scheduled','Boarding')"; break;
+    case 'active': $where .= " AND s.departure_time >= '$live_since' AND s.trip_status IN ('Scheduled','Boarding','Departed') AND s.schedule_status='Active'"; break;
     case 'all': break;
-    default: $where .= " AND s.departure_time >= NOW() AND s.trip_status IN ('Scheduled','Boarding')"; break;
+    default: $where .= " AND s.departure_time >= '$live_since' AND s.trip_status IN ('Scheduled','Boarding','Departed') AND s.schedule_status='Active'"; break;
 }
 $query = mbus_db_prepare($conn, "
     SELECT s.schedule_id, s.departure_time, s.arrival_time, s.trip_status, s.schedule_status,
@@ -137,6 +139,7 @@ $query = mbus_db_prepare($conn, "
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
     <title>Trip Operations</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -191,7 +194,6 @@ $query = mbus_db_prepare($conn, "
     <h1>Trip Operations</h1>
 
             <div class="page-header-right">
-                <a href="waiting.php" class="btn btn-outline">Waiting pickups</a>
                 <div class="profile-menu-wrap">
                     <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
                         <span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></span>
@@ -216,7 +218,8 @@ $query = mbus_db_prepare($conn, "
 
 <section class="card" aria-labelledby="trip-context-heading">
     <h2 id="trip-context-heading" style="margin:0 0 .35rem;">Trip Operations</h2>
-    <p style="margin:0;color:var(--color-text-muted);">Use Scan Ticket for boarding, update trip status here, and review completed work in History.</p>
+    <p style="margin:0;color:var(--color-text-muted);">Use Scan Ticket for boarding, update trip status here, and review completed work in History. When a trip enters Boarding or Departed, location sharing starts for its assigned bus. Allow browser location access; sharing requires HTTPS and stops when the trip ends or this page is hidden.</p>
+    <p id="operatorTrackingStatus" role="status" aria-live="polite" style="margin:.75rem 0 0;">Live location tracking is idle.</p>
 </section>
 <div class="date-filter-container">
 <nav class="date-filters" aria-label="Trip filters">
@@ -254,7 +257,7 @@ $query = mbus_db_prepare($conn, "
             mbus_db_data_seek($query, 0);
             while($row=mbus_db_fetch_assoc($query)){
             ?>
-            <tr class="trip-row" data-schedule-id="<?php echo $row['schedule_id']; ?>">
+            <tr class="trip-row" data-schedule-id="<?php echo (int)$row['schedule_id']; ?>" data-trip-status="<?php echo htmlspecialchars($row['trip_status'], ENT_QUOTES); ?>">
 
                     <td data-label="Schedule ID"><?php echo $row['schedule_id']; ?></td>
 
@@ -385,6 +388,9 @@ $query = mbus_db_prepare($conn, "
 </main>
 
 <script>
+window.OPERATOR_LIVE_ENDPOINT = '../api/live_tracking.php';
+window.OPERATOR_CSRF_TOKEN = <?php echo json_encode(csrf_get_token()); ?>;
+window.OPERATOR_TRACK_SCHEDULE_ID = <?php echo json_encode($open_schedule); ?>;
 document.addEventListener('DOMContentLoaded', function() {
     // Toggle passenger manifest rows
     document.querySelectorAll('.toggle-passengers').forEach(function(btn) {
@@ -450,6 +456,7 @@ document.addEventListener('keydown', function(e) {
     }
 });
 </script>
+<script src="../Assets/js/pickup_staff.js"></script>
 
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="operator_dashboard.php" class="bottom-nav-item">

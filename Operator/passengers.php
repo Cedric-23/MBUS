@@ -39,8 +39,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_boarded'])){
 $notice = $_SESSION['riders_flash'] ?? '';
 unset($_SESSION['riders_flash']);
 
-// Trips this operator runs: from 3 hours ago so a bus that just left can still be checked
-$since = (new DateTimeImmutable($b['now']))->modify('-3 hours')->format('Y-m-d H:i:s');
+// Include today's Departed trips so the operator can review the live bus and waiting riders en route.
+$since = $b['today'];
 $tq = mbus_db_prepare($conn, "
     SELECT s.schedule_id, s.departure_time, s.trip_status, bu.bus_number, bu.capacity, ro.origin, ro.destination
     FROM schedule s
@@ -112,6 +112,7 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
     <title>Riders</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -122,7 +123,20 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/operator_riders.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
     <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
+    <style>
+      .rider-live { width:100%; max-width:850px; margin:0 auto; }
+      .rider-live h3 { margin:1rem 0 .4rem; color:var(--color-primary); }
+      .live-rider-map { height:320px; min-height:240px; border-radius:14px; border:1px solid var(--color-border); background:#eef3f8; }
+      .waiting-rider-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr)); gap:10px; }
+      .waiting-rider-card { padding:12px; border:1px solid var(--color-border); border-radius:14px; background:var(--color-surface); overflow-wrap:anywhere; }
+      .waiting-rider-card h4 { margin:0 0 8px; color:var(--color-primary); }
+      .waiting-rider-facts { display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px 12px; margin:0; font-size:.9rem; }
+      .waiting-rider-facts dt { color:var(--color-text-muted); }
+      .waiting-rider-facts dd { margin:0; text-align:right; }
+      @media(max-width:600px){ .live-rider-map{height:260px}.rider-live{padding:13px} }
+    </style>
 </head>
 <body class="has-sidebar has-bottom-nav riders-page">
 
@@ -145,7 +159,6 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
 <header class="page-header">
     <h1>Riders</h1>
     <div class="page-header-right">
-        <a href="waiting.php" class="btn btn-outline">Waiting pickups</a>
         <div class="profile-menu-wrap">
             <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
                 <span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></span>
@@ -181,6 +194,16 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
         <?php } ?>
     </nav>
 
+    <section id="riderLive" class="bus-panel rider-live" data-schedule-id="<?php echo (int)$selected['schedule_id']; ?>" data-endpoint="../api/live_tracking.php" aria-labelledby="liveTitle">
+        <div class="bus-panel-head"><h2 id="liveTitle">Live bus location &amp; waiting riders</h2><span class="trip-state" id="liveStatus" role="status" aria-live="polite">Loading live trip…</span></div>
+        <p id="liveUpdated" class="riders-hint">Waiting for live location and rider updates.</p>
+        <div id="liveMap" class="live-rider-map" role="application" aria-label="Map showing bus and waiting pickup locations"></div>
+        <p id="liveMapError" class="riders-hint" hidden>The map tiles could not be loaded; pickup details remain available below.</p>
+        <h3>Waiting commuters <span id="waitingCount">—</span></h3>
+        <p id="waitingState" class="riders-hint" aria-live="polite">Loading waiting commuters…</p>
+        <div id="waitingList" class="waiting-rider-list" aria-live="polite"></div>
+        <button id="liveRefresh" class="btn btn-outline" type="button">Refresh live trip</button>
+    </section>
     <section class="bus-panel" aria-label="Seats">
         <div class="bus-panel-head">
             <h2><?php echo htmlspecialchars($selected['origin']); ?> to <?php echo htmlspecialchars($selected['destination']); ?></h2>
@@ -257,7 +280,10 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
 <script>
 const RIDERS = <?php echo json_encode($riders, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 const TRIP_OPEN = <?php echo $trip_open ? 'true' : 'false'; ?>;
+window.OPERATOR_LIVE_ENDPOINT = '../api/live_tracking.php';
 </script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="../Assets/js/pickup_staff.js"></script>
 <script src="../Assets/js/operator_riders.js"></script>
 <?php } ?>
 

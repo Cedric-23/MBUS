@@ -1,5 +1,5 @@
 <?php
-// Included by role-checked Admin/waiting.php and Operator/waiting.php; no DB writes on page load.
+// Included by the role-checked Admin/waiting.php; operator waiters are shown on Riders.
 if (!isset($pickupStaffRole) || !in_array($pickupStaffRole, ['admin', 'operator'], true)) {
     http_response_code(403);
     exit('Access denied.');
@@ -80,6 +80,6 @@ $roleLabel = $isAdmin ? 'Admin' : 'Operator';
     <a href="notifications.php" class="bottom-nav-item"><i class="fa fa-bell" aria-hidden="true"></i><span>Alerts</span></a>
 </nav>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="../Assets/js/pickup_staff.js"></script>
+<script src="../Assets/js/admin_waiting.js"></script>
 </body>
 </html>

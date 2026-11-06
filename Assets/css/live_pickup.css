@@ -46,3 +46,19 @@
 .live-staff-list { display: grid; gap: 12px; }
 @media (min-width: 900px) { .live-page .main { padding: 24px 28px 48px; } .live-layout { grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr); } .live-map-panel { position: sticky; top: 20px; } .live-map { height: min(66vh, 620px); } }
 @media (prefers-reduced-motion: reduce) { .live-page *, .live-card * { scroll-behavior: auto !important; transition: none !important; } }
+
+/* Commuter live trip tracking — mobile-first map and status surface. */
+.live-page .main { max-width: 1180px; }
+.live-tag { background: #e9f2ff; color: #164e8a; }
+.live-tag > span { background: #2472c8; }
+.live-layout { gap: 14px; }
+.live-card { padding: 16px; }
+.live-map { height: min(48vh, 480px); min-height: 300px; }
+.live-map-hint { min-height: 1.4em; }
+.live-route-copy { color: var(--color-primary, #18365d); font-weight: 700; line-height: 1.5; overflow-wrap: anywhere; }
+.live-wait-actions { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.live-waiting-card { border-color: #dce2ea; }
+.live-status.is-current { color: #23734a; background: #eaf6ef; }
+.live-page #trackingMap[hidden] { display: none !important; }
+@media (min-width: 700px) { .live-wait-actions { grid-template-columns: 1fr 1.25fr; } }
+@media (min-width: 900px) { .live-layout { grid-template-columns: minmax(0, 1.5fr) minmax(320px, .85fr); } .live-map-panel { position: sticky; top: 18px; } .live-map { height: min(68vh, 640px); } }

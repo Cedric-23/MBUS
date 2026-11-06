@@ -1,0 +1,27 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const manage = fs.readFileSync('Operator/manage_trips.php', 'utf8');
+const riders = fs.readFileSync('Operator/passengers.php', 'utf8');
+const dashboard = fs.readFileSync('Operator/operator_dashboard.php', 'utf8');
+const script = fs.readFileSync('Assets/js/pickup_staff.js', 'utf8');
+for (const page of [manage, riders, dashboard]) assert.doesNotMatch(page, /href=["']waiting\.php/i);
+assert.match(manage, /data-trip-status=/);
+assert.match(manage, /IN \('Scheduled','Boarding','Departed'\)/);
+assert.match(manage, /OPERATOR_TRACK_SCHEDULE_ID/);
+assert.match(script, /OPERATOR_TRACK_SCHEDULE_ID/);
+assert.match(riders, /\$since = \$b\['today'\]/);
+assert.match(manage, /csrf_get_token\(\)/);
+assert.match(manage, /pickup_staff\.js/);
+assert.match(script, /action:'update_location'/);
+for (const field of ['csrf_token','schedule_id','latitude','longitude','accuracy']) assert.match(script, new RegExp(field));
+assert.match(script, /watchPosition/);
+assert.match(script, /clearWatch/);
+assert.match(script, /document\.hidden/);
+assert.match(script, /setInterval\(refresh,10000\)/);
+assert.match(riders, /live_tracking\.php/);
+assert.match(riders, /liveMap/);
+assert.match(riders, /waitingList/);
+assert.match(riders, /operator_riders\.js/); // reserved seat-map interactions retained
+assert.match(riders, /leaflet@1\.9\.4/);
+assert.doesNotMatch(manage, /waiting (?:pickup|commuter)|waitingList|liveMap/i);
+console.log('operator live tracking regression tests passed');

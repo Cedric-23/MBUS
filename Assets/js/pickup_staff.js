@@ -1,203 +1,32 @@
 (() => {
-    'use strict';
-    const root = document.getElementById('pickupStaff');
-    if (!root) return;
-    const endpoint = root.dataset.endpoint;
-    const notice = document.getElementById('staffNotice');
-    const list = document.getElementById('staffList');
-    const empty = document.getElementById('staffEmpty');
-    const count = document.getElementById('staffCount');
-    const filter = document.getElementById('staffSchedule');
-    const updated = document.getElementById('staffUpdated');
-    const refreshButton = document.getElementById('staffRefresh');
-    let requests = [];
-    let csrfToken = '';
-    let ready = false;
-    let refreshing = null;
-    let map = null;
-    let markerLayer = null;
-    let fitted = false;
-    let pendingMutation = false;
-
-    const node = (tag, text, className) => {
-        const element = document.createElement(tag);
-        if (text !== undefined) element.textContent = text;
-        if (className) element.className = className;
-        return element;
-    };
-    function showNotice(message, kind = 'error') {
-        notice.textContent = message;
-        notice.className = 'live-notice live-notice-' + kind;
-        notice.dataset.kind = kind;
-        notice.hidden = !message;
-    }
-    function dateLabel(value) {
-        const date = new Date(value);
-        return Number.isNaN(date.getTime()) ? 'Unknown time' : date.toLocaleString();
-    }
-    function validPoint(request) {
-        return Number.isFinite(request.latitude) && Number.isFinite(request.longitude)
-            && Math.abs(request.latitude) <= 90 && Math.abs(request.longitude) <= 180;
-    }
-    function initMap() {
-        if (!window.L) {
-            document.getElementById('staffMapError').hidden = false;
-            return;
-        }
-        try {
-            map = L.map('staffMap').setView([14.815, 120.275], 11);
-            const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
-            tiles.on('tileerror', () => { document.getElementById('staffMapError').hidden = false; });
-            markerLayer = L.layerGroup().addTo(map);
-        } catch (_) {
-            map = null;
-            document.getElementById('staffMapError').hidden = false;
-        }
-    }
-    async function api(options = {}) {
-        const controller = new AbortController();
-        const timeout = window.setTimeout(() => controller.abort(), 12000);
-        try {
-            const response = await fetch(endpoint, {
-                credentials: 'same-origin', cache: 'no-store', signal: controller.signal, ...options
-            });
-            let data;
-            try { data = await response.json(); }
-            catch (_) { throw new Error('The pickup service returned an invalid response. Please try again.'); }
-            if (!response.ok || data.ok !== true) {
-                throw new Error(data.message || 'Pickup service unavailable. Please try again.');
-            }
-            return data;
-        } catch (error) {
-            if (error.name === 'AbortError') throw new Error('Pickup service timed out. Please try again.');
-            throw error;
-        } finally {
-            window.clearTimeout(timeout);
-        }
-    }
-    function render() {
-        list.replaceChildren();
-        if (markerLayer) markerLayer.clearLayers();
-        const selected = filter.value;
-        const visible = requests.filter(request => !selected || String(request.schedule_id) === selected);
-        count.textContent = visible.length + ' waiting';
-        empty.textContent = ready ? 'No waiting commuters for these trips.' : 'Live pickup is not enabled yet.';
-        empty.hidden = visible.length > 0;
-        const bounds = [];
-        visible.forEach(request => {
-            const card = node('article', undefined, 'live-card live-waiting-card');
-            card.append(node('h3', request.full_name || 'Commuter'));
-            card.append(node('p', 'Bus ' + request.bus_number + ' · ' + request.origin + ' → ' + request.route_destination, 'live-small'));
-            const facts = node('dl', undefined, 'pickup-staff-facts');
-            const details = [
-                ['Pickup', request.pickup_label || 'Pinned pickup point'],
-                ['Destination', request.destination],
-                ['Updated', dateLabel(request.updated_at)],
-                ['Expires', dateLabel(request.expires_at)],
-                ['Coordinates', validPoint(request) ? request.latitude.toFixed(5) + ', ' + request.longitude.toFixed(5) : 'Unavailable']
-            ];
-            details.forEach(([label, value]) => facts.append(node('dt', label), node('dd', value)));
-            card.append(facts);
-            const actions = node('div', undefined, 'pickup-staff-actions');
-            if (map && validPoint(request)) {
-                const point = [request.latitude, request.longitude];
-                bounds.push(point);
-                const popup = node('div');
-                popup.append(node('strong', request.full_name || 'Commuter'));
-                popup.append(node('p', 'Bus ' + request.bus_number + ' · Destination: ' + request.destination));
-                popup.append(node('p', request.pickup_label || 'Pinned pickup point'));
-                const marker = L.circleMarker(point, { radius: 9, color: '#fff', weight: 3, fillColor: '#18365d', fillOpacity: 1 })
-                    .addTo(markerLayer).bindPopup(popup);
-                const locate = node('button', 'Show on map', 'live-button live-button-secondary');
-                locate.type = 'button';
-                locate.addEventListener('click', () => {
-                    document.getElementById('staffMap').scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    map.setView(point, 16);
-                    marker.openPopup();
-                });
-                actions.append(locate);
-            }
-            const complete = node('button', 'Mark picked up', 'live-button live-button-primary');
-            complete.type = 'button';
-            complete.disabled = !ready || !csrfToken || pendingMutation;
-            complete.addEventListener('click', () => markPickedUp(request, complete));
-            actions.append(complete);
-            card.append(actions);
-            list.append(card);
-        });
-        if (map && bounds.length && !fitted) {
-            map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
-            fitted = true;
-        }
-    }
-    function updateFilter(schedules) {
-        const selected = filter.value;
-        filter.replaceChildren(node('option', 'All authorized trips'));
-        filter.firstChild.value = '';
-        schedules.forEach(schedule => {
-            const option = node('option', 'Bus ' + schedule.bus_number + ' · ' + schedule.origin + ' → ' + schedule.destination + ' · ' + dateLabel(schedule.departure_time));
-            option.value = String(schedule.schedule_id);
-            filter.append(option);
-        });
-        if (Array.from(filter.options).some(option => option.value === selected)) filter.value = selected;
-    }
-    function refresh() {
-        if (refreshing) return refreshing;
-        refreshButton.disabled = true;
-        refreshing = (async () => {
-            try {
-                const data = await api();
-                ready = data.ready === true;
-                csrfToken = typeof data.csrf_token === 'string' ? data.csrf_token : '';
-                requests = Array.isArray(data.requests) ? data.requests : [];
-                updateFilter(Array.isArray(data.schedules) ? data.schedules : []);
-                render();
-                updated.textContent = 'Last checked: ' + dateLabel(data.server_time);
-                if (!ready) showNotice(data.message || 'Ask an administrator to deploy supabase/10_live_pickup.sql.');
-                else if (notice.dataset.kind === 'error') showNotice('');
-            } catch (error) {
-                ready = false;
-                requests = [];
-                render();
-                empty.textContent = 'The waiting list could not be loaded. Refresh to try again.';
-                updated.textContent = 'Refresh failed — waiting data unavailable';
-                showNotice(error.message || 'Could not load waiting commuters.');
-            } finally {
-                refreshing = null;
-                refreshButton.disabled = false;
-            }
-        })();
-        return refreshing;
-    }
-    async function markPickedUp(request, button) {
-        if (pendingMutation || !window.confirm('Confirm that ' + (request.full_name || 'this commuter') + ' has been picked up? This will not change reservations or payments.')) return;
-        pendingMutation = true;
-        button.disabled = true;
-        try {
-            const data = await api({ method: 'POST', body: new URLSearchParams({
-                csrf_token: csrfToken, action: 'picked_up', request_id: String(request.request_id)
-            }) });
-            // Let an older GET finish before requesting a fresh post-mutation snapshot.
-            if (refreshing) await refreshing;
-            requests = requests.filter(item => item.request_id !== request.request_id);
-            showNotice(data.message || 'Pickup marked complete.', 'success');
-            await refresh();
-        } catch (error) {
-            showNotice(error.message || 'Pickup could not be completed.');
-        } finally {
-            pendingMutation = false;
-            render();
-        }
-    }
-    filter.addEventListener('change', render);
-    refreshButton.addEventListener('click', refresh);
-    initMap();
-    refresh();
-    // GET only; polling never refreshes expiry. Location changes require explicit rider POST.
-    const timer = window.setInterval(() => { if (!document.hidden && !pendingMutation) refresh(); }, 15000);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden && !pendingMutation) refresh(); });
-    window.addEventListener('pagehide', () => window.clearInterval(timer), { once: true });
+'use strict';
+const endpoint = window.OPERATOR_LIVE_ENDPOINT || '../api/live_tracking.php';
+const token = window.OPERATOR_CSRF_TOKEN || document.querySelector('meta[name="csrf-token"]')?.content || '';
+const status = document.getElementById('operatorTrackingStatus');
+if (status) trackBus();
+const root = document.getElementById('riderLive');
+if (root) riderFeed(root);
+function trackBus() {
+ const active = [...document.querySelectorAll('.trip-row')].filter(r => ['Boarding','Departed'].includes(r.dataset.tripStatus));
+ if (!active.length) { status.textContent='Live location is off: no assigned trip is Boarding or Departed.'; return; }
+ const preferredId=Number(window.OPERATOR_TRACK_SCHEDULE_ID),preferred=Number.isSafeInteger(preferredId)&&preferredId>0?active.find(r=>Number(r.dataset.scheduleId)===preferredId):null;
+ const row=preferred||active.find(r=>r.dataset.tripStatus==='Departed')||active[0], sid=Number(row.dataset.scheduleId);
+ let watch=null,lastSent=0,busy=false;
+ const stop=()=>{if(watch!==null)navigator.geolocation.clearWatch(watch);watch=null;};
+ const err=e=>!window.isSecureContext?'Live tracking requires HTTPS (or localhost). Trip status remains unchanged.':e?.code===1?'Location permission denied. Allow location access in browser settings to share the bus position.':e?.code===2?'Bus location unavailable. Check device location services.':e?.code===3?'Getting bus location timed out; waiting for another fix.':'Location permission or device error. Allow browser location access.';
+ const locate=async p=>{if(Date.now()-lastSent<8500||busy||document.hidden)return;busy=true;try{const c=p.coords;const response=await fetch(endpoint,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:new URLSearchParams({csrf_token:token,action:'update_location',schedule_id:String(sid),latitude:String(c.latitude),longitude:String(c.longitude),accuracy:String(c.accuracy)})});const d=await response.json();if(!response.ok||d.ok!==true)throw Error(d.message||'Location service rejected update');lastSent=Date.now();status.textContent='Sharing live bus location for trip '+sid+' · last update '+new Date().toLocaleTimeString()+'.';}catch(e){status.textContent='Live location update failed: '+(e.message||'service unavailable')+' Retrying while this page is visible.';}finally{busy=false;}};
+ const start=()=>{stop();if(document.hidden)return;if(!window.isSecureContext){status.textContent=err();return;}if(!navigator.geolocation){status.textContent='This browser does not support geolocation. Trip status remains unchanged.';return;}status.textContent='Requesting location permission for assigned bus on trip '+sid+'…';watch=navigator.geolocation.watchPosition(locate,e=>{status.textContent=err(e);},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});};
+ document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();status.textContent='Location sharing paused while this page is hidden.';}else start();});window.addEventListener('pagehide',stop);start();
+}
+function riderFeed(root){
+ const sid=Number(root.dataset.scheduleId),state=document.getElementById('waitingState'),list=document.getElementById('waitingList'),count=document.getElementById('waitingCount'),updated=document.getElementById('liveUpdated'),mapError=document.getElementById('liveMapError'),button=document.getElementById('liveRefresh');let map=null,layer=null,busy=false,timer=null;
+ const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!=null)n.textContent=String(text);if(cls)n.className=cls;return n;},valid=(a,b)=>Number.isFinite(Number(a))&&Number.isFinite(Number(b))&&Math.abs(Number(a))<=90&&Math.abs(Number(b))<=180;
+ if(window.L){try{map=L.map('liveMap').setView([14.815,120.275],11);const tiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);tiles.on('tileerror',()=>mapError.hidden=false);layer=L.layerGroup().addTo(map);}catch(_){mapError.hidden=false;}}else mapError.hidden=false;
+ const addMarker=(lat,lng,label,color,bounds)=>{if(!map||!valid(lat,lng))return;const point=[Number(lat),Number(lng)];bounds.push(point);L.circleMarker(point,{radius:9,color:'#fff',weight:3,fillColor:color,fillOpacity:1}).addTo(layer).bindPopup(document.createTextNode(label));};
+ async function refresh(){if(busy||document.hidden)return;busy=true;button.disabled=true;try{const r=await fetch(endpoint+'?schedule_id='+encodeURIComponent(String(sid)),{credentials:'same-origin',cache:'no-store'}),d=await r.json();if(!r.ok||d.ok!==true)throw Error(d.message||'Live trip service unavailable.');const requests=Array.isArray(d.requests)?d.requests:[];if(!d.active){state.textContent='Live pickup tracking is not active for this trip.';count.textContent='0';list.replaceChildren();}else{count.textContent=String(requests.length);state.textContent=requests.length?requests.length+' waiting commuter'+(requests.length===1?'':'s')+' for this trip.':'No active waiting commuters for this trip.';list.replaceChildren();requests.forEach(q=>{const card=el('article',null,'waiting-rider-card');card.append(el('h4',q.full_name||q.name||'Commuter'));const facts=el('dl',null,'waiting-rider-facts');const point=valid(q.latitude,q.longitude)?Number(q.latitude).toFixed(5)+', '+Number(q.longitude).toFixed(5):'Coordinates unavailable';[['Pickup',q.pickup_label||'Pinned pickup'],['Coordinates',point],['Requested',q.updated_at||'Time unavailable'],['Destination',q.destination||'Not provided']].forEach(([k,v])=>facts.append(el('dt',k),el('dd',v)));card.append(facts);list.append(card);});}
+ if(layer){layer.clearLayers();const bounds=[];if(d.location)addMarker(d.location.latitude,d.location.longitude,'Operator bus · updated '+(d.location.updated_at||'recently'),'#1769aa',bounds);requests.forEach(q=>addMarker(q.latitude,q.longitude,(q.full_name||q.name||'Commuter')+' · '+(q.pickup_label||'Waiting pickup'),'#c2413b',bounds));if(bounds.length)map.fitBounds(bounds,{padding:[24,24],maxZoom:15});}
+ updated.textContent=d.location?.updated_at?'Bus location last updated '+new Date(d.location.updated_at).toLocaleString()+' · feed checked '+new Date(d.server_time||Date.now()).toLocaleTimeString():d.server_time?'Feed checked '+new Date(d.server_time).toLocaleString()+' · bus location not yet available':'Live trip data checked.';
+ }catch(e){state.textContent='Waiting pickup data could not be loaded: '+(e.message||'network error')+' Use Refresh to retry.';count.textContent='Unavailable';}finally{busy=false;button.disabled=false;}}
+ button.addEventListener('click',refresh);document.addEventListener('visibilitychange',()=>{if(document.hidden){clearInterval(timer);timer=null;}else{refresh();if(!timer)timer=setInterval(refresh,10000);}});window.addEventListener('pagehide',()=>clearInterval(timer),{once:true});refresh();timer=setInterval(refresh,10000);
+}
 })();
