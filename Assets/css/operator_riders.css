@@ -1,0 +1,87 @@
+/* Operator: riders (seat map + rider card) */
+.riders-page [hidden] { display: none !important; }
+.riders-page .riders-wrap { width: 100%; max-width: 620px; margin: 0 auto; display: grid; gap: 14px; padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+@media (min-width: 769px) { .riders-page .riders-wrap { padding-bottom: var(--space-8); } }
+
+.riders-toast { padding: 10px 14px; border-radius: 12px; background: var(--color-success-light); color: var(--color-success-dark); font-weight: 600; }
+
+/* Trip picker: one swipeable row */
+.trip-picker { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; scroll-snap-type: x proximity; }
+.trip-picker::-webkit-scrollbar { display: none; }
+.trip-chip {
+  flex: 0 0 auto; display: grid; gap: 2px; min-width: 116px; padding: 8px 14px;
+  border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface);
+  color: var(--color-text-secondary); text-decoration: none; scroll-snap-align: start; -webkit-tap-highlight-color: transparent;
+}
+.trip-chip strong { font-size: 1rem; color: var(--color-text); }
+.trip-chip span { font-size: 0.8125rem; }
+.trip-chip.on { background: var(--color-primary); border-color: var(--color-primary); color: rgba(255,255,255,0.85); }
+.trip-chip.on strong { color: #fff; }
+.trip-chip:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+
+.bus-panel { padding: 16px; border: 1px solid var(--color-border); border-radius: 18px; background: var(--color-surface); }
+.bus-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.bus-panel-head h2 { margin: 0; font-size: 1.0625rem; color: var(--color-primary); }
+.trip-state { flex: 0 0 auto; padding: 3px 10px; border-radius: 999px; background: var(--color-bg-secondary); font-size: 0.8125rem; font-weight: 600; color: var(--color-text-secondary); }
+
+.seat-key { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 12px; padding: 0; list-style: none; font-size: 0.8125rem; color: var(--color-text-secondary); }
+.seat-key li { display: inline-flex; align-items: center; gap: 6px; }
+.key { display: inline-block; width: 12px; height: 12px; border-radius: 4px; border: 2px solid transparent; }
+.key.paid, .rseat.paid { background: #e8f1ff; border-color: #2f7de1; color: #174f9c; }
+.key.boarded, .rseat.boarded { background: var(--color-success); border-color: var(--color-success); color: #fff; }
+.key.pending, .rseat.pending { background: var(--color-warning-light); border-color: #e3a008; color: var(--color-warning-dark); }
+.key.empty, .rseat.empty { background: #f1f4f8; border-color: #e1e6ed; color: #9aa6b5; }
+
+.bus-front { text-align: center; margin-bottom: 8px; font-size: 0.8125rem; font-weight: 600; color: var(--color-text-muted); }
+.rider-map { display: grid; gap: 10px; padding: 16px 12px; border: 2px solid var(--color-border); border-radius: 28px 28px 14px 14px; background: #fafbfd; }
+.rider-map .seat-row { display: flex; justify-content: center; gap: 8px; }
+.rider-map .aisle { flex: 0 0 26px; }
+.rseat {
+  flex: 1 1 0; max-width: 64px; height: 52px; display: inline-flex; align-items: center; justify-content: center;
+  border: 2px solid; border-radius: 12px; font: inherit; font-size: 1rem; font-weight: 600; box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+button.rseat { cursor: pointer; }
+button.rseat:active { filter: brightness(0.96); }
+button.rseat:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+.riders-hint { margin: 12px 0 0; text-align: center; font-size: 0.875rem; color: var(--color-text-muted); }
+
+.riders-empty { padding: 36px 18px; text-align: center; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); }
+.riders-empty h2 { margin: 0 0 6px; font-size: 1.125rem; }
+.riders-empty p { margin: 0; color: var(--color-text-secondary); }
+
+/* Rider card */
+.rider-backdrop { position: fixed; inset: 0; z-index: 999; background: rgba(10,25,45,0.45); }
+.rider-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000; max-height: 86vh; overflow-y: auto;
+  padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); background: var(--color-surface);
+  border-radius: 20px 20px 0 0; box-shadow: 0 -12px 40px rgba(24,54,93,0.25);
+}
+.rider-sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.rider-sheet h2 { margin: 0; font-size: 1.25rem; color: var(--color-primary); overflow-wrap: anywhere; }
+.rider-sheet-head p { margin: 2px 0 0; color: var(--color-text-secondary); }
+.rider-close { flex: 0 0 auto; width: 44px; height: 44px; margin: -6px -6px 0 0; border: 0; border-radius: 50%; background: var(--color-bg-secondary); color: var(--color-text); cursor: pointer; }
+.rider-close:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+.rider-state { display: inline-block; margin: 8px 0 0; padding: 3px 12px; border-radius: 999px; font-size: 0.8125rem; font-weight: 600; }
+.rider-state.paid { background: #e8f1ff; color: #174f9c; }
+.rider-state.boarded { background: var(--color-success-light); color: var(--color-success-dark); }
+.rider-state.pending { background: var(--color-warning-light); color: var(--color-warning-dark); }
+.rider-facts { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 8px 16px; margin: 14px 0; padding-top: 14px; border-top: 1px dashed var(--color-border); }
+.rider-facts dt { color: var(--color-text-muted); font-size: 0.9375rem; }
+.rider-facts dd { margin: 0; text-align: right; font-weight: 500; overflow-wrap: anywhere; }
+.rider-facts a { color: var(--color-primary); }
+.rider-board {
+  width: 100%; min-height: 54px; border: 0; border-radius: 12px; background: var(--color-primary); color: #fff;
+  font: inherit; font-size: 1rem; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.rider-board:active { background: var(--color-primary-dark); }
+.rider-board:disabled { opacity: 0.7; cursor: progress; }
+.rider-board:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+.rider-note { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--color-bg-secondary); color: var(--color-text-secondary); font-size: 0.9375rem; }
+
+@media (min-width: 769px) {
+  .rider-sheet { left: 50%; right: auto; bottom: 8vh; width: min(420px, 92vw); transform: translateX(-50%); border-radius: 20px; }
+}
+
+.riders-page .page-header { margin-bottom: var(--space-3); }
+.riders-page .page-header h1 { margin: 0; font-size: 1.25rem; font-weight: 700; }

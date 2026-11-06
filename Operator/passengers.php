@@ -5,358 +5,260 @@ require_once "../config/mysqli_compat.php";
 require_once "../Includes/csrf.php";
 require_once "../Includes/activity_log.php";
 
-if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type']) !== 'operator'){
+if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'operator'){
     header("Location: ../login.php");
     exit();
 }
 
-$operator_id = $_SESSION['user_id'];
+$operator_id = (int)$_SESSION['user_id'];
+$b = mbus_local_bounds(); // app-timezone boundaries (not the DB clock)
+$notice = '';
+$error = '';
 
-// Authorization check
-$operator_check = mbus_db_prepare($conn, "
-    SELECT user_id FROM users WHERE user_id = ? AND LOWER(user_type) = 'operator'
-", [$operator_id]);
-
-if(!mbus_db_fetch_assoc($operator_check)){
-    die("Unauthorized access.");
+// Confirm boarding from a rider card
+if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_boarded'])){
+    $back_schedule = (int)($_POST['schedule_id'] ?? 0);
+    if(!csrf_validate_token()){
+        $error = "Session expired. Try again.";
+    } else {
+        $reservation_id = (int)($_POST['reservation_id'] ?? 0);
+        $stmt = mbus_db_prepare($conn, "UPDATE reservation r SET status='Boarded'
+            WHERE r.reservation_id = ?
+              AND r.status = 'Paid'
+              AND r.schedule_id IN (
+                  SELECT s.schedule_id FROM schedule s
+                  JOIN operator_bus_assignments oba ON oba.bus_id = s.bus_id
+                  WHERE oba.operator_id = ? AND s.trip_status IN ('Scheduled', 'Boarding')
+              )", [$reservation_id, $operator_id]);
+        $ok = $stmt !== false && $conn->affectedRows > 0;
+        $_SESSION['riders_flash'] = $ok ? 'Passenger boarded.' : 'Could not board this passenger.';
+    }
+    header("Location: passengers.php?schedule_id=" . $back_schedule);
+    exit();
 }
+$notice = $_SESSION['riders_flash'] ?? '';
+unset($_SESSION['riders_flash']);
 
-// Filters
-$filter = $_GET['filter'] ?? 'all';
-$search = $_GET['search'] ?? '';
-$status = $_GET['status'] ?? '';
-
-// App-timezone date boundaries (schedule times are local; don't use the DB clock)
-$b = mbus_local_bounds();
-
-// Build WHERE clause
-$where = "
-WHERE oba.operator_id = ?
-AND s.departure_time >= '{$b['now']}'
-";
-
-$params = [$operator_id];
-
-// Filter logic (PostgreSQL compatible)
-if($filter === 'today'){
-    $where .= " AND s.departure_time < '{$b['tomorrow']}'";
-}
-elseif($filter === 'tomorrow'){
-    $where .= " AND s.departure_time >= '{$b['tomorrow']}' AND s.departure_time < '{$b['day_after']}'";
-}
-elseif($filter === 'this_week'){
-    $where .= " AND s.departure_time >= '{$b['week_start']}' AND s.departure_time < '{$b['next_week']}'";
-}
-elseif($filter === 'next_week'){
-    $where .= " AND s.departure_time >= '{$b['next_week']}' AND s.departure_time < '{$b['week_after_next']}'";
-}
-
-if(in_array($status, ['Paid', 'Boarded'], true)){
-    $where .= " AND r.status = ?";
-    $params[] = $status;
-}
-// Search logic
-if($search !== ''){
-    $where .= " AND (
-        u.full_name ILIKE ?
-        OR r.ticket_code ILIKE ?
-        OR r.seat_number ILIKE ?
-    )";
-    $search_term = "%$search%";
-    $params[] = $search_term;
-    $params[] = $search_term;
-    $params[] = $search_term;
-}
-
-// Stats queries - handle false return for empty results
-$total_passengers_query = mbus_db_prepare($conn, "
-    SELECT COUNT(*) total
-    FROM reservation r
-    JOIN schedule s ON r.schedule_id = s.schedule_id
-    JOIN operator_bus_assignments oba ON s.bus_id = oba.bus_id
-    WHERE oba.operator_id = ?
-    AND s.departure_time >= '{$b['now']}'
-", [$operator_id]);
-$total_passengers = mbus_db_fetch_assoc($total_passengers_query) ?: ['total' => 0];
-
-$paid_passengers_query = mbus_db_prepare($conn, "
-    SELECT COUNT(*) total
-    FROM reservation r
-    JOIN schedule s ON r.schedule_id = s.schedule_id
-    JOIN operator_bus_assignments oba ON s.bus_id = oba.bus_id
-    WHERE oba.operator_id = ?
-    AND r.status = 'Paid'
-    AND s.departure_time >= '{$b['now']}'
-", [$operator_id]);
-$paid_passengers = mbus_db_fetch_assoc($paid_passengers_query) ?: ['total' => 0];
-
-$boarded_passengers_query = mbus_db_prepare($conn, "
-    SELECT COUNT(*) total
-    FROM reservation r
-    JOIN schedule s ON r.schedule_id = s.schedule_id
-    JOIN operator_bus_assignments oba ON s.bus_id = oba.bus_id
-    WHERE oba.operator_id = ?
-    AND r.status = 'Boarded'
-    AND s.departure_time >= '{$b['now']}'
-", [$operator_id]);
-$boarded_passengers = mbus_db_fetch_assoc($boarded_passengers_query) ?: ['total' => 0];
-
-$today_trips_query = mbus_db_prepare($conn, "
-    SELECT COUNT(*) total
+// Trips this operator runs: from 3 hours ago so a bus that just left can still be checked
+$since = (new DateTimeImmutable($b['now']))->modify('-3 hours')->format('Y-m-d H:i:s');
+$tq = mbus_db_prepare($conn, "
+    SELECT s.schedule_id, s.departure_time, s.trip_status, bu.bus_number, bu.capacity, ro.origin, ro.destination
     FROM schedule s
-    JOIN operator_bus_assignments oba ON s.bus_id = oba.bus_id
-    WHERE oba.operator_id = ?
-    AND s.departure_time >= '{$b['now']}'
-    AND s.departure_time < '{$b['tomorrow']}'
+    JOIN buses bu ON bu.bus_id = s.bus_id
+    JOIN routes ro ON ro.route_id = s.route_id
+    WHERE s.bus_id IN (SELECT bus_id FROM operator_bus_assignments WHERE operator_id = ?)
+    AND s.departure_time >= '$since'
+    ORDER BY s.departure_time ASC
+    LIMIT 14
 ", [$operator_id]);
-$today_trips = mbus_db_fetch_assoc($today_trips_query) ?: ['total' => 0];
+$trips = [];
+while($tq !== false && ($t = mbus_db_fetch_assoc($tq))){ $trips[] = $t; }
 
-// Fetch passengers
-$passenger_sql = "
-SELECT
-    r.*,
-    u.full_name,
-    s.departure_time,
-    rt.origin,
-    rt.destination,
-    b.bus_number
-FROM reservation r
-JOIN users u ON r.user_id = u.user_id
-JOIN schedule s ON r.schedule_id = s.schedule_id
-JOIN routes rt ON s.route_id = rt.route_id
-JOIN buses b ON s.bus_id = b.bus_id
-JOIN operator_bus_assignments oba ON s.bus_id = oba.bus_id
-$where
-ORDER BY r.created_at DESC
-";
+// Pick the trip: requested one, otherwise the next one that hasn't left yet
+$selected = null;
+$want = (int)($_GET['schedule_id'] ?? 0);
+foreach($trips as $t){ if((int)$t['schedule_id'] === $want){ $selected = $t; break; } }
+if(!$selected){
+    foreach($trips as $t){ if($t['departure_time'] >= $b['now']){ $selected = $t; break; } }
+    if(!$selected && $trips){ $selected = $trips[0]; }
+}
 
-$passengers = mbus_db_prepare($conn, $passenger_sql, $params);
+$riders = [];     // seat number => details
+if($selected){
+    $rq = mbus_db_prepare($conn, "
+        SELECT r.reservation_id, r.seat_number, r.status, r.pickup_location, r.destination, r.ticket_code,
+               u.full_name, u.phone_number,
+               (SELECT p.amount FROM payment p WHERE p.reservation_id IN
+                    (SELECT reservation_id FROM reservation WHERE user_id = r.user_id AND schedule_id = r.schedule_id)
+                    ORDER BY p.payment_id DESC LIMIT 1) AS amount,
+               (SELECT p.payment_reference FROM payment p WHERE p.reservation_id IN
+                    (SELECT reservation_id FROM reservation WHERE user_id = r.user_id AND schedule_id = r.schedule_id)
+                    ORDER BY p.payment_id DESC LIMIT 1) AS reference
+        FROM reservation r
+        JOIN users u ON u.user_id = r.user_id
+        WHERE r.schedule_id = ?
+        AND (r.status IN ('Paid', 'Boarded')
+             OR (r.status = 'Pending' AND r.created_at > NOW() - INTERVAL '10 minutes'))
+    ", [(int)$selected['schedule_id']]);
+    while($rq !== false && ($r = mbus_db_fetch_assoc($rq))){
+        $riders[(string)$r['seat_number']] = [
+            'id' => (int)$r['reservation_id'],
+            'seat' => $r['seat_number'],
+            'status' => $r['status'],
+            'name' => $r['full_name'],
+            'phone' => $r['phone_number'],
+            'pickup' => $r['pickup_location'],
+            'destination' => $r['destination'],
+            'code' => $r['ticket_code'],
+            'amount' => $r['amount'] !== null ? number_format((float)$r['amount'], 2) : null,
+            'reference' => $r['reference'],
+        ];
+    }
+}
+$trip_open = $selected && in_array($selected['trip_status'], ['Scheduled', 'Boarding'], true);
+
+function riders_when(string $dt, string $today_key, string $tomorrow_key): string
+{
+    $ts = strtotime($dt);
+    $key = date('Y-m-d', $ts);
+    $day = $key === $today_key ? 'Today' : ($key === $tomorrow_key ? 'Tomorrow' : date('M j', $ts));
+    return $day . ' ' . date('g:i A', $ts);
+}
+$today_key = substr($b['today'], 0, 10);
+$tomorrow_key = substr($b['tomorrow'], 0, 10);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Passenger List</title>
-
+    <title>Riders</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/operator/operator_sidebar.css">
-    <link rel="stylesheet" href="../Assets/css/operator/operator_passengers.css">
-    <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
-    <link rel="stylesheet" href="../Assets/css/professional-filters.css">
-    <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
-    <link rel="shortcut icon" href="../Assets/images/mbus_icon.png">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
+    <link rel="stylesheet" href="../Assets/css/operator_riders.css">
+    <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
 </head>
-
-<body class="has-sidebar">
-
-<!-- Mobile Sidebar Toggle -->
-<button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
-    <i class="fa fa-bars" aria-hidden="true"></i>
-</button>
-
-<!-- Sidebar Overlay -->
-<div class="sidebar-overlay" onclick="toggleSidebar()" aria-hidden="true"></div>
+<body class="has-sidebar has-bottom-nav riders-page">
 
 <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
-    <div class="logo-container">
-        <img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo">
-    </div>
-
+    <div class="logo-container"><img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo"></div>
     <h2>Operator</h2>
-
     <nav class="menu-top" aria-label="Operator menu">
         <a href="operator_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
         <a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
         <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
-        <a href="passengers.php" aria-current="page"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
+        <a href="passengers.php" aria-current="page"><i class="fa fa-users" aria-hidden="true"></i> Riders</a>
+        <a href="notifications.php"><i class="fa fa-bell" aria-hidden="true"></i> Notifications</a>
     </nav>
-
     <div class="menu-bottom">
-        <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
-            <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
-        </a>
+        <a href="../logout.php" class="logout-btn btn btn-outline btn-block"><i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
     </div>
 </aside>
 
 <main class="main" role="main">
-
 <header class="page-header">
-    <h1>Passenger List</h1>
-
-            <div class="page-header-right">
-                <div class="profile-menu-wrap">
-                    <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
-                        <span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></span>
-                    </button>
-                    <div class="profile-menu" id="profileMenu" role="menu">
-                        <div class="profile-menu-header">
-                            <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
-                            <span class="profile-menu-role">Operator account</span>
-                        </div>
-                        <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
-                    </div>
+    <h1>Riders</h1>
+    <div class="page-header-right">
+        <div class="profile-menu-wrap">
+            <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
+                <span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></span>
+            </button>
+            <div class="profile-menu" id="profileMenu" role="menu">
+                <div class="profile-menu-header">
+                    <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
+                    <span class="profile-menu-role">Operator account</span>
                 </div>
+                <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
+        </div>
+    </div>
 </header>
 
-<!-- Filter Tabs -->
-<div class="date-filter-container">
-<nav class="date-filters" aria-label="Passenger filters">
-<a href="?filter=all" class="date-filter-btn <?php echo $filter==='all' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='all' ? 'page' : 'false'; ?>">
-<i class="fa fa-users" aria-hidden="true"></i> All
-</a>
-<a href="?filter=today" class="date-filter-btn <?php echo $filter==='today' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='today' ? 'page' : 'false'; ?>">
-<i class="fa fa-calendar-day" aria-hidden="true"></i>Today
-</a>
-<a href="?filter=tomorrow" class="date-filter-btn <?php echo $filter==='tomorrow' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='tomorrow' ? 'page' : 'false'; ?>">
-<i class="fa fa-calendar-plus" aria-hidden="true"></i>Tomorrow
-</a>
-<a href="?filter=this_week" class="date-filter-btn <?php echo $filter==='this_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='this_week' ? 'page' : 'false'; ?>">
-<i class="fa fa-calendar-week" aria-hidden="true"></i>This Week
-</a>
-<a href="?filter=next_week" class="date-filter-btn <?php echo $filter==='next_week' ? 'active' : ''; ?>" aria-current="<?php echo $filter==='next_week' ? 'page' : 'false'; ?>">
-<i class="fa fa-calendar-alt" aria-hidden="true"></i>Next Week
-</a>
-</nav>
+<div class="riders-wrap">
+
+<?php if($notice !== ''){ ?><div class="riders-toast" role="status"><?php echo htmlspecialchars($notice); ?></div><?php } ?>
+
+<?php if(!$trips){ ?>
+    <div class="riders-empty">
+        <h2>No trips to show</h2>
+        <p>Trips on your buses will appear here once they are scheduled.</p>
+    </div>
+<?php } else { ?>
+
+    <nav class="trip-picker" aria-label="Choose a trip">
+        <?php foreach($trips as $t){ $on = (int)$t['schedule_id'] === (int)$selected['schedule_id']; ?>
+        <a class="trip-chip<?php echo $on ? ' on' : ''; ?>" href="passengers.php?schedule_id=<?php echo (int)$t['schedule_id']; ?>"<?php echo $on ? ' aria-current="true"' : ''; ?>>
+            <strong><?php echo htmlspecialchars($t['bus_number']); ?></strong>
+            <span><?php echo htmlspecialchars(riders_when($t['departure_time'], $today_key, $tomorrow_key)); ?></span>
+        </a>
+        <?php } ?>
+    </nav>
+
+    <section class="bus-panel" aria-label="Seats">
+        <div class="bus-panel-head">
+            <h2><?php echo htmlspecialchars($selected['origin']); ?> to <?php echo htmlspecialchars($selected['destination']); ?></h2>
+            <span class="trip-state"><?php echo htmlspecialchars($selected['trip_status']); ?></span>
+        </div>
+
+        <ul class="seat-key" aria-hidden="true">
+            <li><i class="key paid"></i>Paid</li>
+            <li><i class="key boarded"></i>Boarded</li>
+            <li><i class="key pending"></i>Unpaid</li>
+            <li><i class="key empty"></i>Empty</li>
+        </ul>
+
+        <div class="bus-front" aria-hidden="true">Front of bus</div>
+        <div class="rider-map" role="group" aria-label="Bus seats">
+        <?php
+        $capacity = (int)$selected['capacity'];
+        $rows = (int)ceil($capacity / 4);
+        $n = 1;
+        for($r = 1; $r <= $rows; $r++){
+            echo "<div class='seat-row'>";
+            for($c = 1; $c <= 4; $c++){
+                if($n <= $capacity){
+                    $info = $riders[(string)$n] ?? null;
+                    if($info){
+                        $cls = $info['status'] === 'Boarded' ? 'boarded' : ($info['status'] === 'Paid' ? 'paid' : 'pending');
+                        echo "<button type='button' class='rseat $cls' data-seat='$n' aria-label='Seat $n, " . htmlspecialchars($info['name'], ENT_QUOTES) . ", " . $info['status'] . "'>$n</button>";
+                    } else {
+                        echo "<span class='rseat empty' aria-label='Seat $n empty'>$n</span>";
+                    }
+                    $n++;
+                }
+                if($c == 2){ echo "<span class='aisle'></span>"; }
+            }
+            echo "</div>";
+        }
+        ?>
+        </div>
+        <?php if(!$riders){ ?><p class="riders-hint">No riders on this bus yet.</p><?php } else { ?><p class="riders-hint">Tap a seat to see the rider.</p><?php } ?>
+    </section>
+
+<?php } ?>
 </div>
-
-<!-- Search -->
-<div class="search-modern">
-<i class="fa fa-search" aria-hidden="true"></i>
-<form method="GET" role="search">
-<input type="hidden" name="filter" value="<?php echo htmlspecialchars($filter); ?>">
-<input type="search" name="search" placeholder="Search by name, ticket code, or seat..." value="<?php echo htmlspecialchars($search); ?>" aria-label="Search passengers">
-</form>
-</div>
-
-<!-- Stats Cards -->
-<section class="cards" aria-labelledby="stats-heading">
-    <h2 id="stats-heading" class="visually-hidden">Passenger Statistics</h2>
-    
-    <article class="card card-animated">
-        <h3 class="day"><?php echo $total_passengers['total']; ?></h3>
-        <p class="date">Total Passengers</p>
-    </article>
-    
-    <article class="card card-animated">
-        <h3 class="day"><?php echo $paid_passengers['total']; ?></h3>
-        <p class="date">Paid</p>
-    </article>
-    
-    <article class="card card-animated">
-        <h3 class="day"><?php echo $boarded_passengers['total']; ?></h3>
-        <p class="date">Boarded</p>
-    </article>
-    
-    <article class="card card-animated">
-        <h3 class="day"><?php echo $today_trips['total']; ?></h3>
-        <p class="date">Trips Today</p>
-    </article>
-</section>
-
-<div class="table-responsive passengers-table-responsive">
-    <table class="passengers-table">
-        <thead>
-            <tr>
-                <th scope="col">Passenger</th>
-                <th scope="col">Bus</th>
-                <th scope="col">Route</th>
-                <th scope="col">Departure</th>
-                <th scope="col">Seat</th>
-                <th scope="col">Ticket Code</th>
-                <th scope="col">Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php 
-            mbus_db_data_seek($passengers, 0);
-            while($row=mbus_db_fetch_assoc($passengers)){ 
-            ?>
-            <tr>
-                <td data-label="Passenger" class="passenger-name"><?php echo htmlspecialchars($row['full_name']); ?></td>
-                <td data-label="Bus">
-                    <span class="bus-number"><?php echo htmlspecialchars($row['bus_number']); ?></span>
-                </td>
-                <td data-label="Route">
-                    <span class="route-badge">
-                        <i class="fa fa-map-marker-alt" aria-hidden="true"></i>
-                        <span><?php echo htmlspecialchars($row['origin']); ?> → <?php echo htmlspecialchars($row['destination']); ?></span>
-                    </span>
-                </td>
-                <td data-label="Departure"><?php echo date('M j, Y g:i A', strtotime($row['departure_time'])); ?></td>
-                <td data-label="Seat"><?php echo $row['seat_number']; ?></td>
-                <td data-label="Ticket Code" class="ticket-code"><?php echo htmlspecialchars($row['ticket_code']); ?></td>
-                <td data-label="Status">
-                    <?php if($row['status']=="Boarded"){ ?>
-                    <span class="status-badge boarded">Boarded</span>
-                    <?php } else { ?>
-                    <span class="status-badge paid">Paid</span>
-                    <?php } ?>
-                </td>
-            </tr>
-            <?php } ?>
-        </tbody>
-    </table>
-</div>
-
-<?php if(mbus_db_num_rows($passengers) === 0): ?>
-<div class="empty-state">
-    <i class="fa fa-users" aria-hidden="true"></i>
-    <h3>No passengers found</h3>
-    <p>No passenger records match your current filters.</p>
-</div>
-<?php endif; ?>
-
 </main>
 
+<?php if($selected){ ?>
+<div class="rider-backdrop" id="riderBackdrop" hidden></div>
+<section class="rider-sheet" id="riderSheet" role="dialog" aria-modal="true" aria-labelledby="rdName" hidden>
+    <div class="rider-sheet-head">
+        <div>
+            <h2 id="rdName"></h2>
+            <p id="rdSeat"></p>
+        </div>
+        <button type="button" class="rider-close" id="riderClose" aria-label="Close"><i class="fa fa-xmark" aria-hidden="true"></i></button>
+    </div>
+    <span class="rider-state" id="rdState"></span>
+    <dl class="rider-facts">
+        <dt>Pickup</dt><dd id="rdPickup"></dd>
+        <dt>Drop-off</dt><dd id="rdDest"></dd>
+        <dt>Phone</dt><dd id="rdPhone"></dd>
+        <dt>Ticket</dt><dd id="rdCode"></dd>
+        <dt>Paid</dt><dd id="rdAmount"></dd>
+        <dt>GCash ref</dt><dd id="rdRef"></dd>
+    </dl>
+    <form method="POST" id="boardForm">
+        <?php csrf_field(); ?>
+        <input type="hidden" name="mark_boarded" value="1">
+        <input type="hidden" name="reservation_id" id="rdId" value="">
+        <input type="hidden" name="schedule_id" value="<?php echo (int)$selected['schedule_id']; ?>">
+        <button type="submit" class="rider-board" id="rdBoard">Confirm boarding</button>
+    </form>
+    <p class="rider-note" id="rdNote" hidden></p>
+</section>
 <script>
-// Toggle sidebar for mobile
-function toggleSidebar() {
-    const sidebar = document.querySelector('.sidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    const toggle = document.querySelector('.sidebar-toggle');
-    
-    const isOpen = sidebar.classList.toggle('open');
-    overlay.classList.toggle('active');
-    document.body.classList.toggle('sidebar-open', isOpen);
-    
-    if (toggle) {
-        toggle.setAttribute('aria-expanded', isOpen);
-    }
-    
-    if (isOpen) {
-        document.body.style.overflow = 'hidden';
-        const firstLink = sidebar.querySelector('a, button');
-        if (firstLink) firstLink.focus();
-    } else {
-        document.body.style.overflow = '';
-    }
-}
-
-// Close sidebar when clicking a nav link on mobile
-document.querySelectorAll('.menu-top a').forEach(link => {
-    link.addEventListener('click', () => {
-        if (window.innerWidth <= 768) {
-            toggleSidebar();
-        }
-    });
-});
-
-// Handle keyboard navigation for sidebar
-document.addEventListener('keydown', function(e) {
-    const sidebar = document.querySelector('.sidebar');
-    if (sidebar.classList.contains('open') && e.key === 'Escape') {
-        toggleSidebar();
-    }
-});
+const RIDERS = <?php echo json_encode($riders, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+const TRIP_OPEN = <?php echo $trip_open ? 'true' : 'false'; ?>;
 </script>
+<script src="../Assets/js/operator_riders.js"></script>
+<?php } ?>
 
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="operator_dashboard.php" class="bottom-nav-item">
