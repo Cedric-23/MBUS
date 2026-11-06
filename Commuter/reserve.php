@@ -515,6 +515,7 @@ const fareTable = <?php echo json_encode($fare_table); ?>;
         <i class="fa fa-bell" aria-hidden="true"></i><span>Alerts</span>
     </a>
 </nav>
+<script src="../Assets/js/flow-feedback.js"></script>
 <script src="../Assets/js/app-header.js"></script>
 </body>
 </html>

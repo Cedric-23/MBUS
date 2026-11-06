@@ -645,3 +645,135 @@
   color: var(--color-success-dark);
 }
 .reserve-page .legend-selected { box-shadow: none; }
+
+/* ------------------------------------------------------------------ */
+/* Loading feedback                                                   */
+/* ------------------------------------------------------------------ */
+.nav-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2000;
+  width: 100%;
+  height: 3px;
+  background: var(--color-accent, #1e90ff);
+  transform: scaleX(0);
+  transform-origin: left;
+  opacity: 0;
+  pointer-events: none;
+}
+.nav-progress.run {
+  opacity: 1;
+  transform: scaleX(0.85);
+  transition: transform 8s cubic-bezier(0.1, 0.6, 0.2, 1);
+}
+.nav-progress.done {
+  opacity: 0;
+  transform: scaleX(1);
+  transition: transform 0.15s, opacity 0.3s 0.15s;
+}
+
+.btn-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  vertical-align: -3px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: btn-spin 0.7s linear infinite;
+}
+@keyframes btn-spin { to { transform: rotate(360deg); } }
+.is-busy { opacity: 0.8; cursor: progress; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-spinner { animation-duration: 2s; }
+  .nav-progress.run { transition: none; transform: scaleX(0.6); }
+}
+
+/* ------------------------------------------------------------------ */
+/* Payment page: compact and quiet                                    */
+/* ------------------------------------------------------------------ */
+.payment-page .main {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: var(--space-4);
+  padding-bottom: calc(var(--space-8) + env(safe-area-inset-bottom));
+}
+.payment-page .page-header { margin-bottom: var(--space-3); }
+.payment-page .page-header-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.payment-page .page-header h1 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+.payment-page .back-btn {
+  display: inline-grid; place-items: center; width: 44px; height: 44px; flex: 0 0 auto;
+  border: 1px solid var(--color-border); border-radius: 50%;
+  background: var(--color-surface); color: var(--color-primary); text-decoration: none;
+}
+.payment-page .payment-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; max-width: none; }
+.payment-page .payment-panel { min-width: 0; }
+.payment-page .card { padding: var(--space-4); border-radius: 16px; margin: 0 0 12px; }
+
+.payment-page .trip-summary .route-badge {
+  display: block; padding: 0; background: none; border-radius: 0;
+  font-size: 1.125rem; font-weight: 700; color: var(--color-primary);
+}
+.payment-page .trip-details {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 14px;
+  margin: 12px 0; padding: 0; list-style: none; font-size: 0.9375rem;
+}
+.payment-page .trip-details li { display: contents; }
+.payment-page .trip-details strong { font-weight: 500; color: var(--color-text-muted); }
+.payment-page .trip-details li > :not(strong) { text-align: right; }
+.payment-page .seats-section {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+  padding-top: 12px; border-top: 1px dashed var(--color-border); font-size: 0.9375rem;
+}
+.payment-page .seats-section > strong { font-weight: 500; color: var(--color-text-muted); }
+.payment-page .seat-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.payment-page .seat-tag {
+  padding: 4px 12px; border-radius: var(--radius-full);
+  background: var(--color-primary-light-bg); color: var(--color-primary); font-weight: 600; font-size: 0.875rem;
+}
+
+.payment-page .timer-box {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 10px 14px;
+  border-radius: 12px; background: var(--color-warning-light); color: var(--color-warning-dark);
+  font-size: 0.9375rem; font-weight: 600;
+}
+.payment-page fieldset { margin: 0 0 14px; padding: 0; border: 0; min-width: 0; }
+.payment-page legend { padding: 0; margin-bottom: 8px; font-size: 0.9375rem; font-weight: 600; }
+.payment-page .payment-method { margin-bottom: 8px; }
+.payment-page .payment-method label {
+  display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px;
+  border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface);
+  font-size: 1rem; font-weight: 500; cursor: pointer;
+}
+.payment-page .payment-method input { position: absolute; opacity: 0; pointer-events: none; }
+.payment-page .payment-method input:checked + label {
+  border-color: var(--color-primary); background: var(--color-primary-light-bg); color: var(--color-primary); font-weight: 600;
+}
+.payment-page .payment-method input:focus-visible + label { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+.payment-page .payment-method { position: relative; }
+.payment-page .form-control { min-height: 48px; font-size: 1rem; border-radius: 12px; }
+.payment-page .form-hint { display: block; margin-top: 6px; color: var(--color-text-muted); font-size: 0.8125rem; }
+.payment-page .btn-block { min-height: 52px; border-radius: 12px; font-size: 1rem; font-weight: 600; }
+.payment-page .cancel-form { margin-top: 10px; }
+.payment-page .cancel-form .btn { background: transparent; border-color: transparent; color: var(--color-error-dark, #c0392b); box-shadow: none; }
+.payment-page .bottom-nav { display: none !important; }
+
+/* Payment methods: the wrapper is only a positioning shell, the label is the card */
+.payment-page .payment-method,
+.payment-page .payment-method:hover,
+.payment-page .payment-method:has(input:checked),
+.payment-page .payment-method.selected {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.payment-page .payment-method label { width: 100%; box-sizing: border-box; }
+.payment-page .payment-method:hover label { border-color: var(--color-primary); }
+.payment-page .trip-details { font-size: 0.9375rem; }
+.payment-page .seats-section { background: none; padding-inline: 0; }
+.payment-page .payment-method input:checked + label { background: #eef3fa; }

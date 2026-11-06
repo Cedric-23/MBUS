@@ -209,6 +209,8 @@ document.getElementById("reserveBtn")
         return;
     }
 
+    const btn = document.getElementById("reserveBtn");
+    setBusy(btn, true, "Reserving");
     const success = await reserveSeats();
 
     if (success) {
@@ -221,6 +223,7 @@ document.getElementById("reserveBtn")
 
     } else {
 
+        setBusy(btn, false);
         showError("Unable to reserve seats.");
 
     }
@@ -238,6 +241,8 @@ document.getElementById("payBtn")
         return;
     }
 
+    const payBtn = document.getElementById("payBtn");
+    setBusy(payBtn, true, "Reserving seats");
     const success = await reserveSeats();
 
     if (success) {
@@ -249,6 +254,7 @@ document.getElementById("payBtn")
 
     } else {
 
+        setBusy(payBtn, false);
         showError("Unable to reserve seats.");
 
     }

@@ -448,6 +448,7 @@ document.addEventListener('DOMContentLoaded', initScheduleCalendar);
     </a>
 </nav>
 
+<script src="../Assets/js/flow-feedback.js"></script>
 <script src="../Assets/js/app-header.js"></script>
 </body>
 </html>
