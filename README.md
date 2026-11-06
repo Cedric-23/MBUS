@@ -87,7 +87,7 @@ Every role uses one **Waiting** tab (the old *Alerts* tab). Waiting requests and
 | Operator | `Operator/waiting.php` — waiting riders for the operator's own buses plus a live map of those buses. Riders page is a seat map only. |
 | Admin | `Admin/waiting.php` — the same board for every bus and every waiting rider. |
 
-Location is required before a dashboard opens. `gps.php` asks once, stores `mbus_gps=1`, and then sends the user to their dashboard (or the page they asked for through `?next=`). Operators share GPS automatically once the gate has passed, and the trip page pins a position immediately when a trip is set to **Departed**. Browsers only expose location over HTTPS (or `localhost`).
+Only operators see the location gate before their dashboard; commuters and admins proceed without enabling GPS. The operator gate uses the browser permission prompt, then auto-shares location silently (no live card/map on operator Home). The trip page pins a position immediately when a trip is set to **Departed**. Browsers only expose location over HTTPS (or `localhost`).
 
 Check the static UI contract and API behavior locally:
 

@@ -9,7 +9,11 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once __DIR__ . '/Includes/gps_gate.php';
 
-$role = strtolower((string)($_SESSION['user_type'] ?? 'commuter'));
+$role = strtolower((string)($_SESSION['user_type'] ?? ''));
+if ($role !== 'operator') {
+    header('Location: ' . mbus_role_home($role));
+    exit;
+}
 $next = mbus_safe_next($_GET['next'] ?? null, $role);
 
 if (mbus_gps_enabled()) {
@@ -38,14 +42,14 @@ if (mbus_gps_enabled()) {
     <section class="gate-card" aria-labelledby="gateTitle">
         <div class="gate-pin" aria-hidden="true"><i class="fa fa-location-crosshairs"></i></div>
         <h1 id="gateTitle">Turn on location</h1>
-        <p class="gate-sub">So you and your operator can see the bus.</p>
+        <p class="gate-sub">So commuters can see your bus.</p>
 
         <button type="button" id="gateEnable" class="gate-cta">
             <i class="fa fa-location-arrow" aria-hidden="true"></i>
             <span>Enable location</span>
         </button>
 
-        <p id="gateStatus" class="gate-status" role="status" aria-live="polite">Required to continue</p>
+        <p id="gateStatus" class="gate-status" role="status" aria-live="polite">Required for operator location sharing</p>
     </section>
 
     <p class="gate-foot">You can turn location off anytime in your browser.</p>

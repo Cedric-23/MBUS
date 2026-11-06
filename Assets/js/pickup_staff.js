@@ -6,7 +6,7 @@
     const token = window.OPERATOR_CSRF_TOKEN || document.querySelector('meta[name="csrf-token"]')?.content || '';
     const status = document.getElementById('operatorTrackingStatus');
 
-    if (status && document.getElementById('enableOperatorGps')) dashboardTracking();
+    if (status && window.MBUS_GPS_ENABLED) dashboardTracking();
     else if (status) trackBus();
 
     function errorText(error) {
@@ -53,26 +53,24 @@
         const schedulesFrom = data => Array.isArray(data.schedules) ? data.schedules : Array.isArray(data.operator_schedules) ? data.operator_schedules : Array.isArray(data.trips) ? data.trips : [];
 
         function renderTrips() {
-            const previous = selected;
-            select.replaceChildren();
-            active.forEach(trip => {
-                const option = document.createElement('option');
-                option.value = String(trip.schedule_id);
-                option.textContent = (trip.bus_number || 'Trip') + ' · ' + (trip.origin || '') + ' → ' + (trip.destination || '');
-                select.append(option);
-            });
-            label.hidden = active.length < 2;
-            select.hidden = active.length < 2;
-            if (active.some(trip => String(trip.schedule_id) === previous)) select.value = previous;
-            else {
+            if (!active.some(trip => String(trip.schedule_id) === selected)) {
                 const preferred = active.find(trip => trip.trip_status === 'Departed') || active.find(trip => trip.trip_status === 'Boarding') || active[0];
                 selected = preferred ? String(preferred.schedule_id) : '';
-                select.value = selected;
                 lastSent = 0;
+            }
+            if (select) {
+                select.replaceChildren();
+                active.forEach(trip => {
+                    const option = document.createElement('option');
+                    option.value = String(trip.schedule_id);
+                    option.textContent = (trip.bus_number || 'Trip') + ' · ' + (trip.origin || '') + ' → ' + (trip.destination || '');
+                    select.append(option);
+                });
+                select.value = selected;
             }
         }
 
-        const chosen = () => active.find(trip => String(trip.schedule_id) === String(select.value || selected)) || null;
+        const chosen = () => active.find(trip => String(trip.schedule_id) === selected) || null;
 
         async function upload() {
             if (!enabled || !latest || document.hidden || uploadBusy) return;
@@ -182,8 +180,8 @@
             startPolling();
         }
 
-        button.addEventListener('click', enable);
-        select.addEventListener('change', () => { selected = select.value; lastSent = 0; if (latest) upload(); });
+        if (button) button.addEventListener('click', enable);
+        if (select) select.addEventListener('change', () => { selected = select.value; lastSent = 0; if (latest) upload(); });
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 stopWatch();
@@ -197,7 +195,7 @@
         });
         window.addEventListener('pagehide', () => { stopWatch(); clearInterval(pollTimer); pollTimer = null; });
 
-        // Location is already allowed (see gps.php), so sharing starts on its own.
+        // Location is already allowed by the operator-only gate; share without a home-screen control.
         if (window.MBUS_GPS_ENABLED) enable();
         else { set('Location is off.', 'off'); if (button) button.hidden = false; }
     }

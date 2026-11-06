@@ -16,11 +16,11 @@ Commuter navigation is Home / Schedule / Live / Trips / Waiting. Live is trackin
 
 ## Location gate
 
-`gps.php` runs before either dashboard. It shows one sentence, one button and nothing else. Tapping **Enable location** requests the browser permission once, stores `mbus_gps=1`, and returns to the requested page (`?next=` is validated to in-app paths). `Includes/gps_gate.php` enforces the cookie on `Commuter/commuter_dashboard.php` and `Operator/operator_dashboard.php`. Browsers only expose location over HTTPS or `localhost`.
+`gps.php` is shown only to operators before the operator dashboard. It uses the MBUS light surface, blue primary action and brief copy; **Enable location** invokes the browser permission prompt, stores `mbus_gps=1`, and returns to the requested operator page (`?next=` is validated to in-app paths). Commuters and admins do not need to grant location and never see this gate. Browsers only expose location over HTTPS or `localhost`.
 
 ## Operator side
 
-Once the gate has passed, `Assets/js/pickup_staff.js` starts sharing automatically on the operator dashboard: it watches position, keeps only one trip selected (the operator can switch when several are active), and posts at most every 8.5 seconds. On `Operator/manage_trips.php` the script sends one immediate fix before watching, so changing a trip to **Departed** pins the bus location right away; the page also shows a short "Departed — pinning your location" banner. Sharing pauses when the tab is hidden and resumes when it returns.
+Once the gate has passed, `Assets/js/pickup_staff.js` starts sharing automatically on the operator dashboard without a visible map, badge, location card or trip selector. Status is available to assistive technology only; the app picks the active trip automatically and posts at most every 8.5 seconds. On `Operator/manage_trips.php` the script sends one immediate fix before watching, so changing a trip to **Departed** pins the bus location right away; the page also shows a short "Departed — pinning your location" banner. Sharing pauses when the tab is hidden and resumes when it returns.
 
 ## API
 

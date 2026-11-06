@@ -9,8 +9,6 @@ if(!isset($_SESSION['user_id'])){
 
 /* Load app config so date() uses the app timezone (Asia/Manila), not the server's UTC default */
 require_once __DIR__ . "/../config/app.php";
-require_once __DIR__ . "/../Includes/gps_gate.php";
-mbus_require_gps('Commuter/commuter_dashboard.php');
 include "../Includes/csrf.php";
 ?>
 

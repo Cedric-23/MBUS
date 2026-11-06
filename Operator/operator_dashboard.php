@@ -89,8 +89,6 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/dashboard-home.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="../Assets/css/live_pickup.css">
     <link rel="stylesheet" href="../Assets/css/gps_status.css">
 </head>
 
@@ -150,17 +148,10 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
         <!-- Dashboard Content -->
         <div class="dashboard-content">
             <p class="dashboard-intro">Keep today's trips and passenger movement on track.</p>
-            <section class="gps-card" aria-labelledby="operator-gps-heading">
-                <div class="gps-card-head">
-                    <h2 id="operator-gps-heading">Bus location</h2>
-                    <span id="operatorTrackingBadge" class="gps-badge">Off</span>
-                </div>
-                <p id="operatorTrackingStatus" role="status" aria-live="polite">Starting location…</p>
-                <button type="button" id="enableOperatorGps" class="btn btn-primary" hidden>Retry location</button>
-                <label for="operatorTrackingTrip" id="operatorTrackingTripLabel" hidden>Active trip</label>
-                <select id="operatorTrackingTrip" aria-describedby="operatorTrackingStatus" hidden></select>
-                <div id="operatorGpsMap" class="gps-map" aria-label="Your shared bus location"></div>
-            </section>
+            <div class="tracking-sr-only" aria-live="polite" role="status">
+                <span id="operatorTrackingStatus">Operator location sharing is active.</span>
+                <select id="operatorTrackingTrip" aria-label="Active trip"></select>
+            </div>
 
             <!-- QUICK ACTIONS -->
             <section class="cards" aria-labelledby="cards-heading">
@@ -207,7 +198,6 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
 
 <script src="../Assets/js/app-header.js"></script>
 <script>window.OPERATOR_CSRF_TOKEN = <?php echo json_encode(csrf_get_token()); ?>; window.MBUS_GPS_ENABLED = true;</script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="../Assets/js/pickup_staff.js"></script>
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="operator_dashboard.php" class="bottom-nav-item active" aria-current="page">

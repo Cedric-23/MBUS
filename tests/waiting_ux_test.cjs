@@ -88,9 +88,11 @@ assert.match(gate, /id="gateEnable"/);
 assert.match(gate, /navigator\.geolocation\.getCurrentPosition/);
 assert.match(gateInclude, /mbus_gps/);
 assert.match(gateInclude, /header\('Location: ' \. \(\$base \?: ''\) \. '\/gps\.php\?next='/);
-for (const dashboard of ['Commuter/commuter_dashboard.php', 'Operator/operator_dashboard.php']) {
-    assert.match(read(dashboard), /mbus_require_gps\(/, `${dashboard} is not gated`);
-}
+assert.doesNotMatch(read('Commuter/commuter_dashboard.php'), /mbus_require_gps|gps_gate/);
+assert.doesNotMatch(read('Admin/admin_dashboard.php'), /mbus_require_gps|gps_gate/);
+assert.match(read('Operator/operator_dashboard.php'), /mbus_require_gps\(/);
+assert.match(gate, /if \(\$role !== 'operator'\)/);
+assert.match(gate, /So commuters can see your bus/);
 const gateWords = gate.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, ' ')
     .replace(/&[a-z]+;/g, ' ').replace(/\s+/g, ' ').trim().split(' ').length;
 assert.ok(gateWords < 60, `gate copy too long: ${gateWords} words`);
@@ -100,4 +102,4 @@ assert.match(tracking, /'locations' => \$locations/);
 assert.match(tracking, /'my_request' => \$myRequest/);
 assert.match(tracking, /public\.bus_live_tracking/);
 
-console.log('PASS waiting rename, brief commuter UX, staff waiting page, GPS gate and live bus payload');
+console.log('PASS waiting rename, brief commuter UX, staff waiting page, operator-only GPS gate and live bus payload');

@@ -24,10 +24,10 @@ assert.match(manage, /csrf_get_token\(\)/);
 // dashboard shares automatically once the location gate allowed it
 assert.match(dashboard, /Includes\/csrf\.php/);
 assert.match(dashboard, /window\.MBUS_GPS_ENABLED = true/);
-assert.match(dashboard, /operatorGpsMap/);
+assert.match(dashboard, /class="tracking-sr-only"/);
 assert.match(dashboard, /id="operatorTrackingStatus"/);
-assert.match(dashboard, /id="operatorTrackingBadge"/);
-assert.match(dashboard, /leaflet@1\.9\.4/);
+assert.doesNotMatch(dashboard, /operatorGpsMap|operatorTrackingBadge|leaflet@1\.9\.4|Bus location/);
+assert.match(dashboard, /gps_status\.css/);
 assert.doesNotMatch(dashboard, /Enable GPS for bus tracking/);
 
 // script: immediate fix then watch, foreground only, short status copy
