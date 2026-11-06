@@ -43,6 +43,7 @@
         var secs = Math.abs(diff);
         var text = secs < 45 ? 'just now' : secs < 3600 ? Math.round(secs / 60) + ' min' : Math.round(secs / 3600) + ' h';
         if (future) return 'in ' + (secs < 60 ? Math.max(1, Math.round(secs)) + ' s' : text);
+        if (text === 'just now') return text;
         return text + (suffix ? ' ' + suffix : ' ago');
     }
 
