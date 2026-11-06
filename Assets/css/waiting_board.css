@@ -211,6 +211,31 @@
 
 .board-bus-pin i { font-size: 10px; }
 
+/* Desktop keeps a compact section bar because the bottom nav is hidden there. */
+.board-topnav { display: none; }
+
+@media (min-width: 769px) {
+  .board-topnav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 6px 0 16px;
+  }
+  .board-topnav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    color: #4a5b70;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .board-topnav a:hover { background: #f1f5f9; }
+  .board-topnav a.is-current { background: #18365d; color: #fff; }
+}
+
 @media (max-width: 420px) {
   .board-filter select { max-width: 130px; }
   .board-stat { padding: 8px 10px; }

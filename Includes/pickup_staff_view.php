@@ -65,6 +65,13 @@ $navItems = $isAdmin
         </div>
     </header>
 
+    <nav class="board-topnav" aria-label="Sections">
+        <?php foreach ($navItems as $item): ?>
+        <a href="<?php echo $item[0]; ?>"><i class="fa <?php echo $item[1]; ?>" aria-hidden="true"></i> <?php echo $item[2]; ?></a>
+        <?php endforeach; ?>
+        <a href="waiting.php" class="is-current" aria-current="page"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
+    </nav>
+
     <p id="staffNotice" class="board-notice" role="status" aria-live="polite" hidden></p>
 
     <section class="board-summary" aria-label="Summary">
