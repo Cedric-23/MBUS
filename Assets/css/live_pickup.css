@@ -62,3 +62,15 @@
 .live-page #trackingMap[hidden] { display: none !important; }
 @media (min-width: 700px) { .live-wait-actions { grid-template-columns: 1fr 1.25fr; } }
 @media (min-width: 900px) { .live-layout { grid-template-columns: minmax(0, 1.5fr) minmax(320px, .85fr); } .live-map-panel { position: sticky; top: 18px; } .live-map { height: min(68vh, 640px); } }
+
+/* Alerts waiting-location picker; intentionally independent of Live bus tracking. */
+.waiting-alert-card { margin: 0 0 var(--space-6, 24px); }
+.waiting-alert-card .live-card-head { align-items: flex-start; }
+.waiting-alert-card .live-card-head h2 { margin: 0 0 8px; }
+.waiting-alert-intro { max-width: 760px; margin: 0; color: var(--color-text-secondary, #667085); font-size: .9375rem; line-height: 1.55; }
+.waiting-picker-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(260px, .8fr); gap: 16px; align-items: start; }
+.waiting-picker-grid > div { min-width: 0; }
+.waiting-picker-grid #waitingMap { height: 340px; min-height: 260px; }
+.waiting-own-request { padding: 12px; border: 1px solid #b4dbc3; border-radius: 12px; background: #f5fbf7; }
+.waiting-alert-card [hidden] { display: none !important; }
+@media (max-width: 700px) { .waiting-picker-grid { grid-template-columns: 1fr; } .waiting-picker-grid #waitingMap { height: 290px; } }

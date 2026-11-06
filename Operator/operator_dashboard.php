@@ -85,6 +85,8 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/dashboard-home.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="../Assets/css/live_pickup.css">
 </head>
 
 <body class="has-sidebar">
@@ -142,6 +144,15 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
         <!-- Dashboard Content -->
         <div class="dashboard-content">
             <p class="dashboard-intro">Keep today's trips and passenger movement on track.</p>
+            <section class="card" aria-labelledby="operator-gps-heading" style="margin:1.5rem 0;padding:1.25rem">
+                <h2 id="operator-gps-heading">Bus live location</h2>
+                <p>Turn on GPS and allow location access in your browser to share your bus position. Location is published only while an assigned trip is Boarding or Departed. Keep this page open and visible; sharing pauses when you leave or hide it. This feature requires HTTPS (or localhost).</p>
+                <button type="button" id="enableOperatorGps" class="btn btn-primary">Enable GPS for bus tracking</button>
+                <p id="operatorTrackingStatus" role="status" aria-live="polite">Location permission not enabled. Choose “Enable GPS for bus tracking” to begin.</p>
+                <label for="operatorTrackingTrip" id="operatorTrackingTripLabel" hidden>Choose active trip</label>
+                <select id="operatorTrackingTrip" aria-describedby="operatorTrackingStatus" hidden></select>
+                <div id="operatorGpsMap" class="live-map" aria-label="Your GPS pin shared with the selected active bus" style="margin-top:1rem;max-width:720px"></div>
+            </section>
 
             <!-- QUICK ACTIONS -->
             <section class="cards" aria-labelledby="cards-heading">
@@ -187,6 +198,9 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
 
 
 <script src="../Assets/js/app-header.js"></script>
+<script>window.OPERATOR_CSRF_TOKEN = <?php echo json_encode(csrf_get_token()); ?>;</script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="../Assets/js/pickup_staff.js"></script>
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="operator_dashboard.php" class="bottom-nav-item active" aria-current="page">
         <i class="fa fa-home" aria-hidden="true"></i><span>Home</span>

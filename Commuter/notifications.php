@@ -94,6 +94,8 @@ $unread_count = (int)($unread_row['count'] ?? 0);
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/notification-page.css">
+    <link rel="stylesheet" href="../Assets/css/live_pickup.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
     <link rel="shortcut icon" href="../Assets/images/mbus_icon.png">
@@ -133,6 +135,25 @@ $unread_count = (int)($unread_row['count'] ?? 0);
 <div class="alert alert-error" role="alert"><?php echo $error; ?></div>
 <?php endif; ?>
 
+<!-- Waiting location: rider selects their own location for the assigned operator. -->
+<section class="live-card waiting-alert-card" aria-labelledby="waitingHeading">
+    <div class="live-card-head"><div><h2 id="waitingHeading">Waiting location</h2><p class="waiting-alert-intro">If you couldn’t reserve, share your location with the operator assigned to an active Boarding or Departed bus. This is your location only; this page does not track the bus.</p></div></div>
+    <p id="waitingMessage" class="live-notice" role="status" aria-live="polite">Choose your bus and location. Nothing is shared until you confirm.</p>
+    <div id="waitingOwnRequest" class="waiting-own-request" hidden><span class="live-status" id="waitingOwnStatus">Waiting</span><p id="waitingOwnDetails" class="live-request-title"></p><p class="live-small">Your waiting location is available to the assigned operator for this trip.</p><button id="cancelWaitingBtn" type="button" class="live-text-button live-danger">Cancel my waiting request</button></div>
+    <div id="waitingPicker">
+        <div class="live-field"><label for="waitingSchedule">Active bus</label><select id="waitingSchedule"><option value="">Loading active buses…</option></select><small>Only buses currently Boarding or Departed are shown.</small></div>
+        <div class="waiting-picker-grid">
+            <div><div id="waitingMap" class="live-map" aria-label="Choose your waiting location on the map"></div><p id="waitingMapMessage" class="live-small">Tap the map or drag the pin to your current location.</p></div>
+            <div><button id="locateWaitingBtn" type="button" class="live-button live-button-secondary">Use my current location (GPS)</button>
+                <details id="waitingCoordinates" class="live-coordinate-entry"><summary>Enter coordinates manually instead</summary><div class="live-coordinate-fields"><label>Latitude<input id="waitingLatitude" type="number" inputmode="decimal" step="any" min="-90" max="90" placeholder="e.g. 14.5995"></label><label>Longitude<input id="waitingLongitude" type="number" inputmode="decimal" step="any" min="-180" max="180" placeholder="e.g. 120.9842"></label></div></details>
+                <div class="live-field"><label for="waitingLabel">Nearby landmark (optional)</label><input id="waitingLabel" type="text" maxlength="100" autocomplete="off" placeholder="e.g. Main Gate bus stop"></div>
+                <p id="waitingCoordinateText" class="live-small">Choose your location using GPS, the map, or coordinates.</p>
+                <p class="live-privacy">Selecting a point does not send it. Review your selected location, then explicitly confirm to share it with the assigned operator.</p>
+                <button id="shareWaitingBtn" type="button" class="live-button live-button-primary" disabled>Share waiting location</button>
+            </div>
+        </div>
+    </div>
+</section>
 <!-- Stats Card -->
 <section class="card" style="margin-bottom: var(--space-6);">
     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4);">
@@ -226,6 +247,9 @@ $unread_count = (int)($unread_row['count'] ?? 0);
     </a>
 </nav>
 
+<script>window.mbusWaitingConfig = <?php echo json_encode(['csrfToken' => csrf_get_token()], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="../Assets/js/commuter_waiting_alerts.js"></script>
 <script src="../Assets/js/app-header.js"></script>
 </body>
 </html>
