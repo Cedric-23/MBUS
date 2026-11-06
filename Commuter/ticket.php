@@ -1,6 +1,7 @@
 <?php
 session_start();
 include "../config/db_connect.php";
+require_once "../Includes/ticket_qr.php";
 
 if(!isset($_SESSION['user_id'])){
     header("Location: ../login.php");
@@ -75,6 +76,7 @@ while($row = mbus_db_fetch_assoc($res_query)){
 }
 
 $seat_list = implode(", ", $seats);
+$qr_token = mbus_ticket_token((int)$schedule_id, (int)$user_id);
 
 /* SCHEDULE INFO */
 $schedule_query = mbus_db_prepare($conn, "
@@ -102,9 +104,10 @@ $data = mbus_db_fetch_assoc($schedule_query);
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
+    <link rel="stylesheet" href="../Assets/css/commuter_mobile.css">
 </head>
 
-<body class="has-bottom-nav">
+<body class="has-bottom-nav ticket-page">
 <header class="page-header" role="banner">
     <div class="page-header-left"><h1>Digital Ticket</h1></div>
     <div class="page-header-right"><div class="profile-menu-wrap">
@@ -132,9 +135,10 @@ $data = mbus_db_fetch_assoc($schedule_query);
         </header>
 
         <!-- TICKET CODE -->
-        <div class="ticket-code-display">
-            <i class="fa fa-qrcode" aria-hidden="true"></i>
-            <span><?php echo !empty($ticket_code) ? $ticket_code : "N/A"; ?></span>
+        <div class="ticket-qr">
+            <div id="ticketQr" class="ticket-qr-box" role="img" aria-label="Boarding QR code" data-token="<?php echo htmlspecialchars($qr_token); ?>"></div>
+            <p class="ticket-qr-hint">Show this QR to the operator when you board</p>
+            <p class="ticket-qr-code"><?php echo !empty($ticket_code) ? htmlspecialchars($ticket_code) : "N/A"; ?></p>
         </div>
 
         <!-- PASSENGER -->
@@ -219,13 +223,23 @@ $data = mbus_db_fetch_assoc($schedule_query);
 
     </div>
 
-    <!-- QR Code placeholder for future enhancement -->
     <div class="ticket-footer">
         <p>This is your official digital ticket. Present this to the bus conductor upon boarding.</p>
     </div>
 
 </div>
 
+<script src="../Assets/js/vendor/qrcode.js"></script>
+<script>
+(function(){
+    var box = document.getElementById('ticketQr');
+    if (!box || typeof qrcode === 'undefined') return;
+    var qr = qrcode(0, 'M');
+    qr.addData(box.dataset.token);
+    qr.make();
+    box.innerHTML = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
+})();
+</script>
 <script>
 // Print ticket functionality
 window.addEventListener('load', function() {

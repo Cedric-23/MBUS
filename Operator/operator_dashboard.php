@@ -99,6 +99,7 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
 
         <nav class="menu-top" aria-label="Operator menu">
             <a href="operator_dashboard.php" aria-current="page"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+            <a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
             <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
             <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
             <a href="notifications.php"><i class="fa fa-bell" aria-hidden="true"></i> Notifications</a>
@@ -190,11 +191,12 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
     <a href="operator_dashboard.php" class="bottom-nav-item active" aria-current="page">
         <i class="fa fa-home" aria-hidden="true"></i><span>Home</span>
     </a>
+    <a href="scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
     <a href="manage_trips.php" class="bottom-nav-item">
         <i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span>
     </a>
     <a href="passengers.php" class="bottom-nav-item">
-        <i class="fa fa-users" aria-hidden="true"></i><span>Passengers</span>
+        <i class="fa fa-users" aria-hidden="true"></i><span>Riders</span>
     </a>
     <a href="notifications.php" class="bottom-nav-item">
         <i class="fa fa-bell" aria-hidden="true"></i><span>Alerts</span>
