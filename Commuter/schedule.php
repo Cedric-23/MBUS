@@ -301,7 +301,7 @@ if($row['trip_status'] !== 'Departed'){
         </button>
         <?php } ?>
         <a class="btn-reserve schedule-action-link<?php echo $action === 'unavailable' ? ' is-disabled' : ''; ?>"
-            <?php if($action !== 'unavailable'){ ?>href="<?php echo $action === 'pickup' ? 'live.php' : 'reserve.php'; ?>?schedule_id=<?php echo (int)$schedule_id; ?>"<?php }else{ ?>aria-disabled="true" tabindex="-1"<?php } ?>><?php echo $action === 'reserve' ? 'Reserve seat' : ($action === 'pickup' ? 'Pick up' : 'Unavailable'); ?></a>
+            <?php if($action !== 'unavailable'){ ?>href="<?php echo $action === 'pickup' ? 'waiting.php' : 'reserve.php'; ?>?schedule_id=<?php echo (int)$schedule_id; ?>"<?php }else{ ?>aria-disabled="true" tabindex="-1"<?php } ?>><?php echo $action === 'reserve' ? 'Reserve seat' : ($action === 'pickup' ? 'Pick up' : 'Unavailable'); ?></a>
     </div>
 </article>
 
@@ -364,7 +364,7 @@ function updateScheduleCard(card) {
         link.setAttribute('aria-disabled', 'true');
         link.setAttribute('tabindex', '-1');
     } else {
-        link.href = (action === 'pickup' ? 'live.php' : 'reserve.php') + '?schedule_id=' + encodeURIComponent(card.dataset.scheduleId);
+        link.href = (action === 'pickup' ? 'waiting.php' : 'reserve.php') + '?schedule_id=' + encodeURIComponent(card.dataset.scheduleId);
         link.removeAttribute('aria-disabled');
         link.removeAttribute('tabindex');
     }
@@ -496,7 +496,7 @@ function initScheduleCalendar() {
             const action = currentScheduleAction(props.action, props.reserve_cutoff, props.unavailable_at);
             info.jsEvent.preventDefault();
             if (action === 'pickup') {
-                window.location.href = 'live.php?schedule_id=' + encodeURIComponent(info.event.id);
+                window.location.href = 'waiting.php?schedule_id=' + encodeURIComponent(info.event.id);
             } else if (action === 'reserve') {
                 if (confirm(`Book ${props.bus_number} - ${props.origin} \u2192 ${props.destination}?\nDeparture: ${props.departure_time}\nAvailable Seats: ${props.available_seats}`)) {
                     window.location.href = 'reserve.php?schedule_id=' + encodeURIComponent(info.event.id);

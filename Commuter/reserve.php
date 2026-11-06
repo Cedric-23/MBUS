@@ -65,11 +65,11 @@ $reject_booking = function(string $action) use ($schedule_id): void {
         http_response_code(409);
         header('Content-Type: text/plain; charset=UTF-8');
         echo $action === 'pickup'
-            ? "Seat reservations are closed. Open live.php?schedule_id=$schedule_id to arrange pickup."
+            ? "Seat reservations are closed. Open waiting.php?schedule_id=$schedule_id to mark your pickup spot."
             : "This schedule is no longer available. Please choose another trip.";
         exit();
     }
-    header("Location: live.php?schedule_id=$schedule_id");
+    header("Location: waiting.php?schedule_id=$schedule_id");
     exit();
 };
 

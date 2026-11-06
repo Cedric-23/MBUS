@@ -38,7 +38,7 @@ $navItems = $isAdmin
     <link rel="stylesheet" href="../Assets/css/waiting_board.css">
 </head>
 <body class="has-bottom-nav waiting-board-page">
-<main class="main" role="main" id="pickupStaff" data-endpoint="../api/pickup.php" data-live-endpoint="../api/live_tracking.php">
+<main class="main" role="main" id="pickupStaff" data-role="<?php echo $pickupStaffRole; ?>" data-endpoint="../api/pickup.php" data-live-endpoint="../api/live_tracking.php">
 
     <header class="page-header board-header">
         <div class="page-header-left">

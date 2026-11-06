@@ -19,12 +19,15 @@ assert.match(html, /id="mapMessage"/);
 assert.match(html, /href="waiting\.php"/);
 assert.match(html, /<span>Waiting<\/span>/);
 assert.doesNotMatch(html, />Alerts</);
+assert.doesNotMatch(html, /Waiting for a bus/);
 assert.equal((html.match(/class="bottom-nav-item/g) || []).length, 5, 'expected five tabs');
 
 // live script: polls, selects a bus that is actually sharing, no sharing controls
 assert.match(source, /No active Boarding\/Departed buses/);
 assert.match(source, /Stale location/);
 assert.match(source, /liveIds/);
+assert.match(source, /map\.setView\(loc, 17/);
+assert.doesNotMatch(source, /fitBounds/);
 assert.match(source, /data\.locations/);
 assert.doesNotMatch(source, /mark_waiting|cancel_waiting/);
 

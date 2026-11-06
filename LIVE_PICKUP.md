@@ -8,11 +8,11 @@ Every bottom navigation bar now has **Waiting** where **Alerts** used to be. Not
 
 | Role | Page | Behaviour |
 |------|------|-----------|
-| Commuter | `Commuter/waiting.php` | Pick the bus, tap **Share my location**, then see a status card with the bus, stop, shared time, expiry and the distance to the bus. **Update my spot** re-sends the current GPS fix; **Cancel** removes the signal. A map, coordinates and stop name sit behind **Adjust location** so the first screen stays short. |
+| Commuter | `Commuter/waiting.php` | Choose a bus first, then pin the pickup spot using current GPS or by tapping/dragging the visible map pin. Confirm **Mark me as waiting** to share the point. The status card shows the bus, stop, shared time, expiry and distance; **Cancel waiting** removes the signal. There is no update action. |
 | Operator | `Operator/waiting.php` | Waiting riders for the operator's own buses, plus a live map of those buses. The Riders page is a seat map only. |
 | Admin | `Admin/waiting.php` | The same board for every bus and every waiting rider. Admin dashboard and schedule pages no longer link to separate waiting screens. |
 
-Commuter navigation is Home / Schedule / Live / Trips / Waiting. Live is tracking only: it lists current-day **Boarding** or **Departed** buses, defaults to a bus that is actually sharing GPS, and labels stale points instead of pretending they are current. Notifications are reached from the profile menu as **Updates**.
+Commuter navigation is Home / Schedule / Live / Trips / Waiting. Live is tracking only: it lists current-day **Boarding** or **Departed** buses, defaults to a bus that is actually sharing GPS, centers tightly on the selected live bus, and labels stale points instead of pretending they are current. Schedule **Pick up** actions open Waiting with that bus preselected. Notifications are reached from the profile menu as **Updates**.
 
 ## Location gate
 

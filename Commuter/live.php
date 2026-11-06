@@ -50,7 +50,7 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
     <div id="liveMessage" class="live-notice" role="status" aria-live="polite">Loading current bus locations…</div>
     <div class="live-layout">
         <section class="live-map-panel live-card" aria-labelledby="mapHeading">
-            <div class="live-card-head"><h2 id="mapHeading">Route map</h2><span id="trackingStatus" class="live-status is-ended">Waiting for trip</span></div>
+            <div class="live-card-head"><h2 id="mapHeading">Bus location</h2><span id="trackingStatus" class="live-status is-ended">Waiting for trip</span></div>
             <div id="trackingMap" class="live-map" aria-label="Live bus map"></div>
             <p id="mapMessage" class="live-map-hint">The bus appears once the driver shares location.</p>
             <div class="live-map-footer"><span id="updatedAt">Location update: —</span><span id="freshness">—</span></div>
@@ -61,7 +61,6 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
                 <div class="live-card-head"><h2 id="tripHeading">Bus in service</h2></div>
                 <div class="live-field"><label for="liveSchedule">Choose a bus</label><select id="liveSchedule" name="schedule_id" disabled><option value="">Loading trips…</option></select></div>
                 <p id="tripRoute" class="live-route-copy">Loading current buses…</p>
-                <p class="live-small">Waiting for a bus? Share your spot in <a href="waiting.php"><strong>Waiting</strong></a>.</p>
             </section>
         </div>
     </div>

@@ -27,6 +27,7 @@
     let map = null;
     let markerLayer = null;
     let fitted = false;
+    const operatorView = root.dataset.role === 'operator';
 
     const node = (tag, text, className) => {
         const element = document.createElement(tag);
@@ -66,7 +67,7 @@
             return;
         }
         try {
-            map = L.map('staffMap', { zoomControl: true }).setView([14.78, 120.25], 11);
+            map = L.map('staffMap', { zoomControl: true }).setView([14.678, 120.266], 15);
             const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '&copy; OpenStreetMap'
@@ -171,14 +172,20 @@
             list.append(card);
         });
 
-        if (map && bounds.length && !fitted) {
+        const selectedBus = visibleBuses.find(bus => valid(bus.latitude, bus.longitude));
+        if (map && selectedBus && (operatorView || selected)) {
+            // Keep a selected/current bus identifiable instead of fitting the route and rider across a town.
+            map.setView([Number(selectedBus.latitude), Number(selectedBus.longitude)], 16, { animate: false });
+            fitted = true;
+        } else if (map && bounds.length && !fitted) {
             map.fitBounds(bounds, { padding: [28, 28], maxZoom: 14 });
             fitted = true;
         }
+        if (map) window.requestAnimationFrame(() => map.invalidateSize({ pan: false }));
     }
 
     function updateFilter() {
-        const selected = filter.value;
+        let selected = filter.value;
         filter.replaceChildren(new Option('All buses', ''));
         const seen = new Set();
         schedules.forEach(schedule => {
@@ -194,6 +201,7 @@
             seen.add(id);
             filter.append(new Option('Bus ' + bus.bus_number + ' · live', id));
         });
+        if (operatorView && !selected && locations.length) selected = String(locations[0].schedule_id);
         if (Array.from(filter.options).some(option => option.value === selected)) filter.value = selected;
     }
 

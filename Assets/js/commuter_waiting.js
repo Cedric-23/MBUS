@@ -10,7 +10,7 @@
         trips: [],
         waiting: null,
         locations: [],
-        selected: '',
+        selected: String((window.mbusWaitingConfig || {}).scheduleId || ''),
         point: null,
         busy: false,
         loading: false,
@@ -120,17 +120,27 @@
             button.addEventListener('click', function () {
                 state.selected = String(trip.schedule_id);
                 renderTrips();
+                updatePinControls();
                 updateShareButton();
             });
             box.append(button);
         });
     }
 
+    function updatePinControls() {
+        var pin = el('waitPin');
+        pin.disabled = !state.selected || state.busy;
+        if (!state.selected) el('waitPinStatus').textContent = 'Choose a bus first';
+        else if (state.point) el('waitPinStatus').textContent = 'Pickup spot pinned';
+        else el('waitPinStatus').textContent = 'Pin your spot on the map or use your location';
+    }
+
     function updateShareButton() {
         var button = el('waitShare');
-        var hasTrip = !!state.selected && !!state.trips.length;
-        button.disabled = state.busy || !hasTrip;
-        el('waitShareLabel').textContent = state.busy ? 'Sharing…' : 'Share my location';
+        var hasTrip = !!state.selected && !!tripFor(state.selected);
+        button.disabled = state.busy || !hasTrip || !state.point;
+        el('waitShareLabel').textContent = state.busy ? 'Saving…' : 'Mark me as waiting';
+        updatePinControls();
     }
 
     function show(view) {
@@ -138,6 +148,9 @@
         el('waitState').hidden = view !== 'state';
         el('waitPicker').hidden = view !== 'picker';
         el('waitEmpty').hidden = view !== 'empty';
+        if (view === 'picker' && state.map) {
+            window.requestAnimationFrame(function () { state.map.invalidateSize({ pan: false }); });
+        }
     }
 
     function renderState() {
@@ -186,11 +199,16 @@
             state.trips = activeTrips(data);
             state.locations = Array.isArray(data.locations) ? data.locations : [];
             state.waiting = data.my_request || null;
+            var expired = !!(state.waiting && state.waiting.status === 'Expired');
+            if (expired) {
+                state.selected = String(state.waiting.schedule_id || state.selected || '');
+                state.waiting = null;
+            }
             if (data.csrf_token) csrf = data.csrf_token;
-            if (!state.selected && state.trips.length) state.selected = String(state.trips[0].schedule_id);
-            if (state.selected && !tripFor(state.selected) && state.trips.length) state.selected = String(state.trips[0].schedule_id);
+            if (state.selected && !tripFor(state.selected)) state.selected = '';
             render();
-            if (!silent) flash('');
+            if (expired) flash('Your previous wait expired. Pin your spot to start again.');
+            else if (!silent) flash('');
         } catch (error) {
             el('waitSkeleton').hidden = true;
             if (!state.trips.length) { show('empty'); }
@@ -233,24 +251,48 @@
                     state.point = [p.lat, p.lng];
                     el('waitLat').value = p.lat.toFixed(6);
                     el('waitLng').value = p.lng.toFixed(6);
+                    el('waitPinStatus').textContent = 'Pickup spot pinned';
+                    updateShareButton();
                 });
             } else {
                 state.marker.setLatLng([lat, lng]);
             }
-            if (center) state.map.setView([lat, lng], 16);
+            if (center) state.map.setView([lat, lng], 17, { animate: true });
         }
+        el('waitPinStatus').textContent = 'Pickup spot pinned';
+        updateShareButton();
         return true;
     }
 
     function initMap() {
         var node = el('waitMap');
         if (!node || typeof L === 'undefined') return;
-        state.map = L.map(node, { zoomControl: false, attributionControl: true }).setView([14.676, 120.27], 12);
+        state.map = L.map(node, { zoomControl: false, attributionControl: true }).setView([14.678, 120.266], 15);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
+            maxZoom: 20,
             attribution: '&copy; OpenStreetMap'
         }).addTo(state.map);
-        state.map.on('click', function (event) { setPoint(event.latlng.lat, event.latlng.lng, false); });
+        state.map.on('click', function (event) {
+            if (!state.selected) { flash('Choose a bus first.', 'error'); return; }
+            setPoint(event.latlng.lat, event.latlng.lng, false);
+        });
+    }
+
+    async function pinCurrentLocation() {
+        if (!state.selected || state.busy) return;
+        var button = el('waitPin');
+        button.disabled = true;
+        el('waitPinStatus').textContent = 'Finding your location…';
+        flash('');
+        try {
+            var point = await currentPosition();
+            setPoint(point[0], point[1], true);
+        } catch (error) {
+            el('waitPinStatus').textContent = 'Could not get location';
+            flash(error.message, 'error');
+        } finally {
+            updatePinControls();
+        }
     }
 
     async function share() {
@@ -260,17 +302,7 @@
         flash('');
         try {
             var point = state.point;
-            if (!point) {
-                try {
-                    point = await currentPosition();
-                    setPoint(point[0], point[1], false);
-                } catch (error) {
-                    flash(error.message, 'error');
-                    var advanced = document.querySelector('.wait-advanced');
-                    if (advanced) advanced.open = true;
-                    throw error;
-                }
-            }
+            if (!point) throw new Error('Pin your pickup spot first.');
             var body = new URLSearchParams({
                 csrf_token: csrf,
                 action: 'mark_waiting',
@@ -323,38 +355,10 @@
         }
     }
 
-    async function resituate() {
-        if (!state.waiting || state.busy) return;
-        state.busy = true;
-        flash('');
-        try {
-            var point = await currentPosition();
-            var body = new URLSearchParams({
-                csrf_token: csrf,
-                action: 'mark_waiting',
-                schedule_id: String(state.waiting.schedule_id),
-                latitude: String(point[0]),
-                longitude: String(point[1])
-            });
-            var label = state.waiting.pickup_label && state.waiting.pickup_label !== 'Pinned pickup point' ? state.waiting.pickup_label : '';
-            if (label) body.set('pickup_label', label.slice(0, 100));
-            await api(endpoint, {
-                method: 'POST',
-                headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-                body: body
-            });
-            flash('Spot updated.', 'success');
-            await load(true);
-        } catch (error) {
-            flash(error.message, 'error');
-        } finally {
-            state.busy = false;
-        }
-    }
 
     el('waitShare').addEventListener('click', share);
     el('waitCancel').addEventListener('click', cancel);
-    el('waitUpdate').addEventListener('click', resituate);
+    el('waitPin').addEventListener('click', pinCurrentLocation);
     el('waitLat').addEventListener('change', function () { setPoint(el('waitLat').value, el('waitLng').value, false); });
     el('waitLng').addEventListener('change', function () { setPoint(el('waitLat').value, el('waitLng').value, false); });
     document.addEventListener('visibilitychange', function () {

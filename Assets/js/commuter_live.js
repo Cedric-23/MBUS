@@ -5,7 +5,7 @@
     const select = el('liveSchedule');
     if (!select) return;
     let trips = [], chosen = '', csrf = (window.mbusLive || {}).csrfToken || '';
-    let map = null, routeLayer = null, busMarker = null, pollTimer = null, loading = false, version = 0;
+    let map = null, busMarker = null, pollTimer = null, loading = false, version = 0;
     const visible = () => !document.hidden;
     function notify(text, type) { el('liveMessage').textContent = text; el('liveMessage').className = 'live-notice' + (type ? ' live-notice-' + type : ''); }
     function number(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }
@@ -17,22 +17,22 @@
     }
     function setStatus(text, live) { el('trackingStatus').textContent = text; el('trackingStatus').className = 'live-status' + (live ? '' : ' is-ended'); }
     if (typeof L !== 'undefined' && el('trackingMap')) {
-        map = L.map('trackingMap').setView([14.676, 120.27], 11);
+        map = L.map('trackingMap', { zoomControl: true }).setView([14.678, 120.266], 15);
         const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
         tiles.on('tileerror', () => { el('mapMessage').textContent = 'Map tiles could not load. Route and bus status remain available; try again when your connection improves.'; });
-        routeLayer = L.layerGroup().addTo(map);
     } else if (el('trackingMap')) { el('trackingMap').hidden = true; el('mapMessage').textContent = 'The map could not load. Live trip status is still available.'; }
     function draw(trip, location) {
         const loc = coords(location);
-        if (routeLayer) routeLayer.clearLayers();
-        if (busMarker && map) { map.removeLayer(busMarker); busMarker = null; }
-        const bounds = [];
-        if (trip && routeLayer) [
-            { name: trip.origin || trip.origin_name || 'Route origin', lat: trip.origin_lat, lng: trip.origin_lng },
-            { name: trip.destination || trip.destination_name || 'Route endpoint', lat: trip.destination_lat, lng: trip.destination_lng }
-        ].forEach(stop => { const lat = number(stop.lat), lng = number(stop.lng); if (lat === null || lng === null || lat < -90 || lat > 90 || lng < -180 || lng > 180) return; const p = [lat, lng]; bounds.push(p); L.circleMarker(p, { radius: 7, color: '#18365d', fillColor: '#fff', fillOpacity: 1, weight: 3 }).addTo(routeLayer).bindPopup(document.createTextNode(stop.name)); });
-        if (loc && map) { busMarker = L.marker(loc, { title: 'Bus location' }).addTo(map).bindPopup('Bus location'); bounds.push(loc); }
-        if (bounds.length && map) map.fitBounds(bounds, { padding: [28, 28], maxZoom: 14 });
+        if (!map) return loc;
+        if (!loc) {
+            if (busMarker) { map.removeLayer(busMarker); busMarker = null; }
+            return null;
+        }
+        if (!busMarker) busMarker = L.marker(loc, { title: 'Live bus location' }).addTo(map).bindPopup('Live bus location');
+        else busMarker.setLatLng(loc);
+        // Bus tracking should stay at street level; fitting route endpoints makes the bus look lost.
+        map.setView(loc, 17, { animate: false });
+        window.requestAnimationFrame(() => map.invalidateSize({ pan: false }));
         return loc;
     }
     async function request(url) {
@@ -72,7 +72,7 @@
             el('updatedAt').textContent = 'Location update: ' + (updated ? new Date(updated).toLocaleString() : 'Not available');
             el('freshness').textContent = fresh ? 'Updated ' + Math.floor(age / 1000) + ' sec ago' : busLocation ? 'Location is stale' : 'No bus GPS available';
             setStatus(fresh ? 'Live location' : busLocation ? 'Stale location' : 'No bus GPS', !!fresh);
-            el('mapMessage').textContent = fresh ? 'Bus location is being shared by the operator.' : busLocation ? 'Last reported bus location may be out of date. Do not rely on it as current.' : trip ? 'The operator has not shared a bus GPS location. No bus marker is shown.' : 'Select one of your active reservations to view its route.';
+            el('mapMessage').textContent = fresh ? 'Bus location is being shared by the operator.' : busLocation ? 'Last reported bus location may be out of date. Do not rely on it as current.' : trip ? 'The operator has not shared a bus GPS location. No bus marker is shown.' : 'Choose an active bus to view its location.';
             if (!trips.length) notify('No bus is currently Boarding or Departed. Check again when your bus is in service.');
             else if (!busLocation) notify('Trip loaded. Bus GPS is not currently available; no live bus marker is shown.');
             else if (!fresh) notify('The last bus location is stale. Wait for a fresh operator update.', 'error');

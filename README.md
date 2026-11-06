@@ -83,7 +83,7 @@ Every role uses one **Waiting** tab (the old *Alerts* tab). Waiting requests and
 
 | Role | What Waiting does |
 |------|-------------------|
-| Commuter | `Commuter/waiting.php` — pick a bus, one tap shares the current spot, and the page then shows a status card (bus, stop, shared time, expiry, how far the bus is). Cancelling or updating the spot stays one tap away. |
+| Commuter | `Commuter/waiting.php` — choose a bus, pin your pickup spot on the map or with GPS, then confirm **Mark me as waiting**. The status card shows the bus, stop, shared time, expiry and distance; cancel is available, with no update action. |
 | Operator | `Operator/waiting.php` — waiting riders for the operator's own buses plus a live map of those buses. Riders page is a seat map only. |
 | Admin | `Admin/waiting.php` — the same board for every bus and every waiting rider. |
 

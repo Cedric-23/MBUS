@@ -10,6 +10,8 @@ const manage = read('Operator/manage_trips.php');
 const riders = read('Operator/passengers.php');
 const dashboard = read('Operator/operator_dashboard.php');
 const script = read('Assets/js/pickup_staff.js');
+const waitingBoard = read('Includes/pickup_staff_view.php');
+const waitingBoardScript = read('Assets/js/admin_waiting.js');
 
 // trip page keeps status updates and focuses the bus that just departed
 assert.match(manage, /data-trip-status=/);
@@ -43,6 +45,10 @@ assert.match(script, /MBUS_GPS_ENABLED/);
 assert.match(script, /setInterval\(poll, 10000\)/);
 assert.match(script, /operatorTrackingBadge/);
 assert.doesNotMatch(script, /riderFeed/);
+assert.match(waitingBoard, /data-role="<\?php echo \$pickupStaffRole; \?>"/);
+assert.match(waitingBoardScript, /const operatorView = root\.dataset\.role === 'operator'/);
+assert.match(waitingBoardScript, /map\.setView\(\[Number\(selectedBus\.latitude\), Number\(selectedBus\.longitude\)\], 16/);
+assert.match(waitingBoardScript, /if \(operatorView && !selected && locations\.length\)/);
 
 // riders page is a seat map only
 assert.doesNotMatch(riders, /riderLive|liveMap|waitingList|pickup_staff\.js|leaflet/i);

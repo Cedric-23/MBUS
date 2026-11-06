@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/app.php';
 session_start();
 require_once __DIR__ . '/../Includes/csrf.php';
+$schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: 0;
 
 if (!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?? '')) !== 'commuter') {
     header('Location: ../login.php');
@@ -68,44 +69,47 @@ if (!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?
             <div><dt>Bus</dt><dd id="waitBusGps">—</dd></div>
         </dl>
         <div class="wait-actions">
-            <button type="button" id="waitUpdate" class="wait-btn wait-btn-ghost">Update my spot</button>
-            <button type="button" id="waitCancel" class="wait-btn wait-btn-danger">Cancel</button>
+            <button type="button" id="waitCancel" class="wait-btn wait-btn-danger">Cancel waiting</button>
         </div>
     </section>
 
-    <!-- State: choose a bus and share -->
-    <section id="waitPicker" class="wait-card" aria-labelledby="waitPickerTitle" hidden>
-        <h2 id="waitPickerTitle">Where are you waiting?</h2>
-        <p class="wait-lead">Pick your bus, then share your spot.</p>
+    <!-- State: choose a bus, pin the pickup point, then mark waiting -->
+    <section id="waitPicker" class="wait-card wait-picker-card" aria-labelledby="waitPickerTitle" hidden>
+        <h2 id="waitPickerTitle">Mark yourself as waiting</h2>
+        <p class="wait-lead">Choose a bus, pin your spot, then confirm.</p>
 
+        <div class="wait-step-heading"><span>1</span><h3>Choose your bus</h3></div>
         <div id="waitTrips" class="wait-trips" role="radiogroup" aria-label="Active buses"></div>
 
-        <button type="button" id="waitShare" class="wait-btn wait-btn-primary" disabled>
-            <i class="fa fa-location-arrow" aria-hidden="true"></i>
-            <span id="waitShareLabel">Share my location</span>
+        <div class="wait-step-heading"><span>2</span><h3>Pin your pickup spot</h3></div>
+        <button type="button" id="waitPin" class="wait-btn wait-btn-location" disabled>
+            <i class="fa fa-location-crosshairs" aria-hidden="true"></i>
+            <span>Use my current location</span>
         </button>
-        <p id="waitHint" class="wait-hint">Your spot is shared with the driver only.</p>
+        <p id="waitPinStatus" class="wait-pin-status" role="status" aria-live="polite">Choose a bus first</p>
+        <div id="waitMap" class="wait-map" aria-label="Tap the map or drag the pin to set your pickup spot"></div>
+        <p class="wait-map-tip">Tap the map or move the pin to adjust.</p>
 
-        <details class="wait-advanced">
-            <summary>Adjust location</summary>
-            <div class="wait-advanced-body">
-                <div id="waitMap" class="wait-map" aria-label="Choose your waiting point on the map"></div>
-                <div class="wait-coords">
-                    <label>Latitude<input id="waitLat" type="number" inputmode="decimal" step="any" min="-90" max="90" placeholder="14.6780"></label>
-                    <label>Longitude<input id="waitLng" type="number" inputmode="decimal" step="any" min="-180" max="180" placeholder="120.2660"></label>
-                </div>
-                <label class="wait-landmark">Stop name <span>(optional)</span>
-                    <input id="waitLabel" type="text" maxlength="100" autocomplete="off" placeholder="e.g. Main gate">
-                </label>
-            </div>
-        </details>
+        <div class="wait-optional">
+            <label class="wait-landmark">Stop name <span>(optional)</span>
+                <input id="waitLabel" type="text" maxlength="100" autocomplete="off" placeholder="e.g. Main gate">
+            </label>
+        </div>
+        <div class="wait-coords" hidden>
+            <label>Latitude<input id="waitLat" type="number" inputmode="decimal" step="any" min="-90" max="90"></label>
+            <label>Longitude<input id="waitLng" type="number" inputmode="decimal" step="any" min="-180" max="180"></label>
+        </div>
+        <button type="button" id="waitShare" class="wait-btn wait-btn-primary" disabled>
+            <i class="fa fa-hourglass-half" aria-hidden="true"></i>
+            <span id="waitShareLabel">Mark me as waiting</span>
+        </button>
     </section>
 
     <!-- State: no active bus -->
     <section id="waitEmpty" class="wait-card wait-empty" hidden>
         <i class="fa fa-bus" aria-hidden="true"></i>
-        <h2>No bus in service</h2>
-        <p>Waiting opens when a bus starts boarding.</p>
+        <h2>No bus available</h2>
+        <p>Check back when a bus is boarding or in service.</p>
         <a href="schedule.php" class="wait-btn wait-btn-ghost">See schedule</a>
     </section>
 
@@ -129,7 +133,7 @@ if (!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?
     <a href="waiting.php" class="bottom-nav-item active" aria-current="page"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
 </nav>
 
-<script>window.mbusWaitingConfig = <?php echo json_encode(['csrfToken' => csrf_get_token()], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
+<script>window.mbusWaitingConfig = <?php echo json_encode(['csrfToken' => csrf_get_token(), 'scheduleId' => $schedule_id], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="../Assets/js/commuter_waiting.js"></script>
 <script src="../Assets/js/app-header.js"></script>
