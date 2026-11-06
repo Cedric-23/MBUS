@@ -191,6 +191,12 @@ $where
 ORDER BY schedule.departure_time ASC";
 
 $result=mbus_db_query($conn,$sql);
+// mbus_db_query() returns false when the SQL itself fails. Keep that visible instead of
+// showing it as an empty list ("No schedules available"); details are already in the server log.
+$query_failed = ($result === false);
+if($query_failed){
+    error_log("Commuter/schedule.php list query failed (filter=$filter): " . ($conn->lastError ?? 'unknown error'));
+}
 ?>
 
 <?php if(mbus_db_num_rows($result)>0){ ?>
@@ -278,6 +284,13 @@ else{echo"<span class='badge badge-success'>$available / $capacity</span>";}
 
 </tbody>
 </table>
+</div>
+
+<?php }elseif($query_failed){ ?>
+
+<div class="card empty-state" role="alert">
+<h3>Schedules couldn't be loaded.</h3>
+<p>Something went wrong while loading the schedule. Please refresh, or try again in a moment.</p>
 </div>
 
 <?php }else{ ?>
