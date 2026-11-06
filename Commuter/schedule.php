@@ -92,9 +92,10 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
+    <link rel="stylesheet" href="../Assets/css/commuter_mobile.css">
 </head>
 
-<body class="has-bottom-nav">
+<body class="has-bottom-nav schedule-page">
 
 <main class="main" role="main">
 
@@ -118,12 +119,14 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
             </div>
 </header>
 
-<!-- Route Map Container -->
-<div id="scheduleMapContainer" class="map-container">
-    <div id="scheduleMap" class="map-canvas" style="display: none;"></div>
-    <div id="mapPlaceholder" class="map-placeholder">
-        <p>Click "View Route" on any schedule to see the route on the map</p>
+<!-- Route map: opens as a bottom sheet when "Route" is tapped -->
+<div id="scheduleMapBackdrop" class="map-backdrop" hidden></div>
+<div id="scheduleMapContainer" class="map-sheet" role="dialog" aria-modal="true" aria-labelledby="scheduleMapTitle" hidden>
+    <div class="map-sheet-head">
+        <h2 id="scheduleMapTitle">Route</h2>
+        <button type="button" id="scheduleMapClose" class="map-close" aria-label="Close map"><i class="fa fa-xmark" aria-hidden="true"></i></button>
     </div>
+    <div id="scheduleMap" class="map-canvas"></div>
 </div>
 
 <!-- List View -->
@@ -210,25 +213,13 @@ if($query_failed){
 }
 ?>
 
-<?php if(mbus_db_num_rows($result)>0){ ?>
+<?php if(mbus_db_num_rows($result)>0){
+$today_key = $todayStart->format('Y-m-d');
+$tomorrow_key = $tomorrowStart->format('Y-m-d');
+$last_day_key = null;
+?>
 
-<div class="table-responsive" role="region" aria-label="Bus schedules" tabindex="0">
-<table class="table table-striped" data-schedule-table>
-
-<thead>
-<tr>
-<th scope="col">Bus Number</th>
-<th scope="col">Route</th>
-<th scope="col">Departure</th>
-<th scope="col">Arrival</th>
-<th scope="col">Status</th>
-<th scope="col">Available Seats</th>
-<th scope="col">Map</th>
-<th scope="col">Action</th>
-</tr>
-</thead>
-
-<tbody>
+<div class="bus-list" role="list" aria-label="Bus schedules" data-schedule-table>
 <?php while($row=mbus_db_fetch_assoc($result)){
 $schedule_id=$row['schedule_id'];
 
@@ -241,74 +232,92 @@ $seat_data=$seat_result === false ? false : mbus_db_fetch_assoc($seat_result);
 $reserved=(int)($seat_data['total_reserved'] ?? 0);
 $capacity=(int)$row['capacity'];
 $available=max(0,$capacity-$reserved);
+
+$dep_ts=strtotime($row['departure_time']);
+$arr_ts=strtotime($row['arrival_time']);
+$day_key=date('Y-m-d',$dep_ts);
+if($day_key!==$last_day_key){
+    $last_day_key=$day_key;
+    $heading = $day_key===$today_key ? 'Today' : ($day_key===$tomorrow_key ? 'Tomorrow' : date('l',$dep_ts));
 ?>
+<h2 class="day-heading"><?php echo $heading; ?><time datetime="<?php echo $day_key; ?>"><?php echo date('M j',$dep_ts); ?></time></h2>
+<?php }
 
-<tr data-schedule-id="<?php echo $schedule_id; ?>">
+$mins = ($arr_ts && $arr_ts > $dep_ts) ? (int)round(($arr_ts-$dep_ts)/60) : 0;
+$duration = $mins>0 ? (intdiv($mins,60)>0 ? intdiv($mins,60).' hr'.($mins%60 ? ' '.($mins%60).' min' : '') : $mins.' min') : '';
 
-<td data-label="Bus Number"><?php echo htmlspecialchars($row['bus_number']); ?></td>
-
-<td data-label="Route">
-<span class="badge badge-primary route-badge"><?php echo htmlspecialchars($row['origin']); ?> &#8594; <?php echo htmlspecialchars($row['destination']); ?></span>
-</td>
-
-<td data-label="Departure"><?php echo date("F d, g:i A",strtotime($row['departure_time'])); ?></td>
-<td data-label="Arrival"><?php echo date("F d, g:i A",strtotime($row['arrival_time'])); ?></td>
-
-<td data-label="Status">
-<?php
 $status=strtolower($row['schedule_status']);
-if($status=="active"){echo"<span class='badge badge-success'>Active</span>";}
-elseif($status=="cancelled"){echo"<span class='badge badge-error'>Cancelled</span>";}
-elseif($status=="delayed"){echo"<span class='badge badge-warning'>Delayed</span>";}
-else{echo"<span class='badge badge-secondary'>".htmlspecialchars($row['schedule_status'])."</span>";}
+$has_map = $row['origin_lat'] && $row['origin_lng'] && $row['destination_lat'] && $row['destination_lng'];
+$chip_class = $available<=0 ? 'full' : ($available<=5 ? 'low' : 'ok');
 ?>
-</td>
 
-<td data-label="Available Seats" class="seat-availability">
-<?php
-if($available<=0){echo"<span class='badge badge-error'>FULL</span>";}
-else{echo"<span class='badge badge-success'>$available / $capacity</span>";}
-?>
-</td>
+<article class="bus-card<?php echo $available<=0 ? ' is-full' : ''; ?>" role="listitem" data-schedule-id="<?php echo (int)$schedule_id; ?>">
+    <div class="bus-card-top">
+        <span class="bus-name"><i class="fa fa-bus" aria-hidden="true"></i><?php echo htmlspecialchars($row['bus_number']); ?></span>
+        <?php if($status!=="active"){ ?>
+            <span class="status-chip"><?php echo htmlspecialchars($row['schedule_status']); ?></span>
+        <?php }else{ ?>
+            <span class="seat-chip <?php echo $chip_class; ?>"><?php echo $available<=0 ? 'Fully booked' : $available.' seats left'; ?></span>
+        <?php } ?>
+    </div>
 
-<td data-label="Map">
-<?php if($row['origin_lat'] && $row['origin_lng'] && $row['destination_lat'] && $row['destination_lng']){ ?>
-<button type="button" class="btn btn-sm btn-outline view-route-btn" onclick="viewRoute(<?php echo $row['origin_lat']; ?>, <?php echo $row['origin_lng']; ?>, <?php echo $row['destination_lat']; ?>, <?php echo $row['destination_lng']; ?>, '<?php echo htmlspecialchars($row['origin'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($row['destination'], ENT_QUOTES); ?>')">
-<i class="fa fa-map" aria-hidden="true"></i> View Route
-</button>
-<?php } else { ?>
-<span class="text-muted" style="font-size: var(--fs-xs);">No map data</span>
+    <div class="timetable">
+        <div class="stop">
+            <span class="stop-time"><?php echo date('g:i',$dep_ts); ?><small><?php echo date('A',$dep_ts); ?></small></span>
+            <span class="stop-dot" aria-hidden="true"></span>
+            <span class="stop-name"><?php echo htmlspecialchars($row['origin']); ?></span>
+        </div>
+        <div class="leg">
+            <span class="leg-note"><?php echo $duration ? htmlspecialchars($duration) : ''; ?></span>
+            <span class="leg-line" aria-hidden="true"></span>
+            <span></span>
+        </div>
+        <div class="stop">
+            <span class="stop-time"><?php echo $arr_ts ? date('g:i',$arr_ts) : '--'; ?><small><?php echo $arr_ts ? date('A',$arr_ts) : ''; ?></small></span>
+            <span class="stop-dot end" aria-hidden="true"></span>
+            <span class="stop-name"><?php echo htmlspecialchars($row['destination']); ?></span>
+        </div>
+    </div>
+
+    <div class="bus-actions">
+        <?php if($has_map){ ?>
+        <button type="button" class="btn-route view-route-btn"
+            data-origin-lat="<?php echo htmlspecialchars($row['origin_lat']); ?>"
+            data-origin-lng="<?php echo htmlspecialchars($row['origin_lng']); ?>"
+            data-dest-lat="<?php echo htmlspecialchars($row['destination_lat']); ?>"
+            data-dest-lng="<?php echo htmlspecialchars($row['destination_lng']); ?>"
+            data-origin="<?php echo htmlspecialchars($row['origin'], ENT_QUOTES); ?>"
+            data-dest="<?php echo htmlspecialchars($row['destination'], ENT_QUOTES); ?>">
+            <i class="fa fa-map" aria-hidden="true"></i>Route
+        </button>
+        <?php } ?>
+        <?php if($available<=0 || $status!=="active"){ ?>
+            <span class="btn-reserve is-disabled" aria-disabled="true"><?php echo $available<=0 ? 'Fully booked' : 'Unavailable'; ?></span>
+        <?php }else{ ?>
+            <a href="reserve.php?schedule_id=<?php echo (int)$schedule_id; ?>" class="btn-reserve">Reserve seat</a>
+        <?php } ?>
+    </div>
+</article>
+
 <?php } ?>
-</td>
-
-<td data-label="Action">
-<?php if($available<=0){ ?>
-<button type="button" class="btn btn-sm btn-disabled" disabled aria-disabled="true">Full</button>
-<?php }else{ ?>
-<a href="reserve.php?schedule_id=<?php echo $schedule_id; ?>" class="btn btn-sm btn-primary">Select</a>
-<?php } ?>
-</td>
-
-</tr>
-
-<?php } ?>
-
-</tbody>
-</table>
 </div>
 
 <?php }elseif($query_failed){ ?>
 
 <div class="card empty-state" role="alert">
+<span class="empty-icon" aria-hidden="true"><i class="fa fa-triangle-exclamation"></i></span>
 <h3>Schedules couldn't be loaded.</h3>
-<p>Something went wrong while loading the schedule. Please refresh, or try again in a moment.</p>
+<p>Something went wrong while loading the schedule. Refresh the page or try again in a moment.</p>
+<a class="empty-action" href="schedule.php?filter=<?php echo htmlspecialchars($filter); ?>">Refresh</a>
 </div>
 
 <?php }else{ ?>
 
 <div class="card empty-state" role="status">
+<span class="empty-icon" aria-hidden="true"><i class="fa fa-bus"></i></span>
 <h3>No schedules available.</h3>
-<p>There are currently no available schedules for this selected filter.</p>
+<p>Nothing is scheduled for this filter yet.</p>
+<?php if($filter!=="all"){ ?><a class="empty-action" href="schedule.php?filter=all">See all upcoming</a><?php } ?>
 </div>
 
 <?php } ?>
@@ -340,53 +349,50 @@ function initScheduleMap() {
     });
 }
 
+function openMapSheet(open) {
+    const sheet = document.getElementById("scheduleMapContainer");
+    const backdrop = document.getElementById("scheduleMapBackdrop");
+    sheet.hidden = !open;
+    backdrop.hidden = !open;
+    document.body.style.overflow = open ? "hidden" : "";
+    if (open) { document.getElementById("scheduleMapClose").focus(); }
+}
+
 function viewRoute(originLat, originLng, destLat, destLng, originName, destName) {
-    // Show map, hide placeholder
-    document.getElementById("scheduleMap").style.display = "block";
-    document.getElementById("mapPlaceholder").style.display = "none";
+    document.getElementById("scheduleMapTitle").textContent = originName + " to " + destName;
+    openMapSheet(true);
+    if (typeof google === "undefined" || !scheduleMap) { return; }
 
-    // Clear previous route
-    if (scheduleDirectionsRenderer) {
-        scheduleDirectionsRenderer.setDirections({routes: []});
-    }
+    google.maps.event.trigger(scheduleMap, "resize");
+    scheduleDirectionsRenderer.setDirections({routes: []});
 
-    // Create markers
-    const originMarker = new google.maps.Marker({
-        position: { lat: originLat, lng: originLng },
-        map: scheduleMap,
-        title: originName,
-        label: "A"
-    });
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend({ lat: originLat, lng: originLng });
+    bounds.extend({ lat: destLat, lng: destLng });
+    scheduleMap.fitBounds(bounds);
 
-    const destMarker = new google.maps.Marker({
-        position: { lat: destLat, lng: destLng },
-        map: scheduleMap,
-        title: destName,
-        label: "B"
-    });
-
-    // Draw route
-    const request = {
+    scheduleDirectionsService.route({
         origin: { lat: originLat, lng: originLng },
         destination: { lat: destLat, lng: destLng },
         travelMode: google.maps.TravelMode.DRIVING
-    };
-
-    scheduleDirectionsService.route(request, function(result, status) {
-        if (status === "OK") {
-            scheduleDirectionsRenderer.setDirections(result);
-
-            // Fit bounds to show entire route
-            const bounds = new google.maps.LatLngBounds();
-            bounds.extend({ lat: originLat, lng: originLng });
-            bounds.extend({ lat: destLat, lng: destLng });
-            scheduleMap.fitBounds(bounds);
-        }
+    }, function(result, status) {
+        if (status === "OK") { scheduleDirectionsRenderer.setDirections(result); }
     });
-
-    // Scroll to map
-    document.getElementById("scheduleMapContainer").scrollIntoView({ behavior: "smooth" });
 }
+
+document.addEventListener("click", function(e) {
+    const btn = e.target.closest(".view-route-btn");
+    if (btn) {
+        viewRoute(parseFloat(btn.dataset.originLat), parseFloat(btn.dataset.originLng),
+                  parseFloat(btn.dataset.destLat), parseFloat(btn.dataset.destLng),
+                  btn.dataset.origin, btn.dataset.dest);
+    } else if (e.target.closest("#scheduleMapClose") || e.target.id === "scheduleMapBackdrop") {
+        openMapSheet(false);
+    }
+});
+document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") { openMapSheet(false); }
+});
 
 function initScheduleCalendar() {
     const calendarEl = document.getElementById('calendar');

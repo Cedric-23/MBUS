@@ -255,49 +255,18 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
+    <link rel="stylesheet" href="../Assets/css/commuter_mobile.css">
 </head>
 
-<body class="has-sidebar">
-
-<!-- Mobile Sidebar Toggle -->
-<button class="sidebar-toggle btn btn-icon" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
-    <i class="fa fa-bars" aria-hidden="true"></i>
-</button>
-
-<!-- Sidebar Overlay -->
-<div class="sidebar-overlay" onclick="toggleSidebar()" aria-hidden="true"></div>
-
-<aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
-
-<div class="logo-container">
-<img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo">
-</div>
-
-<h2>Commuter</h2>
-
-<nav class="menu-top" aria-label="Commuter menu">
-<a href="commuter_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
-<a href="my_reservations.php"><i class="fa fa-ticket" aria-hidden="true"></i> My Reservations</a>
-<a href="history.php"><i class="fa fa-history" aria-hidden="true"></i> History</a>
-<a href="profile.php"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
-<a href="verification.php"><i class="fa fa-id-card" aria-hidden="true"></i> Verification</a>
-</nav>
-
-<div class="menu-bottom">
-<a href="../logout.php" class="logout-btn btn btn-outline btn-block">
-<i class="fa fa-sign-out" aria-hidden="true"></i> Logout
-</a>
-</div>
-
-</aside>
+<body class="reserve-page">
 
 <main class="main" role="main">
 
 <header class="page-header">
-    <h1>Select Your Seat</h1>
-    <a href="schedule.php" class="btn btn-outline btn-sm">
-        <i class="fa fa-arrow-left" aria-hidden="true"></i> Back to Schedules
-    </a>
+    <div class="page-header-left">
+        <a href="schedule.php" class="back-btn" aria-label="Back to schedules"><i class="fa fa-arrow-left" aria-hidden="true"></i></a>
+        <h1>Choose your seats</h1>
+    </div>
 
             <div class="page-header-right">
                 <div class="profile-menu-wrap">
@@ -323,15 +292,24 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
 
 <div class="card trip-info-card">
 
-<div class="route-header">
-    <span class="route-badge"><?php echo htmlspecialchars($route_data['origin']); ?> &#8594; <?php echo htmlspecialchars($route_data['destination']); ?></span>
-    <span class="seat-counter"><?php echo $available_seats; ?>/<?php echo $capacity; ?> seats available</span>
+<div class="trip-top">
+    <p class="trip-route"><?php echo htmlspecialchars($route_data['origin']); ?> <i class="fa fa-arrow-right" aria-hidden="true"></i> <?php echo htmlspecialchars($route_data['destination']); ?></p>
+    <?php $seat_state = $available_seats<=0 ? 'full' : ($available_seats<=5 ? 'low' : ''); ?>
+    <span class="seat-counter <?php echo $seat_state; ?>"><?php echo $available_seats; ?> seats left</span>
 </div>
 
+<ul class="trip-facts">
+    <li><i class="fa fa-clock" aria-hidden="true"></i><?php echo date("D, M j \\a\\t g:i A", strtotime($route_data['departure_time'])); ?></li>
+    <li><i class="fa fa-bus" aria-hidden="true"></i><?php echo htmlspecialchars($route_data['bus_number']); ?></li>
+</ul>
+
 <?php if($route_data['origin_lat'] && $route_data['origin_lng'] && $route_data['destination_lat'] && $route_data['destination_lng']){ ?>
-<div class="route-map-container">
-    <div id="reserveMap" class="map-canvas" style="height: 250px;"></div>
-</div>
+<details class="route-map-details" id="routeMapDetails">
+    <summary><i class="fa fa-map" aria-hidden="true"></i>View route map</summary>
+    <div class="route-map-container">
+        <div id="reserveMap" class="map-canvas"></div>
+    </div>
+</details>
 <?php } ?>
 
 <div class="seat-legend" role="list" aria-label="Seat status legend">
@@ -352,6 +330,8 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
 </div>
 
 <div class="card seat-map-card">
+
+<div class="bus-front" aria-hidden="true"><i class="fa fa-steering-wheel"></i> Front of bus</div>
 
 <div class="seat-map" role="grid" aria-label="Bus seat map">
 
@@ -529,141 +509,75 @@ function initReserveMap() {
 }
 </script>
 
+<script>
+document.getElementById('routeMapDetails')?.addEventListener('toggle', function(){
+    if (this.open && typeof google !== 'undefined' && reserveMap) {
+        google.maps.event.trigger(reserveMap, 'resize');
+        const b = new google.maps.LatLngBounds();
+        b.extend(reserveMap.getCenter());
+        reserveMap.setCenter(reserveMap.getCenter());
+    }
+});
+</script>
+
 <script src="../Assets/js/commuter_reserve.js"></script>
 
+<div class="seat-bar" id="seatBar">
+    <div class="seat-bar-info">
+        <span class="seat-bar-title" id="seatBarTitle">Pick your seats</span>
+        <span class="seat-bar-sub" id="seatBarSub">Tap an available seat</span>
+    </div>
+    <button type="button" class="seat-bar-btn" id="seatBarBtn">Choose seats</button>
+</div>
+
 <script>
-let notificationDropdownOpen = false;
+/* Sticky seat bar (phones): shows the live selection and walks to the next missing step */
+(function(){
+    const bar = document.getElementById('seatBar');
+    const title = document.getElementById('seatBarTitle');
+    const sub = document.getElementById('seatBarSub');
+    const btn = document.getElementById('seatBarBtn');
+    const pickup = document.getElementById('pickup');
+    const dest = document.getElementById('destination');
+    if (!bar) return;
 
-// Toggle sidebar for mobile
-function toggleSidebar() {
-    const sidebar = document.querySelector('.sidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    const toggle = document.querySelector('.sidebar-toggle');
-    
-    const isOpen = sidebar.classList.toggle('open');
-    overlay.classList.toggle('active');
-    
-    if (toggle) {
-        toggle.setAttribute('aria-expanded', isOpen);
-    }
-    
-    // Add/remove body class for CSS to hide hamburger
-    document.body.classList.toggle('sidebar-open', isOpen);
-    
-    // Trap focus when sidebar is open on mobile
-    if (isOpen) {
-        document.body.style.overflow = 'hidden';
-        const firstLink = sidebar.querySelector('a, button');
-        if (firstLink) firstLink.focus();
-    } else {
-        document.body.style.overflow = '';
-    }
-}
+    function selected(){ return Array.from(document.querySelectorAll('.seat-btn.selected')).map(b => b.dataset.seat); }
 
-// Toggle notification dropdown
-function toggleNotifications() {
-    const dropdown = document.getElementById('notificationDropdown');
-    const bell = document.querySelector('.notification-bell');
-    notificationDropdownOpen = !notificationDropdownOpen;
-    
-    if (notificationDropdownOpen) {
-        dropdown.classList.add('active');
-        if (bell) bell.setAttribute('aria-expanded', 'true');
-        loadNotifications();
-    } else {
-        dropdown.classList.remove('active');
-        if (bell) bell.setAttribute('aria-expanded', 'false');
-    }
-}
-
-// Load notifications
-function loadNotifications() {
-    fetch('../api/get_notifications.php')
-        .then(response => response.json())
-        .then(data => {
-            updateNotificationBadge(data.unread_count);
-            renderNotifications(data.notifications);
-        })
-        .catch(error => {
-            console.error('Error loading notifications:', error);
-        });
-}
-
-// Update notification badge
-function updateNotificationBadge(count) {
-    const badge = document.getElementById('notificationBadge');
-    badge.textContent = count;
-    badge.style.display = count > 0 ? 'flex' : 'none';
-}
-
-// Render notifications
-function renderNotifications(notifications) {
-    const list = document.getElementById('notificationList');
-    
-    if (notifications.length === 0) {
-        list.innerHTML = '<div class="notification-empty">No notifications</div>';
-        return;
-    }
-    
-    list.innerHTML = notifications.map(notif => `
-        <div class="notification-item ${notif.status === 'Unread' ? 'unread' : ''}" 
-             onclick="markAsRead(${notif.id})" role="listitem">
-            <div class="notification-message">${notif.message}</div>
-            <div class="notification-time">${notif.time_ago}</div>
-        </div>
-    `).join('');
-}
-
-// Mark notification as read
-function markAsRead(notificationId) {
-    const formData = new FormData();
-    formData.append('notification_id', notificationId);
-    
-    fetch('../api/mark_notification_read.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            loadNotifications();
+    function refresh(){
+        const seats = selected();
+        if (!seats.length) {
+            title.textContent = 'Pick your seats';
+            sub.textContent = 'Tap an available seat';
+            btn.textContent = 'Choose seats';
+        } else if (!pickup.value) {
+            title.textContent = (seats.length === 1 ? 'Seat ' : 'Seats ') + seats.join(', ');
+            sub.textContent = 'Next: pickup location';
+            btn.textContent = 'Set pickup';
+        } else if (!dest.value) {
+            title.textContent = (seats.length === 1 ? 'Seat ' : 'Seats ') + seats.join(', ');
+            sub.textContent = 'Next: destination';
+            btn.textContent = 'Set destination';
+        } else {
+            title.textContent = (seats.length === 1 ? 'Seat ' : 'Seats ') + seats.join(', ');
+            sub.textContent = 'Ready to review';
+            btn.textContent = 'Review';
         }
-    })
-    .catch(error => {
-        console.error('Error marking notification as read:', error);
-    });
-}
-
-// Close dropdown when clicking outside
-document.addEventListener('click', function(event) {
-    const container = document.querySelector('.notification-container');
-    if (!container.contains(event.target) && notificationDropdownOpen) {
-        toggleNotifications();
     }
-});
 
-// Close sidebar when clicking a nav link on mobile
-document.querySelectorAll('.menu-top a').forEach(link => {
-    link.addEventListener('click', () => {
-        if (window.innerWidth <= 768) {
-            toggleSidebar();
-        }
+    btn.addEventListener('click', function(){
+        const seats = selected();
+        if (!seats.length) { document.querySelector('.seat-map').scrollIntoView({behavior:'smooth', block:'center'}); return; }
+        if (!pickup.value) { pickup.scrollIntoView({behavior:'smooth', block:'center'}); pickup.focus(); return; }
+        if (!dest.value) { dest.scrollIntoView({behavior:'smooth', block:'center'}); dest.focus(); return; }
+        document.getElementById('doneBtn').click();
+        document.getElementById('summaryPanel').scrollIntoView({behavior:'smooth', block:'start'});
     });
-});
 
-// Auto-refresh notifications every 30 seconds
-setInterval(loadNotifications, 30000);
-
-// Initial load
-loadNotifications();
-
-// Handle keyboard navigation for sidebar
-document.addEventListener('keydown', function(e) {
-    const sidebar = document.querySelector('.sidebar');
-    if (sidebar.classList.contains('open') && e.key === 'Escape') {
-        toggleSidebar();
-    }
-});
+    document.addEventListener('click', function(){ setTimeout(refresh, 0); });
+    pickup.addEventListener('change', function(){ setTimeout(refresh, 0); });
+    dest.addEventListener('change', function(){ setTimeout(refresh, 0); });
+    refresh();
+})();
 </script>
 
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">

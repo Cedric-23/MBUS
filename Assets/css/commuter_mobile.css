@@ -1,0 +1,634 @@
+/*
+ * Commuter mobile-first layer: Schedule + Reserve pages.
+ * Loaded after every other stylesheet on those pages. Scoped with
+ * body.schedule-page / body.reserve-page so it wins without !important.
+ * Phone layout is the base; wider screens opt in with min-width queries.
+ */
+
+/* ------------------------------------------------------------------ */
+/* Schedule page                                                      */
+/* ------------------------------------------------------------------ */
+
+.schedule-page .main {
+  padding-inline: var(--space-4);
+}
+
+/* Filters: one swipeable row of chips that stays reachable while scrolling */
+.schedule-page .date-filter-container {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  margin: 0 calc(-1 * var(--space-4)) var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: rgba(248, 249, 250, 0.94);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 0;
+  box-shadow: none;
+}
+
+.schedule-page .date-filters {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.schedule-page .date-filters::-webkit-scrollbar { display: none; }
+
+.schedule-page .date-filter-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  white-space: nowrap;
+  scroll-snap-align: start;
+  box-shadow: none;
+}
+.schedule-page .date-filter-btn.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+.schedule-page .date-filter-btn.active i { color: #fff; }
+
+.schedule-page .day-tabs-container { margin-bottom: var(--space-3); }
+.schedule-page .day-tabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: var(--space-3);
+}
+.schedule-page .day-tabs::-webkit-scrollbar { display: none; }
+.schedule-page .day-tab {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Bus cards ------------------------------------------------------- */
+.schedule-page .bus-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.schedule-page .day-heading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 4px 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+.schedule-page .day-heading:first-child { margin-top: 0; }
+.schedule-page .day-heading time {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.schedule-page .bus-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(24, 54, 93, 0.06);
+}
+.schedule-page .bus-card.is-full { background: #fbfbfc; }
+.schedule-page .bus-card.is-full .stop-time,
+.schedule-page .bus-card.is-full .stop-name { color: var(--color-text-muted); }
+
+.schedule-page .bus-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.schedule-page .bus-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  min-width: 0;
+}
+.schedule-page .bus-name i { color: var(--color-primary); }
+
+.schedule-page .seat-chip {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.schedule-page .seat-chip.ok   { background: var(--color-success-light); color: var(--color-success-dark); }
+.schedule-page .seat-chip.low  { background: var(--color-warning-light); color: var(--color-warning-dark); }
+.schedule-page .seat-chip.full { background: var(--color-error-light);   color: var(--color-error-dark); }
+.schedule-page .status-chip {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+}
+
+/* Timetable: time | rail | place */
+.schedule-page .stop,
+.schedule-page .leg {
+  display: grid;
+  grid-template-columns: 5.25rem 14px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+}
+.schedule-page .stop-time {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+.schedule-page .stop-time small {
+  margin-left: 2px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.schedule-page .stop-dot {
+  justify-self: center;
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border: 3px solid var(--color-primary);
+  border-radius: 50%;
+  background: var(--color-surface);
+}
+.schedule-page .stop-dot.end { background: var(--color-primary); }
+.schedule-page .stop-name {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+.schedule-page .leg { min-height: 34px; }
+.schedule-page .leg-line {
+  justify-self: center;
+  align-self: stretch;
+  width: 0;
+  border-left: 2px dashed #b9c4d3;
+}
+.schedule-page .leg-note {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+/* Actions sit under a dashed "ticket stub" divider */
+.schedule-page .bus-actions {
+  display: flex;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--color-border);
+}
+.schedule-page .btn-reserve,
+.schedule-page .btn-route {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.schedule-page .btn-reserve {
+  flex: 1 1 auto;
+  padding: 0 18px;
+  border: 0;
+  background: var(--color-primary);
+  color: #fff;
+}
+.schedule-page .btn-reserve:active { background: var(--color-primary-dark); }
+.schedule-page .btn-reserve.is-disabled {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+.schedule-page .btn-route {
+  flex: 0 0 auto;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-primary);
+}
+.schedule-page .btn-reserve:focus-visible,
+.schedule-page .btn-route:focus-visible,
+.schedule-page .date-filter-btn:focus-visible,
+.schedule-page .map-close:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Route map opens as a bottom sheet instead of a permanent grey block */
+.schedule-page .map-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(10, 25, 45, 0.45);
+}
+.schedule-page .map-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  height: min(72vh, 540px);
+  margin: 0;
+  overflow: hidden;
+  background: var(--color-surface);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -12px 40px rgba(24, 54, 93, 0.25);
+}
+.schedule-page .map-backdrop[hidden],
+.schedule-page .map-sheet[hidden] { display: none; }
+.schedule-page .map-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 10px 10px 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+.schedule-page .map-sheet-head h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+.schedule-page .map-close {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.schedule-page .map-sheet .map-canvas {
+  flex: 1 1 auto;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+}
+
+/* Empty / error states */
+.schedule-page .empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  max-width: 520px;
+  margin: var(--space-6) auto;
+  padding: var(--space-8) var(--space-5);
+  border-radius: 16px;
+}
+.schedule-page .empty-state .empty-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-primary-light-bg);
+  color: var(--color-primary);
+  font-size: 1.4rem;
+}
+.schedule-page .empty-state h3 { margin: 0; font-size: 1.125rem; }
+.schedule-page .empty-state p { margin: 0; max-width: 300px; }
+.schedule-page .empty-state .empty-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  margin-top: 6px;
+  padding: 0 22px;
+  border-radius: 12px;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+@media (min-width: 700px) {
+  .schedule-page .main { padding-inline: var(--space-6); }
+  .schedule-page .date-filter-container { margin-inline: calc(-1 * var(--space-6)); padding-inline: var(--space-6); }
+  .schedule-page .bus-list { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+}
+
+@media (min-width: 769px) {
+  /* Desktop: the map is a centered dialog, not a bottom sheet */
+  .schedule-page .map-sheet {
+    left: 50%;
+    right: auto;
+    bottom: 6vh;
+    width: min(760px, 92vw);
+    transform: translateX(-50%);
+    border-radius: 20px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Reserve (booking) page                                             */
+/* ------------------------------------------------------------------ */
+
+.reserve-page .main {
+  padding-inline: var(--space-4);
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+}
+
+.reserve-page .page-header { margin-bottom: var(--space-3); }
+.reserve-page .page-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.reserve-page .page-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.reserve-page .back-btn {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  text-decoration: none;
+}
+.reserve-page .back-btn:focus-visible,
+.reserve-page .seat-btn:focus-visible,
+.reserve-page .seat-bar-btn:focus-visible,
+.reserve-page .route-map-details summary:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.reserve-page .reserve-layout {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+.reserve-page .reserve-layout > *,
+.reserve-page .reserve-panel > * { min-width: 0; }
+.reserve-page .card { border-radius: 16px; }
+
+/* Trip summary */
+.reserve-page .trip-info-card { margin-bottom: var(--space-3); }
+.reserve-page .trip-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.reserve-page .trip-route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-primary);
+}
+.reserve-page .trip-route i { font-size: 0.8rem; color: var(--color-text-muted); }
+.reserve-page .seat-counter {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-success-light);
+  color: var(--color-success-dark);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.reserve-page .seat-counter.low  { background: var(--color-warning-light); color: var(--color-warning-dark); }
+.reserve-page .seat-counter.full { background: var(--color-error-light);   color: var(--color-error-dark); }
+.reserve-page .trip-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+}
+.reserve-page .trip-facts i { width: 1.1em; margin-right: 6px; color: var(--color-primary); }
+
+.reserve-page .route-map-details { margin-top: 12px; }
+.reserve-page .route-map-details summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-primary);
+  list-style: none;
+}
+.reserve-page .route-map-details summary::-webkit-details-marker { display: none; }
+.reserve-page .route-map-details .route-map-container { margin-top: 8px; border-radius: 12px; overflow: hidden; }
+.reserve-page .route-map-details .map-canvas { height: 220px !important; }
+
+.reserve-page .seat-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--color-border);
+  font-size: 0.875rem;
+}
+
+/* Seat map reads like the inside of a bus */
+.reserve-page .seat-map-card { padding: var(--space-4); }
+.reserve-page .bus-front {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.reserve-page .seat-map {
+  display: flex;
+  flex-direction: column;
+  grid-template-columns: none;
+  gap: 10px;
+  padding: 16px 12px;
+  border: 2px solid var(--color-border);
+  border-radius: 28px 28px 14px 14px;
+  background: #fafbfd;
+}
+.reserve-page .seat-row {
+  justify-content: center;
+  gap: 8px;
+}
+.reserve-page .seat-btn {
+  flex: 1 1 0;
+  width: auto;
+  max-width: 64px;
+  height: 52px;
+  min-height: 52px;
+  border-radius: 12px;
+  font-size: 1rem;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.reserve-page .seat-btn:hover:not(.reserved):not(.selected):not([disabled]) { transform: none; }
+.reserve-page .seat-btn:active:not(.reserved):not([disabled]) { transform: scale(0.96); }
+.reserve-page .seat-btn.reserved {
+  background: #e9edf2;
+  color: #8b97a5;
+  opacity: 1;
+  text-decoration: line-through;
+}
+.reserve-page .aisle { flex: 0 0 26px; width: 26px; }
+
+/* Pickup form: 16px text stops iOS zooming into the field */
+.reserve-page .form-control {
+  min-height: 48px;
+  font-size: 1rem;
+  border-radius: 12px;
+}
+.reserve-page .form-group label { font-size: 0.9375rem; font-weight: 600; }
+.reserve-page .btn-block {
+  min-height: 52px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Summary as compact label / value rows */
+.reserve-page .summary-card { padding: var(--space-4); }
+.reserve-page .summary-details {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px 16px;
+}
+.reserve-page .summary-details dt { margin: 0; font-size: 0.9375rem; }
+.reserve-page .summary-details dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+
+/* Sticky action bar (phones only) */
+.reserve-page .seat-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -6px 20px rgba(24, 54, 93, 0.10);
+}
+.reserve-page .seat-bar[hidden] { display: none; }
+.reserve-page .seat-bar-info { flex: 1 1 auto; min-width: 0; }
+.reserve-page .seat-bar-title {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reserve-page .seat-bar-sub {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+.reserve-page .seat-bar-btn {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.reserve-page .seat-bar-btn[aria-disabled="true"] { opacity: 0.5; }
+
+@media (min-width: 769px) {
+  .reserve-page .main { padding-inline: var(--space-6); padding-bottom: var(--space-8); }
+  .reserve-page .seat-bar { display: none; }
+  .reserve-page .reserve-layout { grid-template-columns: minmax(0, 1fr) 360px; align-items: start; }
+  .reserve-page .seat-btn { max-width: 56px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .schedule-page *,
+  .reserve-page * { transition: none !important; scroll-behavior: auto !important; }
+}
+
+/* The booking flow has its own sticky action bar; the tab bar would sit under it */
+.reserve-page .bottom-nav { display: none !important; }
+
+.reserve-page .trip-info-card,
+.reserve-page .pickup-card { padding: var(--space-4); }
+.reserve-page .seat-btn.selected {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.reserve-page .main {
+  margin-left: 0;
+  width: 100%;
+  max-width: 1240px;
+  margin-inline: auto;
+}

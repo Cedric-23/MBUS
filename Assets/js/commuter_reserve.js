@@ -4,7 +4,7 @@ const pickup = document.getElementById("pickup");
 const destination = document.getElementById("destination");
 
 /* SELECT SEATS */
-document.querySelectorAll(".seat").forEach(seat => {
+document.querySelectorAll(".seat-btn").forEach(seat => {
 
     seat.addEventListener("click", function () {
 
@@ -48,6 +48,8 @@ pickup.addEventListener("change", function () {
         destination.appendChild(option);
 
     }
+
+    destination.disabled = !this.value;
 
 });
 
