@@ -274,10 +274,10 @@ document.addEventListener('keydown', function(e) {
     <a href="operator_dashboard.php" class="bottom-nav-item">
         <i class="fa fa-home" aria-hidden="true"></i><span>Home</span>
     </a>
-    <a href="scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
     <a href="manage_trips.php" class="bottom-nav-item">
         <i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span>
     </a>
+    <a href="scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
     <a href="passengers.php" class="bottom-nav-item">
         <i class="fa fa-users" aria-hidden="true"></i><span>Riders</span>
     </a>
