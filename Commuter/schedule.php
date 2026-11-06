@@ -181,21 +181,32 @@ foreach($days as $d){
 <?php } ?>
 
 <?php
-$sql="SELECT schedule.schedule_id,buses.bus_number,buses.capacity,routes.origin,routes.destination,
+$buildListSql = function($coordColumns) use ($where){
+    return "SELECT schedule.schedule_id,buses.bus_number,buses.capacity,routes.origin,routes.destination,
 schedule.departure_time,schedule.arrival_time,schedule.schedule_status,
-routes.origin_lat,routes.origin_lng,routes.destination_lat,routes.destination_lng
+$coordColumns
 FROM schedule
 JOIN buses ON schedule.bus_id=buses.bus_id
 JOIN routes ON schedule.route_id=routes.route_id
 $where
 ORDER BY schedule.departure_time ASC";
+};
 
-$result=mbus_db_query($conn,$sql);
+$result=mbus_db_query($conn,$buildListSql("routes.origin_lat,routes.origin_lng,routes.destination_lat,routes.destination_lng"));
+
+// The map coordinate columns (supabase/03_add_map_coordinates.sql) may be missing on a database
+// that never ran that migration. That must not hide every schedule: retry without them
+// (schedules then simply show without a "View Route" map button).
+if($result === false){
+    error_log("Commuter/schedule.php list query failed (filter=$filter), retrying without route coordinates: " . ($conn->lastError ?? 'unknown error'));
+    $result=mbus_db_query($conn,$buildListSql("NULL AS origin_lat,NULL AS origin_lng,NULL AS destination_lat,NULL AS destination_lng"));
+}
+
 // mbus_db_query() returns false when the SQL itself fails. Keep that visible instead of
-// showing it as an empty list ("No schedules available"); details are already in the server log.
+// showing it as an empty list ("No schedules available"); details are in the server log.
 $query_failed = ($result === false);
 if($query_failed){
-    error_log("Commuter/schedule.php list query failed (filter=$filter): " . ($conn->lastError ?? 'unknown error'));
+    error_log("Commuter/schedule.php list query failed again without route coordinates (filter=$filter): " . ($conn->lastError ?? 'unknown error'));
 }
 ?>
 

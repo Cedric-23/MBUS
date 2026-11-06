@@ -81,15 +81,22 @@ $fare_table=[
 "BINARITAN"=>75.50,"POBLACION"=>75.50,"HILLTOP"=>75.50
 ];
 
-/* ROUTE */
-$route_query=mbus_db_prepare($conn,"
+/* ROUTE
+ * Falls back to NULL coordinates if the routes table has no map columns yet
+ * (supabase/03_add_map_coordinates.sql not applied), so booking still works without the map. */
+$route_sql = "
 SELECT routes.origin,routes.destination,buses.bus_number,buses.capacity,schedule.departure_time,schedule.trip_status,
-routes.origin_lat,routes.origin_lng,routes.destination_lat,routes.destination_lng
+%s
 FROM schedule
 JOIN routes ON schedule.route_id=routes.route_id
 JOIN buses ON schedule.bus_id=buses.bus_id
 WHERE schedule.schedule_id=?
-", [$schedule_id]);
+";
+$route_query=mbus_db_prepare($conn,sprintf($route_sql,"routes.origin_lat,routes.origin_lng,routes.destination_lat,routes.destination_lng"), [$schedule_id]);
+if($route_query === false){
+    error_log("Commuter/reserve.php route query failed, retrying without coordinates: " . ($conn->lastError ?? 'unknown error'));
+    $route_query=mbus_db_prepare($conn,sprintf($route_sql,"NULL AS origin_lat,NULL AS origin_lng,NULL AS destination_lat,NULL AS destination_lng"), [$schedule_id]);
+}
 
 $route_data=mbus_db_fetch_assoc($route_query);
 
