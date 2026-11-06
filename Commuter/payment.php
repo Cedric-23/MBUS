@@ -348,6 +348,9 @@ startCountdown();
     <a href="schedule.php" class="bottom-nav-item">
         <i class="fa fa-calendar" aria-hidden="true"></i><span>Schedule</span>
     </a>
+    <a href="live.php" class="bottom-nav-item">
+        <i class="fa fa-location-dot" aria-hidden="true"></i><span>Live</span>
+    </a>
     <a href="my_reservations.php" class="bottom-nav-item">
         <i class="fa fa-ticket" aria-hidden="true"></i><span>Trips</span>
     </a>

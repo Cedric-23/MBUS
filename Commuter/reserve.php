@@ -4,6 +4,17 @@ include "../config/db_connect.php";
 include "../Includes/activity_log.php";
 include "../Includes/email_helper.php";
 include "../Includes/csrf.php";
+require_once __DIR__ . '/../Includes/schedule_booking.php';
+
+/* Authenticate and validate submitted bookings before any database mutation. */
+if(!isset($_SESSION['user_id'])){
+    header("Location: ../login.php");
+    exit();
+}
+if(isset($_POST['confirm_reserve']) && !csrf_validate_token()){
+    http_response_code(403);
+    die("Security validation failed. Please refresh the page and try again.");
+}
 
 /* AUTO EXPIRE - 10 MINUTE RESERVATION EXPIRATION */
 $expiry_result = mbus_db_prepare($conn,"
@@ -40,11 +51,6 @@ while($expired_query !== false && ($expired = mbus_db_fetch_assoc($expired_query
 }
 
 /* AUTH */
-if(!isset($_SESSION['user_id'])){
-    header("Location: ../login.php");
-    exit();
-}
-
 $user_id=$_SESSION['user_id'];
 
 /* SCHEDULE */
@@ -52,22 +58,20 @@ if(!isset($_GET['schedule_id']) || !is_scalar($_GET['schedule_id'])){die("Schedu
 
 $schedule_id=(int)$_GET['schedule_id'];
 
-// Authorization check - verify schedule exists and is bookable
-$schedule_check = mbus_db_prepare($conn,"
-    SELECT schedule_id, schedule_status, trip_status, departure_time
-    FROM schedule
-    WHERE schedule_id = ?
-", [$schedule_id]);
-
-$schedule_info = mbus_db_fetch_assoc($schedule_check);
-
-if(!$schedule_info){
-    die("Invalid schedule.");
-}
-
-if($schedule_info['schedule_status'] != 'Active'){
-    die("Schedule is not available for booking.");
-}
+// AJAX expects plain "ok" only on success. Never redirect a failed POST into
+// HTML (fetch follows redirects); give it a conflict response instead.
+$reject_booking = function(string $action) use ($schedule_id): void {
+    if(($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'){
+        http_response_code(409);
+        header('Content-Type: text/plain; charset=UTF-8');
+        echo $action === 'pickup'
+            ? "Seat reservations are closed. Open live.php?schedule_id=$schedule_id to arrange pickup."
+            : "This schedule is no longer available. Please choose another trip.";
+        exit();
+    }
+    header("Location: live.php?schedule_id=$schedule_id");
+    exit();
+};
 
 /* STOPS */
 $stops=["MORONG TERMINAL","BINARITAN","POBLACION","HILLTOP","SABANG","ANVAYA","MABAYO","MINANGA","MORONG GATE","GROUP 6","IDESS","APPAREL","GATE 2","TRIBOA","TOWER","KORYO","TECHNO","UA","NSD","PETRON","INDUSTRIAL","HARBOR POINT","MAIN GATE"];
@@ -85,7 +89,7 @@ $fare_table=[
  * Falls back to NULL coordinates if the routes table has no map columns yet
  * (supabase/03_add_map_coordinates.sql not applied), so booking still works without the map. */
 $route_sql = "
-SELECT routes.origin,routes.destination,buses.bus_number,buses.capacity,schedule.departure_time,schedule.trip_status,
+SELECT routes.origin,routes.destination,buses.bus_number,buses.capacity,schedule.departure_time,schedule.arrival_time,schedule.trip_status,schedule.schedule_status,
 %s
 FROM schedule
 JOIN routes ON schedule.route_id=routes.route_id
@@ -102,19 +106,10 @@ $route_data=mbus_db_fetch_assoc($route_query);
 
 if(!$route_data){die("Invalid schedule.");}
 
-/* SCHEDULE VALIDATION - MINIMUM PREPARATION TIME (30 MINUTES) */
-$min_preparation_time = 30; // minutes
-$departure_time = strtotime($route_data['departure_time']);
-$current_time = time();
-$time_diff = ($departure_time - $current_time) / 60; // in minutes
-
-if($time_diff < $min_preparation_time){
-    die("Booking unavailable. Schedule departs in less than {$min_preparation_time} minutes. Please select a later schedule.");
-}
-
-/* STATUS */
-if(in_array($route_data['trip_status'],['Departed','Arrived','Cancelled'])){
-    die("Booking unavailable.");
+/* Shared policy also rejects terminal, inactive, and stale schedules. */
+$booking_action = mbus_schedule_action($route_data);
+if($booking_action !== 'reserve'){
+    $reject_booking($booking_action);
 }
 
 /* REVERSE */
@@ -143,14 +138,13 @@ while($reserved_row=mbus_db_fetch_assoc($reserved_query)){
 $reserved_count=count($reserved);
 $capacity=(int)($route_data['capacity'] ?? 0);
 $available_seats=max(0,$capacity-$reserved_count);
+$booking_action = mbus_schedule_action($route_data, $available_seats);
+if($booking_action !== 'reserve'){
+    $reject_booking($booking_action);
+}
 
 /* RESERVE */
 if(isset($_POST['confirm_reserve'])){
-    // Validate CSRF token
-    if(!csrf_validate_token()){
-        die("Security validation failed. Please refresh the page and try again.");
-    }
-
 $pickup_input=$_POST['pickup'] ?? '';
 $destination_input=$_POST['destination'] ?? '';
 $seats_input=$_POST['seats'] ?? '';
@@ -171,6 +165,42 @@ $seats=$requested_seats;
 $created_reservations=[];
 try{
     $conn->pdo->beginTransaction();
+    // Serialize bookings for this schedule, and block a concurrent departure
+    // update until this transaction commits or rolls back. Seat-row locks alone
+    // cannot protect an unoccupied seat or a changing schedule status.
+    $locked_result = mbus_db_prepare($conn,"
+SELECT schedule.schedule_id,schedule.schedule_status,schedule.trip_status,
+       schedule.departure_time,schedule.arrival_time,buses.capacity
+FROM schedule
+JOIN buses ON buses.bus_id=schedule.bus_id
+WHERE schedule.schedule_id=?
+FOR UPDATE OF schedule, buses
+", [$schedule_id]);
+    if($locked_result === false){
+        throw new RuntimeException("Schedule availability check failed");
+    }
+    $locked_schedule = mbus_db_fetch_assoc($locked_result);
+    if(!$locked_schedule){
+        throw new DomainException('unavailable');
+    }
+    $locked_count_result = mbus_db_prepare($conn,"
+SELECT COUNT(*) AS reserved FROM reservation
+WHERE schedule_id=?
+AND(status IN ('Paid','Confirmed','Boarded') OR(status='Pending' AND created_at>NOW()-INTERVAL '10 minutes'))
+", [$schedule_id]);
+    if($locked_count_result === false){
+        throw new RuntimeException("Seat availability check failed");
+    }
+    $locked_count = mbus_db_fetch_assoc($locked_count_result);
+    $locked_capacity = (int)$locked_schedule['capacity'];
+    $locked_available = max(0, $locked_capacity - (int)$locked_count['reserved']);
+    $locked_action = mbus_schedule_action($locked_schedule, $locked_available);
+    if($locked_action !== 'reserve'){
+        throw new DomainException($locked_action);
+    }
+    if(count($seats) > $locked_available || max($seats) > $locked_capacity){
+        throw new RuntimeException("Insufficient capacity");
+    }
     foreach($seats as $seat){
         $check=mbus_db_prepare($conn,"
 SELECT reservation_id FROM reservation
@@ -192,6 +222,11 @@ FOR UPDATE
                 throw new RuntimeException("Ticket code check failed");
             }
         }while(mbus_db_num_rows($check_code)>0);
+        // A cutoff can pass even while the transaction is open.
+        $locked_action = mbus_schedule_action($locked_schedule, $locked_available - count($created_reservations));
+        if($locked_action !== 'reserve'){
+            throw new DomainException($locked_action);
+        }
         $inserted = mbus_db_prepare($conn,"
 INSERT INTO reservation(ticket_code,user_id,schedule_id,seat_number,pickup_location,destination,reservation_date,created_at,status)
 VALUES(?, ?, ?, ?, ?, ?, NOW(), NOW(), 'Pending')
@@ -205,6 +240,9 @@ VALUES(?, ?, ?, ?, ?, ?, NOW(), NOW(), 'Pending')
 } catch(Throwable $e){
     if($conn->pdo->inTransaction()){
         $conn->pdo->rollBack();
+    }
+    if($e instanceof DomainException){
+        $reject_booking($e->getMessage());
     }
     http_response_code(409);
     echo "Reservation could not be completed. Please refresh and select available seats.";
@@ -506,6 +544,9 @@ const fareTable = <?php echo json_encode($fare_table); ?>;
     </a>
     <a href="schedule.php" class="bottom-nav-item">
         <i class="fa fa-calendar" aria-hidden="true"></i><span>Schedule</span>
+    </a>
+    <a href="live.php" class="bottom-nav-item">
+        <i class="fa fa-location-dot" aria-hidden="true"></i><span>Live</span>
     </a>
     <a href="my_reservations.php" class="bottom-nav-item">
         <i class="fa fa-ticket" aria-hidden="true"></i><span>Trips</span>

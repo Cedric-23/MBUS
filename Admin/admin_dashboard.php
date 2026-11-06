@@ -123,6 +123,7 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
                 <h1>Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?>!</h1>
             </div>
             <div class="page-header-right">
+                <a href="waiting.php" class="btn btn-outline">Waiting pickups</a>
                 <div class="profile-menu-wrap">
                     <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
                         <span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></span>

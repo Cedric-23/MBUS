@@ -67,6 +67,8 @@ Public bus reservation system — PHP + Supabase PostgreSQL.
 
 Already applied if you ran setup before. To re-run:
 
+For the Live pickup feature, apply the additive `supabase/10_live_pickup.sql` migration separately. See [Live pickup setup and behavior](LIVE_PICKUP.md) for the rider/staff flow and local checks. A Git push does not apply database migrations.
+
 ```bash
 php scripts/setup_supabase.php
 ```

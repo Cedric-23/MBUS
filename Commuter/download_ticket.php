@@ -1,7 +1,9 @@
 <?php
 session_start();
 include "../config/db_connect.php";
-require_once("fpdf/fpdf.php");
+require_once __DIR__ . "/fpdf/fpdf.php";
+require_once __DIR__ . "/../Includes/ticket_qr.php";
+require_once __DIR__ . "/../Includes/qr_pdf.php";
 
 if(!isset($_SESSION['user_id'])){
     header("Location: ../login.php");
@@ -111,12 +113,17 @@ if($schedule_query === false){ die("Schedule data unavailable."); }
 $data = mbus_db_fetch_assoc($schedule_query);
 if(!$data){ die("Schedule not found."); }
 
+// Match the on-screen ticket exactly; never encode a URL or the readable payment code.
+$qr_token = mbus_ticket_token((int)$schedule_id, (int)$user_id);
+
 /* =========================
    PDF GENERATION
 ========================= */
-$pdf = new FPDF('P','mm',array(80,200));
-$pdf->AddPage();
+// Reserve space for the QR plus the existing receipt. Long text can continue safely.
+$pdf = new FPDF('P','mm',array(80,300));
 $pdf->SetMargins(5,5,5);
+$pdf->SetAutoPageBreak(true,5);
+$pdf->AddPage();
 
 /* ===== HEADER (FIXED CENTER) ===== */
 $pdf->SetFont('Arial','B',16);
@@ -129,9 +136,18 @@ $pdf->Cell(80,5,'Digital Bus Ticket',0,1,'C');
 
 $pdf->Ln(3);
 
+/* ===== BOARDING QR (LOCAL VECTOR RENDERING, INCLUDING QUIET ZONE) ===== */
+$qr_size = 50;
+$qr_y = $pdf->GetY();
+mbus_pdf_draw_qr($pdf, $qr_token, ($pdf->GetPageWidth() - $qr_size) / 2, $qr_y, $qr_size);
+$pdf->SetY($qr_y + $qr_size + 1);
+$pdf->SetFont('Arial','',8);
+$pdf->MultiCell(0,4,'Show this QR to the operator when you board.',0,'C');
+$pdf->Ln(2);
+
 /* ===== TICKET CODE ===== */
 $pdf->SetFont('Arial','B',10);
-$pdf->Cell(0,7, !empty($ticket_code)?$ticket_code:"N/A",1,1,'C');
+$pdf->MultiCell(0,7, !empty($ticket_code)?$ticket_code:"N/A",1,'C');
 
 $pdf->Ln(3);
 
@@ -146,13 +162,13 @@ $pdf->Ln(2);
 
 /* ===== ROUTE ===== */
 $pdf->SetFont('Arial','B',12);
-$pdf->Cell(0,6,strtoupper($pickup),0,1,'C');
+$pdf->MultiCell(0,6,strtoupper($pickup),0,'C');
 
 $pdf->SetFont('Arial','',9);
 $pdf->Cell(0,4,'TO',0,1,'C');
 
 $pdf->SetFont('Arial','B',12);
-$pdf->Cell(0,6,strtoupper($destination),0,1,'C');
+$pdf->MultiCell(0,6,strtoupper($destination),0,'C');
 
 $pdf->Ln(3);
 
@@ -161,7 +177,7 @@ $pdf->SetFont('Arial','B',9);
 $pdf->Cell(0,5,'Bus Number',0,1);
 
 $pdf->SetFont('Arial','',9);
-$pdf->Cell(0,5,$data['bus_number'],0,1);
+$pdf->MultiCell(0,5,$data['bus_number']);
 
 $pdf->Ln(2);
 
@@ -200,7 +216,7 @@ $pdf->SetFont('Arial','B',9);
 $pdf->Cell(0,5,'Payment Method',0,1);
 
 $pdf->SetFont('Arial','',9);
-$pdf->Cell(0,5, !empty($payment_method)?$payment_method:"N/A",0,1);
+$pdf->MultiCell(0,5, !empty($payment_method)?$payment_method:"N/A");
 
 $pdf->Ln(2);
 

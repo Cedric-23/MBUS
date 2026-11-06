@@ -1,6 +1,7 @@
 <?php
 session_start();
 include "../config/db_connect.php";
+require_once __DIR__ . '/../Includes/schedule_booking.php';
 
 if(!isset($_SESSION['user_id'])){
     header("Location: ../login.php");
@@ -40,22 +41,23 @@ $weekAfterNextStart = $weekStart->modify('+14 days');
 $fmt = function(DateTimeImmutable $d){ return $d->format('Y-m-d H:i:s'); };
 
 $where="";
+$activeWhere="WHERE schedule.schedule_status='Active' AND schedule.trip_status IN ('Scheduled','Boarding','Departed')";
 
 if($filter=="all"){
-    $where="WHERE schedule.schedule_status='Active' AND schedule.departure_time >= '$nowSql'";
+    $where=$activeWhere." AND schedule.departure_time >= '" . $fmt($todayStart) . "'";
 }
 elseif($filter=="today"){
-    $where="WHERE schedule.schedule_status='Active' AND schedule.departure_time >= '$nowSql' AND schedule.departure_time < '" . $fmt($tomorrowStart) . "'";
+    $where=$activeWhere." AND schedule.departure_time >= '" . $fmt($todayStart) . "' AND schedule.departure_time < '" . $fmt($tomorrowStart) . "'";
 }
 elseif($filter=="tomorrow"){
-    $where="WHERE schedule.schedule_status='Active' AND schedule.departure_time >= '" . $fmt($tomorrowStart) . "' AND schedule.departure_time < '" . $fmt($dayAfterStart) . "'";
+    $where=$activeWhere." AND schedule.departure_time >= '" . $fmt($tomorrowStart) . "' AND schedule.departure_time < '" . $fmt($dayAfterStart) . "'";
 }
 elseif($filter=="thisweek"){
-    $where="WHERE schedule.schedule_status='Active' AND schedule.departure_time >= '$nowSql' AND schedule.departure_time < '" . $fmt($nextWeekStart) . "'";
+    $where=$activeWhere." AND schedule.departure_time >= '" . $fmt($todayStart) . "' AND schedule.departure_time < '" . $fmt($nextWeekStart) . "'";
     if($day!=""){$where.=" AND LOWER(TRIM(TO_CHAR(schedule.departure_time, 'FMDay')))='".strtolower($day)."'";}
 }
 elseif($filter=="nextweek"){
-    $where="WHERE schedule.schedule_status='Active' AND schedule.departure_time >= '" . $fmt($nextWeekStart) . "' AND schedule.departure_time < '" . $fmt($weekAfterNextStart) . "'";
+    $where=$activeWhere." AND schedule.departure_time >= '" . $fmt($nextWeekStart) . "' AND schedule.departure_time < '" . $fmt($weekAfterNextStart) . "'";
     if($day!=""){$where.=" AND LOWER(TRIM(TO_CHAR(schedule.departure_time, 'FMDay')))='".strtolower($day)."'";}
 }
 ?>
@@ -186,7 +188,7 @@ foreach($days as $d){
 <?php
 $buildListSql = function($coordColumns) use ($where){
     return "SELECT schedule.schedule_id,buses.bus_number,buses.capacity,routes.origin,routes.destination,
-schedule.departure_time,schedule.arrival_time,schedule.schedule_status,
+schedule.departure_time,schedule.arrival_time,schedule.schedule_status,schedule.trip_status,
 $coordColumns
 FROM schedule
 JOIN buses ON schedule.bus_id=buses.bus_id
@@ -249,9 +251,16 @@ $duration = $mins>0 ? (intdiv($mins,60)>0 ? intdiv($mins,60).' hr'.($mins%60 ? '
 $status=strtolower($row['schedule_status']);
 $has_map = $row['origin_lat'] && $row['origin_lng'] && $row['destination_lat'] && $row['destination_lng'];
 $chip_class = $available<=0 ? 'full' : ($available<=5 ? 'low' : 'ok');
+$action = $seat_data === false ? 'unavailable' : mbus_schedule_action($row, $available);
+$unavailable_at = strtotime($day_key . ' +1 day');
+if($row['trip_status'] !== 'Departed'){
+    $unavailable_at = min($unavailable_at, max($dep_ts, $arr_ts ?: 0));
+}
 ?>
 
-<article class="bus-card<?php echo $available<=0 ? ' is-full' : ''; ?>" role="listitem" data-schedule-id="<?php echo (int)$schedule_id; ?>">
+<article class="bus-card<?php echo $available<=0 ? ' is-full' : ''; ?>" role="listitem"
+    data-schedule-id="<?php echo (int)$schedule_id; ?>" data-schedule-action="<?php echo $action; ?>"
+    data-reserve-cutoff="<?php echo $dep_ts - 30 * 60; ?>" data-unavailable-at="<?php echo $unavailable_at; ?>">
     <div class="bus-card-top">
         <span class="bus-name"><i class="fa fa-bus" aria-hidden="true"></i><?php echo htmlspecialchars($row['bus_number']); ?></span>
         <?php if($status!=="active"){ ?>
@@ -291,11 +300,8 @@ $chip_class = $available<=0 ? 'full' : ($available<=5 ? 'low' : 'ok');
             <i class="fa fa-map" aria-hidden="true"></i>Route
         </button>
         <?php } ?>
-        <?php if($available<=0 || $status!=="active"){ ?>
-            <span class="btn-reserve is-disabled" aria-disabled="true"><?php echo $available<=0 ? 'Fully booked' : 'Unavailable'; ?></span>
-        <?php }else{ ?>
-            <a href="reserve.php?schedule_id=<?php echo (int)$schedule_id; ?>" class="btn-reserve">Reserve seat</a>
-        <?php } ?>
+        <a class="btn-reserve schedule-action-link<?php echo $action === 'unavailable' ? ' is-disabled' : ''; ?>"
+            <?php if($action !== 'unavailable'){ ?>href="<?php echo $action === 'pickup' ? 'live.php' : 'reserve.php'; ?>?schedule_id=<?php echo (int)$schedule_id; ?>"<?php }else{ ?>aria-disabled="true" tabindex="-1"<?php } ?>><?php echo $action === 'reserve' ? 'Reserve seat' : ($action === 'pickup' ? 'Pick up' : 'Unavailable'); ?></a>
     </div>
 </article>
 
@@ -336,6 +342,86 @@ $chip_class = $available<=0 ? 'full' : ($available<=5 ? 'low' : 'ok');
 let scheduleMap;
 let scheduleDirectionsService;
 let scheduleDirectionsRenderer;
+let scheduleCalendar;
+// Anchor to the server clock, not the phone's timezone or potentially skewed clock.
+let scheduleClockOffset = <?php echo (int)round(microtime(true) * 1000); ?> - Date.now();
+const scheduleCards = Array.from(document.querySelectorAll('[data-schedule-action]'));
+
+function currentScheduleAction(action, reserveCutoff, unavailableAt) {
+    const now = Math.floor((Date.now() + scheduleClockOffset) / 1000);
+    if (action === 'unavailable' || now >= Number(unavailableAt)) return 'unavailable';
+    // Exactly 30 minutes is still bookable; only strictly below the cutoff is pickup.
+    return action === 'reserve' && now > Number(reserveCutoff) ? 'pickup' : action;
+}
+
+function updateScheduleCard(card) {
+    const action = currentScheduleAction(card.dataset.scheduleAction, card.dataset.reserveCutoff, card.dataset.unavailableAt);
+    const link = card.querySelector('.schedule-action-link');
+    link.textContent = action === 'reserve' ? 'Reserve seat' : (action === 'pickup' ? 'Pick up' : 'Unavailable');
+    link.classList.toggle('is-disabled', action === 'unavailable');
+    if (action === 'unavailable') {
+        link.removeAttribute('href');
+        link.setAttribute('aria-disabled', 'true');
+        link.setAttribute('tabindex', '-1');
+    } else {
+        link.href = (action === 'pickup' ? 'live.php' : 'reserve.php') + '?schedule_id=' + encodeURIComponent(card.dataset.scheduleId);
+        link.removeAttribute('aria-disabled');
+        link.removeAttribute('tabindex');
+    }
+    return action;
+}
+
+function updateScheduleCards() { scheduleCards.forEach(updateScheduleCard); }
+updateScheduleCards();
+setInterval(updateScheduleCards, 1000);
+// Recheck at click time too, so a click between timer ticks cannot follow a stale CTA.
+document.addEventListener('click', function(e) {
+    const link = e.target.closest('.schedule-action-link');
+    if (link && updateScheduleCard(link.closest('[data-schedule-action]')) === 'unavailable') e.preventDefault();
+}, true);
+
+let scheduleRefreshPending = false;
+async function refreshScheduleActions() {
+    if (scheduleRefreshPending || document.hidden) return;
+    scheduleRefreshPending = true;
+    try {
+        if (scheduleCards.length) {
+            const lastExpiry = Math.max(...scheduleCards.map(card => Number(card.dataset.unavailableAt)));
+            const end = new Date(lastExpiry * 1000).toISOString();
+            const response = await fetch('../api/get_calendar_events.php?start=<?php echo $todayStart->format('Y-m-d'); ?>&end=' + encodeURIComponent(end), {cache: 'no-store'});
+            if (!response.ok) return;
+            const events = await response.json();
+            if (!Array.isArray(events)) return;
+            const byId = new Map(events.map(event => [String(event.id), event.extendedProps]));
+            if (events.length) scheduleClockOffset = Number(events[0].extendedProps.server_time) * 1000 - Date.now();
+            scheduleCards.forEach(card => {
+                const props = byId.get(card.dataset.scheduleId);
+                card.dataset.scheduleAction = props ? props.action : 'unavailable';
+                if (props) {
+                    card.dataset.reserveCutoff = props.reserve_cutoff;
+                    card.dataset.unavailableAt = props.unavailable_at;
+                    card.classList.toggle('is-full', props.available_seats <= 0);
+                    const chip = card.querySelector('.seat-chip');
+                    if (chip) {
+                        chip.textContent = props.available_seats <= 0 ? 'Fully booked' : props.available_seats + ' seats left';
+                        chip.className = 'seat-chip ' + (props.available_seats <= 0 ? 'full' : (props.available_seats <= 5 ? 'low' : 'ok'));
+                    }
+                }
+            });
+            updateScheduleCards();
+        }
+        if (scheduleCalendar) scheduleCalendar.refetchEvents();
+    } catch (error) {
+        // Local clock-based cutoffs keep working during a temporary network failure.
+    } finally {
+        scheduleRefreshPending = false;
+    }
+}
+setInterval(refreshScheduleActions, 30000);
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) { updateScheduleCards(); refreshScheduleActions(); }
+});
+window.addEventListener('pageshow', function(e) { if (e.persisted) { updateScheduleCards(); refreshScheduleActions(); } });
 
 function initScheduleMap() {
     scheduleMap = new google.maps.Map(document.getElementById("scheduleMap"), {
@@ -397,7 +483,7 @@ document.addEventListener("keydown", function(e) {
 function initScheduleCalendar() {
     const calendarEl = document.getElementById('calendar');
     if (!calendarEl || typeof FullCalendar === 'undefined') return;
-    const calendar = new FullCalendar.Calendar(calendarEl, {
+    scheduleCalendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         headerToolbar: {
             left: 'prev,next today',
@@ -407,12 +493,16 @@ function initScheduleCalendar() {
         events: '../api/get_calendar_events.php',
         eventClick: function(info) {
             const props = info.event.extendedProps;
-            if (props.available_seats > 0) {
+            const action = currentScheduleAction(props.action, props.reserve_cutoff, props.unavailable_at);
+            info.jsEvent.preventDefault();
+            if (action === 'pickup') {
+                window.location.href = 'live.php?schedule_id=' + encodeURIComponent(info.event.id);
+            } else if (action === 'reserve') {
                 if (confirm(`Book ${props.bus_number} - ${props.origin} \u2192 ${props.destination}?\nDeparture: ${props.departure_time}\nAvailable Seats: ${props.available_seats}`)) {
-                    window.location.href = `reserve.php?schedule_id=${info.event.id}`;
+                    window.location.href = 'reserve.php?schedule_id=' + encodeURIComponent(info.event.id);
                 }
             } else {
-                alert('This schedule is fully booked.');
+                alert('This schedule is unavailable.');
             }
         },
         eventDidMount: function(info) {
@@ -422,7 +512,7 @@ function initScheduleCalendar() {
         height: 'auto',
         eventColor: '#1e90ff'
     });
-    calendar.render();
+    scheduleCalendar.render();
 }
 
 document.addEventListener('DOMContentLoaded', initScheduleCalendar);
@@ -437,6 +527,10 @@ document.addEventListener('DOMContentLoaded', initScheduleCalendar);
     <a href="schedule.php" class="bottom-nav-item active" aria-current="page">
         <i class="fa fa-calendar" aria-hidden="true"></i>
         <span>Schedule</span>
+    </a>
+    <a href="live.php" class="bottom-nav-item">
+        <i class="fa fa-location-dot" aria-hidden="true"></i>
+        <span>Live</span>
     </a>
     <a href="my_reservations.php" class="bottom-nav-item">
         <i class="fa fa-ticket" aria-hidden="true"></i>

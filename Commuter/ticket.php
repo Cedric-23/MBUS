@@ -256,6 +256,7 @@ window.addEventListener('load', function() {
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="commuter_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
     <a href="schedule.php" class="bottom-nav-item"><i class="fa fa-calendar" aria-hidden="true"></i><span>Schedule</span></a>
+    <a href="live.php" class="bottom-nav-item"><i class="fa fa-location-dot" aria-hidden="true"></i><span>Live</span></a>
     <a href="my_reservations.php" class="bottom-nav-item active" aria-current="page"><i class="fa fa-ticket" aria-hidden="true"></i><span>Trips</span></a>
     <a href="notifications.php" class="bottom-nav-item"><i class="fa fa-bell" aria-hidden="true"></i><span>Alerts</span></a>
 </nav>
