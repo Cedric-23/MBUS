@@ -45,23 +45,23 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
     </header>
     <div class="live-heading">
         <span class="live-tag"><span aria-hidden="true"></span>Trip location</span>
-        <p>Choose a bus currently Boarding or Departed to view the latest GPS location shared by its operator.</p>
+        <p>Pick a bus to see where it is right now.</p>
     </div>
     <div id="liveMessage" class="live-notice" role="status" aria-live="polite">Loading current bus locations…</div>
     <div class="live-layout">
         <section class="live-map-panel live-card" aria-labelledby="mapHeading">
             <div class="live-card-head"><h2 id="mapHeading">Route map</h2><span id="trackingStatus" class="live-status is-ended">Waiting for trip</span></div>
             <div id="trackingMap" class="live-map" aria-label="Live bus map"></div>
-            <p id="mapMessage" class="live-map-hint">A bus marker appears only after the operator shares a GPS location.</p>
+            <p id="mapMessage" class="live-map-hint">The bus appears once the driver shares location.</p>
             <div class="live-map-footer"><span id="updatedAt">Location update: —</span><span id="freshness">—</span></div>
-            <p class="live-small live-map-disclaimer">No bus GPS means no bus marker. This page refreshes only while visible and open; it does not track in the background.</p>
+            <p class="live-small live-map-disclaimer">Refreshes while this page is open.</p>
         </section>
         <div class="live-side">
             <section class="live-card" aria-labelledby="tripHeading">
                 <div class="live-card-head"><h2 id="tripHeading">Bus in service</h2></div>
                 <div class="live-field"><label for="liveSchedule">Choose a bus</label><select id="liveSchedule" name="schedule_id" disabled><option value="">Loading trips…</option></select></div>
                 <p id="tripRoute" class="live-route-copy">Loading current buses…</p>
-                <p class="live-small">You can check an active bus without a seat reservation. To share your waiting point with its operator, use the <strong>Alerts</strong> tab.</p>
+                <p class="live-small">Waiting for a bus? Share your spot in <a href="waiting.php"><strong>Waiting</strong></a>.</p>
             </section>
         </div>
     </div>
@@ -72,7 +72,9 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
     <a href="schedule.php" class="bottom-nav-item"><i class="fa fa-calendar" aria-hidden="true"></i><span>Schedule</span></a>
     <a href="live.php" class="bottom-nav-item active" aria-current="page"><i class="fa fa-map-location-dot" aria-hidden="true"></i><span>Live</span></a>
     <a href="my_reservations.php" class="bottom-nav-item"><i class="fa fa-ticket" aria-hidden="true"></i><span>Trips</span></a>
-    <a href="notifications.php" class="bottom-nav-item"><i class="fa fa-bell" aria-hidden="true"></i><span>Alerts</span></a>
+    <a href="waiting.php" class="bottom-nav-item">
+        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
+    </a>
 </nav>
 <script>window.mbusLive = <?php echo json_encode(['scheduleId' => $schedule_id, 'csrfToken' => csrf_get_token()], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>

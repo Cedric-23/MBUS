@@ -325,9 +325,8 @@ document.addEventListener('keydown', function(e) {
         <i class="fa fa-ticket" aria-hidden="true"></i>
         <span>Trips</span>
     </a>
-    <a href="notifications.php" class="bottom-nav-item">
-        <i class="fa fa-bell" aria-hidden="true"></i>
-        <span>Alerts</span>
+    <a href="waiting.php" class="bottom-nav-item">
+        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
 </nav>
 

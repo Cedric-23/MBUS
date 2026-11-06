@@ -52,14 +52,19 @@
             const data = await request('../api/live_tracking.php' + (chosen ? '?schedule_id=' + encodeURIComponent(chosen) : ''));
             if (thisVersion !== version) return;
             trips = activeTrips(data); if (data.csrf_token) csrf = data.csrf_token;
-            if (!trips.some(t => String(t.schedule_id) === String(chosen))) chosen = String((window.mbusLive || {}).scheduleId || (trips[0] && trips[0].schedule_id) || '');
-            if (!trips.some(t => String(t.schedule_id) === String(chosen))) chosen = String((trips[0] || {}).schedule_id || '');
+            const liveIds = (Array.isArray(data.locations) ? data.locations : []).map(l => String(l.schedule_id));
+            const preferred = String((window.mbusLive || {}).scheduleId || '');
+            if (!trips.some(t => String(t.schedule_id) === String(chosen))) {
+                const onAir = trips.find(t => liveIds.includes(String(t.schedule_id)));
+                chosen = (preferred && trips.some(t => String(t.schedule_id) === preferred)) ? preferred : String((onAir || trips[0] || {}).schedule_id || '');
+            }
             select.replaceChildren(new Option(trips.length ? 'Choose a bus' : 'No active Boarding/Departed buses', ''));
             trips.forEach(t => select.add(new Option((t.bus_number || 'Bus') + ' · ' + (t.origin || 'Origin') + ' → ' + (t.destination || t.route_destination || 'Endpoint'), String(t.schedule_id))));
             select.value = chosen; select.disabled = !trips.length;
             const trip = trips.find(t => String(t.schedule_id) === String(chosen));
             el('tripRoute').textContent = trip ? (trip.bus_number || 'Bus') + ' · ' + (trip.origin || 'Origin') + ' → ' + (trip.destination || trip.route_destination || 'Endpoint') : 'No assigned bus is currently boarding or in service.';
-            const location = data.location && (data.location.schedule_id == null || String(data.location.schedule_id) === String(chosen)) ? data.location : null;
+            const listed = (Array.isArray(data.locations) ? data.locations : []).find(l => String(l.schedule_id) === String(chosen)) || null;
+            const location = listed || (data.location && String(data.location.schedule_id || chosen) === String(chosen) ? data.location : null);
             const busLocation = draw(trip, location);
             const updated = location && (location.updated_at || location.recorded_at || location.timestamp || location.created_at);
             const age = updated ? Math.max(0, Date.parse(data.server_time || Date.now()) - Date.parse(updated)) : Infinity;

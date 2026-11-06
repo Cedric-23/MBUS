@@ -1,53 +1,277 @@
+/* Operator location sharing: starts by itself once location is allowed. */
 (() => {
-'use strict';
-const endpoint = window.OPERATOR_LIVE_ENDPOINT || '../api/live_tracking.php';
-const token = window.OPERATOR_CSRF_TOKEN || document.querySelector('meta[name="csrf-token"]')?.content || '';
-const status = document.getElementById('operatorTrackingStatus');
-if (status && document.getElementById('enableOperatorGps')) dashboardTracking();
-else if (status) trackBus();
-const root = document.getElementById('riderLive');
-if (root) riderFeed(root);
-function dashboardTracking() {
- const button=document.getElementById('enableOperatorGps'),select=document.getElementById('operatorTrackingTrip'),label=document.getElementById('operatorTrackingTripLabel');
- let enabled=false,watch=null,latest=null,active=[],selected='',lastSent=0,pollTimer=null,busy=false,uploadBusy=false;
- const activeStatuses=['Boarding','Departed'];
- let gpsMap=null,gpsMarker=null,gpsAccuracy=null;
- const set=text=>{status.textContent=text;};
- const stopWatch=()=>{if(watch!==null&&navigator.geolocation)navigator.geolocation.clearWatch(watch);watch=null;};
- const err=e=>!window.isSecureContext?'Location requires HTTPS (or localhost).':e?.code===1?'Location permission denied. Allow location access in browser settings, then try again.':e?.code===2?'Bus location unavailable. Check device location services.':e?.code===3?'Getting bus location timed out; waiting for another fix.':'Location permission or device error.';
- const schedulesFrom=d=>Array.isArray(d.schedules)?d.schedules:Array.isArray(d.operator_schedules)?d.operator_schedules:Array.isArray(d.trips)?d.trips:[];
- function renderTrips(){const previous=selected;select.replaceChildren();active.forEach(t=>{const o=document.createElement('option');o.value=String(t.schedule_id);o.textContent=(t.route_name||t.route||t.route_label||'Bus trip')+' · '+t.trip_status+' · Trip '+t.schedule_id;select.append(o);});label.hidden=active.length<2;select.hidden=active.length<2;if(active.some(t=>String(t.schedule_id)===previous))select.value=previous;else{const preferred=active.find(t=>t.trip_status==='Departed')||active.find(t=>t.trip_status==='Boarding')||active[0];selected=preferred?String(preferred.schedule_id):'';select.value=selected;lastSent=0;}}
- function chosen(){return active.find(t=>String(t.schedule_id)===String(select.value||selected))||null;}
- async function upload(){if(!enabled||!latest||document.hidden||uploadBusy)return;const trip=chosen();if(!trip){set('GPS enabled and waiting for an assigned trip to reach Boarding or Departed.');return;}const sid=String(trip.schedule_id);if(Date.now()-lastSent<8500)return;uploadBusy=true;try{const c=latest.coords,r=await fetch(endpoint,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:new URLSearchParams({csrf_token:token,action:'update_location',schedule_id:sid,latitude:String(c.latitude),longitude:String(c.longitude),accuracy:String(c.accuracy)})}),d=await r.json();if(!r.ok||d.ok!==true)throw Error(d.message||'Location service rejected update');lastSent=Date.now();set('Actively sharing Bus / '+(trip.route_name||trip.route||trip.route_label||'route')+' · Trip '+sid+' ('+trip.trip_status+') · updated '+new Date().toLocaleTimeString()+'.');}catch(e){set('Live location update failed: '+(e.message||'service unavailable')+' Retrying while this page is visible.');}finally{uploadBusy=false;}}
- async function poll(){if(!enabled||document.hidden||busy)return;busy=true;try{const r=await fetch(endpoint,{credentials:'same-origin',cache:'no-store'}),d=await r.json();if(!r.ok||d.ok!==true)throw Error(d.message||'Unable to check active trips');const next=schedulesFrom(d).filter(t=>activeStatuses.includes(t.trip_status||t.status)&&t.schedule_id!=null).map(t=>({...t,trip_status:t.trip_status||t.status}));const signature=next.map(t=>String(t.schedule_id)+':'+t.trip_status).sort().join('|'),old=active.map(t=>String(t.schedule_id)+':'+t.trip_status).sort().join('|');if(signature!==old){active=next;renderTrips();lastSent=0;}const trip=chosen();if(!trip){set('GPS enabled; no assigned trip is Boarding or Departed. Your location is not being shared.');return;}if(!latest){set('GPS enabled and waiting for your current location fix for Trip '+trip.schedule_id+'.');return;}await upload();}catch(e){set('Could not check active trips: '+(e.message||'network error')+' Location is not shared until trip status is confirmed.');}finally{busy=false;}}
- if(window.L&&document.getElementById('operatorGpsMap')){try{gpsMap=L.map('operatorGpsMap').setView([14.676,120.27],11);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(gpsMap);}catch(_){set('Map unavailable; GPS tracking can still run while this page is visible.');}}
- function showFix(p){if(!gpsMap)return;const loc=[p.coords.latitude,p.coords.longitude];if(!gpsMarker)gpsMarker=L.marker(loc,{title:'Your current GPS location'}).addTo(gpsMap).bindPopup('Your current GPS location');else gpsMarker.setLatLng(loc);if(gpsAccuracy)gpsMap.removeLayer(gpsAccuracy);const accuracy=Number(p.coords.accuracy);if(Number.isFinite(accuracy)&&accuracy>0)gpsAccuracy=L.circle(loc,{radius:accuracy,color:'#2472c8',fillOpacity:.08,weight:1}).addTo(gpsMap);gpsMap.setView(loc,Math.max(gpsMap.getZoom(),15));}
- function startWatch(){stopWatch();if(!enabled||document.hidden)return;if(!window.isSecureContext){set(err());return;}if(!navigator.geolocation){set('This browser does not support geolocation.');return;}set('Requesting browser location permission…');watch=navigator.geolocation.watchPosition(p=>{latest=p;showFix(p);if(!active.length)set('GPS enabled and waiting for an assigned trip to reach Boarding or Departed. Your pin is shown above; it is not being shared yet.');else upload();},e=>set(err(e)),{enableHighAccuracy:true,maximumAge:5000,timeout:20000});}
- function startPolling(){clearInterval(pollTimer);poll();pollTimer=setInterval(poll,10000);}
- button.addEventListener('click',()=>{if(enabled)return;enabled=true;startWatch();startPolling();});select.addEventListener('change',()=>{selected=select.value;lastSent=0;if(latest)upload();});
- document.addEventListener('visibilitychange',()=>{if(document.hidden){stopWatch();clearInterval(pollTimer);pollTimer=null;set('Location sharing paused while this page is hidden.');}else if(enabled){startWatch();startPolling();}});window.addEventListener('pagehide',()=>{stopWatch();clearInterval(pollTimer);pollTimer=null;});
-}
-function trackBus() {
- const active = [...document.querySelectorAll('.trip-row')].filter(r => ['Boarding','Departed'].includes(r.dataset.tripStatus));
- if (!active.length) { status.textContent='Live location is off: no assigned trip is Boarding or Departed.'; return; }
- const preferredId=Number(window.OPERATOR_TRACK_SCHEDULE_ID),preferred=Number.isSafeInteger(preferredId)&&preferredId>0?active.find(r=>Number(r.dataset.scheduleId)===preferredId):null;
- const row=preferred||active.find(r=>r.dataset.tripStatus==='Departed')||active[0], sid=Number(row.dataset.scheduleId);
- let watch=null,lastSent=0,busy=false;
- const stop=()=>{if(watch!==null)navigator.geolocation.clearWatch(watch);watch=null;};
- const err=e=>!window.isSecureContext?'Live tracking requires HTTPS (or localhost). Trip status remains unchanged.':e?.code===1?'Location permission denied. Allow location access in browser settings to share the bus position.':e?.code===2?'Bus location unavailable. Check device location services.':e?.code===3?'Getting bus location timed out; waiting for another fix.':'Location permission or device error. Allow browser location access.';
- const locate=async p=>{if(Date.now()-lastSent<8500||busy||document.hidden)return;busy=true;try{const c=p.coords;const response=await fetch(endpoint,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:new URLSearchParams({csrf_token:token,action:'update_location',schedule_id:String(sid),latitude:String(c.latitude),longitude:String(c.longitude),accuracy:String(c.accuracy)})});const d=await response.json();if(!response.ok||d.ok!==true)throw Error(d.message||'Location service rejected update');lastSent=Date.now();status.textContent='Sharing live bus location for trip '+sid+' · last update '+new Date().toLocaleTimeString()+'.';}catch(e){status.textContent='Live location update failed: '+(e.message||'service unavailable')+' Retrying while this page is visible.';}finally{busy=false;}};
- const start=()=>{stop();if(document.hidden)return;if(!window.isSecureContext){status.textContent=err();return;}if(!navigator.geolocation){status.textContent='This browser does not support geolocation. Trip status remains unchanged.';return;}status.textContent='Requesting location permission for assigned bus on trip '+sid+'…';watch=navigator.geolocation.watchPosition(locate,e=>{status.textContent=err(e);},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});};
- document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();status.textContent='Location sharing paused while this page is hidden.';}else start();});window.addEventListener('pagehide',stop);start();
-}
-function riderFeed(root){
- const sid=Number(root.dataset.scheduleId),state=document.getElementById('waitingState'),list=document.getElementById('waitingList'),count=document.getElementById('waitingCount'),updated=document.getElementById('liveUpdated'),mapError=document.getElementById('liveMapError'),button=document.getElementById('liveRefresh');let map=null,layer=null,busy=false,timer=null;
- const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!=null)n.textContent=String(text);if(cls)n.className=cls;return n;},valid=(a,b)=>Number.isFinite(Number(a))&&Number.isFinite(Number(b))&&Math.abs(Number(a))<=90&&Math.abs(Number(b))<=180;
- if(window.L){try{map=L.map('liveMap').setView([14.815,120.275],11);const tiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);tiles.on('tileerror',()=>mapError.hidden=false);layer=L.layerGroup().addTo(map);}catch(_){mapError.hidden=false;}}else mapError.hidden=false;
- const addMarker=(lat,lng,label,color,bounds)=>{if(!map||!valid(lat,lng))return;const point=[Number(lat),Number(lng)];bounds.push(point);L.circleMarker(point,{radius:9,color:'#fff',weight:3,fillColor:color,fillOpacity:1}).addTo(layer).bindPopup(document.createTextNode(label));};
- async function refresh(){if(busy||document.hidden)return;busy=true;button.disabled=true;try{const r=await fetch(endpoint+'?schedule_id='+encodeURIComponent(String(sid)),{credentials:'same-origin',cache:'no-store'}),d=await r.json();if(!r.ok||d.ok!==true)throw Error(d.message||'Live trip service unavailable.');const requests=Array.isArray(d.requests)?d.requests:[];if(!d.active){state.textContent='Live pickup tracking is not active for this trip.';count.textContent='0';list.replaceChildren();}else{count.textContent=String(requests.length);state.textContent=requests.length?requests.length+' waiting commuter'+(requests.length===1?'':'s')+' for this trip.':'No active waiting commuters for this trip.';list.replaceChildren();requests.forEach(q=>{const card=el('article',null,'waiting-rider-card');card.append(el('h4',q.full_name||q.name||'Commuter'));const facts=el('dl',null,'waiting-rider-facts');const point=valid(q.latitude,q.longitude)?Number(q.latitude).toFixed(5)+', '+Number(q.longitude).toFixed(5):'Coordinates unavailable';[['Pickup',q.pickup_label||'Pinned pickup'],['Coordinates',point],['Requested',q.updated_at||'Time unavailable'],['Destination',q.destination||'Not provided']].forEach(([k,v])=>facts.append(el('dt',k),el('dd',v)));card.append(facts);list.append(card);});}
- if(layer){layer.clearLayers();const bounds=[];if(d.location)addMarker(d.location.latitude,d.location.longitude,'Operator bus · updated '+(d.location.updated_at||'recently'),'#1769aa',bounds);requests.forEach(q=>addMarker(q.latitude,q.longitude,(q.full_name||q.name||'Commuter')+' · '+(q.pickup_label||'Waiting pickup'),'#c2413b',bounds));if(bounds.length)map.fitBounds(bounds,{padding:[24,24],maxZoom:15});}
- updated.textContent=d.location?.updated_at?'Bus location last updated '+new Date(d.location.updated_at).toLocaleString()+' · feed checked '+new Date(d.server_time||Date.now()).toLocaleTimeString():d.server_time?'Feed checked '+new Date(d.server_time).toLocaleString()+' · bus location not yet available':'Live trip data checked.';
- }catch(e){state.textContent='Waiting pickup data could not be loaded: '+(e.message||'network error')+' Use Refresh to retry.';count.textContent='Unavailable';}finally{busy=false;button.disabled=false;}}
- button.addEventListener('click',refresh);document.addEventListener('visibilitychange',()=>{if(document.hidden){clearInterval(timer);timer=null;}else{refresh();if(!timer)timer=setInterval(refresh,10000);}});window.addEventListener('pagehide',()=>clearInterval(timer),{once:true});refresh();timer=setInterval(refresh,10000);
-}
+    'use strict';
+
+    const endpoint = window.OPERATOR_LIVE_ENDPOINT || '../api/live_tracking.php';
+    const token = window.OPERATOR_CSRF_TOKEN || document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const status = document.getElementById('operatorTrackingStatus');
+
+    if (status && document.getElementById('enableOperatorGps')) dashboardTracking();
+    else if (status) trackBus();
+
+    function errorText(error) {
+        if (!window.isSecureContext) return 'Location needs HTTPS.';
+        if (error && error.code === 1) return 'Location is blocked. Allow it in your browser.';
+        if (error && error.code === 2) return 'No location signal yet.';
+        if (error && error.code === 3) return 'Location timed out. Retrying…';
+        return 'Location unavailable.';
+    }
+
+    function dashboardTracking() {
+        const button = document.getElementById('enableOperatorGps');
+        const select = document.getElementById('operatorTrackingTrip');
+        const label = document.getElementById('operatorTrackingTripLabel');
+        const badge = document.getElementById('operatorTrackingBadge');
+        const activeStatuses = ['Boarding', 'Departed'];
+
+        let enabled = false;
+        let watch = null;
+        let latest = null;
+        let active = [];
+        let selected = '';
+        let lastSent = 0;
+        let pollTimer = null;
+        let busy = false;
+        let uploadBusy = false;
+        let gpsMap = null;
+        let gpsMarker = null;
+        let gpsAccuracy = null;
+
+        const set = (text, tone) => {
+            if (status) status.textContent = text;
+            if (badge) {
+                badge.textContent = tone === 'live' ? 'Live' : tone === 'waiting' ? 'Waiting' : tone === 'error' ? 'Check' : 'Off';
+                badge.className = 'gps-badge' + (tone ? ' is-' + tone : '');
+            }
+        };
+
+        const stopWatch = () => {
+            if (watch !== null && navigator.geolocation) navigator.geolocation.clearWatch(watch);
+            watch = null;
+        };
+
+        const schedulesFrom = data => Array.isArray(data.schedules) ? data.schedules : Array.isArray(data.operator_schedules) ? data.operator_schedules : Array.isArray(data.trips) ? data.trips : [];
+
+        function renderTrips() {
+            const previous = selected;
+            select.replaceChildren();
+            active.forEach(trip => {
+                const option = document.createElement('option');
+                option.value = String(trip.schedule_id);
+                option.textContent = (trip.bus_number || 'Trip') + ' · ' + (trip.origin || '') + ' → ' + (trip.destination || '');
+                select.append(option);
+            });
+            label.hidden = active.length < 2;
+            select.hidden = active.length < 2;
+            if (active.some(trip => String(trip.schedule_id) === previous)) select.value = previous;
+            else {
+                const preferred = active.find(trip => trip.trip_status === 'Departed') || active.find(trip => trip.trip_status === 'Boarding') || active[0];
+                selected = preferred ? String(preferred.schedule_id) : '';
+                select.value = selected;
+                lastSent = 0;
+            }
+        }
+
+        const chosen = () => active.find(trip => String(trip.schedule_id) === String(select.value || selected)) || null;
+
+        async function upload() {
+            if (!enabled || !latest || document.hidden || uploadBusy) return;
+            const trip = chosen();
+            if (!trip) { set('Waiting for a trip to start boarding.', 'waiting'); return; }
+            if (Date.now() - lastSent < 8500) return;
+            uploadBusy = true;
+            try {
+                const coords = latest.coords;
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                    body: new URLSearchParams({
+                        csrf_token: token,
+                        action: 'update_location',
+                        schedule_id: String(trip.schedule_id),
+                        latitude: String(coords.latitude),
+                        longitude: String(coords.longitude),
+                        accuracy: String(coords.accuracy)
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok || data.ok !== true) throw new Error(data.message || 'Location rejected.');
+                lastSent = Date.now();
+                set('Sharing · ' + (trip.bus_number || 'bus') + ' · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 'live');
+            } catch (error) {
+                set('Not sharing: ' + (error.message || 'connection problem'), 'error');
+            } finally {
+                uploadBusy = false;
+            }
+        }
+
+        async function poll() {
+            if (!enabled || document.hidden || busy) return;
+            busy = true;
+            try {
+                const response = await fetch(endpoint, { credentials: 'same-origin', cache: 'no-store' });
+                const data = await response.json();
+                if (!response.ok || data.ok !== true) throw new Error(data.message || 'Unable to check trips.');
+                const next = schedulesFrom(data)
+                    .filter(trip => activeStatuses.includes(trip.trip_status || trip.status) && trip.schedule_id != null)
+                    .map(trip => ({ ...trip, trip_status: trip.trip_status || trip.status }));
+                const signature = next.map(trip => trip.schedule_id + ':' + trip.trip_status).sort().join('|');
+                const old = active.map(trip => trip.schedule_id + ':' + trip.trip_status).sort().join('|');
+                if (signature !== old) { active = next; renderTrips(); lastSent = 0; }
+                if (!chosen()) { set('Waiting for a trip to start boarding.', 'waiting'); return; }
+                if (!latest) { set('Getting your location…', 'waiting'); return; }
+                await upload();
+            } catch (error) {
+                set('Could not check trips: ' + (error.message || 'network error'), 'error');
+            } finally {
+                busy = false;
+            }
+        }
+
+        if (window.L && document.getElementById('operatorGpsMap')) {
+            try {
+                gpsMap = L.map('operatorGpsMap', { zoomControl: false }).setView([14.676, 120.27], 11);
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(gpsMap);
+            } catch (error) {
+                gpsMap = null;
+            }
+        }
+
+        function showFix(position) {
+            if (!gpsMap) return;
+            const loc = [position.coords.latitude, position.coords.longitude];
+            if (!gpsMarker) gpsMarker = L.marker(loc, { title: 'Your bus' }).addTo(gpsMap).bindPopup('Your bus');
+            else gpsMarker.setLatLng(loc);
+            if (gpsAccuracy) gpsMap.removeLayer(gpsAccuracy);
+            const accuracy = Number(position.coords.accuracy);
+            if (Number.isFinite(accuracy) && accuracy > 0) {
+                gpsAccuracy = L.circle(loc, { radius: accuracy, color: '#1f6fb2', fillOpacity: 0.08, weight: 1 }).addTo(gpsMap);
+            }
+            gpsMap.setView(loc, Math.max(gpsMap.getZoom(), 15));
+        }
+
+        function startWatch() {
+            stopWatch();
+            if (!enabled || document.hidden) return;
+            if (!window.isSecureContext) { set('Location needs HTTPS.', 'error'); return; }
+            if (!navigator.geolocation) { set('This browser cannot share location.', 'error'); return; }
+            set('Getting your location…', 'waiting');
+            watch = navigator.geolocation.watchPosition(position => {
+                latest = position;
+                showFix(position);
+                upload();
+            }, error => set(errorText(error), 'error'), { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+            if (button) button.hidden = true;
+        }
+
+        function startPolling() {
+            clearInterval(pollTimer);
+            poll();
+            pollTimer = setInterval(poll, 10000);
+        }
+
+        function enable() {
+            if (enabled) return;
+            enabled = true;
+            startWatch();
+            startPolling();
+        }
+
+        button.addEventListener('click', enable);
+        select.addEventListener('change', () => { selected = select.value; lastSent = 0; if (latest) upload(); });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopWatch();
+                clearInterval(pollTimer);
+                pollTimer = null;
+                set('Paused while this page is hidden.', 'waiting');
+            } else if (enabled) {
+                startWatch();
+                startPolling();
+            }
+        });
+        window.addEventListener('pagehide', () => { stopWatch(); clearInterval(pollTimer); pollTimer = null; });
+
+        // Location is already allowed (see gps.php), so sharing starts on its own.
+        if (window.MBUS_GPS_ENABLED) enable();
+        else { set('Location is off.', 'off'); if (button) button.hidden = false; }
+    }
+
+    function trackBus() {
+        const active = [...document.querySelectorAll('.trip-row')].filter(row => ['Boarding', 'Departed'].includes(row.dataset.tripStatus));
+        if (!active.length) { status.textContent = 'No active trip.'; return; }
+        const preferredId = Number(window.OPERATOR_TRACK_SCHEDULE_ID);
+        const preferred = Number.isSafeInteger(preferredId) && preferredId > 0 ? active.find(row => Number(row.dataset.scheduleId) === preferredId) : null;
+        const row = preferred || active.find(row => row.dataset.tripStatus === 'Departed') || active[0];
+        const sid = Number(row.dataset.scheduleId);
+
+        let watch = null;
+        let lastSent = 0;
+        let busy = false;
+
+        const stop = () => { if (watch !== null) navigator.geolocation.clearWatch(watch); watch = null; };
+
+        async function send(position) {
+            if (busy || document.hidden) return;
+            if (Date.now() - lastSent < 8500) return;
+            busy = true;
+            try {
+                const coords = position.coords;
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                    body: new URLSearchParams({
+                        csrf_token: token,
+                        action: 'update_location',
+                        schedule_id: String(sid),
+                        latitude: String(coords.latitude),
+                        longitude: String(coords.longitude),
+                        accuracy: String(coords.accuracy)
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok || data.ok !== true) throw new Error(data.message || 'Location rejected.');
+                lastSent = Date.now();
+                status.textContent = 'Sharing your location · updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const badge = document.getElementById('operatorTrackingBadge');
+                if (badge) { badge.textContent = 'Live'; badge.className = 'gps-badge is-live'; }
+            } catch (error) {
+                status.textContent = 'Not sharing: ' + (error.message || 'connection problem');
+            } finally {
+                busy = false;
+            }
+        }
+
+        function start() {
+            stop();
+            if (document.hidden) return;
+            if (!window.isSecureContext) { status.textContent = 'Location needs HTTPS.'; return; }
+            if (!navigator.geolocation) { status.textContent = 'This browser cannot share location.'; return; }
+            status.textContent = 'Pinning your location…';
+            // First fix is published immediately so departing is visible right away.
+            navigator.geolocation.getCurrentPosition(send, error => { status.textContent = errorText(error); }, { enableHighAccuracy: true, maximumAge: 30000, timeout: 15000 });
+            watch = navigator.geolocation.watchPosition(send, error => { status.textContent = errorText(error); }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stop();
+                status.textContent = 'Sharing paused while this page is hidden.';
+            } else start();
+        });
+        window.addEventListener('pagehide', stop);
+        start();
+    }
+
+    const departing = document.getElementById('departingBanner');
+    if (departing) {
+        window.setTimeout(() => { departing.hidden = true; }, 12000);
+    }
 })();

@@ -1,4 +1,11 @@
 <?php
-// Waiting riders are part of the operator's Riders workspace, not a separate page.
-header('Location: passengers.php#liveTitle', true, 302);
-exit;
+require_once __DIR__ . '/../config/app.php';
+session_start();
+
+if (!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?? '')) !== 'operator') {
+    header('Location: ../login.php');
+    exit;
+}
+
+$pickupStaffRole = 'operator';
+require __DIR__ . '/../Includes/pickup_staff_view.php';

@@ -9,6 +9,8 @@ if(!isset($_SESSION['user_id'])){
 
 /* Load app config so date() uses the app timezone (Asia/Manila), not the server's UTC default */
 require_once __DIR__ . "/../config/app.php";
+require_once __DIR__ . "/../Includes/gps_gate.php";
+mbus_require_gps('Commuter/commuter_dashboard.php');
 include "../Includes/csrf.php";
 ?>
 
@@ -58,6 +60,8 @@ include "../Includes/csrf.php";
                             <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
                             <span class="profile-menu-role">Commuter account</span>
                         </div>
+                        <a href="waiting.php" role="menuitem"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
+                        <a href="notifications.php" role="menuitem"><i class="fa fa-bell" aria-hidden="true"></i> Updates</a>
                         <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>
@@ -68,6 +72,12 @@ include "../Includes/csrf.php";
         <!-- Dashboard Content -->
         <div class="dashboard-content">
             <p class="dashboard-intro">Choose a travel window to see available bus schedules.</p>
+
+            <a class="wait-cta" href="waiting.php">
+                <span class="wait-cta-icon" aria-hidden="true"><i class="fa fa-hourglass-half"></i></span>
+                <span class="wait-cta-text"><strong>Waiting for a bus?</strong><small>Share your spot with the driver</small></span>
+                <i class="fa fa-chevron-right" aria-hidden="true"></i>
+            </a>
 
             <!-- QUICK ACTIONS -->
             <section class="cards" aria-labelledby="cards-heading">
@@ -135,9 +145,8 @@ include "../Includes/csrf.php";
         <i class="fa fa-ticket" aria-hidden="true"></i>
         <span>Trips</span>
     </a>
-    <a href="notifications.php" class="bottom-nav-item">
-        <i class="fa fa-bell" aria-hidden="true"></i>
-        <span>Alerts</span>
+    <a href="waiting.php" class="bottom-nav-item">
+        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
 </nav>
 

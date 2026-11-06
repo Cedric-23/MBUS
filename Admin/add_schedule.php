@@ -278,8 +278,8 @@ document.addEventListener('keydown', function(e) {
     <a href="manage_operators.php" class="bottom-nav-item">
         <i class="fa fa-users" aria-hidden="true"></i><span>Operators</span>
     </a>
-    <a href="notifications.php" class="bottom-nav-item">
-        <i class="fa fa-bell" aria-hidden="true"></i><span>Alerts</span>
+    <a href="waiting.php" class="bottom-nav-item">
+        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
 </nav>
 <script src="../Assets/js/app-header.js"></script>

@@ -123,20 +123,7 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/operator_riders.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
     <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
-    <style>
-      .rider-live { width:100%; max-width:850px; margin:0 auto; }
-      .rider-live h3 { margin:1rem 0 .4rem; color:var(--color-primary); }
-      .live-rider-map { height:320px; min-height:240px; border-radius:14px; border:1px solid var(--color-border); background:#eef3f8; }
-      .waiting-rider-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr)); gap:10px; }
-      .waiting-rider-card { padding:12px; border:1px solid var(--color-border); border-radius:14px; background:var(--color-surface); overflow-wrap:anywhere; }
-      .waiting-rider-card h4 { margin:0 0 8px; color:var(--color-primary); }
-      .waiting-rider-facts { display:grid; grid-template-columns:auto minmax(0,1fr); gap:6px 12px; margin:0; font-size:.9rem; }
-      .waiting-rider-facts dt { color:var(--color-text-muted); }
-      .waiting-rider-facts dd { margin:0; text-align:right; }
-      @media(max-width:600px){ .live-rider-map{height:260px}.rider-live{padding:13px} }
-    </style>
 </head>
 <body class="has-sidebar has-bottom-nav riders-page">
 
@@ -148,6 +135,7 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
         <a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
         <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
         <a href="passengers.php" aria-current="page"><i class="fa fa-users" aria-hidden="true"></i> Riders</a>
+        <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
         <a href="notifications.php"><i class="fa fa-bell" aria-hidden="true"></i> Notifications</a>
     </nav>
     <div class="menu-bottom">
@@ -194,16 +182,6 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
         <?php } ?>
     </nav>
 
-    <section id="riderLive" class="bus-panel rider-live" data-schedule-id="<?php echo (int)$selected['schedule_id']; ?>" data-endpoint="../api/live_tracking.php" aria-labelledby="liveTitle">
-        <div class="bus-panel-head"><h2 id="liveTitle">Live bus location &amp; waiting riders</h2><span class="trip-state" id="liveStatus" role="status" aria-live="polite">Loading live trip…</span></div>
-        <p id="liveUpdated" class="riders-hint">Waiting for live location and rider updates.</p>
-        <div id="liveMap" class="live-rider-map" role="application" aria-label="Map showing bus and waiting pickup locations"></div>
-        <p id="liveMapError" class="riders-hint" hidden>The map tiles could not be loaded; pickup details remain available below.</p>
-        <h3>Waiting commuters <span id="waitingCount">—</span></h3>
-        <p id="waitingState" class="riders-hint" aria-live="polite">Loading waiting commuters…</p>
-        <div id="waitingList" class="waiting-rider-list" aria-live="polite"></div>
-        <button id="liveRefresh" class="btn btn-outline" type="button">Refresh live trip</button>
-    </section>
     <section class="bus-panel" aria-label="Seats">
         <div class="bus-panel-head">
             <h2><?php echo htmlspecialchars($selected['origin']); ?> to <?php echo htmlspecialchars($selected['destination']); ?></h2>
@@ -280,10 +258,7 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
 <script>
 const RIDERS = <?php echo json_encode($riders, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 const TRIP_OPEN = <?php echo $trip_open ? 'true' : 'false'; ?>;
-window.OPERATOR_LIVE_ENDPOINT = '../api/live_tracking.php';
 </script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="../Assets/js/pickup_staff.js"></script>
 <script src="../Assets/js/operator_riders.js"></script>
 <?php } ?>
 
@@ -298,8 +273,8 @@ window.OPERATOR_LIVE_ENDPOINT = '../api/live_tracking.php';
     <a href="passengers.php" class="bottom-nav-item active" aria-current="page">
         <i class="fa fa-users" aria-hidden="true"></i><span>Riders</span>
     </a>
-    <a href="notifications.php" class="bottom-nav-item">
-        <i class="fa fa-bell" aria-hidden="true"></i><span>Alerts</span>
+    <a href="waiting.php" class="bottom-nav-item">
+        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
 </nav>
 <script src="../Assets/js/app-header.js"></script>

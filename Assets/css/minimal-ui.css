@@ -1,4 +1,7 @@
 /* MBUS minimalist page polish: quiet surfaces, clear hierarchy, compact controls. */
+/* The hidden attribute must win over component display rules. */
+[hidden] { display: none !important; }
+
 :root {
   --minimal-border: rgba(24, 54, 93, 0.12);
   --minimal-muted: #667085;

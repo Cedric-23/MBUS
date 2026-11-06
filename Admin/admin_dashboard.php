@@ -103,7 +103,7 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
             <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
             <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
             <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
-            <a href="notifications.php"><i class="fa fa-bell" aria-hidden="true"></i> Notifications</a>
+            <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>            <a href="notifications.php"><i class="fa fa-bell" aria-hidden="true"></i> Notifications</a>
         </nav>
 
         <div class="menu-bottom">
@@ -123,7 +123,6 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
                 <h1>Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?>!</h1>
             </div>
             <div class="page-header-right">
-                <a href="waiting.php" class="btn btn-outline">Waiting pickups</a>
                 <div class="profile-menu-wrap">
                     <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
                         <span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></span>
@@ -202,8 +201,8 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
     <a href="manage_operators.php" class="bottom-nav-item">
         <i class="fa fa-users" aria-hidden="true"></i><span>Operators</span>
     </a>
-    <a href="notifications.php" class="bottom-nav-item">
-        <i class="fa fa-bell" aria-hidden="true"></i><span>Alerts</span>
+    <a href="waiting.php" class="bottom-nav-item">
+        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
 </nav>
 </body>

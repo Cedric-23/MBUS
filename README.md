@@ -67,13 +67,35 @@ Public bus reservation system — PHP + Supabase PostgreSQL.
 
 Already applied if you ran setup before. To re-run:
 
-For Live bus tracking and waiting riders, apply additive migrations `supabase/10_live_pickup.sql` and `supabase/11_bus_live_tracking.sql` in order. See [Live bus tracking setup and behavior](LIVE_PICKUP.md) for the rider/operator flow and local checks. A Git push does not apply database migrations.
+For waiting riders and live bus tracking, apply additive migrations `supabase/10_live_pickup.sql` and `supabase/11_bus_live_tracking.sql` in order. See [Waiting riders, live bus location and the location gate](LIVE_PICKUP.md) for the role flow, API payloads and local checks. A Git push does not apply database migrations.
 
 ```bash
 php scripts/setup_supabase.php
 ```
 
 Or run SQL files in Supabase SQL Editor: `00_reset.sql` → `01_schema.sql` → `02_data.sql`.
+
+---
+
+## Waiting and live location
+
+Every role uses one **Waiting** tab (the old *Alerts* tab). Waiting requests and bus positions are shared through `api/live_tracking.php`; both sides poll while the page is open.
+
+| Role | What Waiting does |
+|------|-------------------|
+| Commuter | `Commuter/waiting.php` — pick a bus, one tap shares the current spot, and the page then shows a status card (bus, stop, shared time, expiry, how far the bus is). Cancelling or updating the spot stays one tap away. |
+| Operator | `Operator/waiting.php` — waiting riders for the operator's own buses plus a live map of those buses. Riders page is a seat map only. |
+| Admin | `Admin/waiting.php` — the same board for every bus and every waiting rider. |
+
+Location is required before a dashboard opens. `gps.php` asks once, stores `mbus_gps=1`, and then sends the user to their dashboard (or the page they asked for through `?next=`). Operators share GPS automatically once the gate has passed, and the trip page pins a position immediately when a trip is set to **Departed**. Browsers only expose location over HTTPS (or `localhost`).
+
+Check the static UI contract and API behavior locally:
+
+```bash
+node tests/waiting_ux_test.cjs
+node tests/operator_live_tracking_test.cjs
+node tests/commuter_live_tracking_test.cjs
+```
 
 ---
 

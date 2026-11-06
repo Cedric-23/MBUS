@@ -21,7 +21,7 @@ $pdo->exec("INSERT INTO users(user_id,full_name,email,password,user_type) VALUES
     (905,'Rider Two','r2@test.invalid','test','Commuter')");
 $pdo->exec("INSERT INTO routes(route_id,origin,destination,fare) VALUES(1,'MORONG TERMINAL','SBMA',75.50)");
 $pdo->exec("INSERT INTO buses(bus_id,bus_number,bus_type,capacity) VALUES(11,'B11','Regular',4),(12,'B12','Regular',4)");
-$pdo->exec("INSERT INTO operator_bus_assignments(operator_id,bus_id) VALUES(902,11),(903,12),(902,11)");
+$pdo->exec("INSERT INTO operator_bus_assignments(operator_id,bus_id) VALUES(902,11),(903,12)");
 $now = time();
 $stmt = $pdo->prepare('INSERT INTO schedule(schedule_id,bus_id,route_id,departure_time,arrival_time,schedule_status,trip_status) VALUES(?,?,?,?,?,?,?)');
 foreach ([

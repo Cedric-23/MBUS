@@ -1,45 +1,51 @@
+/* Operator location sharing: auto-start, depart auto-pin, no waiting UI on riders.
+ * Run: node tests/operator_live_tracking_test.cjs */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const manage = fs.readFileSync('Operator/manage_trips.php', 'utf8');
-const riders = fs.readFileSync('Operator/passengers.php', 'utf8');
-const dashboard = fs.readFileSync('Operator/operator_dashboard.php', 'utf8');
-const script = fs.readFileSync('Assets/js/pickup_staff.js', 'utf8');
-for (const page of [manage, riders, dashboard]) assert.doesNotMatch(page, /href=["']waiting\.php/i);
+const path = require('node:path');
+const root = path.resolve(__dirname, '..');
+const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+
+const manage = read('Operator/manage_trips.php');
+const riders = read('Operator/passengers.php');
+const dashboard = read('Operator/operator_dashboard.php');
+const script = read('Assets/js/pickup_staff.js');
+
+// trip page keeps status updates and focuses the bus that just departed
 assert.match(manage, /data-trip-status=/);
-assert.match(manage, /IN \('Scheduled','Boarding','Departed'\)/);
 assert.match(manage, /OPERATOR_TRACK_SCHEDULE_ID/);
-assert.match(script, /OPERATOR_TRACK_SCHEDULE_ID/);
-assert.match(riders, /\$since = \$b\['today'\]/);
-assert.match(manage, /csrf_get_token\(\)/);
+assert.match(manage, /\$departed_now = \(\$trip_status === 'Departed'\)/);
+assert.match(manage, /\$track_focus \?: \$open_schedule/);
+assert.match(manage, /id="departingBanner"/);
+assert.match(manage, /gps_status\.css/);
 assert.match(manage, /pickup_staff\.js/);
-assert.match(script, /action:'update_location'/);
-for (const field of ['csrf_token','schedule_id','latitude','longitude','accuracy']) assert.match(script, new RegExp(field));
+assert.match(manage, /csrf_get_token\(\)/);
+
+// dashboard shares automatically once the location gate allowed it
+assert.match(dashboard, /Includes\/csrf\.php/);
+assert.match(dashboard, /window\.MBUS_GPS_ENABLED = true/);
+assert.match(dashboard, /operatorGpsMap/);
+assert.match(dashboard, /id="operatorTrackingStatus"/);
+assert.match(dashboard, /id="operatorTrackingBadge"/);
+assert.match(dashboard, /leaflet@1\.9\.4/);
+assert.doesNotMatch(dashboard, /Enable GPS for bus tracking/);
+
+// script: immediate fix then watch, foreground only, short status copy
+assert.match(script, /getCurrentPosition/);
 assert.match(script, /watchPosition/);
 assert.match(script, /clearWatch/);
 assert.match(script, /document\.hidden/);
-assert.match(dashboard, /Enable GPS for bus tracking/);
-assert.match(dashboard, /permission not enabled/i);
-assert.match(dashboard, /requires HTTPS/i);
-assert.match(dashboard, /Keep this page open and visible/i);
-assert.match(dashboard, /pickup_staff\.js/);
-assert.match(dashboard, /operatorGpsMap/);
-assert.match(dashboard, /leaflet@1\.9\.4/);
-assert.match(script, /enableOperatorGps/);
-assert.match(script, /button\.addEventListener\('click'/);
-assert.match(script, /schedulesFrom\(d\)/);
-assert.match(script, /activeStatuses=\['Boarding','Departed'\]/);
-assert.match(script, /Location is not shared until trip status is confirmed/);
-assert.match(script, /operatorTrackingTrip/);
-assert.match(script, /Actively sharing Bus \/ /);
-assert.match(script, /function showFix\(p\)/);
-assert.match(script, /Your current GPS location/);
-assert.match(script, /gpsMap\.setView\(loc/);
-assert.match(script, /if\(!enabled\|\|document\.hidden\)return/);
-assert.match(script, /setInterval\(refresh,10000\)/);
-assert.match(riders, /live_tracking\.php/);
-assert.match(riders, /liveMap/);
-assert.match(riders, /waitingList/);
-assert.match(riders, /operator_riders\.js/); // reserved seat-map interactions retained
-assert.match(riders, /leaflet@1\.9\.4/);
-assert.doesNotMatch(manage, /waiting (?:pickup|commuter)|waitingList|liveMap/i);
-console.log('operator live tracking regression tests passed');
+assert.match(script, /action: 'update_location'/);
+for (const field of ['csrf_token', 'schedule_id', 'latitude', 'longitude', 'accuracy']) {
+    assert.match(script, new RegExp(field));
+}
+assert.match(script, /MBUS_GPS_ENABLED/);
+assert.match(script, /setInterval\(poll, 10000\)/);
+assert.match(script, /operatorTrackingBadge/);
+assert.doesNotMatch(script, /riderFeed/);
+
+// riders page is a seat map only
+assert.doesNotMatch(riders, /riderLive|liveMap|waitingList|pickup_staff\.js|leaflet/i);
+assert.match(riders, /operator_riders\.js/);
+
+console.log('PASS operator sharing auto-starts, departs pin location, riders page stays seat-map only');

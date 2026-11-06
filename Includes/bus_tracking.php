@@ -85,13 +85,58 @@ function mbus_tracking_feed(PDO $pdo, string $role, int $userId, ?int $chosen): 
     $schedule = $selectedId !== null ? $schedules[$selectedId] : null;
     $location = null;
     $waiting = null;
+    $myRequest = null;
     $requests = [];
+    // Latest operator GPS point for every active trip in scope, so riders and staff can
+    // see the bus on a map without guessing which trip is selected.
+    $locationSql = "SELECT t.schedule_id, b.bus_number, t.latitude, t.longitude, t.accuracy, t.updated_at
+        FROM public.bus_live_tracking t
+        JOIN public.buses b ON b.bus_id = t.bus_id
+        JOIN public.schedule s ON s.schedule_id = t.schedule_id
+        WHERE s.schedule_status = 'Active' AND s.trip_status IN ('Boarding', 'Departed') AND s.departure_time >= ?";
+    $locationParams = [date('Y-m-d 00:00:00')];
+    if ($role === 'operator') {
+        $locationSql .= ' AND EXISTS (SELECT 1 FROM public.operator_bus_assignments oba WHERE oba.bus_id = s.bus_id AND oba.operator_id = ?)';
+        $locationParams[] = $userId;
+    }
+    $stmt = $pdo->prepare($locationSql);
+    $stmt->execute($locationParams);
+    $locations = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $locations[] = [
+            'schedule_id' => (int)$row['schedule_id'],
+            'bus_number' => $row['bus_number'],
+            'latitude' => (float)$row['latitude'],
+            'longitude' => (float)$row['longitude'],
+            'accuracy' => (float)$row['accuracy'],
+            'updated_at' => (new DateTimeImmutable($row['updated_at']))->format(DATE_ATOM),
+        ];
+    }
+    if ($role === 'commuter') {
+        // The rider's own waiting request is independent of which bus is selected.
+        $stmt = $pdo->prepare("SELECT schedule_id, CASE WHEN status='Waiting' AND expires_at <= clock_timestamp() THEN 'Expired' ELSE status END AS status,
+            pickup_label, latitude, longitude, updated_at, expires_at
+            FROM public.pickup_requests WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $myRequest = [
+                'schedule_id' => (int)$row['schedule_id'],
+                'status' => $row['status'],
+                'pickup_label' => $row['pickup_label'],
+                'latitude' => (float)$row['latitude'],
+                'longitude' => (float)$row['longitude'],
+                'updated_at' => (new DateTimeImmutable($row['updated_at']))->format(DATE_ATOM),
+                'expires_at' => (new DateTimeImmutable($row['expires_at']))->format(DATE_ATOM),
+            ];
+        }
+    }
     if ($selectedId !== null) {
         $stmt = $pdo->prepare('SELECT latitude, longitude, accuracy, updated_at FROM public.bus_live_tracking WHERE schedule_id = ?');
         $stmt->execute([$selectedId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) {
-            $location = ['latitude' => (float)$row['latitude'], 'longitude' => (float)$row['longitude'], 'accuracy' => (float)$row['accuracy'], 'updated_at' => (new DateTimeImmutable($row['updated_at']))->format(DATE_ATOM)];
+            $location = ['schedule_id' => $selectedId, 'latitude' => (float)$row['latitude'], 'longitude' => (float)$row['longitude'], 'accuracy' => (float)$row['accuracy'], 'updated_at' => (new DateTimeImmutable($row['updated_at']))->format(DATE_ATOM)];
         }
         if ($role === 'commuter') {
             $stmt = $pdo->prepare("SELECT CASE WHEN status='Waiting' AND expires_at <= clock_timestamp() THEN 'Expired' ELSE status END AS status,
@@ -114,7 +159,7 @@ function mbus_tracking_feed(PDO $pdo, string $role, int $userId, ?int $chosen): 
             }
         }
     }
-    return ['ok' => true, 'active' => (bool)$schedule, 'schedule' => $schedule, 'schedules' => array_values($schedules), 'location' => $location, 'waiting' => $waiting, 'requests' => $requests, 'server_time' => date(DATE_ATOM)];
+    return ['ok' => true, 'active' => (bool)$schedule, 'schedule' => $schedule, 'schedules' => array_values($schedules), 'location' => $location, 'locations' => $locations, 'waiting' => $waiting, 'my_request' => $myRequest, 'requests' => $requests, 'server_time' => date(DATE_ATOM)];
 }
 
 function mbus_tracking_mutate(PDO $pdo, string $role, int $userId, array $data): array
@@ -155,7 +200,7 @@ function mbus_tracking_mutate(PDO $pdo, string $role, int $userId, array $data):
             if (!$stmt->fetchColumn()) throw new MbusPickupException('Your waiting request was not found or has expired.', 404);
         }
         $pdo->commit();
-        return ['ok' => true, 'message' => $action === 'mark_waiting' ? 'You are marked as waiting for this trip.' : ($action === 'cancel_waiting' ? 'Your waiting request was cancelled.' : 'Live bus location updated.')];
+        return ['ok' => true, 'message' => $action === 'mark_waiting' ? 'You are on the waiting list.' : ($action === 'cancel_waiting' ? 'Your waiting request was cancelled.' : 'Live bus location updated.')];
     } catch (Throwable $error) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         throw $error;

@@ -1,49 +1,45 @@
-# Live bus tracking, waiting riders and ticket QR
+# Waiting riders, live bus location and the location gate
 
-## Database deployment
+After the existing MBUS schema, apply both additive migrations in order: `supabase/10_live_pickup.sql` and `supabase/11_bus_live_tracking.sql`. Migration 10 stores the latest commuter waiting signal; migration 11 stores the latest operator GPS point for each trip. Both preserve schedules, reservations, accounts and payments, and reapplying is safe. A Git push does not run migrations.
 
-After the existing MBUS schema, apply both additive migrations in order: `supabase/10_live_pickup.sql` and `supabase/11_bus_live_tracking.sql`. Migration 10 stores the latest commuter waiting signal; migration 11 stores the latest operator GPS point for each trip. They preserve existing schedules, reservations, accounts and payments. Reapplying is safe. A Git push does not run migrations, and these migrations have not been applied to production from this task.
+## One Waiting tab, three roles
 
-Both tables use the existing server-side PHP database connection. Row-level security is enabled and direct `PUBLIC`, `anon`, and `authenticated` table access is revoked. Do not expose these location tables through the browser Supabase client. A custom non-owner database role needs deliberately configured server-only permissions.
+Every bottom navigation bar now has **Waiting** where **Alerts** used to be. Nothing else in the app offers a waiting control.
 
-## Rider experience
+| Role | Page | Behaviour |
+|------|------|-----------|
+| Commuter | `Commuter/waiting.php` | Pick the bus, tap **Share my location**, then see a status card with the bus, stop, shared time, expiry and the distance to the bus. **Update my spot** re-sends the current GPS fix; **Cancel** removes the signal. A map, coordinates and stop name sit behind **Adjust location** so the first screen stays short. |
+| Operator | `Operator/waiting.php` | Waiting riders for the operator's own buses, plus a live map of those buses. The Riders page is a seat map only. |
+| Admin | `Admin/waiting.php` | The same board for every bus and every waiting rider. Admin dashboard and schedule pages no longer link to separate waiting screens. |
 
-Commuter navigation is Home / Schedule / Live / Trips / Alerts. Schedule remains the place to reserve a seat or choose **Pick up** when reservations have closed. The Live page is for tracking, not for arranging a pickup. It lists current-day buses whose status is **Boarding** or **Departed**, including trips for riders who do not hold a reservation. The commuter chooses a bus and sees its route and most recently shared operator GPS point. No point means no bus marker; old points are labelled stale. Updates poll while the page is visible. The map does not simulate a bus route or claim a fake live location.
+Commuter navigation is Home / Schedule / Live / Trips / Waiting. Live is tracking only: it lists current-day **Boarding** or **Departed** buses, defaults to a bus that is actually sharing GPS, and labels stale points instead of pretending they are current. Notifications are reached from the profile menu as **Updates**.
 
-A commuter selects their waiting location in the **Alerts** tab with GPS, a draggable/map-tap pin, or manual coordinates, then explicitly confirms **Share waiting location**. Only the chosen point and optional landmark are shared with the assigned operator for that trip; selecting a map point or reading GPS alone does not send it. The rider can cancel the waiting signal. It expires after 30 minutes if not renewed. The Live tab is bus tracking only. Maps require browser location permission when GPS is used, an HTTPS site (localhost for development), and network access to Leaflet/OpenStreetMap tiles.
+## Location gate
 
-## Operator experience and limitations
+`gps.php` runs before either dashboard. It shows one sentence, one button and nothing else. Tapping **Enable location** requests the browser permission once, stores `mbus_gps=1`, and returns to the requested page (`?next=` is validated to in-app paths). `Includes/gps_gate.php` enforces the cookie on `Commuter/commuter_dashboard.php` and `Operator/operator_dashboard.php`. Browsers only expose location over HTTPS or `localhost`.
 
-After login, the operator explicitly turns on GPS from the Dashboard and allows browser location access. Their current GPS pin appears on the dashboard map. The dashboard polls assigned trips and uploads that position only once an assigned trip is **Boarding** or **Departed**. The operator can select among multiple active trips. Location sharing pauses when the dashboard is hidden and stops when it closes; keep it open in the foreground on Android Chrome for reliable updates. Browser permission usually requires HTTPS (localhost for development). This implementation does not provide native/background location tracking or a separate vehicle GPS device.
+## Operator side
 
-Operator waiting-rider details are shown inside **Riders**, alongside its seat map. The selected trip's bus position and waiting rider pins share that map. The operator's own Riders page only requests details for buses assigned to that operator. Old links to the separate operator waiting page redirect to Riders. The Admin waiting workspace remains available separately.
+Once the gate has passed, `Assets/js/pickup_staff.js` starts sharing automatically on the operator dashboard: it watches position, keeps only one trip selected (the operator can switch when several are active), and posts at most every 8.5 seconds. On `Operator/manage_trips.php` the script sends one immediate fix before watching, so changing a trip to **Departed** pins the bus location right away; the page also shows a short "Departed — pinning your location" banner. Sharing pauses when the tab is hidden and resumes when it returns.
 
-## Downloaded ticket QR
+## API
 
-Downloaded PDF tickets contain the same signed `mbus_ticket_token(schedule_id, user_id)` as the on-screen ticket, encoded locally and rendered as vector modules. No ticket token is sent to an external QR service. The bundled MIT-licensed QR encoder is attributed under `Includes/vendor/`. The operator scanner continues to verify the existing HMAC token.
+`api/live_tracking.php` reads `mbus_tracking_feed()` and writes through `mbus_tracking_mutate()` in `Includes/bus_tracking.php`.
+
+- `GET` returns `schedules`, `locations` (every active trip's latest bus point, scoped to the operator's buses when the caller is an operator), `location` for the selected trip, and `requests` for staff.
+- For commuters it also returns `my_request`, the rider's own waiting signal regardless of which bus is selected, plus `waiting` for the selected trip.
+- `POST` actions are `update_location`, `mark_waiting`, `cancel_waiting` and `picked_up`, all CSRF-protected.
+
+A waiting signal expires 30 minutes after it was shared and is scoped to one trip. Only the chosen point, optional stop name and destination are visible to staff.
 
 ## Checks
 
-Local-only tests and PHP/JavaScript lint checks:
-
 ```bash
-php scripts/test_schedule_booking.php
-php scripts/test_pickup_policy.php
-php tests/ticket_qr_pdf_test.php
-NODE_PATH=/tmp/mbus-test-tools/node_modules node tests/commuter_live_tracking_test.cjs
+node tests/waiting_ux_test.cjs
 node tests/operator_live_tracking_test.cjs
-php -l api/live_tracking.php
-php -l Includes/bus_tracking.php
-node --check Assets/js/commuter_live.js
-node --check Assets/js/pickup_staff.js
-node --check Assets/js/admin_waiting.js
-```
-
-For isolated PostgreSQL integration tests, apply migrations `01_schema.sql`, `10_live_pickup.sql` and `11_bus_live_tracking.sql` to a disposable local database named `mbus_pickup_test`, then run:
-
-```bash
-MBUS_PICKUP_TEST_DSN='pgsql:host=/var/run/postgresql;dbname=mbus_pickup_test' php tests/pickup_integration.php
+node tests/commuter_live_tracking_test.cjs
 MBUS_TRACKING_TEST_DSN='pgsql:host=/var/run/postgresql;dbname=mbus_pickup_test' php tests/tracking_integration.php
+MBUS_PICKUP_TEST_DSN='pgsql:host=/var/run/postgresql;dbname=mbus_pickup_test' php tests/pickup_integration.php
 ```
 
-These scripts explicitly refuse to run against any other database. Never adapt the target check to production.
+The two PHP suites refuse to run unless the database is the dedicated local `mbus_pickup_test`.

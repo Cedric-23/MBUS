@@ -1,0 +1,71 @@
+/* Compact location status card shared by the operator dashboard and trip pages. */
+.gps-card {
+  padding: 16px;
+  margin: 14px 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.gps-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.gps-card-head h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #14263f;
+}
+
+.gps-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.gps-badge.is-live { background: #e8f7f1; color: #12795a; }
+.gps-badge.is-waiting { background: #fff7e6; color: #9a6700; }
+.gps-badge.is-error { background: #fff1f0; color: #b42318; }
+
+.gps-card p {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: #6b7a8d;
+}
+
+.gps-card .btn { margin-top: 10px; }
+
+.gps-map {
+  height: 170px;
+  margin-top: 12px;
+  border-radius: 12px;
+  background: #eef3f8;
+  z-index: 1;
+}
+
+.gps-map:empty { display: none; }
+
+.departing-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #eef7ff;
+  color: #144d7a;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.departing-banner i { font-size: 0.9rem; }

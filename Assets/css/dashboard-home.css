@@ -86,3 +86,33 @@
   .dashboard-home .cards .card { min-height: 0 !important; padding: var(--space-4); }
   .dashboard-home .dashboard-notice { align-items: flex-start; flex-direction: column; gap: var(--space-1); }
 }
+
+/* Waiting shortcut card (commuter home) */
+.wait-cta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 18px;
+  padding: 14px 16px;
+  border: 1px solid #dbe6f3;
+  border-radius: 16px;
+  background: linear-gradient(120deg, #ffffff 0%, #f3f8ff 100%);
+  color: #14263f;
+  text-decoration: none;
+  box-shadow: 0 1px 2px rgba(16, 40, 68, 0.05);
+}
+.wait-cta:active { transform: scale(0.995); }
+.wait-cta-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #18365d;
+  color: #fff;
+  font-size: 0.95rem;
+}
+.wait-cta-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.wait-cta-text strong { font-size: 0.9rem; color: #14263f; }
+.wait-cta-text small { font-size: 0.78rem; color: #6b7a8d; }
+.wait-cta > i { color: #b6c2d1; font-size: 0.8rem; }

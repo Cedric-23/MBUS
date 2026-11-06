@@ -13,6 +13,8 @@ if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type']) !== 'opera
 $operator_id = (int)$_SESSION['user_id'];
 $success = null;
 $error = null;
+$departed_now = false;
+$track_focus = 0;
 $archive_table_check = mbus_db_query($conn, "SELECT to_regclass('public.operator_trip_archives') AS archive_table");
 $archive_table_row = $archive_table_check !== false ? mbus_db_fetch_assoc($archive_table_check) : false;
 $archive_table_ready = is_array($archive_table_row) && !empty($archive_table_row['archive_table']);
@@ -65,6 +67,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])){
             $stmt = mbus_db_prepare($conn, "UPDATE schedule SET trip_status=? WHERE schedule_id=? AND bus_id IN (SELECT bus_id FROM operator_bus_assignments WHERE operator_id=?)", [$trip_status, $schedule_id, $operator_id]);
             if($stmt !== false && $conn->affectedRows > 0){
                 $success = "Trip status updated";
+                $departed_now = ($trip_status === 'Departed');
+                if ($departed_now) { $track_focus = (int)$schedule_id; }
             } else {
                 $error = "Failed to update status";
             }
@@ -155,6 +159,7 @@ $query = mbus_db_prepare($conn, "
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
+    <link rel="stylesheet" href="../Assets/css/gps_status.css">
 </head>
 
 <body class="has-sidebar">
@@ -216,11 +221,16 @@ $query = mbus_db_prepare($conn, "
 <div class="alert alert-error"><?php echo $error; ?></div>
 <?php endif; ?>
 
-<section class="card" aria-labelledby="trip-context-heading">
-    <h2 id="trip-context-heading" style="margin:0 0 .35rem;">Trip Operations</h2>
-    <p style="margin:0;color:var(--color-text-muted);">Use Scan Ticket for boarding, update trip status here, and review completed work in History. When a trip enters Boarding or Departed, location sharing starts for its assigned bus. Allow browser location access; sharing requires HTTPS and stops when the trip ends or this page is hidden.</p>
-    <p id="operatorTrackingStatus" role="status" aria-live="polite" style="margin:.75rem 0 0;">Live location tracking is idle.</p>
+<section class="gps-card" aria-labelledby="trip-context-heading">
+    <div class="gps-card-head">
+        <h2 id="trip-context-heading">Bus location</h2>
+        <span id="operatorTrackingBadge" class="gps-badge">Off</span>
+    </div>
+    <p id="operatorTrackingStatus" role="status" aria-live="polite">Starting location…</p>
 </section>
+<?php if(!empty($departed_now)): ?>
+<div class="departing-banner" id="departingBanner" role="status"><i class="fa fa-location-crosshairs" aria-hidden="true"></i> Departed — pinning your location for riders and admin.</div>
+<?php endif; ?>
 <div class="date-filter-container">
 <nav class="date-filters" aria-label="Trip filters">
 <a href="?filter=upcoming" class="date-filter-btn <?php echo $filter==='upcoming' ? 'active' : ''; ?>">Upcoming</a>
@@ -390,7 +400,7 @@ $query = mbus_db_prepare($conn, "
 <script>
 window.OPERATOR_LIVE_ENDPOINT = '../api/live_tracking.php';
 window.OPERATOR_CSRF_TOKEN = <?php echo json_encode(csrf_get_token()); ?>;
-window.OPERATOR_TRACK_SCHEDULE_ID = <?php echo json_encode($open_schedule); ?>;
+window.OPERATOR_TRACK_SCHEDULE_ID = <?php echo json_encode($track_focus ?: $open_schedule); ?>;
 document.addEventListener('DOMContentLoaded', function() {
     // Toggle passenger manifest rows
     document.querySelectorAll('.toggle-passengers').forEach(function(btn) {
@@ -469,8 +479,8 @@ document.addEventListener('keydown', function(e) {
     <a href="passengers.php" class="bottom-nav-item">
         <i class="fa fa-users" aria-hidden="true"></i><span>Riders</span>
     </a>
-    <a href="notifications.php" class="bottom-nav-item">
-        <i class="fa fa-bell" aria-hidden="true"></i><span>Notifications</span>
+    <a href="waiting.php" class="bottom-nav-item">
+        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
 </nav>
 <script src="../Assets/js/app-header.js"></script>

@@ -129,7 +129,6 @@ ORDER BY departure_time ASC
     <h1>Manage Schedules</h1>
 
             <div class="page-header-right">
-                <a href="waiting.php" class="btn btn-outline">Waiting pickups</a>
                 <div class="profile-menu-wrap">
                     <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
                         <span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></span>
@@ -425,8 +424,8 @@ document.addEventListener('keydown', function(e) {
     <a href="manage_operators.php" class="bottom-nav-item">
         <i class="fa fa-users" aria-hidden="true"></i><span>Operators</span>
     </a>
-    <a href="notifications.php" class="bottom-nav-item">
-        <i class="fa fa-bell" aria-hidden="true"></i><span>Alerts</span>
+    <a href="waiting.php" class="bottom-nav-item">
+        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
 </nav>
 <script src="../Assets/js/app-header.js"></script>
