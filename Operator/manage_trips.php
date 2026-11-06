@@ -10,7 +10,43 @@ if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type']) !== 'opera
     exit();
 }
 
-$operator_id = $_SESSION['user_id'];
+$operator_id = (int)$_SESSION['user_id'];
+$success = null;
+$error = null;
+$archive_table_check = mbus_db_query($conn, "SELECT to_regclass('public.operator_trip_archives') AS archive_table");
+$archive_table_row = $archive_table_check !== false ? mbus_db_fetch_assoc($archive_table_check) : false;
+$archive_table_ready = is_array($archive_table_row) && !empty($archive_table_row['archive_table']);
+
+// Archive terminal trips per operator; this never deletes operational records.
+if($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['archive_trip']) || isset($_POST['clear_history']))){
+    if(!csrf_validate_token()) $error = "Invalid CSRF token.";
+    elseif(!$archive_table_ready) $error = "Trip history is not enabled yet. Run supabase/09_operator_trip_history.sql first.";
+    elseif(isset($_POST['archive_trip'])){
+        $schedule_id = filter_var($_POST['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
+        if($schedule_id === false) $error = "Invalid trip.";
+        else {
+            $result = mbus_db_prepare($conn, "
+                INSERT INTO operator_trip_archives(operator_id, schedule_id)
+                SELECT ?, s.schedule_id FROM schedule s
+                JOIN operator_bus_assignments oba ON oba.bus_id=s.bus_id AND oba.operator_id=?
+                WHERE s.schedule_id=? AND (s.trip_status IN ('Arrived','Cancelled') OR s.schedule_status IN ('Completed','Cancelled'))
+                ON CONFLICT (operator_id, schedule_id) DO NOTHING
+            ", [(int)$operator_id, (int)$operator_id, $schedule_id]);
+            if($result === false) $error = "Trip could not be archived.";
+            else $success = "Trip moved to history archive.";
+        }
+    } else {
+        $result = mbus_db_prepare($conn, "
+            INSERT INTO operator_trip_archives(operator_id, schedule_id)
+            SELECT ?, s.schedule_id FROM schedule s
+            JOIN operator_bus_assignments oba ON oba.bus_id=s.bus_id AND oba.operator_id=?
+            WHERE s.trip_status IN ('Arrived','Cancelled') OR s.schedule_status IN ('Completed','Cancelled')
+            ON CONFLICT (operator_id, schedule_id) DO NOTHING
+        ", [(int)$operator_id, (int)$operator_id]);
+        if($result === false) $error = "History could not be cleared.";
+        else $success = "Completed and cancelled trips were archived safely.";
+    }
+}
 
 // Handle status update
 if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])){
@@ -67,51 +103,33 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_boarded'])){
 }
 
 // Filters
-$filter = $_GET['filter'] ?? 'all';
-$open_schedule = isset($_GET['open_schedule']) ? (int)$_GET['open_schedule'] : null;
-
+$allowed_filters = ['upcoming','active','today','tomorrow','this_week','next_week','history','all'];
+$filter = isset($_GET['filter']) && is_scalar($_GET['filter']) ? (string)$_GET['filter'] : 'upcoming';
+if(!in_array($filter, $allowed_filters, true)) $filter='upcoming';
+$open_schedule = isset($_GET['open_schedule']) && is_scalar($_GET['open_schedule']) ? (int)$_GET['open_schedule'] : null;
 $where = "WHERE oba.operator_id = ?";
-$params = [$operator_id];
-
-$b = mbus_local_bounds(); // app-timezone date boundaries (not the DB clock)
-
+$params = [(int)$operator_id];
+if($archive_table_ready) $where .= " AND NOT EXISTS (SELECT 1 FROM operator_trip_archives ota WHERE ota.operator_id=oba.operator_id AND ota.schedule_id=s.schedule_id)";
+$b = mbus_local_bounds();
 switch($filter){
-    case 'today':
-        $where .= " AND s.departure_time >= '{$b['today']}' AND s.departure_time < '{$b['tomorrow']}'";
-        break;
-    case 'tomorrow':
-        $where .= " AND s.departure_time >= '{$b['tomorrow']}' AND s.departure_time < '{$b['day_after']}'";
-        break;
-    case 'this_week':
-        $where .= " AND s.departure_time >= '{$b['week_start']}' AND s.departure_time < '{$b['next_week']}'";
-        break;
-    case 'next_week':
-        $where .= " AND s.departure_time >= '{$b['next_week']}' AND s.departure_time < '{$b['week_after_next']}'";
-        break;
-    case 'active':
-        $where .= " AND s.trip_status IN ('Scheduled', 'Boarding')";
-        break;
-    default:
-        // all
-        break;
+    case 'today': $where .= " AND s.departure_time >= '{$b['today']}' AND s.departure_time < '{$b['tomorrow']}'"; break;
+    case 'tomorrow': $where .= " AND s.departure_time >= '{$b['tomorrow']}' AND s.departure_time < '{$b['day_after']}'"; break;
+    case 'this_week': $where .= " AND s.departure_time >= '{$b['week_start']}' AND s.departure_time < '{$b['next_week']}'"; break;
+    case 'next_week': $where .= " AND s.departure_time >= '{$b['next_week']}' AND s.departure_time < '{$b['week_after_next']}'"; break;
+    case 'history': $where .= " AND (s.trip_status IN ('Arrived','Cancelled') OR s.schedule_status IN ('Completed','Cancelled'))"; break;
+    case 'active': $where .= " AND s.departure_time >= NOW() AND s.trip_status IN ('Scheduled','Boarding')"; break;
+    case 'all': break;
+    default: $where .= " AND s.departure_time >= NOW() AND s.trip_status IN ('Scheduled','Boarding')"; break;
 }
-
 $query = mbus_db_prepare($conn, "
-    SELECT 
-        s.schedule_id,
-        s.departure_time,
-        s.arrival_time,
-        s.trip_status,
-        b.bus_number,
-        b.bus_type,
-        r.origin,
-        r.destination
+    SELECT s.schedule_id, s.departure_time, s.arrival_time, s.trip_status, s.schedule_status,
+           b.bus_number, b.bus_type, r.origin, r.destination
     FROM schedule s
-    JOIN buses b ON s.bus_id = b.bus_id
-    JOIN routes r ON s.route_id = r.route_id
-    JOIN operator_bus_assignments oba ON oba.bus_id = s.bus_id
+    JOIN buses b ON s.bus_id=b.bus_id
+    JOIN routes r ON s.route_id=r.route_id
+    JOIN operator_bus_assignments oba ON oba.bus_id=s.bus_id
     $where
-    ORDER BY s.departure_time DESC
+    ORDER BY s.departure_time ASC
 ", $params);
 ?>
 <!DOCTYPE html>
@@ -119,7 +137,7 @@ $query = mbus_db_prepare($conn, "
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Trips</title>
+    <title>Trip Operations</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -170,7 +188,7 @@ $query = mbus_db_prepare($conn, "
 <main class="main" role="main">
 
 <header class="page-header">
-    <h1>Manage Trips</h1>
+    <h1>Trip Operations</h1>
 
             <div class="page-header-right">
                 <div class="profile-menu-wrap">
@@ -195,6 +213,27 @@ $query = mbus_db_prepare($conn, "
 <div class="alert alert-error"><?php echo $error; ?></div>
 <?php endif; ?>
 
+<section class="card" aria-labelledby="trip-context-heading">
+    <h2 id="trip-context-heading" style="margin:0 0 .35rem;">Trip Operations</h2>
+    <p style="margin:0;color:var(--color-text-muted);">Use Scan Ticket for boarding, update trip status here, and review completed work in History.</p>
+</section>
+<div class="date-filter-container">
+<nav class="date-filters" aria-label="Trip filters">
+<a href="?filter=upcoming" class="date-filter-btn <?php echo $filter==='upcoming' ? 'active' : ''; ?>">Upcoming</a>
+<a href="?filter=active" class="date-filter-btn <?php echo $filter==='active' ? 'active' : ''; ?>">Active</a>
+<a href="?filter=today" class="date-filter-btn <?php echo $filter==='today' ? 'active' : ''; ?>">Today</a>
+<a href="?filter=history" class="date-filter-btn <?php echo $filter==='history' ? 'active' : ''; ?>">History</a>
+</nav>
+</div>
+<?php if($filter==='history'): ?>
+<div class="card" style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap;">
+    <span>History is preserved for audit records; clearing only hides terminal trips from this workspace.</span>
+    <form method="POST" onsubmit="return confirm('Archive completed and cancelled trips from your workspace? Records will not be deleted.');">
+        <?php csrf_field(); ?><button type="submit" name="clear_history" class="btn btn-outline"><i class="fa fa-box-archive" aria-hidden="true"></i> Clear history</button>
+    </form>
+</div>
+<?php endif; ?>
+
 <div class="table-responsive trips-table-responsive">
     <table class="trips-table">
         <thead>
@@ -210,39 +249,35 @@ $query = mbus_db_prepare($conn, "
             </tr>
         </thead>
         <tbody>
-            <?php 
+            <?php
             mbus_db_data_seek($query, 0);
-            while($row=mbus_db_fetch_assoc($query)){ 
+            while($row=mbus_db_fetch_assoc($query)){
             ?>
             <tr class="trip-row" data-schedule-id="<?php echo $row['schedule_id']; ?>">
-                <form method="POST" class="schedule-form">
-                    <?php csrf_field(); ?>
-                    <input type="hidden" name="schedule_id" value="<?php echo $row['schedule_id']; ?>">
-                    <input type="hidden" name="open_schedule" value="<?php echo $open_schedule ?? $row['schedule_id']; ?>">
-                    
+
                     <td data-label="Schedule ID"><?php echo $row['schedule_id']; ?></td>
-                    
+
                     <td data-label="Bus">
                         <div class="bus-info">
                             <span class="bus-number"><?php echo htmlspecialchars($row['bus_number']); ?></span>
                             <span class="bus-type"><?php echo htmlspecialchars($row['bus_type']); ?></span>
                         </div>
                     </td>
-                    
+
                     <td data-label="Route">
                         <span class="route-badge">
                             <i class="fa fa-map-marker-alt" aria-hidden="true"></i>
                             <span><?php echo htmlspecialchars($row['origin']); ?> → <?php echo htmlspecialchars($row['destination']); ?></span>
                         </span>
                     </td>
-                    
+
                     <td data-label="Departure"><?php echo date('M j, Y g:i A', strtotime($row['departure_time'])); ?></td>
                     <td data-label="Arrival"><?php echo date('M j, Y g:i A', strtotime($row['arrival_time'])); ?></td>
-                    
+
                     <td data-label="Status">
                         <span class="status-badge <?php echo strtolower($row['trip_status']); ?>"><?php echo htmlspecialchars($row['trip_status']); ?></span>
                     </td>
-                    
+
                     <td data-label="Update">
                         <form method="POST" class="status-form">
                             <?php csrf_field(); ?>
@@ -257,14 +292,20 @@ $query = mbus_db_prepare($conn, "
                             </select>
                             <input type="hidden" name="update_status" value="1">
                         </form>
+                        <?php if($archive_table_ready && ($row['trip_status']==='Arrived' || $row['trip_status']==='Cancelled' || $row['schedule_status']==='Completed' || $row['schedule_status']==='Cancelled')): ?>
+                        <form method="POST" class="action-form" onsubmit="return confirm('Archive this completed trip? Records will not be deleted.');">
+                            <?php csrf_field(); ?>
+                            <input type="hidden" name="schedule_id" value="<?php echo (int)$row['schedule_id']; ?>">
+                            <button type="submit" name="archive_trip" class="btn btn-sm btn-outline"><i class="fa fa-box-archive" aria-hidden="true"></i> Archive</button>
+                        </form>
+                        <?php endif; ?>
                     </td>
-                    
+
                     <td data-label="Passengers">
                         <button type="button" class="btn btn-sm btn-outline toggle-passengers" data-schedule-id="<?php echo $row['schedule_id']; ?>" aria-expanded="false" aria-controls="passengers-<?php echo $row['schedule_id']; ?>">
                             <i class="fa fa-users" aria-hidden="true"></i> View
                         </button>
                     </td>
-                </form>
             </tr>
             <tr id="passengers-<?php echo $row['schedule_id']; ?>" class="manifest-row" style="display: none;">
                 <td colspan="8">
@@ -355,7 +396,7 @@ document.addEventListener('DOMContentLoaded', function() {
             this.innerHTML = isOpen ? '<i class="fa fa-users" aria-hidden="true"></i> View' : '<i class="fa fa-chevron-up" aria-hidden="true"></i> Hide';
         });
     });
-    
+
     // Auto-open manifest if open_schedule parameter is set
     <?php if($open_schedule): ?>
     var openRow = document.getElementById('passengers-<?php echo $open_schedule; ?>');
@@ -373,15 +414,15 @@ function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
     const toggle = document.querySelector('.sidebar-toggle');
-    
+
     const isOpen = sidebar.classList.toggle('open');
     overlay.classList.toggle('active');
     document.body.classList.toggle('sidebar-open', isOpen);
-    
+
     if (toggle) {
         toggle.setAttribute('aria-expanded', isOpen);
     }
-    
+
     if (isOpen) {
         document.body.style.overflow = 'hidden';
         const firstLink = sidebar.querySelector('a, button');
@@ -421,7 +462,7 @@ document.addEventListener('keydown', function(e) {
         <i class="fa fa-users" aria-hidden="true"></i><span>Riders</span>
     </a>
     <a href="notifications.php" class="bottom-nav-item">
-        <i class="fa fa-bell" aria-hidden="true"></i><span>Alerts</span>
+        <i class="fa fa-bell" aria-hidden="true"></i><span>Notifications</span>
     </a>
 </nav>
 <script src="../Assets/js/app-header.js"></script>
