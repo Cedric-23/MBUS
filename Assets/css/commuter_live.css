@@ -1,0 +1,40 @@
+/* Commuter Live: the same map card and bus pins as the operator board, buses only. */
+.commuter-live-page .main { padding-top: 16px; }
+.commuter-live-page .page-header h1 { margin: 0; font-size: 1.5rem; }
+
+.dot-stale { background: #8d9bad; }
+.board-bus-pin.is-stale { background: #8d9bad; }
+.board-bus-pin.is-picked { background: var(--board-navy, #18365d); }
+.live-map-note { color: #6b7a8d; }
+
+.bus-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 13px;
+  border: 1px solid var(--board-line);
+  border-radius: 14px;
+  background: #fbfcfe;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bus-row:disabled { cursor: default; }
+.bus-row.is-picked { border-color: var(--board-navy); background: #f1f6fd; }
+.bus-row:focus-visible { outline: 3px solid #1e90ff; outline-offset: 2px; }
+.bus-row-icon {
+  display: grid; place-items: center; width: 38px; height: 38px;
+  border-radius: 12px; background: #1f6fb2; color: #fff; font-size: 0.9rem;
+}
+.bus-row.is-stale .bus-row-icon, .bus-row.is-none .bus-row-icon { background: #8d9bad; }
+.bus-row-main { min-width: 0; display: grid; gap: 2px; }
+.bus-row-name { font-size: 0.95rem; font-weight: 700; color: var(--board-ink); }
+.bus-row-route { font-size: 0.8rem; color: var(--board-muted); overflow-wrap: anywhere; }
+.bus-row-state { font-size: 0.75rem; font-weight: 600; white-space: nowrap; color: #12795a; }
+.bus-row.is-stale .bus-row-state { color: #9a6700; }
+.bus-row.is-none .bus-row-state { color: var(--board-muted); }
+.live-refresh-note { margin-top: 10px; font-size: 0.75rem; }

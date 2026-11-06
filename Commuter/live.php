@@ -13,7 +13,7 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Bus Tracking — MBUS</title>
+    <title>Live Buses — MBUS</title>
     <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -24,9 +24,10 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="../Assets/css/live_pickup.css">
+    <link rel="stylesheet" href="../Assets/css/waiting_board.css">
+    <link rel="stylesheet" href="../Assets/css/commuter_live.css">
 </head>
-<body class="has-bottom-nav live-page">
+<body class="has-bottom-nav waiting-board-page commuter-live-page live-page">
 <main class="main" role="main">
     <header class="page-header">
         <div class="page-header-left"><h1>Live bus tracking</h1></div>
@@ -43,27 +44,42 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
             </div>
         </div>
     </header>
-    <div class="live-heading">
-        <span class="live-tag"><span aria-hidden="true"></span>Trip location</span>
-        <p>Pick a bus to see where it is right now.</p>
-    </div>
-    <div id="liveMessage" class="live-notice" role="status" aria-live="polite">Loading current bus locations…</div>
-    <div class="live-layout">
-        <section class="live-map-panel live-card" aria-labelledby="mapHeading">
-            <div class="live-card-head"><h2 id="mapHeading">Bus location</h2><span id="trackingStatus" class="live-status is-ended">Waiting for trip</span></div>
-            <div id="trackingMap" class="live-map" aria-label="Live bus map"></div>
-            <p id="mapMessage" class="live-map-hint">The bus appears once the driver shares location.</p>
-            <div class="live-map-footer"><span id="updatedAt">Location update: —</span><span id="freshness">—</span></div>
-            <p class="live-small live-map-disclaimer">Refreshes while this page is open.</p>
-        </section>
-        <div class="live-side">
-            <section class="live-card" aria-labelledby="tripHeading">
-                <div class="live-card-head"><h2 id="tripHeading">Bus in service</h2></div>
-                <div class="live-field"><label for="liveSchedule">Choose a bus</label><select id="liveSchedule" name="schedule_id" disabled><option value="">Loading trips…</option></select></div>
-                <p id="tripRoute" class="live-route-copy">Loading current buses…</p>
-            </section>
+    <p id="liveMessage" class="board-notice" role="status" aria-live="polite" hidden></p>
+
+    <section class="board-summary" aria-label="Summary">
+        <div class="board-stat">
+            <span class="board-stat-value" id="busCount">0</span>
+            <span class="board-stat-label" id="busLabel">buses live</span>
         </div>
-    </div>
+        <label class="board-filter">
+            <span class="sr-only">Choose a bus</span>
+            <select id="liveSchedule" name="schedule_id" aria-label="Choose a bus" disabled>
+                <option value="">All buses</option>
+            </select>
+        </label>
+    </section>
+
+    <section class="board-map-card" aria-labelledby="mapHeading">
+        <div class="board-map-head">
+            <h2 id="mapHeading">Live map</h2>
+            <div class="board-legend" aria-hidden="true">
+                <span><i class="dot-bus"></i>Bus</span>
+                <span><i class="dot-stale"></i>Old location</span>
+            </div>
+        </div>
+        <div id="trackingMap" class="board-map" role="region" aria-label="Map of live buses"></div>
+        <p id="mapMessage" class="board-map-error live-map-note" hidden></p>
+    </section>
+
+    <section class="board-list-card" aria-labelledby="busListHeading">
+        <div class="board-list-head">
+            <h2 id="busListHeading">Buses in service</h2>
+            <span class="board-count" id="trackingStatus">0</span>
+        </div>
+        <p id="busEmpty" class="board-empty">Loading buses…</p>
+        <div id="busList" class="board-list" aria-live="polite"></div>
+        <p class="board-empty live-refresh-note">Updates every few seconds while this page is open.</p>
+    </section>
     <noscript><p class="live-notice live-notice-error">Enable JavaScript to load live bus locations.</p></noscript>
 </main>
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">

@@ -23,11 +23,13 @@ assert.doesNotMatch(html, /Waiting for a bus/);
 assert.equal((html.match(/class="bottom-nav-item/g) || []).length, 5, 'expected five tabs');
 
 // live script: polls, selects a bus that is actually sharing, no sharing controls
-assert.match(source, /No active Boarding\/Departed buses/);
-assert.match(source, /Stale location/);
-assert.match(source, /liveIds/);
-assert.match(source, /map\.setView\(loc, 17/);
-assert.doesNotMatch(source, /fitBounds/);
+assert.match(source, /No bus is boarding or on the road/);
+assert.match(source, /Last seen/);
+assert.match(html, /id="busList"/);
+// same bus-number pins as the operator board, one per live bus
+assert.match(source, /board-bus-pin/);
+assert.match(source, /L\.divIcon/);
+assert.match(source, /map\.setView\(focus, 16/);
 assert.match(source, /data\.locations/);
 assert.doesNotMatch(source, /mark_waiting|cancel_waiting/);
 
