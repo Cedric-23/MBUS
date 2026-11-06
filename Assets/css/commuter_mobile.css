@@ -777,3 +777,97 @@
 .payment-page .trip-details { font-size: 0.9375rem; }
 .payment-page .seats-section { background: none; padding-inline: 0; }
 .payment-page .payment-method input:checked + label { background: #eef3fa; }
+
+/* ------------------------------------------------------------------ */
+/* No hover / tap flashes on touch screens                            */
+/* ------------------------------------------------------------------ */
+.reserve-page button,
+.reserve-page select,
+.reserve-page a,
+.payment-page button,
+.payment-page a { -webkit-tap-highlight-color: transparent; }
+
+.reserve-page .seat-btn { transition: none; }
+.reserve-page .seat-btn:hover:not(.reserved):not(.selected):not([disabled]),
+.reserve-page .seat-btn:focus:not(:focus-visible):not(.selected):not(.reserved) {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+  color: var(--color-success-dark);
+  transform: none;
+}
+.reserve-page .seat-btn.selected,
+.reserve-page .seat-btn.selected:hover,
+.reserve-page .seat-btn.selected:focus {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  box-shadow: none;
+  transform: none;
+}
+.reserve-page .seat-btn:active:not(.reserved):not([disabled]) { transform: none; }
+
+/* One calm button style for the whole booking flow, identical in every state */
+.reserve-page .btn-block,
+.reserve-page .btn-block:hover,
+.reserve-page .btn-block:focus,
+.reserve-page .btn-block:active,
+.payment-page .btn-block,
+.payment-page .btn-block:hover,
+.payment-page .btn-block:focus,
+.payment-page .btn-block:active {
+  background: var(--color-primary);
+  border: 0;
+  color: #fff;
+  box-shadow: none;
+  transform: none;
+}
+.reserve-page .btn-block:active,
+.payment-page .btn-block:active { background: var(--color-primary-dark); }
+.reserve-page #calculateBtn,
+.reserve-page #calculateBtn:hover,
+.reserve-page #calculateBtn:focus {
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+}
+.reserve-page #calculateBtn:active { background: var(--color-primary-light-bg); }
+.reserve-page .btn-block:focus-visible,
+.payment-page .btn-block:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+
+/* Fare breakdown */
+.reserve-page .passenger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+}
+.reserve-page .passenger-types { margin: 14px 0; }
+.reserve-page .ptype { min-height: 44px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 10px; font-size: 1rem; background: var(--color-surface); }
+.reserve-page #calculateBtn { margin-bottom: 12px; }
+.reserve-page .fare-breakdown { border-top: 1px dashed var(--color-border); padding-top: 12px; }
+.reserve-page #fareDetails p { margin: 0 0 6px; font-size: 0.9375rem; line-height: 1.5; color: var(--color-text-secondary); }
+.reserve-page #fareDetails hr { margin: 8px 0; border: 0; border-top: 1px solid var(--color-border); }
+.reserve-page .fare-total {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin: 8px 0 14px; padding: 0; border: 0; font-size: 1.125rem; color: var(--color-primary);
+}
+.reserve-page .fare-total strong { display: flex; width: 100%; justify-content: space-between; }
+
+/* Payment: GCash only */
+.payment-page .gcash-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px; margin-bottom: 16px;
+  border: 1px solid #0d6efd33; border-radius: 12px; background: #f3f8ff;
+}
+.payment-page .gcash-mark {
+  display: grid; place-items: center; flex: 0 0 auto;
+  width: 40px; height: 40px; border-radius: 10px; background: #0d6efd; color: #fff;
+}
+.payment-page .gcash-text { display: grid; gap: 2px; }
+.payment-page .gcash-text strong { font-size: 1rem; color: var(--color-text); }
+.payment-page .gcash-text small { font-size: 0.8125rem; color: var(--color-text-muted); }
+.payment-page .trip-details .trip-total { padding-top: 6px; }
+.payment-page .trip-details .trip-total strong { color: var(--color-text); font-weight: 700; }
+.payment-page .trip-details .trip-total span { font-size: 1.125rem; font-weight: 700; color: var(--color-primary); }
+.payment-page .payment-form .form-group { margin-bottom: 16px; }

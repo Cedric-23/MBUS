@@ -77,7 +77,7 @@ if(isset($_POST['confirm_payment'])){
     if(!csrf_validate_token()){
         $error = "Security validation failed. Please try again.";
     } else {
-        $method = mbus_db_escape($conn, $_POST['payment_method']);
+        $method = 'GCash'; // GCash is the only accepted payment method
         $reference = mbus_db_escape($conn, $_POST['reference_number']);
 
         if(empty($reference)){
@@ -249,6 +249,7 @@ if(isset($_POST['cancel_reservation'])){
     <li><strong>Expected Arrival:</strong> <?php echo date("F d, Y g:i A", strtotime($reservations[0]['arrival_time'])); ?></li>
     <li><strong>Pickup:</strong> <?php echo htmlspecialchars($reservations[0]['pickup_location']); ?></li>
     <li><strong>Destination:</strong> <?php echo htmlspecialchars($reservations[0]['destination']); ?></li>
+    <?php if($total > 0){ ?><li class="trip-total"><strong>Total:</strong> <span>&#8369;<?php echo number_format($total, 2); ?></span></li><?php } ?>
 </ul>
 
 <div class="seats-section">
@@ -282,51 +283,23 @@ if(isset($_POST['cancel_reservation'])){
 <form method="POST" class="payment-form">
     <?php csrf_field(); ?>
     
-    <fieldset>
-        <legend>Payment Method</legend>
-        
-        <div class="payment-method">
-            <input type="radio" name="payment_method" id="method_gcash" value="GCash" required>
-            <label for="method_gcash">
-                <i class="fa fa-mobile-alt" aria-hidden="true"></i>
-                GCash
-            </label>
-        </div>
-        
-        <div class="payment-method">
-            <input type="radio" name="payment_method" id="method_maya" value="Maya">
-            <label for="method_maya">
-                <i class="fa fa-wallet" aria-hidden="true"></i>
-                Maya
-            </label>
-        </div>
-        
-        <div class="payment-method">
-            <input type="radio" name="payment_method" id="method_bank" value="Bank Transfer">
-            <label for="method_bank">
-                <i class="fa fa-university" aria-hidden="true"></i>
-                Bank Transfer
-            </label>
-        </div>
-    </fieldset>
+    <div class="gcash-row">
+        <span class="gcash-mark" aria-hidden="true"><i class="fa fa-mobile-alt"></i></span>
+        <span class="gcash-text"><strong>GCash</strong><small>Only accepted payment method</small></span>
+    </div>
+    <input type="hidden" name="payment_method" value="GCash">
 
     <div class="form-group">
-        <label for="reference_number">Reference Number <span class="required" aria-hidden="true">*</span></label>
-        <input type="text" name="reference_number" id="reference_number" class="form-control" placeholder="Enter transaction reference number" required minlength="10">
-        <small class="form-hint">Enter the reference number from your payment app</small>
+        <label for="reference_number">GCash reference number</label>
+        <input type="text" name="reference_number" id="reference_number" class="form-control" placeholder="e.g. 1234567890123" inputmode="numeric" autocomplete="off" required minlength="10">
+        <small class="form-hint">Find it in your GCash receipt after sending the payment.</small>
     </div>
 
     <button type="submit" name="confirm_payment" class="btn btn-primary btn-block">
-        <i class="fa fa-check" aria-hidden="true"></i> Confirm Payment
+        Confirm payment<?php if($total > 0){ echo ' &#8369;' . number_format($total, 2); } ?>
     </button>
 </form>
 
-<form method="POST" class="cancel-form">
-    <?php csrf_field(); ?>
-    <button type="submit" name="cancel_reservation" class="btn btn-outline btn-danger btn-block">
-        <i class="fa fa-times" aria-hidden="true"></i> Cancel Reservation
-    </button>
-</form>
 
 </div>
 

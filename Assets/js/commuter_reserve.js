@@ -215,38 +215,6 @@ document.getElementById("reserveBtn")
 
     if (success) {
 
-        showSuccess("Redirecting to My Reservations...");
-
-        setTimeout(() => {
-            window.location = "my_reservations.php";
-        }, 1000);
-
-    } else {
-
-        setBusy(btn, false);
-        showError("Unable to reserve seats.");
-
-    }
-
-});
-
-/* PAY */
-document.getElementById("payBtn")
-.addEventListener("click", async (e) => {
-
-    e.preventDefault();
-
-    if (selectedSeats.length === 0) {
-        showError("Please select your seat.");
-        return;
-    }
-
-    const payBtn = document.getElementById("payBtn");
-    setBusy(payBtn, true, "Reserving seats");
-    const success = await reserveSeats();
-
-    if (success) {
-
         window.location =
             "payment.php?schedule_id=" + scheduleId +
             "&total=" +
@@ -254,7 +222,7 @@ document.getElementById("payBtn")
 
     } else {
 
-        setBusy(payBtn, false);
+        setBusy(btn, false);
         showError("Unable to reserve seats.");
 
     }

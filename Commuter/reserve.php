@@ -370,7 +370,7 @@ echo "</div>";
 </div>
 
 <button type="button" id="doneBtn" class="btn btn-primary btn-block">
-    <i class="fa fa-check" aria-hidden="true"></i> Done Selecting Seats
+    Review my trip
 </button>
 
 </div>
@@ -409,7 +409,7 @@ echo "</div>";
 <div id="passengerTypes" class="passenger-types"></div>
 
 <button type="button" id="calculateBtn" class="btn btn-secondary btn-block">
-    <i class="fa fa-calculator" aria-hidden="true"></i> Calculate Fare
+    Calculate fare
 </button>
 
 <div class="fare-breakdown" id="fareBreakdown" style="display:none;">
@@ -418,11 +418,8 @@ echo "</div>";
         <strong>Total: <span id="totalAmount">&#8369;0.00</span></strong>
     </div>
     <button type="button" id="reserveBtn" class="btn btn-primary btn-block">
-        <i class="fa fa-clock" aria-hidden="true"></i> Reserve For 10 Minutes
+        Reserve seats and pay
     </button>
-    <a href="payment.php?schedule_id=<?php echo $schedule_id; ?>&total=0" id="payBtn" class="btn btn-success btn-block">
-        <i class="fa fa-credit-card" aria-hidden="true"></i> Pay Now
-    </a>
 </div>
 
 </div>
@@ -465,6 +462,8 @@ const fareTable = <?php echo json_encode($fare_table); ?>;
     function selected(){ return Array.from(document.querySelectorAll('.seat-btn.selected')).map(b => b.dataset.seat); }
 
     function refresh(){
+        const fare = document.getElementById('fareBreakdown');
+        bar.hidden = !!fare && fare.style.display !== 'none';
         const seats = selected();
         if (!seats.length) {
             title.textContent = 'Pick your seats';
