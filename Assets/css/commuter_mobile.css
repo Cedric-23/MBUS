@@ -632,3 +632,16 @@
   max-width: 1240px;
   margin-inline: auto;
 }
+
+/* Seat states: available reads green (matches the legend), selected navy, reserved grey */
+.reserve-page .seat-btn:not(.reserved):not(.selected) {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+  color: var(--color-success-dark);
+}
+.reserve-page .seat-btn:hover:not(.reserved):not(.selected):not([disabled]) {
+  background: var(--color-success-light);
+  border-color: var(--color-success-dark);
+  color: var(--color-success-dark);
+}
+.reserve-page .legend-selected { box-shadow: none; }

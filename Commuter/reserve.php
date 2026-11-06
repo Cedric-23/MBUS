@@ -246,10 +246,6 @@ exit();
 <link rel="stylesheet" href="../Assets/css/commuter_sidebar.css">
 <link rel="stylesheet" href="../Assets/css/commuter_reserve.css">
 
-<!-- Google Maps API -->
-<script async defer
-src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_API_KEY') ?: 'YOUR_API_KEY'; ?>&callback=initReserveMap">
-</script>
 
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
@@ -303,14 +299,7 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
     <li><i class="fa fa-bus" aria-hidden="true"></i><?php echo htmlspecialchars($route_data['bus_number']); ?></li>
 </ul>
 
-<?php if($route_data['origin_lat'] && $route_data['origin_lng'] && $route_data['destination_lat'] && $route_data['destination_lng']){ ?>
-<details class="route-map-details" id="routeMapDetails">
-    <summary><i class="fa fa-map" aria-hidden="true"></i>View route map</summary>
-    <div class="route-map-container">
-        <div id="reserveMap" class="map-canvas"></div>
-    </div>
-</details>
-<?php } ?>
+
 
 <div class="seat-legend" role="list" aria-label="Seat status legend">
     <div class="legend-item" role="listitem">
@@ -431,7 +420,7 @@ echo "</div>";
     <button type="button" id="reserveBtn" class="btn btn-primary btn-block">
         <i class="fa fa-clock" aria-hidden="true"></i> Reserve For 10 Minutes
     </button>
-    <a href="payment.php?schedule_id=<?php echo $schedule_id; ?>&total=0" id="payBtn" class="btn btn-success btn-block" style="display:none;">
+    <a href="payment.php?schedule_id=<?php echo $schedule_id; ?>&total=0" id="payBtn" class="btn btn-success btn-block">
         <i class="fa fa-credit-card" aria-hidden="true"></i> Pay Now
     </a>
 </div>
@@ -445,80 +434,12 @@ echo "</div>";
 </main>
 
 <script>
-const scheduleId = <?php echo $schedule_id; ?>;
+const scheduleId = <?php echo (int)$schedule_id; ?>;
+const csrfToken = <?php echo json_encode(csrf_get_token()); ?>;
 const route = <?php echo json_encode($stops); ?>;
 const fareTable = <?php echo json_encode($fare_table); ?>;
 </script>
 
-<script>
-let reserveMap;
-let reserveDirectionsService;
-let reserveDirectionsRenderer;
-
-function initReserveMap() {
-    <?php if($route_data['origin_lat'] && $route_data['origin_lng'] && $route_data['destination_lat'] && $route_data['destination_lng']){ ?>
-    const originLat = <?php echo $route_data['origin_lat']; ?>;
-    const originLng = <?php echo $route_data['origin_lng']; ?>;
-    const destLat = <?php echo $route_data['destination_lat']; ?>;
-    const destLng = <?php echo $route_data['destination_lng']; ?>;
-
-    reserveMap = new google.maps.Map(document.getElementById("reserveMap"), {
-        center: { lat: (originLat + destLat) / 2, lng: (originLng + destLng) / 2 },
-        zoom: 10,
-    });
-
-    reserveDirectionsService = new google.maps.DirectionsService();
-    reserveDirectionsRenderer = new google.maps.DirectionsRenderer({
-        map: reserveMap
-    });
-
-    // Create markers
-    const originMarker = new google.maps.Marker({
-        position: { lat: originLat, lng: originLng },
-        map: reserveMap,
-        title: "<?php echo $route_data['origin']; ?>",
-        label: "A"
-    });
-
-    const destMarker = new google.maps.Marker({
-        position: { lat: destLat, lng: destLng },
-        map: reserveMap,
-        title: "<?php echo $route_data['destination']; ?>",
-        label: "B"
-    });
-
-    // Draw route
-    const request = {
-        origin: { lat: originLat, lng: originLng },
-        destination: { lat: destLat, lng: destLng },
-        travelMode: google.maps.TravelMode.DRIVING
-    };
-
-    reserveDirectionsService.route(request, function(result, status) {
-        if (status === "OK") {
-            reserveDirectionsRenderer.setDirections(result);
-
-            // Fit bounds to show entire route
-            const bounds = new google.maps.LatLngBounds();
-            bounds.extend({ lat: originLat, lng: originLng });
-            bounds.extend({ lat: destLat, lng: destLng });
-            reserveMap.fitBounds(bounds);
-        }
-    });
-    <?php } ?>
-}
-</script>
-
-<script>
-document.getElementById('routeMapDetails')?.addEventListener('toggle', function(){
-    if (this.open && typeof google !== 'undefined' && reserveMap) {
-        google.maps.event.trigger(reserveMap, 'resize');
-        const b = new google.maps.LatLngBounds();
-        b.extend(reserveMap.getCenter());
-        reserveMap.setCenter(reserveMap.getCenter());
-    }
-});
-</script>
 
 <script src="../Assets/js/commuter_reserve.js"></script>
 

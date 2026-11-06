@@ -172,6 +172,7 @@ async function reserveSeats() {
     const formData = new FormData();
 
     formData.append("confirm_reserve", "1");
+    formData.append("csrf_token", csrfToken);
     formData.append("pickup", pickup.value);
     formData.append("destination", destination.value);
     formData.append("seats", selectedSeats.join(","));
@@ -228,7 +229,9 @@ document.getElementById("reserveBtn")
 
 /* PAY */
 document.getElementById("payBtn")
-.addEventListener("click", async () => {
+.addEventListener("click", async (e) => {
+
+    e.preventDefault();
 
     if (selectedSeats.length === 0) {
         showError("Please select your seat.");
