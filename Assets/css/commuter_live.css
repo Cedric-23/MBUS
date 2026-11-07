@@ -10,8 +10,14 @@
 .live-route-estimate { margin-top: 0; }
 .live-route-line { color: #1e90ff; }
 .route-line-key { display: inline-block; width: 18px; height: 0; border-top: 3px solid #1e90ff; border-radius: 2px; vertical-align: middle; }
+.pickup-line-key { display: inline-block; width: 18px; height: 0; border-top: 2px dashed #d1493f; vertical-align: middle; }
+.dot-commuter { display: inline-block; width: 10px; height: 10px; border: 2px solid #fff; border-radius: 50%; background: #d1493f; box-shadow: 0 0 0 1px #d1493f; vertical-align: middle; }
 .route-view-btn { min-height: 40px; padding: 0 11px; border: 1px solid #d8e1ec; border-radius: 999px; background: #fff; color: #18365d; font: inherit; font-size: .75rem; font-weight: 700; white-space: nowrap; }
 .route-view-btn:disabled { opacity: .48; }
+.live-rider-marker { background: transparent; border: 0; }
+.live-rider-avatar { position: relative; display: block; box-sizing: border-box; width: 42px; height: 42px; overflow: hidden; border: 3px solid #fff; border-radius: 50%; background: #1e90ff; box-shadow: 0 0 0 3px rgba(209,73,63,.95), 0 2px 8px rgba(0,0,0,.35); }
+.live-rider-avatar img { position: absolute; inset: 0; display: block; width: 36px; height: 36px; min-width: 0; min-height: 0; border-radius: 50%; object-fit: cover; object-position: center; }
+.leaflet-container .leaflet-marker-pane .live-rider-avatar img { width: 36px !important; height: 36px !important; }
 
 .bus-row {
   display: grid;
@@ -52,8 +58,12 @@
 .commuter-live-page .board-list { gap: 6px; }
 .bus-row-wrap { display: flex; gap: 6px; align-items: stretch; }
 .bus-row-wrap .bus-row { flex: 1; min-width: 0; }
-.bus-row-pick { display: grid; place-items: center; min-width: 68px; min-height: 44px; padding: 0 10px; border-radius: 12px; background: var(--board-navy, #18365d); color: #fff; font-size: .8rem; font-weight: 700; text-decoration: none; -webkit-tap-highlight-color: transparent; }
-.bus-pop-pick { display: inline-block; margin-top: 6px; padding: 6px 14px; border-radius: 999px; background: #1e3a5f; color: #fff !important; font-weight: 700; text-decoration: none; }
+.bus-row-pick { display: grid; place-items: center; min-width: 68px; min-height: 44px; padding: 0 10px; border: 0; border-radius: 12px; background: var(--board-navy, #18365d); color: #fff; font: inherit; font-size: .8rem; font-weight: 700; text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.bus-row-pick.is-cancel { background: #fdeceb; color: #b42318; }
+.bus-row-pick:disabled { background: #eef1f4; color: #667085; cursor: not-allowed; }
+.bus-pop-pick { display: inline-block; margin-top: 6px; padding: 8px 14px; border: 0; border-radius: 999px; background: #1e3a5f; color: #fff !important; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
+.bus-pop-pick.is-cancel { background: #fdeceb; color: #b42318 !important; }
+.bus-pop-pick:disabled { background: #eef1f4; color: #667085 !important; cursor: not-allowed; }
 
 @media (max-width: 420px) {
   .commuter-live-page .board-map-head { gap: 7px; }

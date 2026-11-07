@@ -11,6 +11,7 @@
     let map = null, busMarker = null, youMarker = null, line = null;
     let me = null;                 // { lat, lng }
     let waiting = false;
+    let myRequest = null;
     let busLoc = null;
     let csrf = cfg.csrfToken || '';
     let serverNow = Date.now();
@@ -26,6 +27,9 @@
         if (text) setTimeout(() => { if (box.textContent === text) box.hidden = true; }, 5000);
     }
     function sizeSheet() { document.documentElement.style.setProperty('--sheet-h', sheet.offsetHeight + 'px'); }
+    function waitingElsewhere() {
+        return !!(myRequest && myRequest.status === 'Waiting' && Number(myRequest.schedule_id) !== Number(cfg.scheduleId));
+    }
 
     function km(a, b) {
         const R = 6371, rad = d => d * Math.PI / 180;
@@ -59,7 +63,7 @@
         me = { lat, lng };
         if (!map) { refresh(); return; }
         if (!youMarker) {
-            youMarker = L.marker([lat, lng], { icon: youIcon(), draggable: !waiting, title: 'You' }).addTo(map);
+            youMarker = L.marker([lat, lng], { icon: youIcon(), draggable: !waiting && !waitingElsewhere(), title: 'You' }).addTo(map);
             bindAvatarFallback(youMarker);
             youMarker.on('dragend', () => { const p = youMarker.getLatLng(); me = { lat: p.lat, lng: p.lng }; refresh(); });
         } else {
@@ -92,7 +96,7 @@
             } else if (busMarker) { map.removeLayer(busMarker); busMarker = null; }
             if (line) { map.removeLayer(line); line = null; }
             if (busLoc && me) line = L.polyline([[me.lat, me.lng], [busLoc.lat, busLoc.lng]], { color: '#1e90ff', weight: 3, dashArray: '2 8', opacity: .8 }).addTo(map);
-            if (youMarker) { youMarker.setIcon(youIcon()); bindAvatarFallback(youMarker); if (youMarker.dragging) waiting ? youMarker.dragging.disable() : youMarker.dragging.enable(); }
+            if (youMarker) { youMarker.setIcon(youIcon()); bindAvatarFallback(youMarker); if (youMarker.dragging) waiting || waitingElsewhere() ? youMarker.dragging.disable() : youMarker.dragging.enable(); }
         }
 
         if (busLoc && me) {
@@ -104,12 +108,17 @@
             eta.textContent = cfg.status === 'inactive' ? 'Bus is not in service yet' : 'Waiting for the bus location';
         }
 
-        const canMark = !!me && cfg.status !== 'inactive';
+        const elsewhere = waitingElsewhere();
+        const canMark = !!me && cfg.status !== 'inactive' && !elsewhere;
         el('pickupWait').hidden = waiting;
         el('pickupWait').disabled = !canMark || busy;
-        el('pickupCancel').hidden = !waiting;
-        el('pickupLabelWrap').hidden = waiting;
-        hint.textContent = waiting
+        el('pickupWait').textContent = elsewhere ? 'Waiting on another bus' : "I'm waiting here";
+        el('pickupCancel').hidden = !waiting && !elsewhere;
+        el('pickupCancel').textContent = elsewhere ? 'Cancel current waiting' : 'Cancel waiting';
+        el('pickupLabelWrap').hidden = waiting || elsewhere;
+        hint.textContent = elsewhere
+            ? 'You already have a waiting request. Cancel it before choosing a different bus.'
+            : waiting
             ? "You're marked as waiting. The driver can see your spot."
             : cfg.status === 'inactive'
                 ? 'You can mark yourself as waiting once this bus starts boarding (' + cfg.departure + ').'
@@ -126,10 +135,10 @@
         if (!res.ok || !data.ok) throw new Error(data.message || 'Something went wrong.');
         return data;
     }
-    const post = fields => api({
+    const post = (fields, scheduleId) => api({
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-        body: new URLSearchParams(Object.assign({ csrf_token: csrf, schedule_id: String(cfg.scheduleId) }, fields))
+        body: new URLSearchParams(Object.assign({ csrf_token: csrf, schedule_id: String(scheduleId || cfg.scheduleId) }, fields))
     });
 
     async function poll() {
@@ -143,10 +152,10 @@
                 const loc = (data.locations || []).find(l => Number(l.schedule_id) === cfg.scheduleId);
                 const lat = loc && num(loc.latitude), lng = loc && num(loc.longitude);
                 busLoc = lat !== null && lng !== null ? { lat, lng, age: Math.max(0, serverNow - (Date.parse(loc.updated_at) || 0)) } : null;
-                const mine = data.my_request;
-                waiting = !!(mine && mine.status === 'Waiting' && Number(mine.schedule_id) === cfg.scheduleId);
-                if (waiting && mine && !pinMoved) {
-                    const mlat = num(mine.latitude), mlng = num(mine.longitude);
+                myRequest = data.my_request || null;
+                waiting = !!(myRequest && myRequest.status === 'Waiting' && Number(myRequest.schedule_id) === cfg.scheduleId);
+                if (waiting && myRequest && !pinMoved) {
+                    const mlat = num(myRequest.latitude), mlng = num(myRequest.longitude);
                     if (mlat !== null && mlng !== null) { me = { lat: mlat, lng: mlng }; if (youMarker) youMarker.setLatLng([mlat, mlng]); else setMe(mlat, mlng, false); }
                 }
                 fit(false);
@@ -167,7 +176,7 @@
 
     el('pickupLocate').addEventListener('click', () => locate(true));
     el('pickupWait').addEventListener('click', async () => {
-        if (!me || busy) return;
+        if (!me || busy || waitingElsewhere()) return;
         busy = true; refresh();
         try {
             await post({ action: 'mark_waiting', latitude: String(me.lat), longitude: String(me.lng), pickup_label: el('pickupLabel').value.trim() });
@@ -178,7 +187,13 @@
     el('pickupCancel').addEventListener('click', async () => {
         if (busy) return;
         busy = true;
-        try { await post({ action: 'cancel_waiting' }); waiting = false; toast('Waiting cancelled.'); }
+        try {
+            const cancelScheduleId = myRequest && myRequest.status === 'Waiting' ? myRequest.schedule_id : cfg.scheduleId;
+            await post({ action: 'cancel_waiting' }, cancelScheduleId);
+            waiting = false;
+            if (myRequest) myRequest = Object.assign({}, myRequest, { status: 'Cancelled' });
+            toast('Waiting cancelled.');
+        }
         catch (e) { toast(e.message); }
         busy = false; refresh();
     });
@@ -190,7 +205,7 @@
     });
 
     initMap();
-    if (map) map.on('click', e => { if (!waiting) { pinMoved = true; setMe(e.latlng.lat, e.latlng.lng, false); } });
+    if (map) map.on('click', e => { if (!waiting && !waitingElsewhere()) { pinMoved = true; setMe(e.latlng.lat, e.latlng.lng, false); } });
     cfg.status = 'active';
     refresh();
     locate(true);

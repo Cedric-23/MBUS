@@ -15,6 +15,8 @@ const operatorWaiting = read('Operator/waiting.php');
 const adminWaiting = read('Admin/waiting.php');
 const staffView = read('Includes/pickup_staff_view.php');
 const boardJs = read('Assets/js/staff_waiting.js');
+const commuterLive = read('Assets/js/commuter_live.js');
+const commuterLivePage = read('Commuter/live.php');
 const riders = read('Operator/passengers.php');
 const adminDash = read('Admin/admin_dashboard.php');
 const adminSchedules = read('Admin/manage_schedules.php');
@@ -61,6 +63,8 @@ assert.match(pickupJs, /action: 'cancel_waiting'/);
 assert.match(pickupJs, /draggable: !waiting/);
 assert.match(pickupJs, /You\'re marked as waiting/);
 assert.match(pickupJs, /pickupWait/);
+assert.match(pickupJs, /waitingElsewhere\(\)/);
+assert.match(pickupJs, /Cancel current waiting/);
 
 // The Updates page no longer embeds a second waiting picker.
 assert.doesNotMatch(notifications, /waitingSchedule|waitBtn|commuter_waiting_alerts\.js|live_pickup\.css/);
@@ -85,6 +89,12 @@ assert.match(boardJs, /locations/);
 assert.match(boardJs, /personIcon/);
 assert.match(boardJs, /toggleStaffRoute/);
 assert.match(boardJs, /remainingOnRoute/);
+assert.match(commuterLive, /pickupAction\(trip\.schedule_id, myRequest\)/);
+assert.match(commuterLive, /cancel_waiting/);
+assert.match(commuterLive, /Your waiting pickup/);
+assert.match(commuterLive, /Your waiting pickup/);
+assert.match(commuterLivePage, /dot-commuter/);
+assert.match(tracking, /A commuter must still be able to clear their waiting state after the trip/);
 
 // --- 4. GPS gate is operator-only and precedes the operator dashboard
 assert.match(gate, /Turn on location/);

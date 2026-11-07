@@ -175,6 +175,16 @@ function mbus_tracking_mutate(PDO $pdo, string $role, int $userId, array $data):
         $stmt->execute([$scheduleId]);
         $base = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$base) throw new MbusPickupException('Active trip not found.', 404);
+        if ($action === 'cancel_waiting') {
+            // A commuter must still be able to clear their waiting state after the trip
+            // leaves the active tracking feed, as long as the request itself is valid.
+            $stmt = $pdo->prepare("UPDATE public.pickup_requests SET status = 'Cancelled', updated_at = clock_timestamp()
+                WHERE user_id = ? AND schedule_id = ? AND status = 'Waiting' AND expires_at > clock_timestamp() RETURNING user_id");
+            $stmt->execute([$userId, $scheduleId]);
+            if (!$stmt->fetchColumn()) throw new MbusPickupException('Your waiting request was not found or has expired.', 404);
+            $pdo->commit();
+            return ['ok' => true, 'message' => 'Your waiting request was cancelled.'];
+        }
         $schedule = mbus_tracking_schedule($pdo, $scheduleId, $role, $userId);
         if (!$schedule) throw new MbusPickupException('This trip is not active or is not available to your account.', 403);
         if ($action === 'update_location') {
@@ -189,6 +199,17 @@ function mbus_tracking_mutate(PDO $pdo, string $role, int $userId, array $data):
         } elseif ($action === 'mark_waiting') {
             // Any authenticated commuter may signal that they are waiting, including someone
             // who could not reserve a seat after the cutoff or when a trip is full.
+            // Serialize this commuter's request changes and require cancel-then-select to
+            // move a still-valid Waiting request to another bus.
+            $stmt = $pdo->prepare('SELECT user_id FROM public.users WHERE user_id = ? FOR UPDATE');
+            $stmt->execute([$userId]);
+            $stmt = $pdo->prepare("SELECT schedule_id FROM public.pickup_requests
+                WHERE user_id = ? AND status = 'Waiting' AND expires_at > clock_timestamp() FOR UPDATE");
+            $stmt->execute([$userId]);
+            $existingWait = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($existingWait && (int)$existingWait['schedule_id'] !== $scheduleId) {
+                throw new MbusPickupException('You are already waiting for another bus. Cancel that request before choosing a different bus.', 409);
+            }
             $stmt = $pdo->prepare('INSERT INTO public.pickup_requests
                 (user_id,schedule_id,status,latitude,longitude,pickup_label,destination,created_at,updated_at,expires_at)
                 VALUES(?, ?, \'Waiting\', ?, ?, ?, ?, clock_timestamp(), clock_timestamp(), clock_timestamp() + INTERVAL \'30 minutes\')
@@ -196,14 +217,9 @@ function mbus_tracking_mutate(PDO $pdo, string $role, int $userId, array $data):
                 latitude=EXCLUDED.latitude,longitude=EXCLUDED.longitude,pickup_label=EXCLUDED.pickup_label,
                 destination=EXCLUDED.destination,created_at=EXCLUDED.created_at,updated_at=EXCLUDED.updated_at,expires_at=EXCLUDED.expires_at');
             $stmt->execute([$userId, $scheduleId, $data['latitude'], $data['longitude'], $data['pickup_label'], $schedule['destination']]);
-        } else {
-            $stmt = $pdo->prepare("UPDATE public.pickup_requests SET status = 'Cancelled', updated_at = clock_timestamp()
-                WHERE user_id = ? AND schedule_id = ? AND status = 'Waiting' AND expires_at > clock_timestamp() RETURNING user_id");
-            $stmt->execute([$userId, $scheduleId]);
-            if (!$stmt->fetchColumn()) throw new MbusPickupException('Your waiting request was not found or has expired.', 404);
         }
         $pdo->commit();
-        return ['ok' => true, 'message' => $action === 'mark_waiting' ? 'You are on the waiting list.' : ($action === 'cancel_waiting' ? 'Your waiting request was cancelled.' : 'Live bus location updated.')];
+        return ['ok' => true, 'message' => $action === 'mark_waiting' ? 'You are on the waiting list.' : 'Live bus location updated.'];
     } catch (Throwable $error) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         throw $error;

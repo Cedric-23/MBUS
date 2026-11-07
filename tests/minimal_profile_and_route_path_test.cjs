@@ -16,6 +16,7 @@ const waitingStatus = read('Assets/js/commuter_waiting_status.js');
 const selectionWindow = {};
 vm.runInNewContext(read('Assets/js/live_schedule_selection.js'), { window: selectionWindow });
 const chooseSchedule = selectionWindow.MBUSLiveSelection.chooseSchedule;
+const pickupAction = selectionWindow.MBUSLiveSelection.pickupAction;
 const normalizeSelection = value => JSON.parse(JSON.stringify(value));
 
 assert.doesNotMatch(profile, /<label for="email">Email Address|id="email"/);
@@ -34,6 +35,11 @@ assert.match(live, /routeViewMode = 'route'/);
 assert.match(live, /defaultTrip = trips\.find/);
 assert.match(live, /requestedUnavailableId/);
 assert.match(live, /This bus is no longer active/);
+assert.match(live, /data\.my_request/);
+assert.match(live, /cancel_waiting/);
+assert.match(live, /commuterLayer/);
+assert.match(live, /Your waiting pickup/);
+assert.match(live, /from your pickup/);
 assert.ok(livePage.indexOf('live_schedule_selection.js') < livePage.indexOf('commuter_live.js'));
 assert.match(livePage, /route-line-key/);
 assert.match(livePage, /Focus bus/);
@@ -68,5 +74,8 @@ assert.deepEqual(
     { scheduleId: '22', unavailableId: '' },
     'a normal Live page should default to an active bus'
 );
+assert.deepEqual(normalizeSelection(pickupAction(17, null)), { kind: 'pickup', label: 'Pick up' });
+assert.deepEqual(normalizeSelection(pickupAction(17, { status: 'Waiting', schedule_id: 17 })), { kind: 'cancel', label: 'Cancel' });
+assert.deepEqual(normalizeSelection(pickupAction(22, { status: 'Waiting', schedule_id: 17 })), { kind: 'waiting', label: 'Waiting' });
 
-console.log('PASS concise terminal labels, full road path entry point, compact commuter bus list and profile UI');
+console.log('PASS commuter pickup/cancel state, paired rider/bus pins, distance text, full road path and mobile UI');

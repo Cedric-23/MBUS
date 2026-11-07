@@ -8,7 +8,7 @@ Every bottom navigation bar now has **Waiting** where **Alerts** used to be. Not
 
 | Role | Page | Behaviour |
 |------|------|-----------|
-| Commuter | `Commuter/waiting.php` | Choose a bus first, then pin the pickup spot using current GPS or by tapping/dragging the visible map pin. Confirm **Mark me as waiting** to share the point. The status card shows the bus, stop, shared time and expiry; **Track the bus** opens that trip in Live, with its road path shown. **Cancel waiting** removes the signal. There is no update action. |
+| Commuter | `Commuter/waiting.php` | Choose a bus first, then pin the pickup spot using current GPS or by tapping/dragging the visible map pin. Confirm **Mark me as waiting** to share the point. The status card shows the bus, stop, shared time and expiry; **Track the bus** opens that trip in Live. Its map shows the commuter’s photo pin, bus pin, pickup-to-bus distance and road route; commuters can toggle **Focus bus / Full route**. The bus-list **Pick up** action becomes **Cancel** for the active waiting bus; cancel first before switching buses. **Cancel waiting** removes the signal. There is no update action. |
 | Operator | `Operator/waiting.php` | Waiting riders for the operator's own buses, plus a live map of those buses. The Riders page is a seat map only. |
 | Admin | `Admin/waiting.php` | The same board for every bus and every waiting rider. Admin dashboard and schedule pages no longer link to separate waiting screens. |
 

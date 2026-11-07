@@ -35,8 +35,20 @@ try {
 	 tcheck(count($feed['requests'])===1&&$feed['requests'][0]['name']==='Unreserved Rider','assigned operator sees unreserved waiting commuter');
 	 tcheck(count(mbus_tracking_feed($pdo,'operator',9802,9802)['requests'])===0,'unassigned operator cannot see waiter');
 	 tcheck(count(mbus_tracking_feed($pdo,'commuter',9804,9802)['requests'])===1,'commuter sees own waiting status');
-	 mbus_tracking_mutate($pdo,'commuter',9804,['action'=>'cancel_waiting','schedule_id'=>9802]);
-	 tcheck(mbus_tracking_feed($pdo,'commuter',9804,9802)['waiting']['status']==='Cancelled','commuter can cancel own waiting signal');
+		 mbus_tracking_mutate($pdo,'commuter',9804,['action'=>'cancel_waiting','schedule_id'=>9802]);
+		 tcheck(mbus_tracking_feed($pdo,'commuter',9804,9802)['waiting']['status']==='Cancelled','commuter can cancel own waiting signal');
+		 mbus_tracking_mutate($pdo,'commuter',9804,['action'=>'mark_waiting','schedule_id'=>9801,'latitude'=>14.61,'longitude'=>120.21,'pickup_label'=>'North Gate']);
+		 $blockedDifferentBus = false;
+		 try { mbus_tracking_mutate($pdo,'commuter',9804,['action'=>'mark_waiting','schedule_id'=>9802,'latitude'=>14.62,'longitude'=>120.22,'pickup_label'=>'Other Gate']); }
+		 catch (MbusPickupException $e) { $blockedDifferentBus = $e->httpStatus === 409; }
+		 $retainedSchedule = (int)$pdo->query('SELECT schedule_id FROM public.pickup_requests WHERE user_id=9804')->fetchColumn();
+		 tcheck($blockedDifferentBus && $retainedSchedule===9801,'marking a different bus cannot silently replace a valid waiting request');
+		 mbus_tracking_mutate($pdo,'commuter',9804,['action'=>'cancel_waiting','schedule_id'=>9801]);
+		 mbus_tracking_mutate($pdo,'commuter',9804,['action'=>'mark_waiting','schedule_id'=>9802,'latitude'=>14.61,'longitude'=>120.21,'pickup_label'=>'North Gate']);
+		 $pdo->exec("UPDATE public.schedule SET trip_status='Arrived' WHERE schedule_id=9802");
+		 mbus_tracking_mutate($pdo,'commuter',9804,['action'=>'cancel_waiting','schedule_id'=>9802]);
+		 $cancelledAfterArrival = $pdo->query("SELECT status FROM public.pickup_requests WHERE user_id=9804 AND schedule_id=9802")->fetchColumn();
+		 tcheck($cancelledAfterArrival==='Cancelled','commuter can cancel a still-valid waiting request after the bus trip ends');
  tcheck(!$pdo->query("SELECT has_table_privilege('anon','bus_live_tracking','SELECT')")->fetchColumn(),'anon role has no GPS table access');
  tcheck(!$pdo->query("SELECT has_table_privilege('authenticated','bus_live_tracking','SELECT')")->fetchColumn(),'authenticated role has no GPS table access');
  echo "Tracking integration checks passed on isolated local PostgreSQL only.\n";

@@ -38,8 +38,9 @@ assert.match(source, /defaultTrip = trips\.find/);
 assert.match(source, /manualChoice = true/);
 assert.match(source, /MBUSLiveSelection\.chooseSchedule/);
 assert.match(source, /data\.locations/);
+assert.match(source, /cancel_waiting/);
 assert.match(css, /\.commuter-live-page \.board-list-card/);
 assert.match(css, /\.bus-row-route \{[^}]*text-overflow: ellipsis/s);
-assert.doesNotMatch(source, /mark_waiting|cancel_waiting/);
+assert.doesNotMatch(source, /mark_waiting/);
 
 console.log('PASS commuter Live is tracking-only: live bus default, truthful no-GPS state, no waiting controls');

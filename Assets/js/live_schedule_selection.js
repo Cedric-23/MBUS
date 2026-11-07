@@ -24,5 +24,11 @@
         return { scheduleId: first ? String(first.schedule_id) : '', unavailableId: '' };
     }
 
-    global.MBUSLiveSelection = { chooseSchedule };
+    function pickupAction(scheduleId, request) {
+        if (!request || request.status !== 'Waiting') return { kind: 'pickup', label: 'Pick up' };
+        if (String(request.schedule_id) === String(scheduleId)) return { kind: 'cancel', label: 'Cancel' };
+        return { kind: 'waiting', label: 'Waiting' };
+    }
+
+    global.MBUSLiveSelection = { chooseSchedule, pickupAction };
 })(window);

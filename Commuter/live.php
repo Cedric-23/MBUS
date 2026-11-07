@@ -7,6 +7,11 @@ if (!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?
     exit;
 }
 $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: 0;
+$liveAvatar = basename((string)($_SESSION['profile_picture'] ?? ''));
+$liveAvatarPath = __DIR__ . '/../Assets/profile_pictures/' . $liveAvatar;
+$liveProfileImage = ($liveAvatar !== '' && strtolower($liveAvatar) !== 'default.png' && is_file($liveAvatarPath))
+    ? '../Assets/profile_pictures/' . rawurlencode($liveAvatar) . '?v=' . rawurlencode((string)filemtime($liveAvatarPath))
+    : '../Assets/images/mbus_icon.png';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -64,7 +69,9 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
             <h2 id="mapHeading">Live map</h2>
             <div class="board-legend">
                 <span><i class="dot-bus" aria-hidden="true"></i>Bus</span>
+                <span><i class="dot-commuter" aria-hidden="true"></i>You</span>
                 <span><i class="route-line-key" aria-hidden="true"></i>Route</span>
+                <span><i class="pickup-line-key" aria-hidden="true"></i>Pickup distance</span>
                 <span><i class="dot-stale" aria-hidden="true"></i>Old location</span>
             </div>
             <button type="button" id="routeViewButton" class="route-view-btn" disabled>Focus bus</button>
@@ -94,7 +101,7 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
         <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
 </nav>
-<script>window.mbusLive = <?php echo json_encode(['scheduleId' => $schedule_id, 'csrfToken' => csrf_get_token()], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
+<script>window.mbusLive = <?php echo json_encode(['scheduleId' => $schedule_id, 'csrfToken' => csrf_get_token(), 'profileImage' => $liveProfileImage], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="../Assets/js/route_utils.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/route_utils.js'); ?>"></script>
 <script src="../Assets/js/live_schedule_selection.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/live_schedule_selection.js'); ?>"></script>
