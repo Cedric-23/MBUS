@@ -17,7 +17,7 @@ if(isset($_POST['send_code'])){
             $error = 'Invalid email format';
         } else {
             // Use prepared statement
-            $result = mbus_db_prepare($conn, "SELECT * FROM users WHERE email = ?", [$email]);
+            $result = mbus_db_prepare($conn, "SELECT * FROM users WHERE LOWER(email) = LOWER(?)", [$email]);
 
             if(mbus_db_num_rows($result) > 0){
                 $code = rand(100000,999999);
@@ -26,7 +26,7 @@ if(isset($_POST['send_code'])){
                 // Use prepared statement for update
                 mbus_db_prepare($conn, "UPDATE users
                 SET reset_code = ?, reset_expiry = ?
-                WHERE email = ?", [$code, $expiry, $email]);
+                WHERE LOWER(email) = LOWER(?)", [$code, $expiry, $email]);
 
                 $_SESSION['reset_email'] = $email;
                 $_SESSION['reset_code'] = $code;
@@ -92,6 +92,7 @@ if(isset($_POST['send_code'])){
                 <label for="email">Email Address</label>
                 <input 
                     type="email" 
+                    autocapitalize="none" autocorrect="off" spellcheck="false"
                     id="email" 
                     name="email" 
                     placeholder="Enter your email"

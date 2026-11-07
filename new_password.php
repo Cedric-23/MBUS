@@ -32,7 +32,7 @@ if(isset($_POST['reset'])){
                 SET password = ?,
                 reset_code = NULL,
                 reset_expiry = NULL
-                WHERE email = ?", [$hashed, $email]);
+                WHERE LOWER(email) = LOWER(?)", [$hashed, $email]);
 
             session_destroy();
             $success = 'Password updated successfully';

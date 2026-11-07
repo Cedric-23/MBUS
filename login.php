@@ -18,10 +18,13 @@ if(isset($_POST['login'])){
         $password = trim($_POST['password']);
 
         // Use prepared statement to prevent SQL injection
-        $sql = "SELECT * FROM users WHERE email = ?";
+        $sql = "SELECT * FROM users WHERE LOWER(email) = LOWER(?)";
         $result = mbus_db_prepare($conn, $sql, [$email]);
 
-        if(mbus_db_num_rows($result) > 0){
+        if($result === false){
+            error_log("Login query failed: " . mbus_db_error($conn));
+            $login_error = 'Login is temporarily unavailable. Please try again in a moment.';
+        } elseif(mbus_db_num_rows($result) > 0){
 
         $user = mbus_db_fetch_assoc($result);
 
@@ -117,6 +120,7 @@ if(isset($_POST['login'])){
                 <label for="email">Email Address</label>
                 <input 
                     type="email" 
+                    autocapitalize="none" autocorrect="off" spellcheck="false"
                     id="email" 
                     name="email" 
                     placeholder="Enter your email"

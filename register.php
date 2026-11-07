@@ -28,7 +28,7 @@ if (isset($_POST['register'])) {
             $error = 'Password must be at least 8 characters.';
         } else {
             // Use prepared statement to check if email exists
-            $check = mbus_db_prepare($conn, "SELECT user_id FROM users WHERE email = ?", [$email]);
+            $check = mbus_db_prepare($conn, "SELECT user_id FROM users WHERE LOWER(email) = LOWER(?)", [$email]);
             if (mbus_db_num_rows($check) > 0) {
                 $error = 'Email is already registered.';
             } else {
@@ -112,6 +112,7 @@ if (isset($_POST['register'])) {
                 <label for="email">Email Address</label>
                 <input 
                     type="email" 
+                    autocapitalize="none" autocorrect="off" spellcheck="false"
                     id="email" 
                     name="email" 
                     placeholder="Enter your email"

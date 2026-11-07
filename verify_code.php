@@ -20,7 +20,7 @@ if(isset($_POST['verify'])){
         } else {
             // Verify code against database
             $email = $_SESSION['reset_email'];
-            $result = mbus_db_prepare($conn, "SELECT reset_code, reset_expiry FROM users WHERE email = ?", [$email]);
+            $result = mbus_db_prepare($conn, "SELECT reset_code, reset_expiry FROM users WHERE LOWER(email) = LOWER(?)", [$email]);
             $user = mbus_db_fetch_assoc($result);
 
             if($user && $user['reset_code'] == $code && strtotime($user['reset_expiry']) > time()){
