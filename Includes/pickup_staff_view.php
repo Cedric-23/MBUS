@@ -35,84 +35,51 @@ $navItems = $isAdmin
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="../Assets/css/waiting_board.css">
+    <link rel="stylesheet" href="../Assets/css/staff_waiting.css">
 </head>
-<body class="has-bottom-nav waiting-board-page">
+<body class="has-bottom-nav staff-wait-page">
 <main class="main" role="main" id="pickupStaff" data-role="<?php echo $pickupStaffRole; ?>" data-endpoint="../api/pickup.php" data-live-endpoint="../api/live_tracking.php">
 
-    <header class="page-header board-header">
-        <div class="page-header-left">
+    <header class="sw-bar">
+        <div class="sw-title">
             <h1>Waiting</h1>
-            <p class="board-sub" id="staffUpdated">Loading…</p>
+            <p id="staffUpdated">Loading…</p>
         </div>
-        <div class="page-header-right">
-            <button type="button" id="staffRefresh" class="board-refresh" aria-label="Refresh waiting list">
-                <i class="fa fa-rotate" aria-hidden="true"></i>
+        <label class="sw-filter">
+            <span class="sr-only">Choose a bus</span>
+            <select id="staffSchedule" aria-label="Choose a bus"><option value="">All buses</option></select>
+        </label>
+        <button type="button" id="staffRefresh" class="sw-icon-btn" aria-label="Refresh">
+            <i class="fa fa-rotate" aria-hidden="true"></i>
+        </button>
+        <div class="profile-menu-wrap">
+            <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
+                <span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></span>
             </button>
-            <div class="profile-menu-wrap">
-                <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
-                    <span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></span>
-                </button>
-                <div class="profile-menu" id="profileMenu" role="menu">
-                    <div class="profile-menu-header">
-                        <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
-                        <span class="profile-menu-role"><?php echo $roleLabel; ?> account</span>
-                    </div>
-                    <a href="notifications.php" role="menuitem"><i class="fa fa-bell" aria-hidden="true"></i> Updates</a>
-                    <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
+            <div class="profile-menu" id="profileMenu" role="menu">
+                <div class="profile-menu-header">
+                    <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
+                    <span class="profile-menu-role"><?php echo $roleLabel; ?> account</span>
                 </div>
+                <a href="notifications.php" role="menuitem"><i class="fa fa-bell" aria-hidden="true"></i> Updates</a>
+                <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
         </div>
     </header>
 
-    <nav class="board-topnav" aria-label="Sections">
-        <?php foreach ($navItems as $item): ?>
-        <a href="<?php echo $item[0]; ?>"><i class="fa <?php echo $item[1]; ?>" aria-hidden="true"></i> <?php echo $item[2]; ?></a>
-        <?php endforeach; ?>
-        <a href="waiting.php" class="is-current" aria-current="page"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
-    </nav>
+    <div id="staffMap" class="sw-map" role="region" aria-label="Map of waiting riders and live buses"></div>
+    <p id="staffNotice" class="sw-notice" role="status" aria-live="polite" hidden></p>
+    <p id="staffMapError" class="sw-notice sw-notice-soft" hidden>Map tiles are unavailable right now. The list below is still current.</p>
 
-    <p id="staffNotice" class="board-notice" role="status" aria-live="polite" hidden></p>
-
-    <section class="board-summary" aria-label="Summary">
-        <div class="board-stat">
-            <span class="board-stat-value" id="waitingCount">0</span>
-            <span class="board-stat-label">waiting</span>
+    <section class="sw-sheet" aria-label="Riders waiting">
+        <div class="sw-sheet-head">
+            <h2><span id="staffCount">0</span> waiting</h2>
+            <span class="sw-sheet-sub" id="busLabel"></span>
         </div>
-        <div class="board-stat">
-            <span class="board-stat-value" id="busCount">0</span>
-            <span class="board-stat-label">buses live</span>
-        </div>
-        <label class="board-filter">
-            <span class="sr-only">Filter by trip</span>
-            <select id="staffSchedule" aria-label="Filter by trip">
-                <option value="">All buses</option>
-            </select>
-        </label>
+        <p id="staffEmpty" class="sw-empty">No one is waiting right now.</p>
+        <ul id="staffList" class="sw-list" aria-live="polite"></ul>
     </section>
-
-    <section class="board-map-card" aria-labelledby="staffMapHeading">
-        <div class="board-map-head">
-            <h2 id="staffMapHeading">Live map</h2>
-            <div class="board-legend" aria-hidden="true">
-                <span><i class="dot-waiting"></i>Waiting</span>
-                <span><i class="dot-bus"></i>Bus</span>
-            </div>
-        </div>
-        <div id="staffMap" class="board-map" role="region" aria-label="Map of waiting riders and live buses"></div>
-        <p id="staffMapError" class="board-map-error" hidden>Map tiles are unavailable right now.</p>
-    </section>
-
-    <section class="board-list-card" aria-labelledby="staffListHeading">
-        <div class="board-list-head">
-            <h2 id="staffListHeading">Riders waiting</h2>
-            <span class="board-count" id="staffCount">0</span>
-        </div>
-        <p id="staffEmpty" class="board-empty">No one is waiting right now.</p>
-        <div id="staffList" class="board-list" aria-live="polite"></div>
-    </section>
-
-    <noscript><p class="board-notice">Enable JavaScript to see waiting riders.</p></noscript>
+    <noscript><p class="sw-notice">Enable JavaScript to see waiting riders.</p></noscript>
 </main>
 
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
@@ -123,7 +90,7 @@ $navItems = $isAdmin
 </nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="../Assets/js/admin_waiting.js"></script>
+<script src="../Assets/js/staff_waiting.js"></script>
 <script src="../Assets/js/app-header.js"></script>
 <?php if (strtolower((string)($_SESSION['user_type'] ?? '')) === 'operator') { ?><script src="../Assets/js/operator_tracker.js"></script><?php } ?>
 </body>
