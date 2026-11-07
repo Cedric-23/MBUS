@@ -17,51 +17,26 @@ if(
 
 include "../config/db_connect.php";
 
-/* =========================
-   TOTAL BUSES
-========================= */
-
-$bus_query = mbus_db_query($conn, "
-    SELECT COUNT(*) AS total
-    FROM buses
-");
-
-$bus_data = mbus_db_fetch_assoc($bus_query);
-
-/* =========================
-   TOTAL OPERATORS
-========================= */
-
-$operator_query = mbus_db_query($conn, "
-    SELECT COUNT(*) AS total
-    FROM users
-    WHERE LOWER(user_type)='operator'
-");
-
-$operator_data = mbus_db_fetch_assoc($operator_query);
-
-/* =========================
-   TOTAL SCHEDULES
-========================= */
-
-$schedule_query = mbus_db_query($conn, "
-    SELECT COUNT(*) AS total
-    FROM schedule
-");
-
-$schedule_data = mbus_db_fetch_assoc($schedule_query);
-
-/* =========================
-   TOTAL RESERVATIONS
-========================= */
-
-$reservation_query = mbus_db_query($conn, "
-    SELECT COUNT(*) AS total
-    FROM reservation
-");
-
-$reservation_data = mbus_db_fetch_assoc($reservation_query);
-
+include_once "../Includes/admin_menu.php";
+include_once "../config/app.php";
+$bd = mbus_local_bounds();
+$one = function($sql, $params = []) use ($conn) {
+    $q = mbus_db_prepare($conn, $sql, $params);
+    $r = $q === false ? false : mbus_db_fetch_assoc($q);
+    return $r ? (int)$r['n'] : 0;
+};
+$counts = [
+    'Buses' => $one("SELECT COUNT(*) AS n FROM buses"),
+    'Operators' => $one("SELECT COUNT(*) AS n FROM users WHERE LOWER(user_type) = 'operator'"),
+    'Routes' => $one("SELECT COUNT(*) AS n FROM routes"),
+    'Schedules' => $one("SELECT COUNT(*) AS n FROM schedule WHERE departure_time >= ?", [$bd['today']]),
+];
+$pending = $one("SELECT COUNT(*) AS n FROM commuter_verification WHERE verification_status = 'Pending'");
+$trips_today = $one("SELECT COUNT(*) AS n FROM schedule WHERE departure_time >= ? AND departure_time < ?", [$bd['today'], $bd['tomorrow']]);
+$riders_today = $one("SELECT COUNT(*) AS n FROM reservation r JOIN schedule s ON s.schedule_id = r.schedule_id
+    WHERE r.status IN ('Paid','Confirmed','Boarded') AND s.departure_time >= ? AND s.departure_time < ?", [$bd['today'], $bd['tomorrow']]);
+$greeting = (int)date('G') < 12 ? 'Good morning' : ((int)date('G') < 18 ? 'Good afternoon' : 'Good evening');
+$first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -84,10 +59,11 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
-    <link rel="stylesheet" href="../Assets/css/dashboard-home.css">
+    <link rel="stylesheet" href="../Assets/css/commuter_home.css">
+    <link rel="stylesheet" href="../Assets/css/staff_home.css">
 </head>
 
-<body class="has-sidebar">
+<body class="has-sidebar staff-home">
 <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
 
@@ -115,12 +91,12 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
     </aside>
 
     <!-- MAIN -->
-    <main class="main dashboard-home" role="main">
+    <main class="main" role="main"><div class="home-wrap">
 
-        <!-- PAGE HEADER - Part of page flow (scrolls with content), like schedule.php -->
-        <header class="page-header" role="banner">
-            <div class="page-header-left">
-                <h1>Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?>!</h1>
+        <header class="home-top">
+            <div>
+                <p class="home-hello"><?php echo $greeting; ?></p>
+                <h1><?php echo htmlspecialchars($first_name); ?></h1>
             </div>
             <div class="page-header-right">
                 <div class="profile-menu-wrap">
@@ -141,51 +117,31 @@ $reservation_data = mbus_db_fetch_assoc($reservation_query);
             </div>
         </header>
 
-        <!-- Dashboard Content -->
-        <div class="dashboard-content">
-            <p class="dashboard-intro">Monitor the core MBUS system resources from one place.</p>
+        <?php if($pending > 0){ ?>
+        <a class="attn" href="verifications.php">
+            <span><strong><?php echo $pending; ?> ID <?php echo $pending === 1 ? 'request' : 'requests'; ?> waiting</strong><small>Students, seniors and PWD need approval for their discount.</small></span>
+            <span class="attn-go">Review</span>
+        </a>
+        <?php } else { ?>
+        <p class="attn is-clear"><span><strong>All caught up</strong><small>No ID requests waiting.</small></span></p>
+        <?php } ?>
 
-            <!-- QUICK ACTIONS -->
-            <section class="cards" aria-labelledby="cards-heading">
-                <h2 id="cards-heading" class="dashboard-section-title">System overview</h2>
-
-                <!-- TOTAL BUSES -->
-                <article class="card card-animated">
-                    <h3 class="day">Total Buses</h3>
-                    <p class="date"><?php echo $bus_data['total']; ?> registered</p>
-                    <p>All buses in the system</p>
-                    <a href="manage_buses.php" class="btn btn-primary">Manage Buses</a>
-                </article>
-
-                <!-- TOTAL OPERATORS -->
-                <article class="card card-animated">
-                    <h3 class="day">Total Operators</h3>
-                    <p class="date"><?php echo $operator_data['total']; ?> operators</p>
-                    <p>Active operator accounts</p>
-                    <a href="manage_operators.php" class="btn btn-primary">Manage Operators</a>
-                </article>
-
-                <!-- TOTAL SCHEDULES -->
-                <article class="card card-animated">
-                    <h3 class="day">Total Schedules</h3>
-                    <p class="date"><?php echo $schedule_data['total']; ?> schedules</p>
-                    <p>All scheduled trips</p>
-                    <a href="manage_schedules.php" class="btn btn-primary">Manage Schedules</a>
-                </article>
-
-                <!-- TOTAL RESERVATIONS -->
-                <article class="card card-animated">
-                    <h3 class="day">Total Reservations</h3>
-                    <p class="date"><?php echo $reservation_data['total']; ?> bookings</p>
-                    <p>All passenger reservations</p>
-                    <a href="manage_schedules.php" class="btn btn-primary">Review Schedules</a>
-                </article>
-
-            </section>
-
+        <div class="today-strip" aria-label="Today">
+            <div><b><?php echo $trips_today; ?></b><span>Trips today</span></div>
+            <div><b><?php echo $riders_today; ?></b><span>Booked riders today</span></div>
         </div>
 
-    </main>
+        <section class="home-section" aria-labelledby="manage-h">
+            <div class="home-section-head"><h2 id="manage-h">Manage</h2></div>
+            <ul class="manage-list">
+                <li><a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i>Schedules<span class="count"><?php echo $counts['Schedules']; ?> upcoming</span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
+                <li><a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i>Buses<span class="count"><?php echo $counts['Buses']; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
+                <li><a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i>Operators<span class="count"><?php echo $counts['Operators']; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
+                <li><a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i>Routes<span class="count"><?php echo $counts['Routes']; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
+            </ul>
+        </section>
+
+    </div></main>
 
 
 <script src="../Assets/js/app-header.js"></script>

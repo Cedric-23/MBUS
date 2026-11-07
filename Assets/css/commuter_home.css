@@ -1,5 +1,5 @@
 /* Commuter home: one clear next step, then shortcuts. Mobile first. */
-.home-page { background: var(--color-bg, #f8f9fa); }
+.home-page, .staff-home { background: var(--color-bg, #f8f9fa); }
 .home-page .main {
   width: 100%; max-width: 640px; margin: 0 auto;
   padding: var(--space-4);
@@ -58,10 +58,10 @@
 .soon-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .soon-body strong { font-size: .9375rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .soon-body small { font-size: .8125rem; color: var(--color-text-muted); }
-.home-page .seat-chip { padding: 3px 10px; border-radius: 999px; font-size: .75rem; font-weight: 600; white-space: nowrap; }
-.home-page .seat-chip.ok { background: #e6f6ec; color: #067647; }
-.home-page .seat-chip.low { background: #fff4e0; color: #9a5b00; }
-.home-page .seat-chip.full { background: #fdeceb; color: #b42318; }
+.home-page .seat-chip, .staff-home .seat-chip { padding: 3px 10px; border-radius: 999px; font-size: .75rem; font-weight: 600; white-space: nowrap; }
+.home-page .seat-chip, .staff-home .seat-chip.ok { background: #e6f6ec; color: #067647; }
+.home-page .seat-chip, .staff-home .seat-chip.low { background: #fff4e0; color: #9a5b00; }
+.home-page .seat-chip, .staff-home .seat-chip.full { background: #fdeceb; color: #b42318; }
 .home-empty { margin: 0; padding: 16px; border-radius: 16px; background: var(--color-surface); border: 1px dashed var(--color-border); color: var(--color-text-muted); font-size: .9375rem; }
 
 .day-chips { display: flex; gap: 8px; overflow-x: auto; margin: 12px -16px 0; padding: 2px 16px; scrollbar-width: none; }
@@ -80,4 +80,4 @@
 @media (min-width: 769px) {
   .home-page .main { max-width: 720px; padding-top: var(--space-6); }
 }
-@media (prefers-reduced-motion: reduce) { .home-page * { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { .home-page *, .staff-home * { transition: none !important; } }

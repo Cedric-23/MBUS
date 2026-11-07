@@ -144,13 +144,6 @@ function mbus_home_when(string $ts): string {
     </section>
     <?php } ?>
 
-    <nav class="home-actions" aria-label="Quick actions">
-        <a href="schedule.php"><span class="ico"><i class="fa fa-calendar-check" aria-hidden="true"></i></span>Book a seat</a>
-        <a href="live.php"><span class="ico"><i class="fa fa-location-dot" aria-hidden="true"></i></span>Live bus</a>
-        <a href="my_reservations.php"><span class="ico"><i class="fa fa-ticket" aria-hidden="true"></i></span>My trips</a>
-        <a href="waiting.php"><span class="ico"><i class="fa fa-hand" aria-hidden="true"></i></span>I'm waiting</a>
-    </nav>
-
     <section class="home-section" aria-labelledby="soon-h">
         <div class="home-section-head">
             <h2 id="soon-h">Leaving soon</h2>

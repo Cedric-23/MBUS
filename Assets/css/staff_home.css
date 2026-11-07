@@ -1,0 +1,28 @@
+/* Operator + admin home. Sits inside the sidebar layout, so only the content column is constrained. */
+.staff-home .home-wrap { width: 100%; max-width: 680px; margin: 0 auto; }
+.staff-home .home-top h1 { font-size: 1.625rem; }
+.staff-home .next-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+.staff-home .next-actions .next-cta { margin-top: 0; }
+.staff-home .next-cta.is-ghost { background: rgba(255,255,255,.14); color: #fff; }
+.staff-home .home-section { margin-top: 24px; }
+.staff-home .soon-list a { grid-template-columns: 56px minmax(0, 1fr) auto; }
+
+/* admin */
+.attn { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-radius: 16px; text-decoration: none; background: #fff4e0; color: #7a4a00; }
+.attn strong { display: block; font-size: 1rem; }
+.attn small { display: block; margin-top: 2px; font-size: .8125rem; opacity: .85; }
+.attn.is-clear { background: #e6f6ec; color: #067647; }
+.attn .attn-go { padding: 8px 16px; border-radius: 999px; background: #7a4a00; color: #fff; font-weight: 600; font-size: .875rem; white-space: nowrap; }
+.today-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.today-strip > div { padding: 16px; border-radius: 16px; background: var(--color-surface); border: 1px solid var(--color-border-light); }
+.today-strip b { display: block; font-size: 1.75rem; line-height: 1.1; color: var(--color-primary); }
+.today-strip span { font-size: .8125rem; color: var(--color-text-muted); }
+.manage-list { list-style: none; margin: 0; padding: 0; background: var(--color-surface); border: 1px solid var(--color-border-light); border-radius: 16px; overflow: hidden; }
+.manage-list li + li { border-top: 1px solid var(--color-border-light); }
+.manage-list a { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 16px; color: var(--color-text-primary); text-decoration: none; font-weight: 600; -webkit-tap-highlight-color: transparent; }
+.manage-list a:active { background: var(--color-bg-secondary); }
+.manage-list .count { margin-left: auto; color: var(--color-text-muted); font-weight: 500; }
+.manage-list .fa-chevron-right { color: var(--color-medium-gray); font-size: .75rem; }
+@media (max-width: 768px) { .staff-home .home-wrap { padding-bottom: calc(var(--bottom-nav-height, 60px) + var(--space-6)); } }
+.staff-home .home-top > div:first-child { flex: 1; min-width: 0; }
+.staff-home .home-hello { white-space: nowrap; }

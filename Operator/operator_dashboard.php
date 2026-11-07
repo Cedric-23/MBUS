@@ -18,54 +18,30 @@ include("../Includes/csrf.php");
 
 $operator_id = $_SESSION['user_id'];
 
-/* TRIPS TODAY (app-timezone day boundaries, not the DB clock) */
+/* App-timezone day boundaries, not the DB clock */
 $b = mbus_local_bounds();
-$trips_today_query = mbus_db_prepare($conn, "
-SELECT COUNT(*) as total
-FROM schedule
-LEFT JOIN operator_bus_assignments
-ON schedule.bus_id = operator_bus_assignments.bus_id
-WHERE operator_bus_assignments.operator_id = ?
-AND schedule.departure_time >= '{$b['today']}'
-AND schedule.departure_time < '{$b['tomorrow']}'
-", [$operator_id]);
 
-$trips_today = mbus_db_fetch_assoc($trips_today_query)['total'];
-
-/* TOTAL PASSENGERS */
-$passengers_query = mbus_db_prepare($conn, "
-SELECT COUNT(*) as total
-FROM reservation
-JOIN schedule ON reservation.schedule_id = schedule.schedule_id
-JOIN operator_bus_assignments ON schedule.bus_id = operator_bus_assignments.bus_id
-WHERE operator_bus_assignments.operator_id = ?
-AND (reservation.status = 'Paid' OR reservation.status = 'Boarded')
-", [$operator_id]);
-
-$total_passengers = mbus_db_fetch_assoc($passengers_query)['total'];
-
-/* BOARDED */
-$boarded_query = mbus_db_prepare($conn, "
-SELECT COUNT(*) as total
-FROM reservation
-JOIN schedule ON reservation.schedule_id = schedule.schedule_id
-JOIN operator_bus_assignments ON schedule.bus_id = operator_bus_assignments.bus_id
-WHERE operator_bus_assignments.operator_id = ?
-AND reservation.status = 'Boarded'
-", [$operator_id]);
-
-$total_boarded = mbus_db_fetch_assoc($boarded_query)['total'];
-
-/* ACTIVE */
-$active_query = mbus_db_prepare($conn, "
-SELECT COUNT(*) as total
-FROM schedule
-JOIN operator_bus_assignments ON schedule.bus_id = operator_bus_assignments.bus_id
-WHERE operator_bus_assignments.operator_id = ?
-AND (schedule.trip_status = 'Scheduled' OR schedule.trip_status = 'Boarding')
-", [$operator_id]);
-
-$active_trips = mbus_db_fetch_assoc($active_query)['total'];
+/* NEXT TRIP + REST OF TODAY (this operator's buses, still open) */
+$trips = [];
+$tq = mbus_db_prepare($conn, "
+SELECT s.schedule_id, s.departure_time, s.trip_status, b.bus_number, b.capacity,
+       rt.origin, rt.destination,
+       (SELECT COUNT(*) FROM reservation r WHERE r.schedule_id = s.schedule_id AND r.status IN ('Paid','Confirmed','Boarded')) AS booked,
+       (SELECT COUNT(*) FROM reservation r WHERE r.schedule_id = s.schedule_id AND r.status = 'Boarded') AS boarded
+FROM schedule s
+JOIN buses b ON b.bus_id = s.bus_id
+JOIN routes rt ON rt.route_id = s.route_id
+JOIN operator_bus_assignments oba ON oba.bus_id = s.bus_id
+WHERE oba.operator_id = ?
+AND s.schedule_status = 'Active'
+AND s.trip_status IN ('Scheduled','Boarding','Departed')
+AND s.departure_time >= ? AND s.departure_time < ?
+ORDER BY (s.trip_status = 'Departed') DESC, (s.trip_status = 'Boarding') DESC, s.departure_time ASC", [$operator_id, $b['today'], $b['tomorrow']]);
+while($tq !== false && ($r = mbus_db_fetch_assoc($tq))) $trips[] = $r;
+$current = $trips[0] ?? null;
+$rest = array_slice($trips, 1, 4);
+$greeting = (int)date('G') < 12 ? 'Good morning' : ((int)date('G') < 18 ? 'Good afternoon' : 'Good evening');
+$first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -88,11 +64,12 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
-    <link rel="stylesheet" href="../Assets/css/dashboard-home.css">
+    <link rel="stylesheet" href="../Assets/css/commuter_home.css">
+    <link rel="stylesheet" href="../Assets/css/staff_home.css">
     <link rel="stylesheet" href="../Assets/css/gps_status.css">
 </head>
 
-<body class="has-sidebar">
+<body class="has-sidebar staff-home">
 <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
 
@@ -120,12 +97,12 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
     </aside>
 
     <!-- MAIN -->
-    <main class="main dashboard-home" role="main">
+    <main class="main" role="main"><div class="home-wrap">
 
-        <!-- PAGE HEADER - Part of page flow (scrolls with content), like schedule.php -->
-        <header class="page-header" role="banner">
-            <div class="page-header-left">
-                <h1>Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?>!</h1>
+        <header class="home-top">
+            <div>
+                <p class="home-hello"><?php echo $greeting; ?></p>
+                <h1><?php echo htmlspecialchars($first_name); ?></h1>
             </div>
             <div class="page-header-right">
                 <div class="profile-menu-wrap">
@@ -145,55 +122,50 @@ $active_trips = mbus_db_fetch_assoc($active_query)['total'];
             </div>
         </header>
 
-        <!-- Dashboard Content -->
-        <div class="dashboard-content">
-            <p class="dashboard-intro">Keep today's trips and passenger movement on track.</p>
-            <div class="tracking-sr-only" aria-live="polite" role="status">
-                <span id="operatorTrackingStatus">Operator location sharing is active.</span>
-                <select id="operatorTrackingTrip" aria-label="Active trip"></select>
-            </div>
-
-            <!-- QUICK ACTIONS -->
-            <section class="cards" aria-labelledby="cards-heading">
-                <h2 id="cards-heading" class="dashboard-section-title">Operations overview</h2>
-
-                <!-- TRIPS TODAY -->
-                <article class="card card-animated">
-                    <h3 class="day">Trips Today</h3>
-                    <p class="date"><?php echo $trips_today; ?> scheduled</p>
-                    <p>Assigned trips scheduled today</p>
-                    <a href="manage_trips.php?filter=today" class="btn btn-primary">View Trips</a>
-                </article>
-
-                <!-- PAID PASSENGERS -->
-                <article class="card card-animated">
-                    <h3 class="day">Paid Passengers</h3>
-                    <p class="date"><?php echo $total_passengers; ?> confirmed</p>
-                    <p>Passengers with confirmed bookings</p>
-                    <a href="passengers.php?status=Paid" class="btn btn-primary">View Passengers</a>
-                </article>
-
-                <!-- BOARDED PASSENGERS -->
-                <article class="card card-animated">
-                    <h3 class="day">Boarded Passengers</h3>
-                    <p class="date"><?php echo $total_boarded; ?> boarded</p>
-                    <p>Passengers already boarded</p>
-                    <a href="passengers.php?status=Boarded" class="btn btn-primary">View Boarded</a>
-                </article>
-
-                <!-- ACTIVE TRIPS -->
-                <article class="card card-animated">
-                    <h3 class="day">Active Trips</h3>
-                    <p class="date"><?php echo $active_trips; ?> active</p>
-                    <p>Scheduled or boarding trips</p>
-                    <a href="manage_trips.php?filter=active" class="btn btn-primary">View Active</a>
-                </article>
-
-            </section>
-
+        <div class="tracking-sr-only" aria-live="polite" role="status">
+            <span id="operatorTrackingStatus">Operator location sharing is active.</span>
+            <select id="operatorTrackingTrip" aria-label="Active trip"></select>
         </div>
 
-    </main>
+        <?php if($current){
+            $label = ['Scheduled' => 'Up next', 'Boarding' => 'Boarding now', 'Departed' => 'On the road'][$current['trip_status']] ?? 'Up next';
+        ?>
+        <section class="next-trip" aria-label="Current trip">
+            <div class="next-trip-top">
+                <span class="next-state"><?php echo $label; ?></span>
+                <span class="next-when"><?php echo date('g:i A', strtotime($current['departure_time'])); ?></span>
+            </div>
+            <p class="next-route"><?php echo htmlspecialchars($current['origin'] . ' to ' . $current['destination']); ?></p>
+            <p class="next-meta"><?php echo htmlspecialchars($current['bus_number']); ?> &middot; <?php echo (int)$current['boarded']; ?> of <?php echo (int)$current['booked']; ?> boarded</p>
+            <div class="next-actions">
+                <a class="next-cta" href="scan.php">Scan tickets</a>
+                <a class="next-cta is-ghost" href="passengers.php?schedule_id=<?php echo (int)$current['schedule_id']; ?>">Seat map</a>
+            </div>
+        </section>
+        <?php } else { ?>
+        <section class="next-trip is-empty" aria-label="No trips">
+            <p class="next-route">No trips left today</p>
+            <p class="next-meta">Nothing else is assigned to your buses. Check upcoming trips.</p>
+            <a class="next-cta" href="manage_trips.php">View trips</a>
+        </section>
+        <?php } ?>
+
+        <?php if($rest){ ?>
+        <section class="home-section" aria-labelledby="later-h">
+            <div class="home-section-head"><h2 id="later-h">Later today</h2><a href="manage_trips.php">All trips</a></div>
+            <ul class="soon-list">
+                <?php foreach($rest as $t){ $full = (int)$t['booked'] >= (int)$t['capacity']; ?>
+                <li><a href="passengers.php?schedule_id=<?php echo (int)$t['schedule_id']; ?>">
+                    <span class="soon-time"><?php echo date('g:i', strtotime($t['departure_time'])); ?><small><?php echo date('A', strtotime($t['departure_time'])); ?></small></span>
+                    <span class="soon-body"><strong><?php echo htmlspecialchars($t['origin'] . ' to ' . $t['destination']); ?></strong><small><?php echo htmlspecialchars($t['bus_number']); ?></small></span>
+                    <span class="seat-chip <?php echo $full ? 'full' : 'ok'; ?>"><?php echo (int)$t['booked']; ?>/<?php echo (int)$t['capacity']; ?></span>
+                </a></li>
+                <?php } ?>
+            </ul>
+        </section>
+        <?php } ?>
+
+    </div></main>
 
 
 <script src="../Assets/js/app-header.js"></script>
