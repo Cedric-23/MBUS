@@ -35,7 +35,7 @@ $navItems = $isAdmin
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="../Assets/css/staff_waiting.css">
+    <link rel="stylesheet" href="../Assets/css/staff_waiting.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/staff_waiting.css'); ?>">
 </head>
 <body class="has-bottom-nav staff-wait-page">
 <main class="main" role="main" id="pickupStaff" data-role="<?php echo $pickupStaffRole; ?>" data-endpoint="../api/pickup.php" data-live-endpoint="../api/live_tracking.php">

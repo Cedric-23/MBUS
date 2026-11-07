@@ -48,7 +48,7 @@ $config = [
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="../Assets/css/responsive.css">
-    <link rel="stylesheet" href="../Assets/css/commuter_pickup.css">
+    <link rel="stylesheet" href="../Assets/css/commuter_pickup.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_pickup.css'); ?>">
 </head>
 <body class="pickup-page">
     <div id="pickupMap" class="pickup-map" role="region" aria-label="Map showing you and the bus"></div>
