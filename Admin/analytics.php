@@ -137,12 +137,12 @@ if($recent_activity_query === false){
         <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
         <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
         <a href="manage_operators.php"><i class="fa fa-users" aria-hidden="true"></i> Manage Users</a>
-        <a href="verifications.php"><i class="fa fa-id-card" aria-hidden="true"></i> Verifications</a>
         <a href="manage_operators.php"><i class="fa fa-user-plus" aria-hidden="true"></i> Applications</a>
         <a href="admin_dashboard.php"><i class="fa fa-history" aria-hidden="true"></i> Activity Logs</a>
     </nav>
 
     <div class="menu-bottom">
+        <a href="verifications.php" class="menu-bottom-link"><i class="fa fa-id-card" aria-hidden="true"></i> Verifications</a>
         <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
             <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
         </a>

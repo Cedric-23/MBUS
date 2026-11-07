@@ -94,11 +94,11 @@ while($q !== false && ($r = mbus_db_fetch_assoc($q))) $history[] = $r;
         <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
         <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
         <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
-        <a href="verifications.php" aria-current="page"><i class="fa fa-id-card" aria-hidden="true"></i> Verifications</a>
         <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
     </nav>
 
     <div class="menu-bottom">
+        <a href="verifications.php" aria-current="page" class="menu-bottom-link"><i class="fa fa-id-card" aria-hidden="true"></i> Verifications</a>
         <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
             <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
         </a>

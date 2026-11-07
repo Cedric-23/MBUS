@@ -122,3 +122,4 @@
     outline-width: 3px;
   }
 }
+.sidebar .menu-bottom .menu-bottom-link { display: flex; align-items: center; gap: 10px; margin-bottom: var(--space-3); }
