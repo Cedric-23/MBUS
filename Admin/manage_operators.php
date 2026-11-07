@@ -34,7 +34,7 @@ if(isset($_POST['add_operator'])){
 
             /* CHECK EMAIL using prepared statement */
             $check = mbus_db_prepare($conn, "
-SELECT * FROM users WHERE email = ?
+SELECT * FROM users WHERE LOWER(email) = LOWER(?)
 ", [$email]);
 
             if(mbus_db_num_rows($check) > 0){
@@ -294,5 +294,6 @@ document.addEventListener('keydown', function(e) {
     </a>
 </nav>
 <script src="../Assets/js/app-header.js"></script>
+<script src="../Assets/js/password-toggle.js"></script>
 </body>
 </html>

@@ -58,7 +58,7 @@ if(isset($_POST['update_profile'])){
         } else {
             $email_check = mbus_db_prepare($conn,"
                 SELECT user_id FROM users
-                WHERE email = ? AND user_id != ?
+                WHERE LOWER(email) = LOWER(?) AND user_id != ?
             ", [$email, $user_id]);
 
             if(mbus_db_num_rows($email_check) > 0){

@@ -249,16 +249,13 @@ ORDER BY departure_time ASC
                     $status_class = strtolower($row['schedule_status']);
                 ?>
                 <tr class="schedule-row" data-route="<?php echo $route_type; ?>">
-                    <form method="POST" class="schedule-form">
-                        <?php csrf_field(); ?>
-                        <input type="hidden" name="schedule_id" value="<?php echo $row['schedule_id']; ?>">
-
+                    <?php $sched_ids[] = (int)$row['schedule_id']; $fid = 'sf-' . (int)$row['schedule_id']; ?>
                         <td data-label="ID"><?php echo $row['schedule_id']; ?></td>
 
                         <td data-label="Bus">
                             <span class="view-mode">Bus <?php echo $row['bus_id']; ?></span>
                             <div class="edit-controls">
-                                <select name="bus_id" class="form-control edit-input">
+                                <select form="<?php echo $fid; ?>" name="bus_id" class="form-control edit-input">
                                     <?php
                                     mbus_db_data_seek($buses, 0);
                                     while($bus = mbus_db_fetch_assoc($buses)){ ?>
@@ -278,7 +275,7 @@ ORDER BY departure_time ASC
                                 </span>
                             </span>
                             <div class="edit-controls">
-                                <select name="route_id" class="form-control edit-input">
+                                <select form="<?php echo $fid; ?>" name="route_id" class="form-control edit-input">
                                     <?php
                                     mbus_db_data_seek($routes, 0);
                                     while($route = mbus_db_fetch_assoc($routes)){ ?>
@@ -294,7 +291,7 @@ ORDER BY departure_time ASC
                         <td data-label="Departure">
                             <span class="view-mode"><?php echo date('M j, Y g:i A', strtotime($row['departure_time'])); ?></span>
                             <div class="edit-controls">
-                                <input type="datetime-local" name="departure_time" class="form-control edit-input"
+                                <input type="datetime-local" form="<?php echo $fid; ?>" name="departure_time" class="form-control edit-input"
                                     value="<?php echo date('Y-m-d\TH:i', strtotime($row['departure_time'])); ?>">
                             </div>
                         </td>
@@ -302,7 +299,7 @@ ORDER BY departure_time ASC
                         <td data-label="Arrival">
                             <span class="view-mode"><?php echo date('M j, Y g:i A', strtotime($row['arrival_time'])); ?></span>
                             <div class="edit-controls">
-                                <input type="datetime-local" name="arrival_time" class="form-control edit-input"
+                                <input type="datetime-local" form="<?php echo $fid; ?>" name="arrival_time" class="form-control edit-input"
                                     value="<?php echo date('Y-m-d\TH:i', strtotime($row['arrival_time'])); ?>">
                             </div>
                         </td>
@@ -314,7 +311,7 @@ ORDER BY departure_time ASC
                                 </span>
                             </span>
                             <div class="edit-controls">
-                                <select name="schedule_status" class="form-control edit-input">
+                                <select form="<?php echo $fid; ?>" name="schedule_status" class="form-control edit-input">
                                     <option value="Active" <?php echo ($row['schedule_status'] == "Active") ? 'selected' : ''; ?>>Active</option>
                                     <option value="Cancelled" <?php echo ($row['schedule_status'] == "Cancelled") ? 'selected' : ''; ?>>Cancelled</option>
                                     <option value="Completed" <?php echo ($row['schedule_status'] == "Completed") ? 'selected' : ''; ?>>Completed</option>
@@ -324,26 +321,44 @@ ORDER BY departure_time ASC
 
                         <td class="actions-col" data-label="Actions">
                             <div class="action-buttons">
-                                <button type="submit" name="update_schedule" class="btn btn-sm btn-success save-btn">
-                                    <i class="fa fa-save" aria-hidden="true"></i> Save
+                                <button type="button" class="btn btn-sm btn-primary edit-btn" onclick="editRow(this, true)">
+                                    <i class="fa fa-pen" aria-hidden="true"></i> Edit
                                 </button>
-                                <button type="submit" name="delete_schedule" class="btn btn-sm btn-danger delete-btn"
+                                <button type="submit" form="<?php echo $fid; ?>" name="update_schedule" class="btn btn-sm btn-success save-btn" hidden>
+                                    <i class="fa fa-check" aria-hidden="true"></i> Save changes
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline cancel-btn" onclick="editRow(this, false)" hidden>Cancel</button>
+                                <button type="submit" form="<?php echo $fid; ?>" name="delete_schedule" class="btn btn-sm btn-danger delete-btn"
                                     onclick="return confirm('Delete this schedule?')">
                                     <i class="fa fa-trash" aria-hidden="true"></i> Delete
                                 </button>
                             </div>
                         </td>
-                    </form>
                 </tr>
                 <?php } ?>
             </tbody>
         </table>
+        <?php foreach(($sched_ids ?? []) as $sid){ ?>
+        <form id="sf-<?php echo $sid; ?>" method="POST" hidden><?php csrf_field(); ?><input type="hidden" name="schedule_id" value="<?php echo $sid; ?>"></form>
+        <?php } ?>
     </div>
 </section>
 
 </main>
 
 <script>
+// Edit / cancel a schedule row in place
+function editRow(btn, on) {
+    const row = btn.closest('tr');
+    row.classList.toggle('edit-mode', on);
+    row.querySelector('.edit-btn').hidden = on;
+    row.querySelector('.save-btn').hidden = !on;
+    row.querySelector('.cancel-btn').hidden = !on;
+    row.querySelector('.delete-btn').hidden = on;
+    if (!on) row.querySelectorAll('select, input[type=datetime-local]').forEach(el => { el.value = el.defaultValue; if (el.tagName === 'SELECT') Array.from(el.options).forEach(o => { o.selected = o.defaultSelected; }); });
+    else { const first = row.querySelector('.edit-input'); if (first) first.focus(); }
+}
+
 // View toggle functions
 function showListView() {
     document.getElementById('listView').style.display = 'block';

@@ -238,7 +238,8 @@ document.addEventListener('DOMContentLoaded', function() {
     white-space: nowrap;
     border: 0;
 }
-</script>
+</style>
 
+<script src="Assets/js/password-toggle.js"></script>
 </body>
 </html>

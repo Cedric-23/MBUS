@@ -327,7 +327,8 @@ document.addEventListener('DOMContentLoaded', function() {
 .operator-link a:hover {
     color: var(--color-primary) !important;
 }
-</script>
+</style>
 
+<script src="Assets/js/password-toggle.js"></script>
 </body>
 </html>

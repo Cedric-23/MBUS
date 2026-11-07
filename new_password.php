@@ -136,5 +136,6 @@ if(isset($_POST['reset'])){
     </div>
 
 </div>
+<script src="Assets/js/password-toggle.js"></script>
 </body>
 </html>
