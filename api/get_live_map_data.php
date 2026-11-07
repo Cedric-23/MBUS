@@ -26,7 +26,7 @@ if ($rows === false) { http_response_code(500); echo json_encode(['error'=>'Live
 $buses=[]; while($row=mbus_db_fetch_assoc($rows)) $buses[]=$row;
 $pickups=[];
 if ($role === 'admin' || $role === 'operator') {
-  $pickupSql = "SELECT pr.pickup_request_id, pr.schedule_id, pr.pickup_location, pr.latitude, pr.longitude, pr.status, pr.created_at, u.full_name, b.bus_number
+  $pickupSql = "SELECT pr.pickup_request_id, pr.schedule_id, pr.pickup_location, pr.latitude, pr.longitude, pr.status, pr.created_at, u.full_name, u.profile_picture, b.bus_number
                 FROM pickup_requests pr JOIN users u ON u.user_id=pr.user_id
                 JOIN schedule s ON s.schedule_id=pr.schedule_id JOIN buses b ON b.bus_id=s.bus_id
                 JOIN operator_bus_assignments oba ON oba.bus_id=b.bus_id

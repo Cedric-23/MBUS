@@ -21,12 +21,19 @@ if (!$trip) {
     header('Location: schedule.php');
     exit;
 }
+$profile_query = mbus_db_prepare($conn, "SELECT profile_picture FROM users WHERE user_id = ?", [(int)$_SESSION['user_id']]);
+$profile_row = $profile_query === false ? null : mbus_db_fetch_assoc($profile_query);
+$profile_picture = basename((string)($profile_row['profile_picture'] ?? ''));
+$profile_image = ($profile_picture !== '' && $profile_picture !== 'default.png')
+    ? '../Assets/profile_pictures/' . rawurlencode($profile_picture)
+    : '../Assets/images/mbus_icon.png';
 $config = [
     'csrfToken' => csrf_get_token(),
     'scheduleId' => (int)$trip['schedule_id'],
     'bus' => $trip['bus_number'],
     'route' => $trip['origin'] . ' to ' . $trip['destination'],
     'departure' => date('g:i A', strtotime($trip['departure_time'])),
+    'profileImage' => $profile_image,
 ];
 ?>
 <!DOCTYPE html>

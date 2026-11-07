@@ -44,7 +44,7 @@
         className: '', iconSize: [84, 28], iconAnchor: [42, 14],
         html: '<span class="pk-bus' + (stale ? ' is-stale' : '') + '"><i class="fa fa-bus" aria-hidden="true"></i>' + esc(cfg.bus) + '</span>'
     });
-    const youIcon = () => L.divIcon({ className: '', iconSize: [22, 22], iconAnchor: [11, 11], html: '<span class="pk-you' + (waiting ? ' is-waiting' : '') + '"></span>' });
+    const youIcon = () => L.divIcon({ className: '', iconSize: [42, 42], iconAnchor: [21, 21], html: '<span class="pk-you' + (waiting ? ' is-waiting' : '') + '"><img src="' + esc(cfg.profileImage || '') + '" alt=""></span>' });
 
     function setMe(lat, lng, pan) {
         me = { lat, lng };

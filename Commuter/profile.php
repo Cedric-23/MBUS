@@ -70,60 +70,46 @@ if(isset($_POST['update_profile'])){
 }
 
 /* HANDLE PROFILE PICTURE UPLOAD */
-if(isset($_POST['upload_picture'])){
-    if(!csrf_validate_token()){
+if (isset($_POST['upload_picture'])) {
+    if (!csrf_validate_token()) {
         $picture_error = "Security validation failed. Please try again.";
-    } elseif(isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] == 0){
-        $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+    } elseif (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === 0) {
+        $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
         $filename = $_FILES['profile_picture']['name'];
         $file_ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         $max_size = 5 * 1024 * 1024;
 
-        if($_FILES['profile_picture']['size'] > $max_size){
+        if ($_FILES['profile_picture']['size'] > $max_size) {
             $picture_error = "File too large. Maximum size is 5MB.";
-        } elseif(!in_array($file_ext, $allowed)){
-            $picture_error = "Invalid file type. Only JPG, JPEG, PNG, and GIF allowed";
+        } elseif (!in_array($file_ext, $allowed, true)) {
+            $picture_error = "Invalid file type. Only JPG, JPEG, PNG, GIF, and WebP are allowed.";
         } else {
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mime_type = finfo_file($finfo, $_FILES['profile_picture']['tmp_name']);
             finfo_close($finfo);
+            $allowed_mimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
-            $allowed_mimes = ['image/jpeg', 'image/png', 'image/gif'];
-            if(!in_array($mime_type, $allowed_mimes)){
-                $picture_error = "Invalid file content. Only images allowed.";
+            if (!in_array($mime_type, $allowed_mimes, true)) {
+                $picture_error = "Invalid file content. Only images are allowed.";
+            } elseif (getimagesize($_FILES['profile_picture']['tmp_name']) === false) {
+                $picture_error = "Invalid image file.";
             } else {
-                $image_info = getimagesize($_FILES['profile_picture']['tmp_name']);
-                if($image_info === false){
-                    $picture_error = "Invalid image file.";
+                // Dimensions are intentionally unrestricted; CSS crops the image into an avatar.
+                $new_filename = "profile_" . $user_id . "_" . time() . "." . $file_ext;
+                $upload_dir = "../Assets/profile_pictures/";
+                $upload_path = $upload_dir . $new_filename;
+                if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+
+                if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $upload_path)) {
+                    mbus_db_prepare($conn, "UPDATE users SET profile_picture = ? WHERE user_id = ?", [$new_filename, $user_id]);
+                    $picture_success = "Profile picture updated successfully";
                 } else {
-                    $max_width = 2000;
-                    $max_height = 2000;
-                    if($image_info[0] > $max_width || $image_info[1] > $max_height){
-                        $picture_error = "Image too large. Maximum dimensions: {$max_width}x{$max_height}px";
-                    } else {
-                        $new_filename = "profile_" . $user_id . "_" . time() . "." . $file_ext;
-                        $upload_path = "../Assets/profile_pictures/" . $new_filename;
-
-                        if(!file_exists("../Assets/profile_pictures/")){
-                            mkdir("../Assets/profile_pictures/", 0755, true);
-                        }
-
-                        if(move_uploaded_file($_FILES['profile_picture']['tmp_name'], $upload_path)){
-                            mbus_db_prepare($conn,"
-                                UPDATE users
-                                SET profile_picture = ?
-                                WHERE user_id = ?
-                            ", [$new_filename, $user_id]);
-                            $picture_success = "Profile picture updated successfully";
-                        } else {
-                            $picture_error = "Failed to upload profile picture";
-                        }
-                    }
+                    $picture_error = "Failed to upload profile picture.";
                 }
             }
         }
     } else {
-        $picture_error = "No file uploaded or upload error";
+        $picture_error = "No file uploaded or upload error.";
     }
 }
 ?>

@@ -37,7 +37,8 @@
 /* map pins */
 .pk-bus { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: #1f6fb2; color: #fff; font: 700 .75rem/1 Inter, system-ui, sans-serif; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.3); border: 2px solid #fff; }
 .pk-bus.is-stale { background: #8d9bad; }
-.pk-you { display: block; box-sizing: border-box; width: 22px; height: 22px; border-radius: 50%; background: #1e90ff; border: 4px solid #fff; box-shadow: 0 0 0 0 rgba(30,144,255,.5), 0 2px 8px rgba(0,0,0,.35); animation: pkpulse 2s infinite; }
-.pk-you.is-waiting { background: #12b76a; box-shadow: 0 0 0 0 rgba(18,183,106,.5), 0 2px 8px rgba(0,0,0,.35); }
+.pk-you { display: grid; place-items: center; box-sizing: border-box; width: 42px; height: 42px; border-radius: 50%; background: #1e90ff; border: 3px solid #fff; box-shadow: 0 0 0 3px rgba(30,144,255,.9), 0 2px 8px rgba(0,0,0,.35); animation: pkpulse 2s infinite; overflow: hidden; }
+.pk-you img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.pk-you.is-waiting { box-shadow: 0 0 0 3px rgba(18,183,106,.95), 0 2px 8px rgba(0,0,0,.35); }
 @keyframes pkpulse { 70% { box-shadow: 0 0 0 14px rgba(30,144,255,0), 0 2px 8px rgba(0,0,0,.35); } 100% { box-shadow: 0 0 0 0 rgba(30,144,255,0), 0 2px 8px rgba(0,0,0,.35); } }
 @media (prefers-reduced-motion: reduce) { .pk-you { animation: none; } }
