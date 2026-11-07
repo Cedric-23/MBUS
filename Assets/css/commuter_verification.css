@@ -29,3 +29,6 @@
 .ptype-tag { padding:2px 10px; border-radius:999px; background:var(--color-primary-light-bg); color:var(--color-primary); font-size:.8125rem; font-weight:600; }
 .verify-hint { display:block; margin-top:8px; font-size:.875rem; color:var(--color-primary); }
 .passenger-type-badge { display:inline-block; padding:2px 10px; border-radius:999px; background:var(--color-primary-light-bg); color:var(--color-primary); font-size:.8125rem; font-weight:600; }
+
+.page-header-left .back-btn { display:inline-grid; place-items:center; width:44px; height:44px; margin-right:8px; border:1px solid var(--color-border); border-radius:50%; background:var(--color-surface); color:var(--color-primary); text-decoration:none; }
+.page-header-left:has(.back-btn) { display:flex; align-items:center; }

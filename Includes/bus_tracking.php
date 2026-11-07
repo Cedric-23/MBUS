@@ -20,10 +20,11 @@ function mbus_tracking_form(array $post, string $role): array
     }
     if ($action === 'update_location') {
         $accuracy = $post['accuracy'] ?? null;
-        if (!is_scalar($accuracy) || is_bool($accuracy) || !is_numeric($accuracy) || !is_finite((float)$accuracy) || (float)$accuracy < 0 || (float)$accuracy > 1000) {
+        if (!is_scalar($accuracy) || is_bool($accuracy) || !is_numeric($accuracy) || !is_finite((float)$accuracy) || (float)$accuracy < 0) {
             throw new MbusPickupException('Please provide valid GPS accuracy.', 400);
         }
-        $data['accuracy'] = (float)$accuracy;
+        // Desktop browsers locate by Wi-Fi/IP and report accuracy in the thousands of meters; the table stores at most 1000.
+        $data['accuracy'] = min(1000.0, (float)$accuracy);
     }
     if ($action === 'mark_waiting') {
         $data['pickup_label'] = mbus_pickup_text($post['pickup_label'] ?? '', 100, false) ?: 'Pinned pickup point';

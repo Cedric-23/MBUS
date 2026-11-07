@@ -88,7 +88,7 @@ $can_submit = !$latest || $status === 'Rejected' || ($status === 'Approved' && $
 
 <header class="page-header">
     <div class="page-header-left">
-        <a href="profile.php" class="back-btn" aria-label="Back to profile"><i class="fa fa-arrow-left" aria-hidden="true"></i></a>
+        <a href="<?php echo ($_GET['from'] ?? '') === 'profile' ? 'profile.php' : 'commuter_dashboard.php'; ?>" class="back-btn" aria-label="Go back"><i class="fa fa-arrow-left" aria-hidden="true"></i></a>
         <h1>Get 20% off</h1>
     </div>
 </header>

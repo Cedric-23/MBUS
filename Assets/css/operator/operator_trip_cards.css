@@ -1,0 +1,34 @@
+/* Operator trips: one compact card per trip, riders open inside the card. */
+.trip-cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); align-items: start; }
+.trips-empty { padding: 16px; border-radius: 16px; background: var(--color-surface); border: 1px dashed var(--color-border); color: var(--color-text-muted); }
+.trip-card { padding: 14px; border-radius: 16px; background: var(--color-surface); border: 1px solid var(--color-border-light); box-shadow: none; }
+.tc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tc-bus { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--color-primary); }
+.tc-bus small { font-weight: 500; color: var(--color-text-muted); }
+.tc-route { margin: 10px 0 2px; font-size: 1.0625rem; font-weight: 600; overflow-wrap: anywhere; }
+.tc-time { margin: 0; font-size: .875rem; color: var(--color-text-muted); }
+.tc-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 12px; }
+.tc-actions .status-form { margin: 0; }
+.tc-actions .status-select { width: 100%; min-height: 44px; border-radius: 12px; font-size: .9375rem; }
+.tc-riders { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); color: var(--color-primary); font: inherit; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.tc-riders[aria-expanded="true"] { background: var(--color-primary-light-bg, #e8f0fa); border-color: var(--color-primary); }
+.tc-chev { font-size: .75rem; transition: transform .15s; }
+.tc-riders[aria-expanded="true"] .tc-chev { transform: rotate(180deg); }
+.trip-card > .action-form { margin-top: 8px; }
+
+.manifest { margin-top: 12px; border-top: 1px solid var(--color-border-light); padding-top: 8px; }
+.manifest[hidden] { display: none; }
+.manifest-empty { margin: 8px 0 2px; color: var(--color-text-muted); font-size: .9375rem; }
+.manifest-list { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; overscroll-behavior: contain; }
+.manifest-list li { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 52px; padding: 6px 0; }
+.manifest-list li + li { border-top: 1px solid var(--color-border-light); }
+.m-seat { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: var(--color-primary-light-bg, #e8f0fa); color: var(--color-primary); font-weight: 700; font-size: .875rem; }
+.is-boarded .m-seat { background: #e6f6ec; color: #067647; }
+.m-info { min-width: 0; display: flex; flex-direction: column; }
+.m-info strong { font-size: .9375rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.m-info small { font-size: .8125rem; color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.m-done { font-size: .8125rem; font-weight: 600; color: #067647; }
+.m-board { min-height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--color-primary); color: #fff; font: inherit; font-weight: 600; font-size: .875rem; cursor: pointer; }
+.m-board:active { background: var(--color-primary-dark); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 768px) { .trip-cards { grid-template-columns: 1fr; } }

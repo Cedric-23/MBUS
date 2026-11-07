@@ -37,6 +37,8 @@ if (!$user_data) {
 }
 
 $passenger_type = mbus_passenger_type($conn, (int)$user_id);
+$vq = mbus_db_prepare($conn, "SELECT verification_status, verification_type, rejection_reason FROM commuter_verification WHERE user_id = ? ORDER BY verification_id DESC LIMIT 1", [$user_id]);
+$latest_v = $vq === false ? false : mbus_db_fetch_assoc($vq);
 
 /* HANDLE PROFILE UPDATE */
 if(isset($_POST['update_profile'])){
@@ -45,12 +47,14 @@ if(isset($_POST['update_profile'])){
     } else {
         $full_name = trim($_POST['full_name']);
         $email = trim($_POST['email']);
-        $phone_number = trim($_POST['phone_number']);
+        $phone_number = preg_replace('/\D+/', '', (string)($_POST['phone_number'] ?? ''));
+        if(strlen($phone_number) === 12 && strpos($phone_number, '63') === 0) $phone_number = '0' . substr($phone_number, 2);
+        elseif(strlen($phone_number) === 10 && $phone_number[0] === '9') $phone_number = '0' . $phone_number;
 
         if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
             $error = "Invalid email format";
-        } elseif (!preg_match('/^09\d{9}$/', $phone_number) && !empty($phone_number)) {
-            $error = "Phone number must be 11 digits starting with 09 (e.g., 09123456789).";
+        } elseif ($phone_number !== '' && !preg_match('/^09\d{9}$/', $phone_number)) {
+            $error = "Phone number must be 11 digits starting with 09 (e.g., 09123456789). Leave it blank if you'd rather not add one.";
         } else {
             $email_check = mbus_db_prepare($conn,"
                 SELECT user_id FROM users
@@ -158,6 +162,7 @@ if(isset($_POST['upload_picture'])){
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
+    <link rel="stylesheet" href="../Assets/css/commuter_verification.css">
 </head>
 <body class="has-bottom-nav">
 
@@ -165,6 +170,7 @@ if(isset($_POST['upload_picture'])){
 
 <header class="page-header">
     <div class="page-header-left">
+        <a href="commuter_dashboard.php" class="back-btn" aria-label="Back to home"><i class="fa fa-arrow-left" aria-hidden="true"></i></a>
         <h1>My Profile</h1>
     </div>
 
@@ -185,7 +191,55 @@ if(isset($_POST['upload_picture'])){
             </div>
 </header>
 
+<?php foreach([['success','success'],['error','error'],['picture_success','success'],['picture_error','error']] as [$var,$type]){ if(isset($$var)){ ?>
+<div class="alert alert-<?php echo $type; ?>" role="<?php echo $type === 'error' ? 'alert' : 'status'; ?>"><?php echo htmlspecialchars($$var); ?></div>
+<?php } } ?>
+
 <div class="profile-container">
+    <section class="card profile-info-section">
+        <h2 class="section-title">
+            <i class="fa fa-id-card" aria-hidden="true"></i> Profile Information
+        </h2>
+        
+        
+        
+        <form method="POST" class="profile-form">
+            <?php csrf_field(); ?>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="full_name">Full Name</label>
+                    <input type="text" name="full_name" id="full_name" value="<?php echo htmlspecialchars($user_data['full_name'] ?? ''); ?>" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" name="email" id="email" value="<?php echo htmlspecialchars($user_data['email'] ?? ''); ?>" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone_number">Phone Number</label>
+                    <input type="tel" name="phone_number" id="phone_number" value="<?php $ph = $_POST['phone_number'] ?? ($user_data['phone_number'] ?? ''); echo htmlspecialchars(strlen(preg_replace('/\D+/', '', (string)$ph)) < 2 ? '' : $ph); ?>" class="form-control" inputmode="tel" autocomplete="tel" maxlength="16" placeholder="09XXXXXXXXX">
+                    <small class="form-hint">Format: 11 digits starting with 09 (e.g., 09123456789)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="user_type">Passenger Type</label>
+                    <input type="text" id="user_type" value="<?php echo htmlspecialchars($passenger_type); ?>" class="form-control" disabled aria-disabled="true">
+                    <small class="form-hint"><?php
+                        if($passenger_type !== 'Regular') echo '20% fare discount active.';
+                        elseif($latest_v && $latest_v['verification_status'] === 'Pending') echo 'Your ' . htmlspecialchars($latest_v['verification_type']) . ' ID is under review.';
+                        elseif($latest_v && $latest_v['verification_status'] === 'Rejected') echo 'Your last ID was rejected.';
+                        else echo 'Student, senior or PWD?';
+                    ?> <a href="verification.php?from=profile"><?php echo $passenger_type !== 'Regular' ? 'Manage verification' : ($latest_v && $latest_v['verification_status'] === 'Pending' ? 'View status' : 'Verify your ID'); ?></a></small>
+                </div>
+            </div>
+            
+            <button type="submit" name="update_profile" class="btn btn-primary">
+                <i class="fa fa-save" aria-hidden="true"></i> Update Profile
+            </button>
+        </form>
+    </section>
+
     <section class="card profile-picture-section">
         <h2 class="section-title">
             <i class="fa fa-user-circle" aria-hidden="true"></i> Profile Picture
@@ -215,58 +269,6 @@ if(isset($_POST['upload_picture'])){
                         </button>
         </form>
         
-        <?php if(isset($picture_error)): ?>
-            <div class="alert alert-error" role="alert"><?php echo $picture_error; ?></div>
-        <?php endif; ?>
-        
-        <?php if(isset($picture_success)): ?>
-            <div class="alert alert-success" role="alert"><?php echo $picture_success; ?></div>
-        <?php endif; ?>
-    </section>
-    
-    <section class="card profile-info-section">
-        <h2 class="section-title">
-            <i class="fa fa-id-card" aria-hidden="true"></i> Profile Information
-        </h2>
-        
-        <?php if(isset($success)): ?>
-            <div class="alert alert-success" role="alert"><?php echo $success; ?></div>
-        <?php endif; ?>
-        
-        <?php if(isset($error)): ?>
-            <div class="alert alert-error" role="alert"><?php echo $error; ?></div>
-        <?php endif; ?>
-        
-        <form method="POST" class="profile-form">
-            <?php csrf_field(); ?>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="full_name">Full Name</label>
-                    <input type="text" name="full_name" id="full_name" value="<?php echo htmlspecialchars($user_data['full_name'] ?? ''); ?>" class="form-control" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <input type="email" name="email" id="email" value="<?php echo htmlspecialchars($user_data['email'] ?? ''); ?>" class="form-control" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="phone_number">Phone Number</label>
-                    <input type="tel" name="phone_number" id="phone_number" value="<?php echo htmlspecialchars($user_data['phone_number'] ?? ''); ?>" class="form-control" pattern="09\d{9}" maxlength="11" placeholder="09XXXXXXXXX">
-                    <small class="form-hint">Format: 11 digits starting with 09 (e.g., 09123456789)</small>
-                </div>
-                
-                <div class="form-group">
-                    <label for="user_type">Passenger Type</label>
-                    <input type="text" id="user_type" value="<?php echo htmlspecialchars($passenger_type); ?>" class="form-control" disabled aria-disabled="true">
-                    <small class="form-hint"><?php echo $passenger_type === 'Regular' ? 'Student, senior or PWD?' : '20% fare discount active.'; ?> <a href="verification.php"><?php echo $passenger_type === 'Regular' ? 'Verify your ID' : 'Manage verification'; ?></a></small>
-                </div>
-            </div>
-            
-            <button type="submit" name="update_profile" class="btn btn-primary">
-                <i class="fa fa-save" aria-hidden="true"></i> Update Profile
-            </button>
-        </form>
     </section>
 </div>
 

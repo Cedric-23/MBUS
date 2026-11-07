@@ -160,6 +160,7 @@ $query = mbus_db_prepare($conn, "
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/gps_status.css">
+    <link rel="stylesheet" href="../Assets/css/operator/operator_trip_cards.css">
 </head>
 
 <body class="has-sidebar">
@@ -248,151 +249,86 @@ $query = mbus_db_prepare($conn, "
 </div>
 <?php endif; ?>
 
-<div class="table-responsive trips-table-responsive">
-    <table class="trips-table">
-        <thead>
-            <tr>
-                <th scope="col">Schedule ID</th>
-                <th scope="col">Bus</th>
-                <th scope="col">Route</th>
-                <th scope="col">Departure</th>
-                <th scope="col">Arrival</th>
-                <th scope="col">Status</th>
-                <th scope="col">Update</th>
-                <th scope="col">Passengers</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php
-            mbus_db_data_seek($query, 0);
-            while($row=mbus_db_fetch_assoc($query)){
-            ?>
-            <tr class="trip-row" data-schedule-id="<?php echo (int)$row['schedule_id']; ?>" data-trip-status="<?php echo htmlspecialchars($row['trip_status'], ENT_QUOTES); ?>">
+<?php
+$trip_rows = [];
+mbus_db_data_seek($query, 0);
+while($tr = mbus_db_fetch_assoc($query)) $trip_rows[] = $tr;
+?>
+<?php if(!$trip_rows){ ?>
+<p class="trips-empty">No trips here. Try another filter.</p>
+<?php } ?>
+<div class="trip-cards">
+<?php foreach($trip_rows as $row){
+    $sid = (int)$row['schedule_id'];
+    $pq = mbus_db_prepare($conn, "SELECT reservation.reservation_id, reservation.seat_number, reservation.pickup_location, reservation.destination, reservation.status, users.full_name
+        FROM reservation JOIN users ON reservation.user_id = users.user_id
+        WHERE reservation.schedule_id = ? AND reservation.status IN ('Paid','Boarded')
+        ORDER BY NULLIF(regexp_replace(reservation.seat_number,'\\D','','g'),'')::int", [$sid]);
+    $riders = [];
+    while($pq !== false && ($pr = mbus_db_fetch_assoc($pq))) $riders[] = $pr;
+    $boarded = count(array_filter($riders, fn($r) => $r['status'] === 'Boarded'));
+    $is_open = $open_schedule === $sid;
+?>
+<article class="trip-card trip-row" data-schedule-id="<?php echo $sid; ?>" data-trip-status="<?php echo htmlspecialchars($row['trip_status'], ENT_QUOTES); ?>">
+    <div class="tc-top">
+        <span class="tc-bus"><i class="fa fa-bus" aria-hidden="true"></i> <?php echo htmlspecialchars($row['bus_number']); ?><small><?php echo htmlspecialchars($row['bus_type']); ?></small></span>
+        <span class="status-badge <?php echo strtolower($row['trip_status']); ?>"><?php echo htmlspecialchars($row['trip_status']); ?></span>
+    </div>
+    <p class="tc-route"><?php echo htmlspecialchars($row['origin']); ?> <span aria-hidden="true">&rarr;</span> <?php echo htmlspecialchars($row['destination']); ?></p>
+    <p class="tc-time"><?php echo date('D, M j', strtotime($row['departure_time'])); ?> &middot; <?php echo date('g:i A', strtotime($row['departure_time'])); ?> to <?php echo date('g:i A', strtotime($row['arrival_time'])); ?></p>
 
-                    <td data-label="Schedule ID"><?php echo $row['schedule_id']; ?></td>
+    <div class="tc-actions">
+        <form method="POST" class="status-form">
+            <?php csrf_field(); ?>
+            <input type="hidden" name="schedule_id" value="<?php echo $sid; ?>">
+            <input type="hidden" name="open_schedule" value="<?php echo $open_schedule ?? $sid; ?>">
+            <input type="hidden" name="update_status" value="1">
+            <label class="sr-only" for="st-<?php echo $sid; ?>">Trip status</label>
+            <select id="st-<?php echo $sid; ?>" name="trip_status" class="form-control status-select" onchange="this.form.submit()">
+                <?php foreach(['Scheduled','Boarding','Departed','Arrived','Cancelled'] as $st){ ?>
+                <option value="<?php echo $st; ?>" <?php echo $row['trip_status']===$st ? 'selected' : ''; ?>><?php echo $st; ?></option>
+                <?php } ?>
+            </select>
+        </form>
+        <button type="button" class="tc-riders toggle-passengers" data-schedule-id="<?php echo $sid; ?>" aria-expanded="<?php echo $is_open ? 'true' : 'false'; ?>" aria-controls="passengers-<?php echo $sid; ?>">
+            <i class="fa fa-users" aria-hidden="true"></i> Riders <b><?php echo $boarded; ?>/<?php echo count($riders); ?></b>
+            <i class="fa fa-chevron-down tc-chev" aria-hidden="true"></i>
+        </button>
+    </div>
+    <?php if($archive_table_ready && ($row['trip_status']==='Arrived' || $row['trip_status']==='Cancelled' || $row['schedule_status']==='Completed' || $row['schedule_status']==='Cancelled')): ?>
+    <form method="POST" class="action-form" onsubmit="return confirm('Archive this completed trip? Records will not be deleted.');">
+        <?php csrf_field(); ?>
+        <input type="hidden" name="schedule_id" value="<?php echo $sid; ?>">
+        <button type="submit" name="archive_trip" class="btn btn-sm btn-outline"><i class="fa fa-box-archive" aria-hidden="true"></i> Archive</button>
+    </form>
+    <?php endif; ?>
 
-                    <td data-label="Bus">
-                        <div class="bus-info">
-                            <span class="bus-number"><?php echo htmlspecialchars($row['bus_number']); ?></span>
-                            <span class="bus-type"><?php echo htmlspecialchars($row['bus_type']); ?></span>
-                        </div>
-                    </td>
-
-                    <td data-label="Route">
-                        <span class="route-badge">
-                            <i class="fa fa-map-marker-alt" aria-hidden="true"></i>
-                            <span><?php echo htmlspecialchars($row['origin']); ?> → <?php echo htmlspecialchars($row['destination']); ?></span>
-                        </span>
-                    </td>
-
-                    <td data-label="Departure"><?php echo date('M j, Y g:i A', strtotime($row['departure_time'])); ?></td>
-                    <td data-label="Arrival"><?php echo date('M j, Y g:i A', strtotime($row['arrival_time'])); ?></td>
-
-                    <td data-label="Status">
-                        <span class="status-badge <?php echo strtolower($row['trip_status']); ?>"><?php echo htmlspecialchars($row['trip_status']); ?></span>
-                    </td>
-
-                    <td data-label="Update">
-                        <form method="POST" class="status-form">
-                            <?php csrf_field(); ?>
-                            <input type="hidden" name="schedule_id" value="<?php echo $row['schedule_id']; ?>">
-                            <input type="hidden" name="open_schedule" value="<?php echo $open_schedule ?? $row['schedule_id']; ?>">
-                            <select name="trip_status" class="form-control status-select" onchange="this.form.submit()">
-                                <option value="Scheduled" <?php echo $row['trip_status']==='Scheduled' ? 'selected' : ''; ?>>Scheduled</option>
-                                <option value="Boarding" <?php echo $row['trip_status']==='Boarding' ? 'selected' : ''; ?>>Boarding</option>
-                                <option value="Departed" <?php echo $row['trip_status']==='Departed' ? 'selected' : ''; ?>>Departed</option>
-                                <option value="Arrived" <?php echo $row['trip_status']==='Arrived' ? 'selected' : ''; ?>>Arrived</option>
-                                <option value="Cancelled" <?php echo $row['trip_status']==='Cancelled' ? 'selected' : ''; ?>>Cancelled</option>
-                            </select>
-                            <input type="hidden" name="update_status" value="1">
-                        </form>
-                        <?php if($archive_table_ready && ($row['trip_status']==='Arrived' || $row['trip_status']==='Cancelled' || $row['schedule_status']==='Completed' || $row['schedule_status']==='Cancelled')): ?>
-                        <form method="POST" class="action-form" onsubmit="return confirm('Archive this completed trip? Records will not be deleted.');">
-                            <?php csrf_field(); ?>
-                            <input type="hidden" name="schedule_id" value="<?php echo (int)$row['schedule_id']; ?>">
-                            <button type="submit" name="archive_trip" class="btn btn-sm btn-outline"><i class="fa fa-box-archive" aria-hidden="true"></i> Archive</button>
-                        </form>
-                        <?php endif; ?>
-                    </td>
-
-                    <td data-label="Passengers">
-                        <button type="button" class="btn btn-sm btn-outline toggle-passengers" data-schedule-id="<?php echo $row['schedule_id']; ?>" aria-expanded="false" aria-controls="passengers-<?php echo $row['schedule_id']; ?>">
-                            <i class="fa fa-users" aria-hidden="true"></i> View
-                        </button>
-                    </td>
-            </tr>
-            <tr id="passengers-<?php echo $row['schedule_id']; ?>" class="manifest-row" style="display: none;">
-                <td colspan="8">
-                    <div class="manifest-wrapper">
-                        <div class="manifest-table-responsive">
-                            <table class="manifest-table">
-                                <thead>
-                                    <tr>
-                                        <th>Passenger</th>
-                                        <th>Seat</th>
-                                        <th>Pickup</th>
-                                        <th>Destination</th>
-                                        <th>Ticket Code</th>
-                                        <th>Status</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php
-                                    $sid = $row['schedule_id'];
-
-                                    $sql = "SELECT reservation.*, users.full_name FROM reservation JOIN users ON reservation.user_id = users.user_id WHERE reservation.schedule_id = ? AND (reservation.status = 'Paid' OR reservation.status = 'Boarded') ORDER BY reservation.seat_number ASC";
-                                    $passengers = mbus_db_prepare($conn, $sql, [$sid]);
-
-                                    if(mbus_db_num_rows($passengers)>0){
-                                        while($passenger=mbus_db_fetch_assoc($passengers)){
-                                    ?>
-                                    <tr>
-                                        <td data-label="Passenger" class="passenger-name"><?php echo htmlspecialchars($passenger['full_name']); ?></td>
-                                        <td data-label="Seat"><?php echo $passenger['seat_number']; ?></td>
-                                        <td data-label="Pickup"><?php echo htmlspecialchars($passenger['pickup_location']); ?></td>
-                                        <td data-label="Destination"><?php echo htmlspecialchars($passenger['destination']); ?></td>
-                                        <td data-label="Ticket Code"><?php echo htmlspecialchars($passenger['ticket_code']); ?></td>
-                                        <td data-label="Status">
-                                            <?php if($passenger['status']=="Boarded"){ ?>
-                                            <span class="badge badge-success boarded-badge">Boarded</span>
-                                            <?php } else { ?>
-                                            <span class="badge badge-warning paid-badge">Paid</span>
-                                            <?php } ?>
-                                        </td>
-                                        <td data-label="Action">
-                                            <?php if($passenger['status']!="Boarded"){ ?>
-                                            <form method="POST" class="action-form">
-                                                <?php csrf_field(); ?>
-                                                <input type="hidden" name="reservation_id" value="<?php echo $passenger['reservation_id']; ?>">
-                                                <input type="hidden" name="open_schedule" value="<?php echo $row['schedule_id']; ?>">
-                                                <button type="submit" name="mark_boarded" class="btn btn-sm btn-success board-btn">Board</button>
-                                            </form>
-                                            <?php } else { ?>
-                                            <span class="badge badge-success">✔ Boarded</span>
-                                            <?php } ?>
-                                        </td>
-                                    </tr>
-                                    <?php
-                                        }
-                                    }else{
-                                    ?>
-                                    <tr>
-                                        <td colspan="7" data-label="No passengers found">No passengers found.</td>
-                                    </tr>
-                                    <?php } ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </td>
-            </tr>
-            <tr class="divider-row">
-                <td colspan="8"><div class="trip-divider"></div></td>
-            </tr>
+    <div class="manifest" id="passengers-<?php echo $sid; ?>" <?php echo $is_open ? '' : 'hidden'; ?>>
+        <?php if(!$riders){ ?>
+            <p class="manifest-empty">No paid riders yet.</p>
+        <?php } else { ?>
+        <ul class="manifest-list">
+            <?php foreach($riders as $r){ ?>
+            <li class="<?php echo $r['status'] === 'Boarded' ? 'is-boarded' : ''; ?>">
+                <span class="m-seat"><?php echo htmlspecialchars($r['seat_number']); ?></span>
+                <span class="m-info"><strong><?php echo htmlspecialchars($r['full_name']); ?></strong><small><?php echo htmlspecialchars($r['pickup_location'] . ' to ' . $r['destination']); ?></small></span>
+                <?php if($r['status'] === 'Boarded'){ ?>
+                    <span class="m-done">Boarded</span>
+                <?php } else { ?>
+                <form method="POST" class="action-form">
+                    <?php csrf_field(); ?>
+                    <input type="hidden" name="reservation_id" value="<?php echo (int)$r['reservation_id']; ?>">
+                    <input type="hidden" name="open_schedule" value="<?php echo $sid; ?>">
+                    <button type="submit" name="mark_boarded" class="m-board">Board</button>
+                </form>
+                <?php } ?>
+            </li>
             <?php } ?>
-        </tbody>
-    </table>
+        </ul>
+        <?php } ?>
+    </div>
+</article>
+<?php } ?>
 </div>
 
 </main>
@@ -402,28 +338,16 @@ window.OPERATOR_LIVE_ENDPOINT = '../api/live_tracking.php';
 window.OPERATOR_CSRF_TOKEN = <?php echo json_encode(csrf_get_token()); ?>;
 window.OPERATOR_TRACK_SCHEDULE_ID = <?php echo json_encode($track_focus ?: $open_schedule); ?>;
 document.addEventListener('DOMContentLoaded', function() {
-    // Toggle passenger manifest rows
+    // Show / hide each trip's riders
     document.querySelectorAll('.toggle-passengers').forEach(function(btn) {
         btn.addEventListener('click', function() {
-            var scheduleId = this.dataset.scheduleId;
-            var manifestRow = document.getElementById('passengers-' + scheduleId);
-            var isOpen = manifestRow.style.display !== 'none';
-            manifestRow.style.display = isOpen ? 'none' : 'table-row';
-            this.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
-            this.innerHTML = isOpen ? '<i class="fa fa-users" aria-hidden="true"></i> View' : '<i class="fa fa-chevron-up" aria-hidden="true"></i> Hide';
+            var panel = document.getElementById('passengers-' + this.dataset.scheduleId);
+            if (!panel) return;
+            var open = panel.hasAttribute('hidden');
+            if (open) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', '');
+            this.setAttribute('aria-expanded', open ? 'true' : 'false');
         });
     });
-
-    // Auto-open manifest if open_schedule parameter is set
-    <?php if($open_schedule): ?>
-    var openRow = document.getElementById('passengers-<?php echo $open_schedule; ?>');
-    var openBtn = document.querySelector('.toggle-passengers[data-schedule-id="<?php echo $open_schedule; ?>"]');
-    if(openRow && openBtn) {
-        openRow.style.display = 'table-row';
-        openBtn.setAttribute('aria-expanded', 'true');
-        openBtn.innerHTML = '<i class="fa fa-chevron-up" aria-hidden="true"></i> Hide';
-    }
-    <?php endif; ?>
 });
 
 // Toggle sidebar for mobile
