@@ -4,6 +4,7 @@
     const cfg = window.mbusPickup || {};
     const ENDPOINT = '../api/live_tracking.php';
     const FRESH_MS = 120000;
+    const FALLBACK_AVATAR = '../Assets/images/mbus_icon.png';
     const el = id => document.getElementById(id);
     const sheet = document.querySelector('.pickup-sheet');
 
@@ -44,13 +45,22 @@
         className: '', iconSize: [84, 28], iconAnchor: [42, 14],
         html: '<span class="pk-bus' + (stale ? ' is-stale' : '') + '"><i class="fa fa-bus" aria-hidden="true"></i>' + esc(cfg.bus) + '</span>'
     });
-    const youIcon = () => L.divIcon({ className: '', iconSize: [42, 42], iconAnchor: [21, 21], html: '<span class="pk-you' + (waiting ? ' is-waiting' : '') + '"><img src="' + esc(cfg.profileImage || '') + '" alt=""></span>' });
+    const youIcon = () => L.divIcon({ className: '', iconSize: [42, 42], iconAnchor: [21, 21], html: '<span class="pk-you' + (waiting ? ' is-waiting' : '') + '"><img src="' + esc(cfg.profileImage || FALLBACK_AVATAR) + '" alt=""></span>' });
+
+    function bindAvatarFallback(marker) {
+        const img = marker && marker.getElement() && marker.getElement().querySelector('.pk-you img');
+        if (!img) return;
+        img.addEventListener('error', () => {
+            if (img.src !== new URL(FALLBACK_AVATAR, location.href).href) img.src = FALLBACK_AVATAR;
+        }, { once: true });
+    }
 
     function setMe(lat, lng, pan) {
         me = { lat, lng };
         if (!map) { refresh(); return; }
         if (!youMarker) {
             youMarker = L.marker([lat, lng], { icon: youIcon(), draggable: !waiting, title: 'You' }).addTo(map);
+            bindAvatarFallback(youMarker);
             youMarker.on('dragend', () => { const p = youMarker.getLatLng(); me = { lat: p.lat, lng: p.lng }; refresh(); });
         } else {
             youMarker.setLatLng([lat, lng]);
@@ -82,7 +92,7 @@
             } else if (busMarker) { map.removeLayer(busMarker); busMarker = null; }
             if (line) { map.removeLayer(line); line = null; }
             if (busLoc && me) line = L.polyline([[me.lat, me.lng], [busLoc.lat, busLoc.lng]], { color: '#1e90ff', weight: 3, dashArray: '2 8', opacity: .8 }).addTo(map);
-            if (youMarker) { youMarker.setIcon(youIcon()); if (youMarker.dragging) waiting ? youMarker.dragging.disable() : youMarker.dragging.enable(); }
+            if (youMarker) { youMarker.setIcon(youIcon()); bindAvatarFallback(youMarker); if (youMarker.dragging) waiting ? youMarker.dragging.disable() : youMarker.dragging.enable(); }
         }
 
         if (busLoc && me) {

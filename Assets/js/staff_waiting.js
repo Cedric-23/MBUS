@@ -48,9 +48,21 @@
             map.on('click', () => { if (selected) { selected = null; render(); } });
         } catch (e) { map = null; el('staffMapError').hidden = false; }
     }
+    const FALLBACK_AVATAR = '../Assets/images/mbus_icon.png';
     const busIcon = (no, stale) => L.divIcon({ className: '', iconSize: [84, 28], iconAnchor: [42, 14],
         html: '<span class="sw-bus' + (stale ? ' is-stale' : '') + '"><i class="fa fa-bus" aria-hidden="true"></i>' + String(no || 'Bus').replace(/[<>&"]/g, '') + '</span>' });
-    const avatarUrl = picture => picture ? '../Assets/profile_pictures/' + encodeURIComponent(String(picture).split('/').pop()) : '../Assets/images/mbus_icon.png';
+    const avatarUrl = picture => {
+        const filename = String(picture || '').replace(/\\/g, '/').split('/').pop();
+        return filename && filename.toLowerCase() !== 'default.png' && /^[A-Za-z0-9][A-Za-z0-9._-]*\.(?:jpe?g|png|gif|webp)$/i.test(filename)
+            ? '../Assets/profile_pictures/' + encodeURIComponent(filename)
+            : FALLBACK_AVATAR;
+    };
+    function bindAvatarFallback(img) {
+        if (!img) return;
+        img.addEventListener('error', () => {
+            if (img.src !== new URL(FALLBACK_AVATAR, location.href).href) img.src = FALLBACK_AVATAR;
+        }, { once: true });
+    }
     const personIcon = (name, on, picture) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
         html: '<span class="sw-person' + (on ? ' is-on' : '') + '"><img src="' + avatarUrl(picture) + '" alt=""></span>' });
 
@@ -95,6 +107,7 @@
             if (p && map) {
                 pts.push(p);
                 const m = L.marker(p, { icon: personIcon(r.full_name, on, r.profile_picture), title: r.full_name || 'Commuter' }).addTo(layer);
+                bindAvatarFallback(m.getElement() && m.getElement().querySelector('.sw-person img'));
                 m.on('click', () => choose(r));
                 if (on) {
                     const b = busFor(r.schedule_id);
@@ -104,9 +117,9 @@
             const li = node('li', undefined, 'sw-row' + (on ? ' is-on' : ''));
             const open = node('button', undefined, 'sw-row-main'); open.type = 'button';
             const avatar = node('img', undefined, 'sw-avatar');
-            avatar.src = avatarUrl(r.profile_picture);
             avatar.alt = '';
-            avatar.onerror = () => { avatar.onerror = null; avatar.src = '../Assets/images/mbus_icon.png'; };
+            bindAvatarFallback(avatar);
+            avatar.src = avatarUrl(r.profile_picture);
             open.append(avatar);
             const txt = node('span', undefined, 'sw-row-text');
             txt.append(node('strong', r.full_name || 'Commuter'),

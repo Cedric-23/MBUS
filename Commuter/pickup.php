@@ -24,8 +24,9 @@ if (!$trip) {
 $profile_query = mbus_db_prepare($conn, "SELECT profile_picture FROM users WHERE user_id = ?", [(int)$_SESSION['user_id']]);
 $profile_row = $profile_query === false ? null : mbus_db_fetch_assoc($profile_query);
 $profile_picture = basename((string)($profile_row['profile_picture'] ?? ''));
-$profile_image = ($profile_picture !== '' && $profile_picture !== 'default.png')
-    ? '../Assets/profile_pictures/' . rawurlencode($profile_picture)
+$profile_path = __DIR__ . '/../Assets/profile_pictures/' . $profile_picture;
+$profile_image = ($profile_picture !== '' && strtolower($profile_picture) !== 'default.png' && is_file($profile_path))
+    ? '../Assets/profile_pictures/' . rawurlencode($profile_picture) . '?v=' . rawurlencode((string)filemtime($profile_path))
     : '../Assets/images/mbus_icon.png';
 $config = [
     'csrfToken' => csrf_get_token(),
@@ -78,6 +79,6 @@ $config = [
 
     <script>window.mbusPickup = <?php echo json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="../Assets/js/commuter_pickup.js"></script>
+    <script src="../Assets/js/commuter_pickup.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/commuter_pickup.js'); ?>"></script>
 </body>
 </html>
