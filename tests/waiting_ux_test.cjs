@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
 const commuterWaiting = read('Commuter/waiting.php');
-const waitingStatusJs = read('Assets/js/commuter_waiting_status.js');
+const waitingBoardJs = read('Assets/js/commuter_waiting_board.js');
 const pickupPage = read('Commuter/pickup.php');
 const pickupJs = read('Assets/js/commuter_pickup.js');
 const notifications = read('Commuter/notifications.php');
@@ -38,16 +38,26 @@ for (const page of navPages) {
     assert.match(html, /<span>Waiting<\/span>/, `${page} Waiting tab label missing`);
 }
 
-// --- 2. Waiting is a concise status page; pickup pinning is its own selected-bus page
-assert.match(commuterWaiting, /id="statusCard"/);
+// --- 2. Waiting is empty until the commuter has marked themselves waiting; pickup pinning stays separate
+assert.match(commuterWaiting, /id="cwbEmpty"/);
+assert.match(commuterWaiting, /id="cwbMap"[^>]*hidden/);
+assert.match(commuterWaiting, /id="cwbSheet"[^>]*hidden/);
 assert.match(commuterWaiting, /<h1>Waiting<\/h1>/);
 assert.match(commuterWaiting, /aria-current="page"/);
 assert.doesNotMatch(commuterWaiting, /pickupMap|Mark me as waiting|Update my spot/);
-assert.match(waitingStatusJs, /data\.my_request/);
-assert.match(waitingStatusJs, /req\.status === 'Waiting'/);
-assert.match(waitingStatusJs, /Cancel waiting/);
-assert.match(waitingStatusJs, /live\.php\?schedule_id=/);
-assert.doesNotMatch(waitingStatusJs, /Update my spot|Spot updated/);
+assert.match(waitingBoardJs, /myRequest\.status !== 'Waiting'/);
+assert.match(waitingBoardJs, /showEmpty\(\)/);
+assert.match(waitingBoardJs, /personIcon/);
+assert.match(waitingBoardJs, /busIcon/);
+assert.match(waitingBoardJs, /getDrivingRoute/);
+assert.match(waitingBoardJs, /remainingOnRoute/);
+assert.match(waitingBoardJs, /toggleRoute/);
+assert.match(waitingBoardJs, /Cancel/);
+assert.match(waitingBoardJs, /Straight-line distance to the bus/);
+assert.match(waitingBoardJs, /Request timed out/);
+assert.match(waitingBoardJs, /selectedBusLocation && selectedBusLocation\.fresh/);
+assert.match(waitingBoardJs, /busMarker\.on\('click',[\s\S]*?updateRouteButton\(\)/);
+assert.doesNotMatch(waitingBoardJs, /Pick up/);
 const visibleCopy = commuterWaiting.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, ' ')
     .replace(/&[a-z]+;/g, ' ').replace(/\s+/g, ' ').trim();
 assert.ok(visibleCopy.split(' ').length < 120, `waiting status page copy too long: ${visibleCopy.split(' ').length} words`);
@@ -65,6 +75,7 @@ assert.match(pickupJs, /You\'re marked as waiting/);
 assert.match(pickupJs, /pickupWait/);
 assert.match(pickupJs, /waitingElsewhere\(\)/);
 assert.match(pickupJs, /Cancel current waiting/);
+assert.match(pickupJs, /window\.location\.href = 'waiting\.php'/);
 
 // The Updates page no longer embeds a second waiting picker.
 assert.doesNotMatch(notifications, /waitingSchedule|waitBtn|commuter_waiting_alerts\.js|live_pickup\.css/);
@@ -89,11 +100,8 @@ assert.match(boardJs, /locations/);
 assert.match(boardJs, /personIcon/);
 assert.match(boardJs, /toggleStaffRoute/);
 assert.match(boardJs, /remainingOnRoute/);
-assert.match(commuterLive, /pickupAction\(trip\.schedule_id, myRequest\)/);
-assert.match(commuterLive, /cancel_waiting/);
-assert.match(commuterLive, /Your waiting pickup/);
-assert.match(commuterLive, /Your waiting pickup/);
-assert.match(commuterLivePage, /dot-commuter/);
+assert.doesNotMatch(commuterLive, /pickupAction|cancel_waiting|commuterLayer|Your waiting pickup|pickup\.php|Pick up/);
+assert.doesNotMatch(commuterLivePage, /dot-commuter|Pickup distance|profileImage/);
 assert.match(tracking, /A commuter must still be able to clear their waiting state after the trip/);
 
 // --- 4. GPS gate is operator-only and precedes the operator dashboard
@@ -119,4 +127,4 @@ assert.match(read('Commuter/schedule.php'), /\$action === 'pickup' \? 'pickup\.p
 assert.match(read('Commuter/reserve.php'), /Location: pickup\.php\?schedule_id=/);
 assert.doesNotMatch(read('Commuter/live.php'), /Waiting for a bus/);
 
-console.log('PASS Waiting status, separate pickup pin flow, staff route estimate, navigation and operator-only GPS gate');
+console.log('PASS commuter Waiting-only map, separate pickup pin flow, staff board and operator-only GPS gate');

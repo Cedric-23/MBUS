@@ -30,7 +30,7 @@ assert.match(source, /No bus is boarding or on the road/);
 assert.match(source, /Last seen/);
 assert.match(html, /id="busList"/);
 // same bus-number pins as the operator board, one per live bus
-assert.match(source, /board-bus-pin/);
+assert.match(source, /board-bus-marker/);
 assert.match(source, /L\.divIcon/);
 assert.match(source, /map\.setView\(focus, 16/);
 assert.match(source, /routeViewMode = 'route'/);
@@ -38,9 +38,10 @@ assert.match(source, /defaultTrip = trips\.find/);
 assert.match(source, /manualChoice = true/);
 assert.match(source, /MBUSLiveSelection\.chooseSchedule/);
 assert.match(source, /data\.locations/);
-assert.match(source, /cancel_waiting/);
+assert.doesNotMatch(source, /cancel_waiting|commuterLayer|Your waiting pickup|pickup\.php|Pick up|bus-row-pick|bus-pop-pick/);
+assert.doesNotMatch(html, /profileImage|dot-commuter|Pickup distance/);
 assert.match(css, /\.commuter-live-page \.board-list-card/);
 assert.match(css, /\.bus-row-route \{[^}]*text-overflow: ellipsis/s);
 assert.doesNotMatch(source, /mark_waiting/);
 
-console.log('PASS commuter Live is tracking-only: live bus default, truthful no-GPS state, no waiting controls');
+console.log('PASS commuter Live is bus-only: live bus and road path, no commuter Waiting controls or markers');

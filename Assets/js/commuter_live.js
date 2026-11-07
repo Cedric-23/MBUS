@@ -11,11 +11,8 @@
     const requestedScheduleId = Number.isSafeInteger(requestedNumber) && requestedNumber > 0 ? String(requestedNumber) : '';
     let chosen = requestedScheduleId;
     let requestedUnavailableId = '';
-    let myRequest = null;
-    let csrf = (window.mbusLive || {}).csrfToken || '';
-    let cancelBusy = false;
     let manualChoice = false;
-    let map = null, markerLayer = null, commuterLayer = null, routeLayer = null, pollTimer = null, loading = false, version = 0, fitted = false;
+    let map = null, markerLayer = null, routeLayer = null, pollTimer = null, loading = false, version = 0, fitted = false;
     let routeKey = '', routeData = null, routeFitKey = '', routeRequestId = 0, routeFailure = null, routeViewMode = 'route';
     const visible = () => !document.hidden;
 
@@ -63,7 +60,6 @@
             const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · routing by OSRM' }).addTo(map);
             tiles.on('tileerror', () => { el('mapMessage').hidden = false; el('mapMessage').textContent = 'Map tiles could not load. Bus status below is still current.'; });
             markerLayer = L.layerGroup().addTo(map);
-            commuterLayer = L.layerGroup().addTo(map);
             routeLayer = L.layerGroup().addTo(map);
         } catch (e) {
             map = null;
@@ -109,84 +105,14 @@
         if (!map || !routeData || !chosen) return;
         if (routeViewMode === 'bus') {
             routeViewMode = 'route';
-            const boundsPoints = routeData.points.slice();
-            const pair = selectedTrackingPoints();
-            boundsPoints.push(...pair);
-            map.fitBounds(L.latLngBounds(boundsPoints).pad(0.08), { maxZoom: 12, animate: false });
+            map.fitBounds(L.latLngBounds(routeData.points).pad(0.08), { maxZoom: 12, animate: false });
         } else {
             routeViewMode = 'bus';
-            const points = selectedTrackingPoints();
-            if (points.length > 1) map.fitBounds(L.latLngBounds(points).pad(0.35), { maxZoom: 16, animate: false });
-            else if (points.length === 1) map.setView(points[0], 16, { animate: false });
+            const trip = trips.find(t => String(t.schedule_id) === chosen);
+            const state = trip ? stateOf(trip) : null;
+            if (state && state.loc) map.setView([Number(state.loc.latitude), Number(state.loc.longitude)], 16, { animate: false });
         }
         updateRouteViewControl();
-    }
-
-    function waitingFor(scheduleId) {
-        return !!(myRequest && myRequest.status === 'Waiting' && String(myRequest.schedule_id) === String(scheduleId));
-    }
-    function validPoint(lat, lng) { return valid(lat, lng); }
-    function selectedTrackingPoints() {
-        const points = [];
-        const trip = trips.find(t => String(t.schedule_id) === chosen);
-        const state = trip ? stateOf(trip) : null;
-        if (waitingFor(chosen) && validPoint(myRequest.latitude, myRequest.longitude)) points.push([Number(myRequest.latitude), Number(myRequest.longitude)]);
-        if (state && state.loc) points.push([Number(state.loc.latitude), Number(state.loc.longitude)]);
-        return points;
-    }
-    function riderIcon() {
-        const picture = (window.mbusLive || {}).profileImage || '../Assets/images/mbus_icon.png';
-        return L.divIcon({ className: 'live-rider-marker', iconSize: [42, 42], iconAnchor: [21, 21],
-            html: '<span class="live-rider-avatar"><img src="' + escapeHtml(picture) + '" alt=""></span>' });
-    }
-    function bindRiderFallback(marker) {
-        const img = marker && marker.getElement() && marker.getElement().querySelector('.live-rider-avatar img');
-        if (!img) return;
-        img.addEventListener('error', () => { img.src = '../Assets/images/mbus_icon.png'; }, { once: true });
-    }
-    function busToPickupText(trip, state) {
-        if (!waitingFor(trip.schedule_id) || !validPoint(myRequest.latitude, myRequest.longitude) || !state || !state.loc) return '';
-        const meters = window.MBUSRouting && window.MBUSRouting.distanceMeters
-            ? window.MBUSRouting.distanceMeters([Number(myRequest.latitude), Number(myRequest.longitude)], [Number(state.loc.latitude), Number(state.loc.longitude)])
-            : haversineMeters([Number(myRequest.latitude), Number(myRequest.longitude)], [Number(state.loc.latitude), Number(state.loc.longitude)]);
-        const prefix = state.kind === 'live' ? 'Bus is ' : 'Last bus pin was ';
-        return prefix + (window.MBUSRouting ? window.MBUSRouting.formatDistance(meters) : Math.round(meters) + ' m') + ' from your pickup (straight-line). ';
-    }
-    function haversineMeters(a, b) {
-        const rad = Math.PI / 180, lat1 = a[0] * rad, lat2 = b[0] * rad;
-        const dLat = (b[0] - a[0]) * rad, dLng = (b[1] - a[1]) * rad;
-        const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-        return 6371000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(Math.max(0, 1 - h)));
-    }
-    async function cancelWaiting(scheduleId, busNumber) {
-        if (cancelBusy) return;
-        cancelBusy = true;
-        let finalMessage = '';
-        render();
-        notify('Cancelling your waiting request…');
-        try {
-            const response = await fetch('../api/live_tracking.php', {
-                method: 'POST', credentials: 'same-origin', cache: 'no-store',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', Accept: 'application/json' },
-                body: new URLSearchParams({ csrf_token: csrf, action: 'cancel_waiting', schedule_id: String(scheduleId) })
-            });
-            let data;
-            try { data = await response.json(); } catch (_) { throw new Error('Live tracking returned an unreadable response.'); }
-            if (data && data.csrf_token) csrf = data.csrf_token;
-            if (!response.ok || !data.ok) throw new Error(data.message || 'Could not cancel waiting.');
-            if (myRequest && String(myRequest.schedule_id) === String(scheduleId)) myRequest = Object.assign({}, myRequest, { status: 'Cancelled' });
-            version++;
-            render();
-            finalMessage = 'Waiting cancelled for bus ' + (busNumber || '') + '.';
-            while (loading) await new Promise(resolve => setTimeout(resolve, 25));
-            await load();
-        } catch (error) {
-            finalMessage = error.message || 'Could not cancel waiting.';
-        } finally {
-            cancelBusy = false;
-            render();
-            if (finalMessage) notify(finalMessage);
-        }
     }
 
     function clearRoute() {
@@ -233,9 +159,9 @@
             updateRouteViewControl();
             const requestId = ++routeRequestId;
             if (routeLayer) routeLayer.clearLayers();
-            box.textContent = busToPickupText(trip, state) + 'Loading the road route to ' + (trip.destination_label || trip.destination || 'the destination') + '…';
+            box.textContent = 'Loading the road route to ' + (trip.destination_label || trip.destination || 'the destination') + '…';
             if (!window.MBUSRouting || !map) {
-                box.textContent = busToPickupText(trip, state) + 'Road directions are unavailable; the live bus pin is still shown.';
+                box.textContent = 'Road directions are unavailable; the live bus pin is still shown.';
                 return;
             }
             window.MBUSRouting.getDrivingRoute(origin, destination).then(route => {
@@ -248,9 +174,7 @@
                 L.circleMarker(route.points[route.points.length - 1], { radius: 5, color: '#fff', weight: 2, fillColor: '#18365d', fillOpacity: 1 }).addTo(routeLayer);
                 routeFitKey = key;
                 if (routeViewMode === 'route') {
-                    const boundsPoints = route.points.slice();
-                    boundsPoints.push(...selectedTrackingPoints());
-                    map.fitBounds(L.latLngBounds(boundsPoints).pad(0.08), { maxZoom: 12, animate: false });
+                    map.fitBounds(L.latLngBounds(route.points).pad(0.08), { maxZoom: 12, animate: false });
                 }
                 updateRouteViewControl();
                 updateRouteEstimate(trip, stateOf(trip));
@@ -258,7 +182,7 @@
                 if (requestId !== routeRequestId || routeKey !== key) return;
                 routeFailure = { key, until: Date.now() + 30000 };
                 updateRouteViewControl();
-                box.textContent = busToPickupText(trip, stateOf(trip)) + (error.message || 'Road directions are unavailable right now.') + ' The bus pin remains available.';
+                box.textContent = (error.message || 'Road directions are unavailable right now.') + ' The bus pin remains available.';
             });
             return;
         }
@@ -269,22 +193,21 @@
             return;
         }
         const destinationName = trip.destination_label || (window.MBUSRouting ? window.MBUSRouting.displayName(trip.destination) : trip.destination) || 'destination';
-        const pickupDistance = busToPickupText(trip, state);
         if (!state || !state.loc) {
-            box.textContent = pickupDistance + 'To ' + destinationName + ': ' + window.MBUSRouting.formatDistance(routeData.distanceMeters) + ' road route · ' + window.MBUSRouting.formatDuration(routeData.durationSeconds) + ' driving estimate. Waiting for the first live bus pin.';
+            box.textContent = 'To ' + destinationName + ': ' + window.MBUSRouting.formatDistance(routeData.distanceMeters) + ' road route · ' + window.MBUSRouting.formatDuration(routeData.durationSeconds) + ' driving estimate. Waiting for the first live bus pin.';
             return;
         }
         if (state.kind !== 'live') {
-            box.textContent = pickupDistance + 'Last bus pin ' + state.label.replace(/^Last seen\s*/, '') + '. Road ETA returns when the driver shares a fresh location.';
+            box.textContent = 'Last bus pin ' + state.label.replace(/^Last seen\s*/, '') + '. Road ETA returns when the driver shares a fresh location.';
             return;
         }
         const remaining = window.MBUSRouting.remainingOnRoute(routeData, [Number(state.loc.latitude), Number(state.loc.longitude)], 2500);
         if (!remaining || !remaining.onRoute) {
-            box.textContent = pickupDistance + 'Bus location is away from the mapped route. Destination ETA is unavailable until it returns to the route.';
+            box.textContent = 'Bus location is away from the mapped route. Destination ETA is unavailable until it returns to the route.';
             return;
         }
-        box.textContent = pickupDistance + 'To ' + destinationName + ': ' + window.MBUSRouting.formatDistance(remaining.distanceMeters) + ' on the road · ' + window.MBUSRouting.formatDuration(remaining.durationSeconds) + '. Estimate excludes traffic, stops and detours.';
-        if (remaining.distanceMeters < 75) box.textContent = pickupDistance + 'Bus is near ' + destinationName + '. ' + window.MBUSRouting.formatDistance(remaining.distanceMeters) + ' left.';
+        box.textContent = 'To ' + destinationName + ': ' + window.MBUSRouting.formatDistance(remaining.distanceMeters) + ' on the road · ' + window.MBUSRouting.formatDuration(remaining.durationSeconds) + '. Estimate excludes traffic, stops and detours.';
+        if (remaining.distanceMeters < 75) box.textContent = 'Bus is near ' + destinationName + '. ' + window.MBUSRouting.formatDistance(remaining.distanceMeters) + ' left.';
     }
 
     function render() {
@@ -301,11 +224,8 @@
         const selection = window.MBUSLiveSelection.chooseSchedule(
             trips, requestedScheduleId, chosen, manualChoice, defaultTrip && defaultTrip.schedule_id
         );
-        const preferredSchedule = myRequest && myRequest.status === 'Waiting' ? String(myRequest.schedule_id) : '';
-        const resolvedSelection = preferredSchedule && !requestedScheduleId && !manualChoice && trips.some(t => String(t.schedule_id) === preferredSchedule)
-            ? { scheduleId: preferredSchedule, unavailableId: '' } : selection;
-        chosen = resolvedSelection.scheduleId;
-        requestedUnavailableId = resolvedSelection.unavailableId;
+        chosen = selection.scheduleId;
+        requestedUnavailableId = selection.unavailableId;
         notify(requestedUnavailableId
             ? 'This bus is no longer active. Choose another bus below if you want to track a different one.'
             : '');
@@ -321,7 +241,7 @@
             const row = document.createElement('button');
             row.type = 'button';
             row.className = 'bus-row is-' + st.kind + (String(trip.schedule_id) === chosen ? ' is-picked' : '');
-            row.disabled = false;
+            row.disabled = st.kind === 'none';
             const icon = document.createElement('span'); icon.className = 'bus-row-icon'; icon.innerHTML = '<i class="fa fa-bus" aria-hidden="true"></i>';
             const main = document.createElement('span'); main.className = 'bus-row-main';
             const name = document.createElement('span'); name.className = 'bus-row-name'; name.textContent = trip.bus_number || 'Bus';
@@ -329,26 +249,8 @@
             main.append(name, route);
             const state = document.createElement('span'); state.className = 'bus-row-state'; state.textContent = st.label;
             row.append(icon, main, state);
-            row.addEventListener('click', () => pick(trip.schedule_id));
-            const wrap = document.createElement('div'); wrap.className = 'bus-row-wrap';
-            const pickupAction = window.MBUSLiveSelection.pickupAction(trip.schedule_id, myRequest);
-            const go = document.createElement(pickupAction.kind === 'pickup' ? 'a' : 'button');
-            go.className = 'bus-row-pick' + (pickupAction.kind === 'cancel' ? ' is-cancel' : '');
-            go.textContent = pickupAction.label;
-            if (pickupAction.kind === 'cancel') {
-                go.type = 'button'; go.disabled = cancelBusy;
-                go.setAttribute('aria-label', 'Cancel waiting for bus ' + (trip.bus_number || ''));
-                go.addEventListener('click', () => cancelWaiting(trip.schedule_id, trip.bus_number));
-            } else if (pickupAction.kind === 'waiting') {
-                go.type = 'button'; go.disabled = true;
-                go.setAttribute('aria-label', 'You are already waiting for another bus');
-                go.title = 'Cancel your current waiting request before choosing another bus.';
-            } else {
-                go.href = 'pickup.php?schedule_id=' + encodeURIComponent(trip.schedule_id);
-                go.setAttribute('aria-label', 'Pick up at bus ' + (trip.bus_number || ''));
-            }
-            wrap.append(row, go);
-            list.append(wrap);
+            row.addEventListener('click', () => pick(String(trip.schedule_id) === chosen ? '' : trip.schedule_id));
+            list.append(row);
         });
 
         // map pins
@@ -365,45 +267,17 @@
                 if (picked) focus = point;
                 const popup = document.createElement('div');
                 const strong = document.createElement('strong'); strong.textContent = 'Bus ' + (trip.bus_number || '');
-                const popupAction = window.MBUSLiveSelection.pickupAction(trip.schedule_id, myRequest);
-                const popGo = document.createElement(popupAction.kind === 'pickup' ? 'a' : 'button'); popGo.className = 'bus-pop-pick';
-                if (popupAction.kind === 'cancel') { popGo.type = 'button'; popGo.classList.add('is-cancel'); popGo.textContent = 'Cancel waiting'; popGo.addEventListener('click', () => cancelWaiting(trip.schedule_id, trip.bus_number)); }
-                else if (popupAction.kind === 'waiting') { popGo.type = 'button'; popGo.textContent = 'Already waiting'; popGo.disabled = true; }
-                else { popGo.href = 'pickup.php?schedule_id=' + encodeURIComponent(trip.schedule_id); popGo.textContent = 'Pick up'; }
-                popup.append(strong, document.createElement('br'), document.createTextNode(st.label), document.createElement('br'), popGo);
-                L.marker(point, { icon: busIcon(trip.bus_number, st.kind === 'stale', false), title: 'Bus ' + (trip.bus_number || ''), zIndexOffset: 500 })
-                    .addTo(markerLayer).bindPopup(popup).on('click', () => { if (String(trip.schedule_id) !== chosen) pick(trip.schedule_id); });
+                popup.append(strong, document.createElement('br'), document.createTextNode(st.label));
+                L.marker(point, { icon: busIcon(trip.bus_number, st.kind === 'stale', false), title: 'Bus ' + (trip.bus_number || '') })
+                    .addTo(markerLayer).bindPopup(popup);
             });
-            if (commuterLayer) {
-                commuterLayer.clearLayers();
-                const myPoint = myRequest && myRequest.status === 'Waiting' && validPoint(myRequest.latitude, myRequest.longitude)
-                    ? [Number(myRequest.latitude), Number(myRequest.longitude)] : null;
-                const currentTrip = trips.find(t => String(t.schedule_id) === chosen);
-                const currentState = currentTrip ? stateOf(currentTrip) : null;
-                const busPoint = currentState && currentState.loc ? [Number(currentState.loc.latitude), Number(currentState.loc.longitude)] : null;
-                if (myPoint && (!chosen || String(myRequest.schedule_id) === chosen)) {
-                    bounds.push(myPoint);
-                    if (myPoint) {
-                        const riderMarker = L.marker(myPoint, { icon: riderIcon(), title: 'Your waiting pickup', zIndexOffset: 900 })
-                            .addTo(commuterLayer).bindPopup('Your waiting pickup');
-                        bindRiderFallback(riderMarker);
-                    }
-                    if (chosen && String(myRequest.schedule_id) === chosen && busPoint) {
-                        L.polyline([myPoint, busPoint], { color: '#d1493f', weight: 3, dashArray: '3 8', opacity: .85 }).addTo(commuterLayer);
-                        bounds.push(busPoint);
-                    }
-                }
-            }
             if (!fitted && bounds.length) {
-                if (focus && myRequest && myRequest.status === 'Waiting' && String(myRequest.schedule_id) === chosen && bounds.length > 1) map.fitBounds(L.latLngBounds(bounds).pad(0.35), { maxZoom: 16, animate: false });
-                else if (focus) map.setView(focus, 16, { animate: false });
+                if (focus) map.setView(focus, 16, { animate: false });
                 else if (bounds.length === 1) map.setView(bounds[0], 16, { animate: false });
                 else map.fitBounds(bounds, { padding: [28, 28], maxZoom: 15 });
                 fitted = true;
-            } else if (routeViewMode === 'bus') {
-                const points = selectedTrackingPoints();
-                if (points.length > 1) map.fitBounds(L.latLngBounds(points).pad(0.35), { maxZoom: 16, animate: false });
-                else if (focus) map.setView(focus, Math.max(16, map.getZoom()), { animate: false });
+            } else if (focus && routeViewMode === 'bus') {
+                map.setView(focus, Math.max(16, map.getZoom()), { animate: false });
             }
             window.requestAnimationFrame(() => map.invalidateSize({ pan: false }));
         }
@@ -442,8 +316,6 @@
             serverNow = Date.parse(data.server_time) || Date.now();
             trips = (Array.isArray(data.schedules) ? data.schedules : []).filter(t => t && t.schedule_id != null);
             locations = Array.isArray(data.locations) ? data.locations : [];
-            myRequest = data.my_request || null;
-            if (data.csrf_token) csrf = data.csrf_token;
             notify('');
             render();
         } catch (e) {

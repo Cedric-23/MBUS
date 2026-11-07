@@ -117,15 +117,32 @@ function mbus_tracking_feed(PDO $pdo, string $role, int $userId, ?int $chosen): 
     }
     if ($role === 'commuter') {
         // The rider's own waiting request is independent of which bus is selected.
-        $stmt = $pdo->prepare("SELECT schedule_id, CASE WHEN status='Waiting' AND expires_at <= clock_timestamp() THEN 'Expired' ELSE status END AS status,
-            pickup_label, latitude, longitude, updated_at, expires_at
-            FROM public.pickup_requests WHERE user_id = ?");
+        $stmt = $pdo->prepare("SELECT p.schedule_id, CASE WHEN p.status='Waiting' AND p.expires_at <= clock_timestamp() THEN 'Expired' ELSE p.status END AS status,
+            p.pickup_label, p.latitude, p.longitude, p.updated_at, p.expires_at, b.bus_number,
+            r.origin, r.destination,
+            to_jsonb(r)->>'origin_lat' AS origin_lat, to_jsonb(r)->>'origin_lng' AS origin_lng,
+            to_jsonb(r)->>'destination_lat' AS destination_lat, to_jsonb(r)->>'destination_lng' AS destination_lng
+            FROM public.pickup_requests p
+            LEFT JOIN public.schedule s ON s.schedule_id = p.schedule_id
+            LEFT JOIN public.buses b ON b.bus_id = s.bus_id
+            LEFT JOIN public.routes r ON r.route_id = s.route_id
+            WHERE p.user_id = ?");
         $stmt->execute([$userId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) {
+            $row = mbus_route_apply_terminal_defaults($row);
             $myRequest = [
                 'schedule_id' => (int)$row['schedule_id'],
                 'status' => $row['status'],
+                'bus_number' => $row['bus_number'],
+                'origin' => $row['origin'],
+                'origin_label' => $row['origin_label'],
+                'origin_lat' => isset($row['origin_lat']) && is_numeric($row['origin_lat']) ? (float)$row['origin_lat'] : null,
+                'origin_lng' => isset($row['origin_lng']) && is_numeric($row['origin_lng']) ? (float)$row['origin_lng'] : null,
+                'destination' => $row['destination'],
+                'destination_label' => $row['destination_label'],
+                'destination_lat' => isset($row['destination_lat']) && is_numeric($row['destination_lat']) ? (float)$row['destination_lat'] : null,
+                'destination_lng' => isset($row['destination_lng']) && is_numeric($row['destination_lng']) ? (float)$row['destination_lng'] : null,
                 'pickup_label' => $row['pickup_label'],
                 'latitude' => (float)$row['latitude'],
                 'longitude' => (float)$row['longitude'],

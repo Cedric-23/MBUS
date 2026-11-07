@@ -46,6 +46,8 @@ try {
 		 mbus_tracking_mutate($pdo,'commuter',9804,['action'=>'cancel_waiting','schedule_id'=>9801]);
 		 mbus_tracking_mutate($pdo,'commuter',9804,['action'=>'mark_waiting','schedule_id'=>9802,'latitude'=>14.61,'longitude'=>120.21,'pickup_label'=>'North Gate']);
 		 $pdo->exec("UPDATE public.schedule SET trip_status='Arrived' WHERE schedule_id=9802");
+		 $endedWait = mbus_tracking_feed($pdo,'commuter',9804,null)['my_request'];
+		 tcheck($endedWait['status']==='Waiting' && $endedWait['bus_number']==='T9802' && $endedWait['origin']==='Origin' && $endedWait['destination']==='Destination','waiting board retains bus and route details after the trip ends');
 		 mbus_tracking_mutate($pdo,'commuter',9804,['action'=>'cancel_waiting','schedule_id'=>9802]);
 		 $cancelledAfterArrival = $pdo->query("SELECT status FROM public.pickup_requests WHERE user_id=9804 AND schedule_id=9802")->fetchColumn();
 		 tcheck($cancelledAfterArrival==='Cancelled','commuter can cancel a still-valid waiting request after the bus trip ends');

@@ -180,7 +180,8 @@
         busy = true; refresh();
         try {
             await post({ action: 'mark_waiting', latitude: String(me.lat), longitude: String(me.lng), pickup_label: el('pickupLabel').value.trim() });
-            waiting = true; pinMoved = true; toast("You're waiting. The driver can see you.");
+            window.location.href = 'waiting.php';
+            return;
         } catch (e) { toast(e.message); }
         busy = false; refresh();
     });

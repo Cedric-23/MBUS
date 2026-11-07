@@ -4,15 +4,15 @@ After the existing MBUS schema, apply the additive migrations `supabase/10_live_
 
 ## One Waiting tab, three roles
 
-Every bottom navigation bar now has **Waiting** where **Alerts** used to be. Nothing else in the app offers a waiting control.
+Every bottom navigation bar now has **Waiting** where **Alerts** used to be. Commuters start a wait through the existing bus-selection and pickup-pin flow; the Waiting tab alone displays their waiting map and bus row. Staff waiting boards remain confined to the staff Waiting navigation page.
 
 | Role | Page | Behaviour |
 |------|------|-----------|
-| Commuter | `Commuter/waiting.php` | Choose a bus first, then pin the pickup spot using current GPS or by tapping/dragging the visible map pin. Confirm **Mark me as waiting** to share the point. The status card shows the bus, stop, shared time and expiry; **Track the bus** opens that trip in Live. Its map shows the commuter’s photo pin, bus pin, pickup-to-bus distance and road route; commuters can toggle **Focus bus / Full route**. The bus-list **Pick up** action becomes **Cancel** for the active waiting bus; cancel first before switching buses. **Cancel waiting** removes the signal. There is no update action. |
+| Commuter | `Commuter/waiting.php` | Before a commuter marks themselves waiting, the Waiting page shows only a concise prompt to choose a bus. A departed bus is chosen from Schedule; the dedicated pickup flow lets the commuter pin their spot and confirm **Mark me as waiting**. Only after that active request exists does Waiting show the selected bus and the commuter’s profile-photo pickup marker, their direct pickup distance, road route and destination estimate, with **Focus bus / Full route** controls. The single bus row has **Cancel**; cancel first before choosing another bus. A valid request can still be cancelled after its trip ends. There is no update action. |
 | Operator | `Operator/waiting.php` | Waiting riders for the operator's own buses, plus a live map of those buses. The Riders page is a seat map only. |
 | Admin | `Admin/waiting.php` | The same board for every bus and every waiting rider. Admin dashboard and schedule pages no longer link to separate waiting screens. |
 
-Commuter navigation is Home / Schedule / Live / Trips / Waiting. Live is tracking only: it lists current-day **Boarding** or **Departed** buses, selects a live bus by default, and shows its full road path with **Focus bus** available for a closer view. If a Waiting deep-link refers to a trip that has ended, Live says so instead of silently switching to another bus; commuters can deliberately choose another bus. Stale points are labeled instead of appearing current. Schedule **Pick up** actions open Waiting with that bus preselected. Notifications are reached from the profile menu as **Updates**.
+Commuter navigation is Home / Schedule / Live / Trips / Waiting. Live remains bus-only tracking: it lists current-day **Boarding** or **Departed** buses and shows their live bus positions and road paths. The commuter pickup/photo marker, waiting row and cancel action are confined to Waiting. Schedule **Pick up** actions open the dedicated pickup/pin flow. Notifications are reached from the profile menu as **Updates**.
 
 ## Location gate
 

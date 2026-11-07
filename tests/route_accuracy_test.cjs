@@ -11,6 +11,7 @@ async function main() {
     const admin = read('Admin/manage_routes.php');
     const livePage = read('Commuter/live.php');
     const liveJs = read('Assets/js/commuter_live.js');
+    const waitingJs = read('Assets/js/commuter_waiting_board.js');
     const staffView = read('Includes/pickup_staff_view.php');
     const staffJs = read('Assets/js/staff_waiting.js');
     const locations = read('Includes/route_locations.php');
@@ -25,6 +26,9 @@ async function main() {
     assert.match(livePage, /id="routeEstimate"/);
     assert.match(liveJs, /remainingOnRoute/);
     assert.match(livePage, /id="routeViewButton"/);
+    assert.match(waitingJs, /getDrivingRoute/);
+    assert.match(waitingJs, /remainingOnRoute/);
+    assert.match(waitingJs, /distanceMeters/);
     assert.match(staffView, /id="staffRouteView"/);
     assert.match(staffJs, /remainingOnRoute/);
     assert.match(staffJs, /toggleStaffRoute/);
