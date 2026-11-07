@@ -4,6 +4,7 @@ include "../config/db_connect.php";
 include "../Includes/activity_log.php";
 include "../Includes/email_helper.php";
 include "../Includes/csrf.php";
+include "../Includes/fare.php";
 
 if(!isset($_SESSION['user_id'])){
     header("Location: ../login.php");
@@ -43,6 +44,7 @@ JOIN buses ON schedule.bus_id = buses.bus_id
 WHERE reservation.user_id = ?
 AND reservation.schedule_id = ?
 AND reservation.status = 'Pending'
+ORDER BY reservation.reservation_id
 ", [$user_id, $schedule_id]);
 
 if(mbus_db_num_rows($res_query) <= 0){
@@ -57,17 +59,8 @@ while($row = mbus_db_fetch_assoc($res_query)){
 $created_at = strtotime($reservations[0]['created_at']);
 $expiry = $created_at + (10 * 60); // 10 minutes matching reserve.php
 
-$total = isset($_GET['total']) ? floatval($_GET['total']) : 0;
-
-// Calculate total if not provided
-if($total <= 0){
-    foreach($reservations as $r){
-        $pickup = $r['pickup_location'];
-        $dest = $r['destination'];
-        // fare_table would need to be passed or calculated
-        // For now use GET total
-    }
-}
+// Total is always computed here; the URL value is never trusted.
+$total = mbus_quote_total($reservations, mbus_passenger_type($conn, (int)$user_id));
 
 $error = "";
 

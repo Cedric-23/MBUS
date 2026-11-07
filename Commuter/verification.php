@@ -2,334 +2,160 @@
 session_start();
 include "../config/db_connect.php";
 include "../Includes/activity_log.php";
-include "../Includes/email_helper.php";
 include "../Includes/csrf.php";
+include "../Includes/fare.php";
 
 if(!isset($_SESSION['user_id'])){
     header("Location: ../login.php");
     exit();
 }
+$user_id = (int)$_SESSION['user_id'];
+$error = ""; $success = "";
+$types = ['Student' => 'Student', 'Senior' => 'Senior citizen', 'PWD' => 'Person with disability'];
+$max_bytes = 5 * 1024 * 1024;
 
-$user_id = $_SESSION['user_id'];
+function mbus_latest_verification($conn, int $user_id) {
+    $q = mbus_db_prepare($conn, "
+        SELECT verification_id, verification_type, verification_status, rejection_reason, expiry_date, submitted_at
+        FROM commuter_verification WHERE user_id = ?
+        ORDER BY verification_id DESC LIMIT 1", [$user_id]);
+    return $q === false ? false : mbus_db_fetch_assoc($q);
+}
 
-/* HANDLE VERIFICATION SUBMISSION */
 if(isset($_POST['submit_verification'])){
-    // Validate CSRF token
+    $latest = mbus_latest_verification($conn, $user_id);
+    $type = $_POST['verification_type'] ?? '';
+    $number = trim((string)($_POST['document_number'] ?? ''));
+    $expiry = trim((string)($_POST['expiry_date'] ?? ''));
+    $file = $_FILES['verification_document'] ?? null;
+
     if(!csrf_validate_token()){
         $error = "Security validation failed. Please try again.";
+    } elseif($latest && $latest['verification_status'] === 'Pending'){
+        $error = "You already have a request under review.";
+    } elseif(!isset($types[$type])){
+        $error = "Choose your passenger type.";
+    } elseif($number === '' || strlen($number) > 50){
+        $error = "Enter the ID number shown on your ID.";
+    } elseif($expiry !== '' && (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $expiry) || $expiry < date('Y-m-d'))){
+        $error = "Your ID is expired. Use a valid ID.";
+    } elseif(!$file || $file['error'] !== UPLOAD_ERR_OK){
+        $error = "Upload a photo of your ID.";
+    } elseif($file['size'] > $max_bytes){
+        $error = "File is too large. Maximum is 5 MB.";
     } else {
-        $verification_type = mbus_db_escape($conn, $_POST['verification_type']);
-        $document_number = mbus_db_escape($conn, $_POST['document_number']);
-        $expiry_date = mbus_db_escape($conn, $_POST['expiry_date']);
-        
-        // Handle file upload
-        if(isset($_FILES['verification_document']) && $_FILES['verification_document']['error'] == 0){
-            $allowed = ['jpg', 'jpeg', 'png', 'pdf'];
-            $filename = $_FILES['verification_document']['name'];
-            $file_ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-            
-            if(in_array($file_ext, $allowed)){
-                $new_filename = "verification_" . $user_id . "_" . time() . "." . $file_ext;
-                $upload_path = "../Assets/verification_documents/" . $new_filename;
-                
-                // Create directory if it doesn't exist
-                if(!file_exists("../Assets/verification_documents/")){
-                    mkdir("../Assets/verification_documents/", 0777, true);
-                }
-                
-                if(move_uploaded_file($_FILES['verification_document']['tmp_name'], $upload_path)){
-                    // Check if user already has a pending verification using prepared statement
-                    $existing_check = mbus_db_prepare($conn, "
-                        SELECT verification_id FROM commuter_verification
-                        WHERE user_id = ? AND verification_status = 'Pending'
-                    ", [$user_id]);
-                    
-                    if(mbus_db_num_rows($existing_check) > 0){
-                        $error = "You already have a pending verification. Please wait for it to be reviewed.";
-                    } else {
-                        // Insert verification record using prepared statement
-                        mbus_db_prepare($conn, "
-                            INSERT INTO commuter_verification (user_id, verification_type, document_path, document_number, expiry_date)
-                            VALUES (?, ?, ?, ?, ?)
-                        ", [$user_id, $verification_type, $new_filename, $document_number, $expiry_date]);
-                        
-                        // Log verification submission
-                        log_activity($conn, $user_id, ACTION_VERIFICATION_SUBMIT, "Submitted $verification_type verification document");
-                        
-                        // Send email notification
-                        $user_email_query = mbus_db_query($conn, "SELECT email FROM users WHERE user_id = '$user_id'");
-                        $user_email_data = mbus_db_fetch_assoc($user_email_query);
-                        $user_email = $user_email_data['email'];
-                        
-                        $email_subject = "Verification Submitted - " . $verification_type;
-                        $email_message = "Dear Commuter,
-
-Your $verification_type verification document has been submitted successfully and is pending admin review.
-
-Thank you for using MBUS!";
-                        send_email_notification($user_email, $email_subject, $email_message);
-                        
-                        $success = "Verification submitted successfully. Please wait for admin approval.";
-                    }
-                } else {
-                    $error = "Failed to upload document";
-                }
-            } else {
-                $error = "Invalid file type. Only JPG, JPEG, PNG, and PDF allowed";
-            }
+        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+        if(!in_array($mime, ['image/jpeg', 'image/png', 'application/pdf'], true)){
+            $error = "Only JPG, PNG or PDF files are allowed.";
         } else {
-            $error = "Please upload a document";
+            $b64 = base64_encode(file_get_contents($file['tmp_name']));
+            $ok = mbus_db_prepare($conn, "
+                INSERT INTO commuter_verification (user_id, verification_type, document_number, expiry_date, document_b64, document_mime)
+                VALUES (?, ?, ?, ?, ?, ?)",
+                [$user_id, $type, $number, $expiry === '' ? null : $expiry, $b64, $mime]);
+            if($ok === false){
+                $error = "Could not submit your request. Please try again.";
+            } else {
+                log_activity($conn, $user_id, ACTION_VERIFICATION_SUBMIT, "Submitted $type verification");
+                mbus_db_prepare($conn, "UPDATE users SET verification_status = 'Pending' WHERE user_id = ?", [$user_id]);
+                $success = "Submitted. We'll review your ID shortly.";
+            }
         }
     }
 }
 
-/* GET EXISTING VERIFICATION STATUS - using prepared statement */
-$verification_query = mbus_db_prepare($conn, "
-    SELECT verification_type, verification_status, submitted_at, reviewed_at, rejection_reason
-    FROM commuter_verification
-    WHERE user_id = ?
-    ORDER BY submitted_at DESC
-    LIMIT 1
-", [$user_id]);
-
-$verification_data = mbus_db_fetch_assoc($verification_query);
+$latest = mbus_latest_verification($conn, $user_id);
+$current = mbus_passenger_type($conn, $user_id);
+$status = $latest['verification_status'] ?? null;
+$can_submit = !$latest || $status === 'Rejected' || ($status === 'Approved' && $current === 'Regular');
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verification - MBUS</title>
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../Assets/css/responsive.css">
-    <link rel="stylesheet" href="../Assets/css/commuter_sidebar.css">
-    <link rel="stylesheet" href="../Assets/css/verification.css">
-    <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
-    <link rel="stylesheet" href="../Assets/css/app-header.css">
-    <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
+    <link rel="stylesheet" href="../Assets/css/commuter_mobile.css">
+    <link rel="stylesheet" href="../Assets/css/commuter_verification.css">
 </head>
-<body class="has-bottom-nav">
-
+<body class="verify-page has-bottom-nav">
 <main class="main" role="main">
 
 <header class="page-header">
-    <h1>Commuter Verification</h1>
-
-            <div class="page-header-right">
-                <div class="profile-menu-wrap">
-                    <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
-                        <span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></span>
-                    </button>
-                    <div class="profile-menu" id="profileMenu" role="menu">
-                        <div class="profile-menu-header">
-                            <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
-                            <span class="profile-menu-role">Commuter account</span>
-                        </div>
-                        <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
-                        <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
-                    </div>
-                </div>
-            </div>
+    <div class="page-header-left">
+        <a href="profile.php" class="back-btn" aria-label="Back to profile"><i class="fa fa-arrow-left" aria-hidden="true"></i></a>
+        <h1>Get 20% off</h1>
+    </div>
 </header>
 
-<div class="verification-container">
-    <!-- Current Status -->
-    <section class="card status-section">
-        <h2 class="section-title">
-            <i class="fa fa-shield-alt" aria-hidden="true"></i> Current Verification Status
-        </h2>
-        
-        <?php if($verification_data): ?>
-            <div class="status-card status-<?php echo strtolower($verification_data['verification_status']); ?>">
-                <div class="status-icon">
-                    <?php if($verification_data['verification_status'] == 'Pending'): ?>
-                        <i class="fa fa-clock" aria-hidden="true"></i>
-                    <?php elseif($verification_data['verification_status'] == 'Approved'): ?>
-                        <i class="fa fa-check-circle" aria-hidden="true"></i>
-                    <?php else: ?>
-                        <i class="fa fa-times-circle" aria-hidden="true"></i>
-                    <?php endif; ?>
-                </div>
-                <div class="status-details">
-                    <h3><?php echo htmlspecialchars($verification_data['verification_status']); ?></h3>
-                    <p>Type: <?php echo htmlspecialchars($verification_data['verification_type']); ?></p>
-                    <p>Submitted: <?php echo date('F d, Y g:i A', strtotime($verification_data['submitted_at'])); ?></p>
-                    <?php if($verification_data['reviewed_at']): ?>
-                        <p>Reviewed: <?php echo date('F d, Y g:i A', strtotime($verification_data['reviewed_at'])); ?></p>
-                    <?php endif; ?>
-                    <?php if($verification_data['rejection_reason']): ?>
-                        <p class="rejection-reason">Reason: <?php echo htmlspecialchars($verification_data['rejection_reason']); ?></p>
-                    <?php endif; ?>
-                </div>
-            </div>
-        <?php else: ?>
-            <div class="no-verification">
-                <i class="fa fa-id-card" aria-hidden="true"></i>
-                <p>No verification submitted yet</p>
-            </div>
-        <?php endif; ?>
-    </section>
-    
-    <!-- Submit Verification -->
-    <?php if(!$verification_data || $verification_data['verification_status'] == 'Rejected'): ?>
-    <section class="card submit-section">
-        <h2 class="section-title">
-            <i class="fa fa-file-upload" aria-hidden="true"></i> Submit Verification Document
-        </h2>
-        
-        <p class="info-text">Submit your verification document to avail of special discounts (Student, Senior Citizen, PWD).</p>
-        
-        <?php if(isset($error)): ?>
-            <div class="alert alert-error" role="alert"><?php echo $error; ?></div>
-        <?php endif; ?>
-        
-        <?php if(isset($success)): ?>
-            <div class="alert alert-success" role="alert"><?php echo $success; ?></div>
-        <?php endif; ?>
-        
-        <form method="POST" enctype="multipart/form-data" class="verification-form">
-            <?php csrf_field(); ?>
-            <div class="form-group">
-                <label for="verification_type">Verification Type</label>
-                <select name="verification_type" id="verification_type" class="form-control" required>
-                    <option value="">Select Type</option>
-                    <option value="Student">Student</option>
-                    <option value="Senior">Senior Citizen</option>
-                    <option value="PWD">PWD (Person with Disability)</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="document_number">Document Number</label>
-                <input type="text" name="document_number" id="document_number" class="form-control" placeholder="Enter document number" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="expiry_date">Expiry Date (if applicable)</label>
-                <input type="date" name="expiry_date" id="expiry_date" class="form-control">
-            </div>
-            
-            <div class="form-group">
-                <label for="verification_document">Upload Document</label>
-                <input type="file" name="verification_document" id="verification_document" class="form-control" accept=".jpg,.jpeg,.png,.pdf" required>
-                <small class="form-hint">Accepted formats: JPG, JPEG, PNG, PDF (Max 5MB)</small>
-            </div>
-            
-            <button type="submit" name="submit_verification" class="btn btn-primary">
-                <i class="fa fa-upload" aria-hidden="true"></i> Submit Verification
-            </button>
-        </form>
-    </section>
-    <?php endif; ?>
-    
-    <!-- Discount Information -->
-    <section class="card discount-info">
-        <h2 class="section-title">
-            <i class="fa fa-percentage" aria-hidden="true"></i> Discount Information
-        </h2>
-        
-        <div class="discount-grid">
-            <div class="discount-item">
-                <div class="discount-icon student">
-                    <i class="fa fa-graduation-cap" aria-hidden="true"></i>
-                </div>
-                <div class="discount-details">
-                    <h3>Student Discount</h3>
-                    <p>20% discount on regular fare</p>
-                    <small>Valid school ID required</small>
-                </div>
-            </div>
-            
-            <div class="discount-item">
-                <div class="discount-icon senior">
-                    <i class="fa fa-user" aria-hidden="true"></i>
-                </div>
-                <div class="discount-details">
-                    <h3>Senior Citizen Discount</h3>
-                    <p>20% discount on regular fare</p>
-                    <small>Valid senior citizen ID required</small>
-                </div>
-            </div>
-            
-            <div class="discount-item">
-                <div class="discount-icon pwd">
-                    <i class="fa fa-wheelchair" aria-hidden="true"></i>
-                </div>
-                <div class="discount-details">
-                    <h3>PWD Discount</h3>
-                    <p>20% discount on regular fare</p>
-                    <small>Valid PWD ID required</small>
-                </div>
-            </div>
+<?php if($success){ ?><div class="alert alert-success" role="status"><?php echo htmlspecialchars($success); ?></div><?php } ?>
+<?php if($error){ ?><div class="alert alert-error" role="alert"><?php echo htmlspecialchars($error); ?></div><?php } ?>
+
+<section class="card v-status">
+    <span class="v-label">Your passenger type</span>
+    <p class="v-type v-<?php echo strtolower($current); ?>"><?php echo htmlspecialchars($current); ?></p>
+    <?php if($current !== 'Regular'){ ?>
+        <p class="v-note">20% off the fare on your own seat. Reservation fee stays the same.<?php if(!empty($latest['expiry_date'])){ echo ' ID valid until ' . htmlspecialchars(date('M j, Y', strtotime($latest['expiry_date']))) . '.'; } ?></p>
+    <?php } elseif($status === 'Pending'){ ?>
+        <p class="v-note">Your <?php echo htmlspecialchars($latest['verification_type']); ?> request is under review. You'll pay the regular fare until it's approved.</p>
+    <?php } elseif($status === 'Rejected'){ ?>
+        <p class="v-note v-reject">Your last request was rejected<?php echo !empty($latest['rejection_reason']) ? ': ' . htmlspecialchars($latest['rejection_reason']) : '.'; ?> Submit a clearer photo below.</p>
+    <?php } else { ?>
+        <p class="v-note">Students, senior citizens and PWD get 20% off. Everyone else is Regular, no action needed.</p>
+    <?php } ?>
+</section>
+
+<?php if($can_submit){ ?>
+<form method="POST" enctype="multipart/form-data" class="card v-form" novalidate>
+    <?php echo csrf_field(); ?>
+    <fieldset>
+        <legend>I am a</legend>
+        <div class="v-types">
+            <?php foreach($types as $key => $label){ ?>
+            <label class="v-choice">
+                <input type="radio" name="verification_type" value="<?php echo $key; ?>" required>
+                <span><strong><?php echo $key; ?></strong><small><?php echo $label; ?></small></span>
+            </label>
+            <?php } ?>
         </div>
-    </section>
-</div>
+    </fieldset>
+
+    <div class="form-group">
+        <label for="document_number">ID number</label>
+        <input class="form-control" id="document_number" name="document_number" maxlength="50" autocomplete="off" required>
+    </div>
+    <div class="form-group">
+        <label for="expiry_date">ID expiry date <small>(if it has one)</small></label>
+        <input class="form-control" type="date" id="expiry_date" name="expiry_date" min="<?php echo date('Y-m-d'); ?>">
+    </div>
+    <div class="form-group">
+        <label for="verification_document">Photo of your ID</label>
+        <label class="v-file" for="verification_document"><i class="fa fa-camera" aria-hidden="true"></i> <span id="fileName">Take or choose a photo</span></label>
+        <input type="file" id="verification_document" name="verification_document" accept="image/jpeg,image/png,application/pdf" required>
+        <small class="form-hint">JPG, PNG or PDF, up to 5 MB. Student ID, senior citizen ID or PWD ID.</small>
+    </div>
+    <button class="btn btn-primary btn-block" type="submit" name="submit_verification">Submit for review</button>
+</form>
+<script>
+document.getElementById('verification_document').addEventListener('change', function(){
+    document.getElementById('fileName').textContent = this.files[0] ? this.files[0].name : 'Take or choose a photo';
+});
+</script>
+<?php } ?>
 
 </main>
 
-<script>
-// Toggle sidebar
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    const toggle = document.querySelector('.sidebar-toggle');
-    
-    if (sidebar && overlay && toggle) {
-        const isOpen = sidebar.classList.toggle('open');
-        overlay.classList.toggle('active', isOpen);
-        toggle.setAttribute('aria-expanded', isOpen);
-        
-        // Add/remove body class for CSS to hide hamburger
-        document.body.classList.toggle('sidebar-open', isOpen);
-    }
-}
-
-// Close sidebar when clicking a nav link on mobile
-document.querySelectorAll('.menu-top a').forEach(link => {
-    link.addEventListener('click', () => {
-        if (window.innerWidth <= 768) {
-            toggleSidebar();
-        }
-    });
-});
-
-// Handle keyboard navigation for sidebar
-document.addEventListener('keydown', function(e) {
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar && sidebar.classList.contains('open') && e.key === 'Escape') {
-        toggleSidebar();
-    }
-});
-</script>
-
-<!-- Bottom Navigation -->
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
-    <a href="commuter_dashboard.php" class="bottom-nav-item">
-        <i class="fa fa-home" aria-hidden="true"></i>
-        <span>Home</span>
-    </a>
-    <a href="schedule.php" class="bottom-nav-item">
-        <i class="fa fa-calendar" aria-hidden="true"></i>
-        <span>Schedule</span>
-    </a>
-    <a href="live.php" class="bottom-nav-item">
-        <i class="fa fa-location-dot" aria-hidden="true"></i>
-        <span>Live</span>
-    </a>
-    <a href="my_reservations.php" class="bottom-nav-item">
-        <i class="fa fa-ticket" aria-hidden="true"></i>
-        <span>Trips</span>
-    </a>
-    <a href="waiting.php" class="bottom-nav-item">
-        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
-    </a>
+    <a href="commuter_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
+    <a href="schedule.php" class="bottom-nav-item"><i class="fa fa-calendar" aria-hidden="true"></i><span>Schedule</span></a>
+    <a href="live.php" class="bottom-nav-item"><i class="fa fa-location-dot" aria-hidden="true"></i><span>Live</span></a>
+    <a href="my_reservations.php" class="bottom-nav-item"><i class="fa fa-ticket" aria-hidden="true"></i><span>Trips</span></a>
+    <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
 </nav>
-
-<script src="../Assets/js/app-header.js"></script>
 </body>
 </html>

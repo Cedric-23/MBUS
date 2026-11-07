@@ -89,26 +89,20 @@ document.getElementById("doneBtn")
 
 });
 
-/* PASSENGER TYPES */
+/* PASSENGER TYPES: the verified account holder's own seat (first one) is discounted */
 function renderPassengerTypes() {
 
+    const discounted = passengerType !== "Regular";
     let html = "";
 
-    selectedSeats.forEach(seat => {
-
-        html += `
-        <div class="passenger-row">
-            <div>Seat ${seat}</div>
-            <select class="ptype">
-                <option value="regular">Regular</option>
-                <option value="student">Student</option>
-                <option value="senior">Senior</option>
-                <option value="pwd">PWD</option>
-            </select>
-        </div>
-        `;
-
+    selectedSeats.forEach((seat, i) => {
+        const label = i === 0 ? passengerType : "Regular";
+        html += `<div class="passenger-row"><div>Seat ${seat}</div><span class="ptype-tag">${label}</span></div>`;
     });
+
+    if (!discounted) {
+        html += `<a class="verify-hint" href="verification.php">Student, senior or PWD? Verify your ID for 20% off</a>`;
+    }
 
     document.getElementById("passengerTypes").innerHTML = html;
 
@@ -128,13 +122,13 @@ document.getElementById("calculateBtn")
     let total = 0;
     let html = "";
 
-    document.querySelectorAll(".ptype").forEach((select, index) => {
+    selectedSeats.forEach((seat, index) => {
 
-        let type = select.value;
+        let type = index === 0 ? passengerType : "Regular";
         let baseFare = farePerSeat;
         let discount = 0;
 
-        if (type === "student" || type === "senior" || type === "pwd") {
+        if (type !== "Regular") {
             discount = baseFare * 0.20;
         }
 
@@ -143,7 +137,7 @@ document.getElementById("calculateBtn")
 
         html += `
         <p>
-            Seat ${selectedSeats[index]} (${type.toUpperCase()})<br>
+            Seat ${seat} (${type})<br>
             Base Fare: ₱${baseFare.toFixed(2)}<br>
             Discount: ₱${discount.toFixed(2)}<br>
             Final Fare: ₱${finalFare.toFixed(2)}

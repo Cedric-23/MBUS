@@ -4,6 +4,7 @@ include "../config/db_connect.php";
 include "../Includes/activity_log.php";
 include "../Includes/email_helper.php";
 include "../Includes/csrf.php";
+include "../Includes/fare.php";
 
 if(!isset($_SESSION['user_id'])){
     header("Location: ../login.php");
@@ -34,6 +35,8 @@ if (!$user_data) {
 } elseif (empty($user_data['user_type'])) {
     $user_data['user_type'] = 'Regular';
 }
+
+$passenger_type = mbus_passenger_type($conn, (int)$user_id);
 
 /* HANDLE PROFILE UPDATE */
 if(isset($_POST['update_profile'])){
@@ -254,8 +257,9 @@ if(isset($_POST['upload_picture'])){
                 </div>
                 
                 <div class="form-group">
-                    <label for="user_type">User Type</label>
-                    <input type="text" id="user_type" value="<?php echo htmlspecialchars($user_data['user_type'] ?? 'Regular'); ?>" class="form-control" disabled aria-disabled="true">
+                    <label for="user_type">Passenger Type</label>
+                    <input type="text" id="user_type" value="<?php echo htmlspecialchars($passenger_type); ?>" class="form-control" disabled aria-disabled="true">
+                    <small class="form-hint"><?php echo $passenger_type === 'Regular' ? 'Student, senior or PWD?' : '20% fare discount active.'; ?> <a href="verification.php"><?php echo $passenger_type === 'Regular' ? 'Verify your ID' : 'Manage verification'; ?></a></small>
                 </div>
             </div>
             

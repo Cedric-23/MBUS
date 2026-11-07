@@ -137,7 +137,7 @@ if($recent_activity_query === false){
         <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
         <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
         <a href="manage_operators.php"><i class="fa fa-users" aria-hidden="true"></i> Manage Users</a>
-        <a href="manage_operators.php"><i class="fa fa-id-card" aria-hidden="true"></i> Verifications</a>
+        <a href="verifications.php"><i class="fa fa-id-card" aria-hidden="true"></i> Verifications</a>
         <a href="manage_operators.php"><i class="fa fa-user-plus" aria-hidden="true"></i> Applications</a>
         <a href="admin_dashboard.php"><i class="fa fa-history" aria-hidden="true"></i> Activity Logs</a>
     </nav>
@@ -268,7 +268,7 @@ if($recent_activity_query === false){
     <section class="chart-card card" aria-labelledby="quick-actions-heading" style="margin-bottom: var(--space-6);">
         <h2 id="quick-actions-heading">Quick Actions</h2>
         <div class="quick-actions">
-            <a href="manage_operators.php" class="action-btn <?php echo $pending_verifications > 0 ? 'urgent' : ''; ?>">
+            <a href="verifications.php" class="action-btn <?php echo $pending_verifications > 0 ? 'urgent' : ''; ?>">
                 <i class="fa fa-id-card" aria-hidden="true"></i>
                 <span>Review Verifications</span>
                 <span class="badge badge-primary"><?php echo $pending_verifications; ?></span>

@@ -127,6 +127,7 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
         <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
         <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
         <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
+        <a href="verifications.php"><i class="fa fa-id-card" aria-hidden="true"></i> Verifications</a>
         <a href="manage_routes.php" aria-current="page"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
     </nav>
 

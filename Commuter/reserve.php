@@ -4,6 +4,7 @@ include "../config/db_connect.php";
 include "../Includes/activity_log.php";
 include "../Includes/email_helper.php";
 include "../Includes/csrf.php";
+include "../Includes/fare.php";
 require_once __DIR__ . '/../Includes/schedule_booking.php';
 
 /* Authenticate and validate submitted bookings before any database mutation. */
@@ -77,13 +78,8 @@ $reject_booking = function(string $action) use ($schedule_id): void {
 $stops=["MORONG TERMINAL","BINARITAN","POBLACION","HILLTOP","SABANG","ANVAYA","MABAYO","MINANGA","MORONG GATE","GROUP 6","IDESS","APPAREL","GATE 2","TRIBOA","TOWER","KORYO","TECHNO","UA","NSD","PETRON","INDUSTRIAL","HARBOR POINT","MAIN GATE"];
 
 /* FARE TABLE */
-$fare_table=[
-"SABANG"=>14.00,"ANVAYA"=>20.38,"MABAYO"=>30.28,"MINANGA"=>30.28,"MORONG GATE"=>41.06,
-"GROUP 6"=>41.06,"IDESS"=>41.06,"APPAREL"=>51.84,"GATE 2"=>51.84,"TRIBOA"=>54.70,
-"TOWER"=>54.70,"KORYO"=>65.26,"TECHNO"=>65.26,"UA"=>65.26,"NSD"=>69.66,"PETRON"=>69.66,
-"INDUSTRIAL"=>69.66,"HARBOR POINT"=>75.50,"MAIN GATE"=>75.50,"MORONG TERMINAL"=>75.50,
-"BINARITAN"=>75.50,"POBLACION"=>75.50,"HILLTOP"=>75.50
-];
+$fare_table=mbus_fare_table();
+$passenger_type=mbus_passenger_type($conn,(int)$user_id);
 
 /* ROUTE
  * Falls back to NULL coordinates if the routes table has no map columns yet
@@ -290,6 +286,7 @@ exit();
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/commuter_mobile.css">
+    <link rel="stylesheet" href="../Assets/css/commuter_verification.css">
 </head>
 
 <body class="reserve-page">
@@ -473,6 +470,7 @@ const scheduleId = <?php echo (int)$schedule_id; ?>;
 const csrfToken = <?php echo json_encode(csrf_get_token()); ?>;
 const route = <?php echo json_encode($stops); ?>;
 const fareTable = <?php echo json_encode($fare_table); ?>;
+const passengerType = <?php echo json_encode($passenger_type); ?>;
 </script>
 
 
