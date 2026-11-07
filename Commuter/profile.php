@@ -101,8 +101,14 @@ if (isset($_POST['upload_picture'])) {
                 if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
 
                 if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $upload_path)) {
-                    mbus_db_prepare($conn, "UPDATE users SET profile_picture = ? WHERE user_id = ?", [$new_filename, $user_id]);
-                    $picture_success = "Profile picture updated successfully";
+                    $picture_updated = mbus_db_prepare($conn, "UPDATE users SET profile_picture = ? WHERE user_id = ?", [$new_filename, $user_id]);
+                    if ($picture_updated === false) {
+                        @unlink($upload_path);
+                        $picture_error = "The picture was uploaded but could not be saved to your profile.";
+                    } else {
+                        $user_data['profile_picture'] = $new_filename;
+                        $picture_success = "Profile picture updated successfully";
+                    }
                 } else {
                     $picture_error = "Failed to upload profile picture.";
                 }
@@ -112,6 +118,10 @@ if (isset($_POST['upload_picture'])) {
         $picture_error = "No file uploaded or upload error.";
     }
 }
+$profile_picture_name = basename((string)($user_data['profile_picture'] ?? ''));
+$profile_avatar_path = ($profile_picture_name !== '' && $profile_picture_name !== 'default.png' && is_file("../Assets/profile_pictures/" . $profile_picture_name))
+    ? "../Assets/profile_pictures/" . rawurlencode($profile_picture_name) . "?v=" . rawurlencode((string)filemtime("../Assets/profile_pictures/" . $profile_picture_name))
+    : "../Assets/images/mbus_icon.png";
 ?>
 
 <!DOCTYPE html>
@@ -146,7 +156,7 @@ if (isset($_POST['upload_picture'])) {
             <div class="page-header-right">
                 <div class="profile-menu-wrap">
                     <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
-                        <span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></span>
+                        <span class="profile-avatar" aria-hidden="true"><img src="<?php echo htmlspecialchars($profile_avatar_path); ?>" alt=""></span>
                     </button>
                     <div class="profile-menu" id="profileMenu" role="menu">
                         <div class="profile-menu-header">
@@ -227,7 +237,7 @@ if (isset($_POST['upload_picture'])) {
                 $profile_pic_path = "../Assets/images/mbus_icon.png";
             }
             ?>
-            <img src="<?php echo $profile_pic_path; ?>" alt="Profile Picture" class="profile-picture" id="profilePreview">
+            <img src="<?php echo htmlspecialchars($profile_pic_path . ($profile_pic !== 'default.png' && is_file($profile_pic_path) ? '?v=' . filemtime($profile_pic_path) : '')); ?>" alt="Profile Picture" class="profile-picture" id="profilePreview">
         </div>
         
         <form method="POST" enctype="multipart/form-data" class="upload-form">
