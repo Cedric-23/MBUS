@@ -129,8 +129,8 @@
     function displayName(name) {
         const raw = String(name || '').trim();
         const key = raw.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-        if (key.includes('morong') && (key.includes('terminal') || key.includes('bataan'))) return 'Morong Bus Terminal';
-        if (key === 'sbma' || key === 'sbma terminal' || key.includes('harbor point') || key.includes('national bookstore') || key.includes('sbma e bus stop')) return 'Harbor Point · National Bookstore stop';
+        if (key.includes('morong') && (key.includes('terminal') || key.includes('bataan'))) return 'Morong Terminal';
+        if (key === 'sbma' || key === 'sbma terminal' || key.includes('harbor point') || key.includes('national bookstore') || key.includes('sbma e bus stop')) return 'Harbor Point';
         return raw || 'Stop';
     }
 

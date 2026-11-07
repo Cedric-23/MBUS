@@ -8,6 +8,7 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
 const html = read('Commuter/live.php');
 const source = read('Assets/js/commuter_live.js');
+const css = read('Assets/css/commuter_live.css');
 
 // tracking-only page
 for (const control of ['pickupForm', 'waitingCard', 'markWaitingPanel', 'waitBtn', 'locateBtn']) {
@@ -16,6 +17,8 @@ for (const control of ['pickupForm', 'waitingCard', 'markWaitingPanel', 'waitBtn
 assert.match(html, /id="liveSchedule"/);
 assert.match(html, /id="trackingMap"/);
 assert.match(html, /id="mapMessage"/);
+assert.match(html, /route-line-key/);
+assert.match(html, /id="routeViewButton"[^>]*>Focus bus</);
 assert.match(html, /href="waiting\.php"/);
 assert.match(html, /<span>Waiting<\/span>/);
 assert.doesNotMatch(html, />Alerts</);
@@ -30,7 +33,13 @@ assert.match(html, /id="busList"/);
 assert.match(source, /board-bus-pin/);
 assert.match(source, /L\.divIcon/);
 assert.match(source, /map\.setView\(focus, 16/);
+assert.match(source, /routeViewMode = 'route'/);
+assert.match(source, /defaultTrip = trips\.find/);
+assert.match(source, /manualChoice = true/);
+assert.match(source, /MBUSLiveSelection\.chooseSchedule/);
 assert.match(source, /data\.locations/);
+assert.match(css, /\.commuter-live-page \.board-list-card/);
+assert.match(css, /\.bus-row-route \{[^}]*text-overflow: ellipsis/s);
 assert.doesNotMatch(source, /mark_waiting|cancel_waiting/);
 
 console.log('PASS commuter Live is tracking-only: live bus default, truthful no-GPS state, no waiting controls');

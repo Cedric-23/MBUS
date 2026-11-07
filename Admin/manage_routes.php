@@ -18,8 +18,8 @@ require_once __DIR__ . '/../Includes/route_locations.php';
 
 /* ROUTE OPTIONS */
 $places = [
-    "Morong Terminal" => "Morong Bus Terminal (Morong, Bataan)",
-    "SBMA" => "SBMA E-bus stop — in front of National Bookstore, Harbor Point"
+    "Morong Terminal" => "Morong Terminal",
+    "SBMA" => "Harbor Point"
 ];
 
 /* ADD ROUTE */
@@ -398,8 +398,8 @@ let clickCount = 0;
 let routeLine = null;
 let routeRequest = 0;
 const terminalPins = {
-    'Morong Terminal': { lat: 14.6798552, lng: 120.2728757, label: 'Morong Bus Terminal (Morong, Bataan)' },
-    'SBMA': { lat: 14.8243652, lng: 120.2801434, label: 'Harbor Point / National Bookstore frontage' }
+    'Morong Terminal': { lat: 14.6798552, lng: 120.2728757, label: 'Morong Terminal' },
+    'SBMA': { lat: 14.8243652, lng: 120.2801434, label: 'Harbor Point' }
 };
 
 function markerIcon(label) {

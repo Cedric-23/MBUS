@@ -8,11 +8,11 @@ Every bottom navigation bar now has **Waiting** where **Alerts** used to be. Not
 
 | Role | Page | Behaviour |
 |------|------|-----------|
-| Commuter | `Commuter/waiting.php` | Choose a bus first, then pin the pickup spot using current GPS or by tapping/dragging the visible map pin. Confirm **Mark me as waiting** to share the point. The status card shows the bus, stop, shared time, expiry and distance; **Cancel waiting** removes the signal. There is no update action. |
+| Commuter | `Commuter/waiting.php` | Choose a bus first, then pin the pickup spot using current GPS or by tapping/dragging the visible map pin. Confirm **Mark me as waiting** to share the point. The status card shows the bus, stop, shared time and expiry; **Track the bus** opens that trip in Live, with its road path shown. **Cancel waiting** removes the signal. There is no update action. |
 | Operator | `Operator/waiting.php` | Waiting riders for the operator's own buses, plus a live map of those buses. The Riders page is a seat map only. |
 | Admin | `Admin/waiting.php` | The same board for every bus and every waiting rider. Admin dashboard and schedule pages no longer link to separate waiting screens. |
 
-Commuter navigation is Home / Schedule / Live / Trips / Waiting. Live is tracking only: it lists current-day **Boarding** or **Departed** buses, defaults to a bus that is actually sharing GPS, centers tightly on the selected live bus, and labels stale points instead of pretending they are current. Schedule **Pick up** actions open Waiting with that bus preselected. Notifications are reached from the profile menu as **Updates**.
+Commuter navigation is Home / Schedule / Live / Trips / Waiting. Live is tracking only: it lists current-day **Boarding** or **Departed** buses, selects a live bus by default, and shows its full road path with **Focus bus** available for a closer view. If a Waiting deep-link refers to a trip that has ended, Live says so instead of silently switching to another bus; commuters can deliberately choose another bus. Stale points are labeled instead of appearing current. Schedule **Pick up** actions open Waiting with that bus preselected. Notifications are reached from the profile menu as **Updates**.
 
 ## Location gate
 

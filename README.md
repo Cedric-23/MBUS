@@ -83,7 +83,7 @@ Every role uses one **Waiting** tab (the old *Alerts* tab). Waiting requests and
 
 | Role | What Waiting does |
 |------|-------------------|
-| Commuter | `Commuter/waiting.php` — choose a bus, pin your pickup spot on the map or with GPS, then confirm **Mark me as waiting**. The status card shows the bus, stop, shared time, expiry and distance; cancel is available, with no update action. |
+| Commuter | `Commuter/waiting.php` — choose a bus, pin your pickup spot on the map or with GPS, then confirm **Mark me as waiting**. The status card has **Track the bus** to open its full road path in Live; ended trips are reported instead of switching to another bus. Cancel is available, with no update action. |
 | Operator | `Operator/waiting.php` — waiting riders for the operator's own buses plus a live map of those buses. Riders page is a seat map only. |
 | Admin | `Admin/waiting.php` — the same board for every bus and every waiting rider. |
 
@@ -95,12 +95,13 @@ Check the static UI contract and API behavior locally:
 node tests/waiting_ux_test.cjs
 node tests/operator_live_tracking_test.cjs
 node tests/commuter_live_tracking_test.cjs
+node tests/minimal_profile_and_route_path_test.cjs
 node tests/route_accuracy_test.cjs
 ```
 
 ## Road routes and destination estimates
 
-Commuter Schedule/Live and the Operator/Admin Waiting map use OpenStreetMap for map tiles and an OSRM-compatible road router for route geometry, road distance and estimated driving time. Live destination estimates project the latest bus pin onto the mapped road route; they are not live-traffic ETAs and exclude stops or detours. The default public OSRM demo is best-effort only; set `MBUS_ROUTING_ENDPOINT` to a managed or self-hosted HTTPS OSRM-compatible endpoint for sustained production use. See [terminal coordinates, source notes and routing limitations](docs/route-terminal-research.md) for the Morong and SBMA terminal research.
+Commuter Schedule/Live and the Operator/Admin Waiting map use OpenStreetMap for map tiles and an OSRM-compatible road router for route geometry, road distance and estimated driving time. User-facing endpoint labels are kept concise as **Morong Terminal** and **Harbor Point**. Live destination estimates project the latest bus pin onto the mapped road route; they are not live-traffic ETAs and exclude stops or detours. The default public OSRM demo is best-effort only; set `MBUS_ROUTING_ENDPOINT` to a managed or self-hosted HTTPS OSRM-compatible endpoint for sustained production use. See [terminal coordinates, source notes and routing limitations](docs/route-terminal-research.md) for the Morong and SBMA terminal research.
 
 ---
 

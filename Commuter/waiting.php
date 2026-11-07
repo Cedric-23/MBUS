@@ -63,7 +63,7 @@ if (!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?
 </nav>
 
 <script>window.mbusWaitingConfig = <?php echo json_encode(['csrfToken' => csrf_get_token(), 'scheduleId' => $schedule_id], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
-<script src="../Assets/js/commuter_waiting_status.js"></script>
+<script src="../Assets/js/commuter_waiting_status.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/commuter_waiting_status.js'); ?>"></script>
 <script src="../Assets/js/app-header.js"></script>
 </body>
 </html>

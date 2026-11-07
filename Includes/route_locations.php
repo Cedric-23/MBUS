@@ -13,7 +13,7 @@ function mbus_route_known_terminal(?string $name): ?array
         return [
             'latitude' => 14.6798552,
             'longitude' => 120.2728757,
-            'label' => 'Morong Bus Terminal (Morong, Bataan)',
+            'label' => 'Morong Terminal',
         ];
     }
 
@@ -21,7 +21,7 @@ function mbus_route_known_terminal(?string $name): ?array
         return [
             'latitude' => 14.8243652,
             'longitude' => 120.2801434,
-            'label' => 'SBMA E-bus stop — in front of National Bookstore, Harbor Point',
+            'label' => 'Harbor Point',
         ];
     }
 

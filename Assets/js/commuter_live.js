@@ -7,9 +7,13 @@
 
     const FRESH_MS = 120000;
     let trips = [], locations = [], serverNow = Date.now();
-    let chosen = String((window.mbusLive || {}).scheduleId || '');
+    const requestedNumber = Number((window.mbusLive || {}).scheduleId || 0);
+    const requestedScheduleId = Number.isSafeInteger(requestedNumber) && requestedNumber > 0 ? String(requestedNumber) : '';
+    let chosen = requestedScheduleId;
+    let requestedUnavailableId = '';
+    let manualChoice = false;
     let map = null, markerLayer = null, routeLayer = null, pollTimer = null, loading = false, version = 0, fitted = false;
-    let routeKey = '', routeData = null, routeFitKey = '', routeRequestId = 0, routeFailure = null, routeViewMode = 'bus';
+    let routeKey = '', routeData = null, routeFitKey = '', routeRequestId = 0, routeFailure = null, routeViewMode = 'route';
     const visible = () => !document.hidden;
 
     function number(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }
@@ -81,10 +85,11 @@
 
     function pick(id) {
         chosen = id ? String(id) : '';
+        manualChoice = true;
         select.value = chosen;
         fitted = false;
         routeFitKey = '';
-        routeViewMode = 'bus';
+        routeViewMode = 'route';
         render();
     }
 
@@ -215,8 +220,15 @@
         // filter select, same shape as the operator board
         select.replaceChildren(new Option('All buses', ''));
         trips.forEach(t => select.add(new Option((t.bus_number || 'Bus') + ' · ' + routeOf(t), String(t.schedule_id))));
-        if (chosen && !trips.some(t => String(t.schedule_id) === chosen)) chosen = '';
-        if (!chosen && trips.length === 1) chosen = String(trips[0].schedule_id);
+        const defaultTrip = trips.find(t => stateOf(t).kind === 'live') || trips.find(t => stateOf(t).kind === 'stale') || trips[0];
+        const selection = window.MBUSLiveSelection.chooseSchedule(
+            trips, requestedScheduleId, chosen, manualChoice, defaultTrip && defaultTrip.schedule_id
+        );
+        chosen = selection.scheduleId;
+        requestedUnavailableId = selection.unavailableId;
+        notify(requestedUnavailableId
+            ? 'This bus is no longer active. Choose another bus below if you want to track a different one.'
+            : '');
         select.value = chosen;
         select.disabled = !trips.length;
 

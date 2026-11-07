@@ -44,7 +44,7 @@ assert.doesNotMatch(commuterWaiting, /pickupMap|Mark me as waiting|Update my spo
 assert.match(waitingStatusJs, /data\.my_request/);
 assert.match(waitingStatusJs, /req\.status === 'Waiting'/);
 assert.match(waitingStatusJs, /Cancel waiting/);
-assert.match(waitingStatusJs, /pickup\.php\?schedule_id=/);
+assert.match(waitingStatusJs, /live\.php\?schedule_id=/);
 assert.doesNotMatch(waitingStatusJs, /Update my spot|Spot updated/);
 const visibleCopy = commuterWaiting.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, ' ')
     .replace(/&[a-z]+;/g, ' ').replace(/\s+/g, ' ').trim();

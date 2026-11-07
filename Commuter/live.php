@@ -25,7 +25,7 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="../Assets/css/waiting_board.css">
-    <link rel="stylesheet" href="../Assets/css/commuter_live.css">
+    <link rel="stylesheet" href="../Assets/css/commuter_live.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_live.css'); ?>">
 </head>
 <body class="has-bottom-nav waiting-board-page commuter-live-page live-page">
 <main class="main" role="main">
@@ -62,11 +62,12 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
     <section class="board-map-card" aria-labelledby="mapHeading">
         <div class="board-map-head">
             <h2 id="mapHeading">Live map</h2>
-            <div class="board-legend" aria-hidden="true">
-                <span><i class="dot-bus"></i>Bus</span>
-                <span><i class="dot-stale"></i>Old location</span>
+            <div class="board-legend">
+                <span><i class="dot-bus" aria-hidden="true"></i>Bus</span>
+                <span><i class="route-line-key" aria-hidden="true"></i>Route</span>
+                <span><i class="dot-stale" aria-hidden="true"></i>Old location</span>
             </div>
-            <button type="button" id="routeViewButton" class="route-view-btn" disabled>Full route</button>
+            <button type="button" id="routeViewButton" class="route-view-btn" disabled>Focus bus</button>
         </div>
         <div id="trackingMap" class="board-map" role="region" aria-label="Map of live buses"></div>
         <p id="mapMessage" class="board-map-error live-map-note" hidden></p>
@@ -75,7 +76,7 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
 
     <section class="board-list-card" aria-labelledby="busListHeading">
         <div class="board-list-head">
-            <h2 id="busListHeading">Buses in service</h2>
+            <h2 id="busListHeading">Buses</h2>
             <span class="board-count" id="trackingStatus">0</span>
         </div>
         <p id="busEmpty" class="board-empty">Loading buses…</p>
@@ -96,7 +97,8 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
 <script>window.mbusLive = <?php echo json_encode(['scheduleId' => $schedule_id, 'csrfToken' => csrf_get_token()], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="../Assets/js/route_utils.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/route_utils.js'); ?>"></script>
-<script src="../Assets/js/commuter_live.js"></script>
+<script src="../Assets/js/live_schedule_selection.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/live_schedule_selection.js'); ?>"></script>
+<script src="../Assets/js/commuter_live.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/commuter_live.js'); ?>"></script>
 <script src="../Assets/js/flow-feedback.js"></script>
 <script src="../Assets/js/app-header.js"></script>
 </body>

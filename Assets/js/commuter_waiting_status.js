@@ -23,14 +23,15 @@
         const sid = Number(req.schedule_id);
         const updated = Date.parse(req.updated_at) || serverNow;
         const left = Math.max(0, Math.round((updated + WINDOW_MIN * 60000 - serverNow) / 60000));
+        const route = trip ? (trip.origin_label || trip.origin || 'Morong Terminal') + ' → ' + (trip.destination_label || trip.destination || 'Harbor Point') : 'Trip is no longer active';
         card.className = 'ws-card';
         card.innerHTML = '<span class="ws-live"><i aria-hidden="true"></i>You are waiting</span>' +
             '<p class="ws-bus">' + (trip ? 'Bus ' + esc(trip.bus_number) : 'Your bus') + '</p>' +
-            '<p class="ws-route">' + (trip ? esc((trip.origin || '') + ' to ' + (trip.destination || '')) : 'Trip is no longer active') + '</p>' +
+            '<p class="ws-route">' + esc(route) + '</p>' +
             '<dl class="ws-meta"><div><dt>Your spot</dt><dd>' + esc(req.pickup_label || 'Pinned spot') + '</dd></div>' +
             '<div><dt>Shared</dt><dd>' + esc(ago(serverNow - updated)) + '</dd></div>' +
             '<div><dt>Stays active for</dt><dd>' + left + ' min</dd></div></dl>' +
-            '<div class="ws-actions"><a class="ws-btn ws-btn-primary" href="pickup.php?schedule_id=' + sid + '">Track the bus</a>' +
+            '<div class="ws-actions"><a class="ws-btn ws-btn-primary" href="live.php?schedule_id=' + sid + '">Track the bus</a>' +
             '<button type="button" id="wsCancel" class="ws-btn ws-btn-ghost">Cancel waiting</button></div>';
         document.getElementById('wsCancel').addEventListener('click', () => cancel(sid));
     }

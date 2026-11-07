@@ -14,6 +14,7 @@ async function main() {
     const staffView = read('Includes/pickup_staff_view.php');
     const staffJs = read('Assets/js/staff_waiting.js');
     const locations = read('Includes/route_locations.php');
+    const routeUtils = read('Assets/js/route_utils.js');
     const migration = read('supabase/13_route_terminal_coordinates.sql');
     const routeApi = read('api/route.php');
 
@@ -31,6 +32,10 @@ async function main() {
     assert.match(locations, /120\.2728757/);
     assert.match(locations, /14\.8243652/);
     assert.match(locations, /120\.2801434/);
+    assert.match(locations, /'label' => 'Morong Terminal'/);
+    assert.match(locations, /'label' => 'Harbor Point'/);
+    assert.match(routeUtils, /return 'Morong Terminal'/);
+    assert.match(routeUtils, /return 'Harbor Point'/);
     assert.match(migration, /UPDATE public\.routes/);
     assert.match(routeApi, /MBUS_ROUTING_ENDPOINT/);
     assert.match(routeApi, /moving operator GPS point is never included/);

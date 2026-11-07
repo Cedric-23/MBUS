@@ -137,13 +137,13 @@ $profile_avatar_path = ($profile_picture_name !== '' && $profile_picture_name !=
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/commuter_sidebar.css">
-    <link rel="stylesheet" href="../Assets/css/profile.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/commuter_verification.css">
+    <link rel="stylesheet" href="../Assets/css/profile.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/profile.css'); ?>">
 </head>
 <body class="has-bottom-nav">
 
@@ -193,19 +193,13 @@ $profile_avatar_path = ($profile_picture_name !== '' && $profile_picture_name !=
                 </div>
                 
                 <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <input type="email" id="email" value="<?php echo htmlspecialchars($user_data['email'] ?? ''); ?>" class="form-control" readonly aria-readonly="true">
-                    <small class="form-hint">Email changes are managed by MBUS support.</small>
-                </div>
-                
-                <div class="form-group">
                     <label for="phone_number">Phone Number</label>
                     <div style="display:flex;gap:.5rem;align-items:center;">
                         <input type="tel" name="phone_number" id="phone_number" value="<?php echo htmlspecialchars($user_data['phone_number'] ?? ''); ?>" class="form-control" inputmode="tel" autocomplete="tel" maxlength="16" placeholder="09XXXXXXXXX" <?php echo !empty($user_data['phone_number']) ? 'readonly aria-readonly="true"' : ''; ?>>
                         <?php if(!empty($user_data['phone_number'])): ?><button type="button" class="btn btn-secondary" id="changePhoneBtn">Change</button><?php endif; ?>
                     </div>
                     <input type="hidden" name="change_phone" id="changePhone" value="0">
-                    <small class="form-hint">Your phone stays locked until you choose Change. Format: 11 digits starting with 09.</small>
+                    <small class="form-hint"><?php echo !empty($user_data['phone_number']) ? 'Tap Change to edit. Format: 09XXXXXXXXX.' : 'Format: 09XXXXXXXXX.'; ?></small>
                 </div>
                 
                 <div class="form-group">
@@ -226,35 +220,24 @@ $profile_avatar_path = ($profile_picture_name !== '' && $profile_picture_name !=
         </form>
     </section>
 
-    <section class="card profile-picture-section">
-        <h2 class="section-title">
-            <i class="fa fa-user-circle" aria-hidden="true"></i> Profile Picture
-        </h2>
-        <div class="profile-picture-container">
-            <?php 
-            $profile_pic = $user_data['profile_picture'] ?? 'default.png';
-            $profile_pic_path = "../Assets/profile_pictures/" . $profile_pic;
-            if(!file_exists($profile_pic_path) || $profile_pic === 'default.png'){
-                $profile_pic = 'default.png';
-                $profile_pic_path = "../Assets/images/mbus_icon.png";
-            }
-            ?>
-            <img src="<?php echo htmlspecialchars($profile_pic_path . ($profile_pic !== 'default.png' && is_file($profile_pic_path) ? '?v=' . filemtime($profile_pic_path) : '')); ?>" alt="Profile Picture" class="profile-picture" id="profilePreview">
-        </div>
-        
-        <form method="POST" enctype="multipart/form-data" class="upload-form">
-            <?php csrf_field(); ?>
-            <div class="file-input-wrapper">
-                <input type="file" name="profile_picture" accept="image/*" id="profilePictureInput" class="file-input" onchange="previewProfilePicture(this)">
-                <label for="profilePictureInput" class="btn btn-secondary">
-                    <i class="fa fa-upload" aria-hidden="true"></i> Choose New Picture
-                </label>
+    <section class="card profile-picture-section" aria-labelledby="profilePhotoTitle">
+        <div class="profile-photo-row">
+            <div class="profile-picture-container">
+                <img src="<?php echo htmlspecialchars($profile_avatar_path); ?>" alt="Profile photo" class="profile-picture" id="profilePreview">
             </div>
-            <button type="submit" name="upload_picture" class="btn btn-primary" disabled id="uploadPictureBtn">
-                            <i class="fa fa-paper-plane" aria-hidden="true"></i> Submit
-                        </button>
-        </form>
-        
+            <div class="profile-photo-content">
+                <h2 id="profilePhotoTitle" class="profile-photo-title">Profile photo</h2>
+                <p class="profile-photo-hint">Shown on your Waiting map pin.</p>
+                <form method="POST" enctype="multipart/form-data" class="upload-form">
+                    <?php csrf_field(); ?>
+                    <input type="file" name="profile_picture" accept="image/*" id="profilePictureInput" class="file-input" aria-label="Choose profile photo" onchange="previewProfilePicture(this)">
+                    <div class="profile-photo-actions">
+                        <label for="profilePictureInput" class="profile-photo-change"><i class="fa fa-camera" aria-hidden="true"></i> Change photo</label>
+                        <button type="submit" name="upload_picture" class="btn btn-primary profile-photo-save" disabled id="uploadPictureBtn">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </section>
 </div>
 

@@ -1,4 +1,4 @@
-/* Commuter Live: the same map card and bus pins as the operator board, buses only. */
+/* Commuter Live: focused route context and compact bus rows. */
 .commuter-live-page .main { padding-top: 16px; }
 .commuter-live-page .page-header h1 { margin: 0; font-size: 1.5rem; }
 
@@ -9,18 +9,20 @@
 .live-map-note { color: #6b7a8d; }
 .live-route-estimate { margin-top: 0; }
 .live-route-line { color: #1e90ff; }
-.route-view-btn { min-height: 34px; padding: 0 11px; border: 1px solid #d8e1ec; border-radius: 999px; background: #fff; color: #18365d; font: inherit; font-size: .75rem; font-weight: 700; white-space: nowrap; }
+.route-line-key { display: inline-block; width: 18px; height: 0; border-top: 3px solid #1e90ff; border-radius: 2px; vertical-align: middle; }
+.route-view-btn { min-height: 40px; padding: 0 11px; border: 1px solid #d8e1ec; border-radius: 999px; background: #fff; color: #18365d; font: inherit; font-size: .75rem; font-weight: 700; white-space: nowrap; }
 .route-view-btn:disabled { opacity: .48; }
 
 .bus-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
-  padding: 12px 13px;
+  min-height: 52px;
+  padding: 8px 10px;
   border: 1px solid var(--board-line);
-  border-radius: 14px;
+  border-radius: 12px;
   background: #fbfcfe;
   font: inherit;
   text-align: left;
@@ -32,19 +34,32 @@
 .bus-row.is-picked { border-color: var(--board-navy); background: #f1f6fd; }
 .bus-row:focus-visible { outline: 3px solid #1e90ff; outline-offset: 2px; }
 .bus-row-icon {
-  display: grid; place-items: center; width: 38px; height: 38px;
-  border-radius: 12px; background: #1f6fb2; color: #fff; font-size: 0.9rem;
+  display: grid; place-items: center; width: 32px; height: 32px;
+  border-radius: 10px; background: #1f6fb2; color: #fff; font-size: 0.8rem;
 }
 .bus-row.is-stale .bus-row-icon, .bus-row.is-none .bus-row-icon { background: #8d9bad; }
 .bus-row-main { min-width: 0; display: grid; gap: 2px; }
-.bus-row-name { font-size: 0.95rem; font-weight: 700; color: var(--board-ink); }
-.bus-row-route { font-size: 0.8rem; color: var(--board-muted); overflow-wrap: anywhere; }
-.bus-row-state { font-size: 0.75rem; font-weight: 600; white-space: nowrap; color: #12795a; }
+.bus-row-name { font-size: 0.875rem; font-weight: 700; color: var(--board-ink); }
+.bus-row-route { min-width: 0; overflow: hidden; color: var(--board-muted); font-size: 0.74rem; white-space: nowrap; text-overflow: ellipsis; }
+.bus-row-state { font-size: 0.7rem; font-weight: 600; white-space: nowrap; color: #12795a; }
 .bus-row.is-stale .bus-row-state { color: #9a6700; }
 .bus-row.is-none .bus-row-state { color: var(--board-muted); }
-.live-refresh-note { margin-top: 10px; font-size: 0.75rem; }
+.live-refresh-note { margin-top: 8px; font-size: 0.72rem; }
 
-.bus-row-wrap { display: flex; gap: 8px; align-items: stretch; }
+.commuter-live-page .board-list-card { margin-bottom: 10px; padding: 10px; border-radius: 14px; }
+.commuter-live-page .board-list-head { margin-bottom: 7px; }
+.commuter-live-page .board-list-head h2 { font-size: 0.9rem; }
+.commuter-live-page .board-list { gap: 6px; }
+.bus-row-wrap { display: flex; gap: 6px; align-items: stretch; }
 .bus-row-wrap .bus-row { flex: 1; min-width: 0; }
-.bus-row-pick { display: grid; place-items: center; padding: 0 16px; border-radius: 14px; background: var(--board-navy, #18365d); color: #fff; font-size: .875rem; font-weight: 700; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.bus-row-pick { display: grid; place-items: center; min-width: 68px; min-height: 44px; padding: 0 10px; border-radius: 12px; background: var(--board-navy, #18365d); color: #fff; font-size: .8rem; font-weight: 700; text-decoration: none; -webkit-tap-highlight-color: transparent; }
 .bus-pop-pick { display: inline-block; margin-top: 6px; padding: 6px 14px; border-radius: 999px; background: #1e3a5f; color: #fff !important; font-weight: 700; text-decoration: none; }
+
+@media (max-width: 420px) {
+  .commuter-live-page .board-map-head { gap: 7px; }
+  .commuter-live-page .board-legend { gap: 8px; font-size: .66rem; }
+  .commuter-live-page .route-view-btn { min-height: 40px; padding-inline: 9px; }
+  .bus-row { grid-template-columns: 30px minmax(0, 1fr) auto; gap: 7px; padding-inline: 8px; }
+  .bus-row-state { font-size: .66rem; }
+  .bus-row-pick { min-width: 60px; padding-inline: 8px; font-size: .74rem; }
+}
