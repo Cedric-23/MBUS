@@ -278,5 +278,6 @@ const TRIP_OPEN = <?php echo $trip_open ? 'true' : 'false'; ?>;
     </a>
 </nav>
 <script src="../Assets/js/app-header.js"></script>
+<script src="../Assets/js/operator_tracker.js"></script>
 </body>
 </html>

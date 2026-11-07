@@ -264,5 +264,6 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
 <script src="../Assets/js/vendor/jsQR.js"></script>
 <script src="../Assets/js/operator_scan.js"></script>
 <script src="../Assets/js/app-header.js"></script>
+<script src="../Assets/js/operator_tracker.js"></script>
 </body>
 </html>

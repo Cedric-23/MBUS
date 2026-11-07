@@ -125,5 +125,6 @@ $navItems = $isAdmin
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="../Assets/js/admin_waiting.js"></script>
 <script src="../Assets/js/app-header.js"></script>
+<?php if (strtolower((string)($_SESSION['user_type'] ?? '')) === 'operator') { ?><script src="../Assets/js/operator_tracker.js"></script><?php } ?>
 </body>
 </html>

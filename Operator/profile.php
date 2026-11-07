@@ -40,4 +40,5 @@ $name = htmlspecialchars($_SESSION['full_name'] ?? 'Operator');
     </a>
 </nav>
 <script src="../Assets/js/app-header.js"></script>
+<script src="../Assets/js/operator_tracker.js"></script>
 </body></html>

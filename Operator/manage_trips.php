@@ -390,7 +390,7 @@ document.addEventListener('keydown', function(e) {
     }
 });
 </script>
-<script src="../Assets/js/pickup_staff.js"></script>
+
 
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="operator_dashboard.php" class="bottom-nav-item">
@@ -408,5 +408,6 @@ document.addEventListener('keydown', function(e) {
     </a>
 </nav>
 <script src="../Assets/js/app-header.js"></script>
+<script src="../Assets/js/operator_tracker.js"></script>
 </body>
 </html>

@@ -286,5 +286,6 @@ document.addEventListener('keydown', function(e) {
     </a>
 </nav>
 <script src="../Assets/js/app-header.js"></script>
+<script src="../Assets/js/operator_tracker.js"></script>
 </body>
 </html>

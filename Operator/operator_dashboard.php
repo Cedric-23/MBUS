@@ -170,7 +170,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
 
 <script src="../Assets/js/app-header.js"></script>
 <script>window.OPERATOR_CSRF_TOKEN = <?php echo json_encode(csrf_get_token()); ?>; window.MBUS_GPS_ENABLED = true;</script>
-<script src="../Assets/js/pickup_staff.js"></script>
+
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="operator_dashboard.php" class="bottom-nav-item active" aria-current="page">
         <i class="fa fa-home" aria-hidden="true"></i><span>Home</span>
@@ -186,5 +186,6 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
         <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
 </nav>
+<script src="../Assets/js/operator_tracker.js"></script>
 </body>
 </html>
