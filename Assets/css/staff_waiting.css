@@ -40,8 +40,9 @@
 /* pins */
 .sw-bus { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: #1f6fb2; color: #fff; font: 700 .75rem/1 Inter, system-ui, sans-serif; white-space: nowrap; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 .sw-bus.is-stale { background: #8d9bad; }
-.sw-person { display: grid; place-items: center; box-sizing: border-box; width: 38px; height: 38px; border-radius: 50%; background: #e8eef6; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.35); overflow: hidden; }
-.sw-person img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.sw-person { position: relative; display: block; box-sizing: border-box; width: 38px; height: 38px; border-radius: 50%; background: #e8eef6; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.35); overflow: hidden; }
+.sw-person img { position: absolute; top: 0; left: 0; display: block; width: 32px; height: 32px; min-width: 0; min-height: 0; object-fit: cover; object-position: center; border-radius: 50%; }
+.leaflet-container .leaflet-marker-pane .sw-person img { width: 32px !important; height: 32px !important; }
 .sw-person.is-on { box-shadow: 0 0 0 6px rgba(30,144,255,.3), 0 2px 8px rgba(0,0,0,.35); }
 
 /* the operator's location pill moves up so it doesn't cover the sheet */
