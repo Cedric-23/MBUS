@@ -83,17 +83,18 @@ Every role uses one **Waiting** tab (the old *Alerts* tab). Commuters start a re
 
 | Role | What Waiting does |
 |------|-------------------|
-| Commuter | `Commuter/waiting.php` — before you mark yourself waiting, this page shows only a short prompt to choose a bus. Choose a departed bus from Schedule, pin your pickup spot in the pickup flow, then confirm **Mark me as waiting**. Only then does Waiting show the bus and your profile-photo pickup marker, their pickup distance, the road route and destination estimate, with **Focus bus / Full route** controls. The single bus row has **Cancel**; cancel first before choosing another bus. If your trip ends, the request can still be cancelled here. |
-| Operator | `Operator/waiting.php` — waiting riders for the operator's own buses plus a live map of those buses. Riders page is a seat map only. |
+| Commuter | `Commuter/waiting.php` — before you mark yourself waiting, this page shows only a short prompt to choose a bus. Choose a departed bus from Schedule, pin your pickup spot in the pickup flow, then confirm **Mark me as waiting**. Only then does Waiting show the bus and your profile-photo pickup marker, pickup distance, road route and destination estimate. Tap the bus row or pin to track/untrack it; **Full route / Focus bus** changes the map view. The row's **Cancel** action stays separate. Cancel first before choosing another bus; if your trip ends, the request can still be cancelled here. |
+| Operator | `Operator/waiting.php` — waiting riders for the operator's own buses plus a live map of those buses. Operator bottom navigation is Home / Trips / **Scan** / Riders / Waiting, with Scan centered and no Live tab. Riders remains a seat map only. |
 | Admin | `Admin/waiting.php` — the same board for every bus and every waiting rider. |
 
-The commuter **Live** page remains bus-only: it shows current bus locations and their road paths. Only operators see the location gate before their dashboard; commuters and admins proceed without enabling GPS. The operator gate uses the browser permission prompt, then auto-shares location silently (no live card/map on operator Home). The trip page pins a position immediately when a trip is set to **Departed**. Browsers only expose location over HTTPS (or `localhost`).
+The commuter **Live** page remains bus-only: it shows current bus locations and their road paths. Operators use the centered **Scan** tab; bus GPS shares silently from the operator Dashboard/Trips flow, with no separate Live tab. Only operators see the location gate before their dashboard; commuters and admins proceed without enabling GPS. The operator gate uses the browser permission prompt, then auto-shares location silently (no live card/map on operator Home). The trip page pins a position immediately when a trip is set to **Departed**. Browsers only expose location over HTTPS (or `localhost`).
 
 Check the static UI contract and API behavior locally:
 
 ```bash
 node tests/waiting_ux_test.cjs
 node tests/operator_live_tracking_test.cjs
+node tests/operator_navigation_test.cjs
 node tests/commuter_live_tracking_test.cjs
 node tests/minimal_profile_and_route_path_test.cjs
 node tests/route_accuracy_test.cjs

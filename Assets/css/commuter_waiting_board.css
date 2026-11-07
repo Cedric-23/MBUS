@@ -29,6 +29,8 @@
 .cwb-row { display: flex; align-items: center; gap: 8px; min-height: 72px; border-top: 1px solid #edf0f4; }
 .cwb-row.is-selected { background: #f7faff; border-radius: 12px; }
 .cwb-row-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 9px 4px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.cwb-row-main:focus-visible { outline: 3px solid #1e90ff; outline-offset: 2px; border-radius: 10px; }
+.cwb-row-main[aria-pressed="false"] .cwb-row-icon { background: #eef1f4; color: #7c8797; }
 .cwb-row-icon { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #e7f0fa; color: #1e6fa9; font-size: 1rem; }
 .cwb-row-text { min-width: 0; flex: 1; display: flex; flex-direction: column; }
 .cwb-row-text strong { overflow: hidden; color: #172b4d; font-size: .9375rem; text-overflow: ellipsis; white-space: nowrap; }
@@ -47,6 +49,7 @@
 .cwb-bus-icon, .cwb-person-icon { background: transparent; border: 0; }
 .cwb-bus-pin { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 86px; height: 32px; padding: 0 10px; border: 2px solid #fff; border-radius: 999px; background: #1f6fb2; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.3); font: 700 .75rem/1 Inter, system-ui, sans-serif; white-space: nowrap; }
 .cwb-bus-pin.is-stale { background: #8d9bad; }
+.cwb-bus-pin.is-untracked { background: #8d9bad; opacity: .82; }
 .cwb-person-pin { position: relative; display: block; box-sizing: border-box; width: 46px; height: 46px; overflow: hidden; border: 3px solid #fff; border-radius: 50%; background: #e8eef6; box-shadow: 0 2px 9px rgba(0,0,0,.32); }
 .cwb-person-pin img { position: absolute; inset: 0; display: block; width: 40px; height: 40px; min-width: 0; min-height: 0; border-radius: 50%; object-fit: cover; object-position: center; }
 .leaflet-container .leaflet-marker-pane .cwb-person-pin img { width: 40px !important; height: 40px !important; }

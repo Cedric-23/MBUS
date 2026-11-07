@@ -13,7 +13,7 @@
     let myRequest = null, schedules = [], locations = [], serverNow = Date.now();
     let map = null, busLayer = null, riderLayer = null, routeLayer = null, mapAttempted = false;
     let routeData = null, routeKey = '', routeFailure = null, routeRequest = 0;
-    let routeViewMode = 'focus', fittedOnce = false, refreshing = null, busy = false, timer = null;
+    let routeViewMode = 'focus', trackSelected = true, fittedOnce = false, refreshing = null, busy = false, timer = null;
 
     const num = value => {
         if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) return null;
@@ -98,9 +98,11 @@
         } catch (_) { map = null; el('cwbMapError').hidden = false; }
     }
     function busIcon(busNumber, stale) {
+        const state = stale ? ' is-stale' : '';
+        const untracked = trackSelected ? '' : ' is-untracked';
         return L.divIcon({
             className: 'cwb-bus-icon', iconSize: [114, 34], iconAnchor: [57, 17],
-            html: '<span class="cwb-bus-pin' + (stale ? ' is-stale' : '') + '"><i class="fa fa-bus" aria-hidden="true"></i> ' + escapeHtml(busNumber || 'Bus') + '</span>'
+            html: '<span class="cwb-bus-pin' + state + untracked + '"><i class="fa fa-bus" aria-hidden="true"></i> ' + escapeHtml(busNumber || 'Bus') + '</span>'
         });
     }
     function avatarUrl() {
@@ -117,18 +119,47 @@
     }
     function updateRouteButton() {
         const button = el('cwbRouteView');
-        button.disabled = !routeData || !map;
-        button.textContent = routeViewMode === 'focus' ? 'Full route' : 'Focus bus';
-        button.setAttribute('aria-pressed', routeViewMode === 'route' ? 'true' : 'false');
+        button.disabled = !map || (trackSelected && !routeData);
+        button.textContent = trackSelected ? (routeViewMode === 'focus' ? 'Full route' : 'Focus bus') : 'Track bus';
+        button.setAttribute('aria-pressed', trackSelected && routeViewMode === 'route' ? 'true' : 'false');
+    }
+    function paintRoute() {
+        if (!routeLayer) return;
+        routeLayer.clearLayers();
+        if (!trackSelected || !routeData) return;
+        L.polyline(routeData.points, { color: '#2786c8', weight: 5, opacity: .82 }).addTo(routeLayer);
+        L.circleMarker(routeData.points[0], { radius: 5, color: '#fff', weight: 2, fillColor: '#2786c8', fillOpacity: 1 }).addTo(routeLayer);
+        L.circleMarker(routeData.points[routeData.points.length - 1], { radius: 5, color: '#fff', weight: 2, fillColor: '#18365d', fillOpacity: 1 }).addTo(routeLayer);
+    }
+    function toggleTracking() {
+        trackSelected = !trackSelected;
+        routeViewMode = 'focus';
+        render();
+        if (!map) return;
+        if (trackSelected) fit(focusedPoints(requestTrip()), true);
+        else if (ownPoint()) map.setView(ownPoint(), 16, { animate: true });
+    }
+    function fitFullRoute(trip) {
+        if (!map || !routeData || !trip) return;
+        const bounds = L.latLngBounds(routeData.points);
+        focusedPoints(trip).forEach(point => bounds.extend(point));
+        map.fitBounds(bounds.pad(.06), {
+            paddingTopLeft: [24, 100],
+            paddingBottomRight: [24, Math.max(220, (el('cwbSheet').offsetHeight || 190) + 36)],
+            maxZoom: 12,
+            animate: false
+        });
+    }
+    function routeAction() {
+        if (!trackSelected) toggleTracking();
+        else toggleRoute();
     }
     function toggleRoute() {
         const trip = requestTrip();
-        if (!routeData || !trip || !map) return;
+        if (!trackSelected || !routeData || !trip || !map) return;
         if (routeViewMode === 'focus') {
             routeViewMode = 'route';
-            const bounds = L.latLngBounds(routeData.points);
-            focusedPoints(trip).forEach(point => bounds.extend(point));
-            map.fitBounds(bounds.pad(.06), { paddingTopLeft: [24, 100], paddingBottomRight: [24, Math.max(220, (el('cwbSheet').offsetHeight || 190) + 36)], maxZoom: 12, animate: false });
+            fitFullRoute(trip);
         } else {
             routeViewMode = 'focus';
             fit(focusedPoints(trip), false);
@@ -141,7 +172,10 @@
         const bus = trip.bus_number || 'your bus';
         const dot = pill.querySelector('.cwb-status-dot');
         pill.hidden = false;
-        if (!location) {
+        if (!trackSelected) {
+            dot.classList.add('is-off');
+            el('cwbLocationText').textContent = 'Tracking paused · ' + bus;
+        } else if (!location) {
             dot.classList.add('is-off');
             el('cwbLocationText').textContent = 'Waiting for location · ' + bus;
         } else if (location.fresh) {
@@ -155,6 +189,7 @@
     function updateEstimate(trip) {
         const box = el('cwbRouteEstimate');
         if (!trip) { box.textContent = 'Your bus route is unavailable.'; return; }
+        if (!trackSelected) { box.textContent = 'Bus tracking paused. Tap the bus row or pin to track again.'; return; }
         const destination = trip.destination_label || (window.MBUSRouting ? window.MBUSRouting.displayName(trip.destination) : trip.destination) || 'destination';
         const location = busLocation(trip);
         if (!routeData) {
@@ -192,10 +227,7 @@
             .then(route => {
                 if (requestId !== routeRequest || routeKey !== key) return;
                 routeData = route; routeFailure = null;
-                routeLayer.clearLayers();
-                L.polyline(route.points, { color: '#2786c8', weight: 5, opacity: .82 }).addTo(routeLayer);
-                L.circleMarker(route.points[0], { radius: 5, color: '#fff', weight: 2, fillColor: '#2786c8', fillOpacity: 1 }).addTo(routeLayer);
-                L.circleMarker(route.points[route.points.length - 1], { radius: 5, color: '#fff', weight: 2, fillColor: '#18365d', fillOpacity: 1 }).addTo(routeLayer);
+                paintRoute();
                 updateRouteButton(); updateEstimate(trip);
             })
             .catch(error => {
@@ -237,7 +269,7 @@
         if (busLayer) busLayer.clearLayers();
         if (riderLayer) riderLayer.clearLayers();
         if (routeLayer) routeLayer.clearLayers();
-        routeRequest++; routeData = null; routeKey = ''; routeFailure = null; updateRouteButton();
+        routeRequest++; routeData = null; routeKey = ''; routeFailure = null; trackSelected = true; updateRouteButton();
     }
     function render() {
         if (!myRequest || myRequest.status !== 'Waiting') { showEmpty(); return; }
@@ -254,22 +286,23 @@
 
         const list = el('cwbList');
         list.replaceChildren();
-        const row = document.createElement('li'); row.className = 'cwb-row is-selected';
+        const row = document.createElement('li'); row.className = 'cwb-row' + (trackSelected ? ' is-selected' : '');
         const select = document.createElement('button'); select.type = 'button'; select.className = 'cwb-row-main';
-        select.setAttribute('aria-label', 'Focus bus ' + (trip && trip.bus_number || 'waiting bus'));
+        select.setAttribute('aria-pressed', trackSelected ? 'true' : 'false');
+        select.setAttribute('aria-label', (trackSelected ? 'Stop tracking ' : 'Track ') + (trip && trip.bus_number || 'waiting bus'));
         const busGlyph = document.createElement('span'); busGlyph.className = 'cwb-row-icon'; busGlyph.innerHTML = '<i class="fa fa-bus" aria-hidden="true"></i>';
         const text = document.createElement('span'); text.className = 'cwb-row-text';
         const name = document.createElement('strong'); name.textContent = trip && trip.bus_number ? String(trip.bus_number) : 'Your bus';
         const route = document.createElement('small'); route.textContent = trip ? routeName(trip) : 'Trip details unavailable';
         text.append(name, route); select.append(busGlyph, text);
         const location = busLocation(trip), rider = ownPoint();
-        if (location && rider) {
+        if (trackSelected && location && rider) {
             const meters = distanceMeters(rider, [Number(location.loc.latitude), Number(location.loc.longitude)]);
             const distance = document.createElement('span'); distance.className = 'cwb-distance'; distance.textContent = distanceLabel(meters); distance.title = 'Straight-line distance to the bus'; select.append(distance);
         } else {
-            const state = document.createElement('span'); state.className = 'cwb-row-state'; state.textContent = location ? 'Pickup saved' : 'No live pin'; select.append(state);
+            const state = document.createElement('span'); state.className = 'cwb-row-state'; state.textContent = trackSelected ? (location ? 'Pickup saved' : 'No live pin') : 'Not tracking'; select.append(state);
         }
-        select.addEventListener('click', () => { routeViewMode = 'focus'; fit(focusedPoints(trip), true); updateRouteButton(); });
+        select.addEventListener('click', toggleTracking);
         const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'cwb-cancel'; cancel.textContent = 'Cancel'; cancel.disabled = busy;
         cancel.setAttribute('aria-label', 'Cancel waiting for ' + (trip && trip.bus_number || 'your bus'));
         cancel.addEventListener('click', cancelWaiting);
@@ -282,16 +315,17 @@
                 const point = [Number(location.loc.latitude), Number(location.loc.longitude)]; points.push(point);
                 const busMarker = L.marker(point, { icon: busIcon(trip.bus_number, !location.fresh), title: 'Bus ' + (trip.bus_number || '') , zIndexOffset: 500 }).addTo(busLayer);
                 busMarker.bindPopup('Bus ' + escapeHtml(trip.bus_number || ''));
-                busMarker.on('click', () => { routeViewMode = 'focus'; fit(focusedPoints(trip), true); updateRouteButton(); });
+                busMarker.on('click', toggleTracking);
             }
             if (rider) {
                 points.push(rider);
                 const marker = L.marker(rider, { icon: personIcon(), title: 'Your pickup spot', zIndexOffset: 900 }).addTo(riderLayer).bindPopup('Your pickup spot · ' + escapeHtml(myRequest.pickup_label || 'Pinned pickup'));
                 fallbackAvatar(marker);
-                if (location) L.polyline([rider, [Number(location.loc.latitude), Number(location.loc.longitude)]], { color: '#d1493f', weight: 3, dashArray: '4 8', opacity: .9 }).addTo(riderLayer);
+                if (trackSelected && location) L.polyline([rider, [Number(location.loc.latitude), Number(location.loc.longitude)]], { color: '#d1493f', weight: 3, dashArray: '4 8', opacity: .9 }).addTo(riderLayer);
             }
+            paintRoute();
             if (!fittedOnce) { fit(points.length ? points : focusedPoints(trip), false); fittedOnce = true; }
-            else if (routeViewMode === 'focus') fit(focusedPoints(trip), false);
+            else if (trackSelected && routeViewMode === 'focus') fit(focusedPoints(trip), false);
             requestAnimationFrame(() => map.invalidateSize({ pan: false }));
         }
         updateEstimate(trip);
@@ -329,7 +363,7 @@
                 const oldId = myRequest && myRequest.schedule_id;
                 myRequest = nextRequest;
                 if (String(oldId || '') !== String(myRequest && myRequest.schedule_id || '')) {
-                    fittedOnce = false; routeViewMode = 'focus'; routeRequest++; routeKey = ''; routeData = null; routeFailure = null;
+                    fittedOnce = false; routeViewMode = 'focus'; trackSelected = true; routeRequest++; routeKey = ''; routeData = null; routeFailure = null;
                 }
                 say(''); render();
             } catch (error) { say(error.message || 'Unable to load waiting status.'); if (!myRequest) showEmpty(); }
@@ -342,8 +376,16 @@
         if (!document.hidden) timer = setTimeout(async () => { if (!busy) await load(); scheduleNext(); }, 10000);
     }
     el('cwbRefresh').addEventListener('click', load);
-    el('cwbRouteView').addEventListener('click', toggleRoute);
-    window.addEventListener('resize', () => { if (map) { fit(focusedPoints(requestTrip()), false); map.invalidateSize(); } });
+    el('cwbRouteView').addEventListener('click', routeAction);
+    window.addEventListener('resize', () => {
+        if (!map) return;
+        map.invalidateSize({ pan: false });
+        if (!trackSelected) return;
+        const trip = requestTrip();
+        if (!trip) return;
+        if (routeViewMode === 'route' && routeData) fitFullRoute(trip);
+        else fit(focusedPoints(trip), false);
+    });
     document.addEventListener('visibilitychange', () => { if (document.hidden) clearTimeout(timer); else { load().then(scheduleNext); } });
     window.addEventListener('pagehide', () => clearTimeout(timer), { once: true });
 

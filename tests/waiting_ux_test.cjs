@@ -56,7 +56,13 @@ assert.match(waitingBoardJs, /Cancel/);
 assert.match(waitingBoardJs, /Straight-line distance to the bus/);
 assert.match(waitingBoardJs, /Request timed out/);
 assert.match(waitingBoardJs, /selectedBusLocation && selectedBusLocation\.fresh/);
-assert.match(waitingBoardJs, /busMarker\.on\('click',[\s\S]*?updateRouteButton\(\)/);
+assert.match(waitingBoardJs, /function toggleTracking\(\)/);
+assert.match(waitingBoardJs, /select\.addEventListener\('click', toggleTracking\)/);
+assert.match(waitingBoardJs, /busMarker\.on\('click', toggleTracking\)/);
+assert.match(waitingBoardJs, /Tracking paused/);
+assert.match(waitingBoardJs, /function fitFullRoute\(trip\)/);
+assert.match(waitingBoardJs, /window\.addEventListener\('resize',[\s\S]*?if \(!trackSelected\) return;[\s\S]*?routeViewMode === 'route' && routeData[\s\S]*?fitFullRoute\(trip\)/);
+assert.match(read('Assets/css/commuter_waiting_board.css'), /\.cwb-bus-pin\.is-untracked/);
 assert.doesNotMatch(waitingBoardJs, /Pick up/);
 const visibleCopy = commuterWaiting.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, ' ')
     .replace(/&[a-z]+;/g, ' ').replace(/\s+/g, ' ').trim();
