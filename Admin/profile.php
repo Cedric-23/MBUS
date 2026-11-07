@@ -24,6 +24,7 @@ $name = htmlspecialchars($_SESSION['full_name'] ?? 'Admin');
             <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($name, 0, 1)); ?></span></button>
             <div class="profile-menu" id="profileMenu" role="menu">
                 <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $name; ?></span><span class="profile-menu-role">Admin account</span></div>
+                <?php include_once "../Includes/admin_menu.php"; echo mbus_admin_approvals_link($conn); ?>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
         </div></div>

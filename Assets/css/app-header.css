@@ -101,3 +101,6 @@
 @media (prefers-reduced-motion: reduce) {
   .profile-trigger, .profile-menu { transition: none; }
 }
+
+.profile-menu .menu-badge { margin-left: auto; min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--color-danger, #d92d20); color: #fff; font-size: .75rem; font-weight: 600; text-align: center; line-height: 20px; }
+.profile-menu a:has(.menu-badge) { display: flex; align-items: center; gap: 8px; }

@@ -98,15 +98,32 @@ while($q !== false && ($r = mbus_db_fetch_assoc($q))) $history[] = $r;
     </nav>
 
     <div class="menu-bottom">
-        <a href="verifications.php" aria-current="page" class="menu-bottom-link"><i class="fa fa-id-card" aria-hidden="true"></i> Verifications</a>
-        <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+<a href="../logout.php" class="logout-btn btn btn-outline btn-block">
             <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
         </a>
     </div>
 </aside>
 
 <main class="main" role="main">
-<header class="page-header"><h1>Verifications</h1></header>
+<header class="page-header">
+    <h1>Verifications</h1>
+
+            <div class="page-header-right">
+                <div class="profile-menu-wrap">
+                    <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
+                        <span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></span>
+                    </button>
+                    <div class="profile-menu" id="profileMenu" role="menu">
+                        <div class="profile-menu-header">
+                            <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
+                            <span class="profile-menu-role">Admin account</span>
+                        </div>
+                        <?php include_once "../Includes/admin_menu.php"; echo mbus_admin_approvals_link($conn); ?>
+                        <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
+                    </div>
+                </div>
+            </div>
+</header>
 
 <?php if($success){ ?><div class="alert alert-success" role="status"><?php echo htmlspecialchars($success); ?></div><?php } ?>
 <?php if($error){ ?><div class="alert alert-error" role="alert"><?php echo htmlspecialchars($error); ?></div><?php } ?>

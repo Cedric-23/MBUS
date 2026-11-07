@@ -130,8 +130,7 @@ $unread_count = (int)($unread_row['count'] ?? 0);
     </nav>
 
     <div class="menu-bottom">
-        <a href="verifications.php" class="menu-bottom-link"><i class="fa fa-id-card" aria-hidden="true"></i> Verifications</a>
-        <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+<a href="../logout.php" class="logout-btn btn btn-outline btn-block">
             <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
         </a>
     </div>
@@ -152,6 +151,7 @@ $unread_count = (int)($unread_row['count'] ?? 0);
                             <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
                             <span class="profile-menu-role">Admin account</span>
                         </div>
+                        <?php include_once "../Includes/admin_menu.php"; echo mbus_admin_approvals_link($conn); ?>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>
                 </div>

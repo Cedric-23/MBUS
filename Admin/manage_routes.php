@@ -131,8 +131,7 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
     </nav>
 
     <div class="menu-bottom">
-        <a href="verifications.php" class="menu-bottom-link"><i class="fa fa-id-card" aria-hidden="true"></i> Verifications</a>
-        <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
+<a href="../logout.php" class="logout-btn btn btn-outline btn-block">
             <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
         </a>
     </div>
@@ -153,6 +152,7 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
                             <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
                             <span class="profile-menu-role">Admin account</span>
                         </div>
+                        <?php include_once "../Includes/admin_menu.php"; echo mbus_admin_approvals_link($conn); ?>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>
                 </div>
