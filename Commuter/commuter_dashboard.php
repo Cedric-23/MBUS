@@ -154,7 +154,7 @@ function mbus_home_when(string $ts): string {
         <?php } else { ?>
         <ul class="soon-list">
             <?php foreach($soon as $s){
-                $href = $s['action'] === 'reserve' ? 'reserve.php?schedule_id=' . (int)$s['schedule_id'] : 'waiting.php?schedule_id=' . (int)$s['schedule_id'];
+                $href = $s['action'] === 'reserve' ? 'reserve.php?schedule_id=' . (int)$s['schedule_id'] : 'pickup.php?schedule_id=' . (int)$s['schedule_id'];
                 $chip = $s['available'] <= 0 ? 'Full' : $s['available'] . ' left';
                 $cls = $s['available'] <= 0 ? 'full' : ($s['available'] <= 5 ? 'low' : 'ok');
             ?>

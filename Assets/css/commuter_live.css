@@ -38,3 +38,8 @@
 .bus-row.is-stale .bus-row-state { color: #9a6700; }
 .bus-row.is-none .bus-row-state { color: var(--board-muted); }
 .live-refresh-note { margin-top: 10px; font-size: 0.75rem; }
+
+.bus-row-wrap { display: flex; gap: 8px; align-items: stretch; }
+.bus-row-wrap .bus-row { flex: 1; min-width: 0; }
+.bus-row-pick { display: grid; place-items: center; padding: 0 16px; border-radius: 14px; background: var(--board-navy, #18365d); color: #fff; font-size: .875rem; font-weight: 700; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.bus-pop-pick { display: inline-block; margin-top: 6px; padding: 6px 14px; border-radius: 999px; background: #1e3a5f; color: #fff !important; font-weight: 700; text-decoration: none; }

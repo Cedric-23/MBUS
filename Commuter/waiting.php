@@ -23,10 +23,9 @@ if (!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
-    <link rel="stylesheet" href="../Assets/css/waiting.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-</head>
-<body class="waiting-page has-bottom-nav">
+    <link rel="stylesheet" href="../Assets/css/commuter_waiting_status.css">
+    </head>
+<body class="waiting-status-page has-bottom-nav">
 <main class="main" role="main">
 
     <header class="page-header waiting-header">
@@ -41,7 +40,6 @@ if (!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?
                         <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
                         <span class="profile-menu-role">Commuter account</span>
                     </div>
-                    <a href="notifications.php" role="menuitem"><i class="fa fa-bell" aria-hidden="true"></i> Updates</a>
                     <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                     <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                 </div>
@@ -51,77 +49,8 @@ if (!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?
 
     <p id="waitFlash" class="wait-flash" role="status" aria-live="polite" hidden></p>
 
-    <section id="waitSkeleton" class="wait-skeleton" aria-hidden="true">
-        <span></span><span></span><span></span>
-    </section>
-
-    <!-- State: rider is marked waiting -->
-    <section id="waitState" class="wait-card wait-card-status" aria-labelledby="waitStateTitle" hidden>
-        <div class="wait-status-top">
-            <span class="wait-live"><span class="wait-dot" aria-hidden="true"></span><span id="waitStateLabel">You're waiting</span></span>
-            <span id="waitStateChip" class="wait-chip">Active</span>
-        </div>
-        <h2 id="waitStateTitle">—</h2>
-        <p id="waitStop" class="wait-stop">—</p>
-        <dl class="wait-meta">
-            <div><dt>Shared</dt><dd id="waitShared">—</dd></div>
-            <div><dt>Expires</dt><dd id="waitExpires">—</dd></div>
-            <div><dt>Bus</dt><dd id="waitBusGps">—</dd></div>
-        </dl>
-        <div class="wait-actions">
-            <button type="button" id="waitCancel" class="wait-btn wait-btn-danger">Cancel waiting</button>
-        </div>
-    </section>
-
-    <!-- State: choose a bus, pin the pickup point, then mark waiting -->
-    <section id="waitPicker" class="wait-card wait-picker-card" aria-labelledby="waitPickerTitle" hidden>
-        <h2 id="waitPickerTitle">Mark yourself as waiting</h2>
-        <p class="wait-lead">Choose a bus, pin your spot, then confirm.</p>
-
-        <div class="wait-step-heading"><span>1</span><h3>Choose your bus</h3></div>
-        <div id="waitTrips" class="wait-trips" role="radiogroup" aria-label="Active buses"></div>
-
-        <div class="wait-step-heading"><span>2</span><h3>Pin your pickup spot</h3></div>
-        <button type="button" id="waitPin" class="wait-btn wait-btn-location" disabled>
-            <i class="fa fa-location-crosshairs" aria-hidden="true"></i>
-            <span>Use my current location</span>
-        </button>
-        <p id="waitPinStatus" class="wait-pin-status" role="status" aria-live="polite">Choose a bus first</p>
-        <div id="waitMap" class="wait-map" aria-label="Tap the map or drag the pin to set your pickup spot"></div>
-        <p class="wait-map-tip">Tap the map or move the pin to adjust.</p>
-
-        <div class="wait-optional">
-            <label class="wait-landmark">Stop name <span>(optional)</span>
-                <input id="waitLabel" type="text" maxlength="100" autocomplete="off" placeholder="e.g. Main gate">
-            </label>
-        </div>
-        <div class="wait-coords" hidden>
-            <label>Latitude<input id="waitLat" type="number" inputmode="decimal" step="any" min="-90" max="90"></label>
-            <label>Longitude<input id="waitLng" type="number" inputmode="decimal" step="any" min="-180" max="180"></label>
-        </div>
-        <button type="button" id="waitShare" class="wait-btn wait-btn-primary" disabled>
-            <i class="fa fa-hourglass-half" aria-hidden="true"></i>
-            <span id="waitShareLabel">Mark me as waiting</span>
-        </button>
-    </section>
-
-    <!-- State: no active bus -->
-    <section id="waitEmpty" class="wait-card wait-empty" hidden>
-        <i class="fa fa-bus" aria-hidden="true"></i>
-        <h2>No bus available</h2>
-        <p>Check back when a bus is boarding or in service.</p>
-        <a href="schedule.php" class="wait-btn wait-btn-ghost">See schedule</a>
-    </section>
-
-    <section class="wait-updates" aria-label="Trip updates">
-        <a href="live.php" class="wait-updates-link">
-            <span><i class="fa fa-map-location-dot" aria-hidden="true"></i> Track the bus</span>
-            <i class="fa fa-chevron-right" aria-hidden="true"></i>
-        </a>
-        <a href="notifications.php" class="wait-updates-link">
-            <span><i class="fa fa-bell" aria-hidden="true"></i> Updates</span>
-            <i class="fa fa-chevron-right" aria-hidden="true"></i>
-        </a>
+    <section id="statusCard" class="ws-card" aria-live="polite">
+        <p class="ws-loading">Checking your status…</p>
     </section>
 </main>
 
@@ -134,8 +63,7 @@ if (!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?
 </nav>
 
 <script>window.mbusWaitingConfig = <?php echo json_encode(['csrfToken' => csrf_get_token(), 'scheduleId' => $schedule_id], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="../Assets/js/commuter_waiting.js"></script>
+<script src="../Assets/js/commuter_waiting_status.js"></script>
 <script src="../Assets/js/app-header.js"></script>
 </body>
 </html>

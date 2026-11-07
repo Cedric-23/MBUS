@@ -111,7 +111,11 @@
             const state = document.createElement('span'); state.className = 'bus-row-state'; state.textContent = st.label;
             row.append(icon, main, state);
             row.addEventListener('click', () => pick(String(trip.schedule_id) === chosen ? '' : trip.schedule_id));
-            list.append(row);
+            const wrap = document.createElement('div'); wrap.className = 'bus-row-wrap';
+            const go = document.createElement('a'); go.className = 'bus-row-pick'; go.href = 'pickup.php?schedule_id=' + encodeURIComponent(trip.schedule_id); go.textContent = 'Pick up';
+            go.setAttribute('aria-label', 'Pick up at bus ' + (trip.bus_number || ''));
+            wrap.append(row, go);
+            list.append(wrap);
         });
 
         // map pins
@@ -128,7 +132,8 @@
                 if (picked) focus = point;
                 const popup = document.createElement('div');
                 const strong = document.createElement('strong'); strong.textContent = 'Bus ' + (trip.bus_number || '');
-                popup.append(strong, document.createElement('br'), document.createTextNode(st.label));
+                const popGo = document.createElement('a'); popGo.className = 'bus-pop-pick'; popGo.href = 'pickup.php?schedule_id=' + encodeURIComponent(trip.schedule_id); popGo.textContent = 'Pick up';
+                popup.append(strong, document.createElement('br'), document.createTextNode(st.label), document.createElement('br'), popGo);
                 L.marker(point, { icon: busIcon(trip.bus_number, st.kind === 'stale', false), title: 'Bus ' + (trip.bus_number || '') })
                     .addTo(markerLayer).bindPopup(popup);
             });
