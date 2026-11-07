@@ -25,6 +25,13 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     ]);
     $pdo->exec("SET TIME ZONE '" . str_replace("'", "''", mbus_timezone()) . "'");
+    // Keep profile uploads compatible with deployments where the optional migration
+    // has not yet been run manually. IF NOT EXISTS makes this safe on every request.
+    try {
+        $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(255)');
+    } catch (PDOException $schema_error) {
+        error_log('Profile picture schema check failed: ' . $schema_error->getMessage());
+    }
     $conn = new MbusConnection($pdo);
 } catch (PDOException $e) {
     $GLOBALS['mbus_connect_error'] = $e->getMessage();

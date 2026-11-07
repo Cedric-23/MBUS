@@ -104,9 +104,11 @@ if (isset($_POST['upload_picture'])) {
                     $picture_updated = mbus_db_prepare($conn, "UPDATE users SET profile_picture = ? WHERE user_id = ?", [$new_filename, $user_id]);
                     if ($picture_updated === false) {
                         @unlink($upload_path);
+                        error_log('Profile picture database update failed for user ' . (int)$user_id . ': ' . mbus_db_error($conn));
                         $picture_error = "The picture was uploaded but could not be saved to your profile.";
                     } else {
                         $user_data['profile_picture'] = $new_filename;
+                        $_SESSION['profile_picture'] = $new_filename;
                         $picture_success = "Profile picture updated successfully";
                     }
                 } else {

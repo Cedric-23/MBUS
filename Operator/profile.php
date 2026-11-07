@@ -21,7 +21,7 @@ $name = htmlspecialchars($_SESSION['full_name'] ?? 'Operator');
     <header class="page-header" role="banner">
         <div class="page-header-left"><h1>My Profile</h1></div>
         <div class="page-header-right"><div class="profile-menu-wrap">
-            <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($name, 0, 1)); ?></span></button>
+            <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><img src="<?php $avatar = basename((string)($_SESSION['profile_picture'] ?? '')); echo htmlspecialchars(($avatar !== '' && $avatar !== 'default.png') ? '../Assets/profile_pictures/' . rawurlencode($avatar) : '../Assets/images/mbus_icon.png'); ?>" alt=""></span></button>
             <div class="profile-menu" id="profileMenu" role="menu">
                 <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $name; ?></span><span class="profile-menu-role">Operator account</span></div>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>

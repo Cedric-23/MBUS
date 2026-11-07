@@ -171,7 +171,7 @@ function mbus_pickup_feed(PDO $pdo, string $role, int $userId): array
     $requests = [];
     if ($ready) {
         $params = [];
-        $name = $role === 'commuter' ? '' : ', u.full_name';
+        $name = $role === 'commuter' ? '' : ', u.full_name, u.profile_picture';
         $sql = "SELECT p.request_id, p.schedule_id, p.status, p.latitude, p.longitude, p.pickup_label,
             p.destination, p.updated_at, p.expires_at, b.bus_number, r.origin, r.destination AS route_destination,
             (p.expires_at <= NOW()) AS expired {$name}

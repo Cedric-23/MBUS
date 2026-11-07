@@ -50,8 +50,9 @@
     }
     const busIcon = (no, stale) => L.divIcon({ className: '', iconSize: [84, 28], iconAnchor: [42, 14],
         html: '<span class="sw-bus' + (stale ? ' is-stale' : '') + '"><i class="fa fa-bus" aria-hidden="true"></i>' + String(no || 'Bus').replace(/[<>&"]/g, '') + '</span>' });
-    const personIcon = (name, on) => L.divIcon({ className: '', iconSize: [34, 34], iconAnchor: [17, 17],
-        html: '<span class="sw-person' + (on ? ' is-on' : '') + '">' + String(name || '?').trim().charAt(0).toUpperCase().replace(/[<>&"]/g, '') + '</span>' });
+    const avatarUrl = picture => picture ? '../Assets/profile_pictures/' + encodeURIComponent(String(picture).split('/').pop()) : '../Assets/images/mbus_icon.png';
+    const personIcon = (name, on, picture) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
+        html: '<span class="sw-person' + (on ? ' is-on' : '') + '"><img src="' + avatarUrl(picture) + '" alt=""></span>' });
 
     function fit(points) {
         if (!map || !points.length) return;
@@ -93,7 +94,7 @@
             const ok = validPt(r.latitude, r.longitude), p = ok ? [+r.latitude, +r.longitude] : null;
             if (p && map) {
                 pts.push(p);
-                const m = L.marker(p, { icon: personIcon(r.full_name, on), title: r.full_name || 'Commuter' }).addTo(layer);
+                const m = L.marker(p, { icon: personIcon(r.full_name, on, r.profile_picture), title: r.full_name || 'Commuter' }).addTo(layer);
                 m.on('click', () => choose(r));
                 if (on) {
                     const b = busFor(r.schedule_id);
@@ -102,7 +103,11 @@
             }
             const li = node('li', undefined, 'sw-row' + (on ? ' is-on' : ''));
             const open = node('button', undefined, 'sw-row-main'); open.type = 'button';
-            open.append(node('span', String(r.full_name || '?').trim().charAt(0).toUpperCase(), 'sw-avatar'));
+            const avatar = node('img', undefined, 'sw-avatar');
+            avatar.src = avatarUrl(r.profile_picture);
+            avatar.alt = '';
+            avatar.onerror = () => { avatar.onerror = null; avatar.src = '../Assets/images/mbus_icon.png'; };
+            open.append(avatar);
             const txt = node('span', undefined, 'sw-row-text');
             txt.append(node('strong', r.full_name || 'Commuter'),
                 node('small', (r.pickup_label || 'Pinned spot') + (r.bus_number ? ' · ' + r.bus_number : '') + ' · ' + ago(r.updated_at)));

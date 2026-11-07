@@ -36,6 +36,7 @@ if(isset($_POST['login'])){
             $_SESSION['user_id'] = $user['user_id'];
             $_SESSION['full_name'] = $user['full_name'];
             $_SESSION['user_type'] = strtolower($user['user_type']);
+            $_SESSION['profile_picture'] = $user['profile_picture'] ?? 'default.png';
 
             // Log successful login
             log_activity($conn, $user['user_id'], ACTION_LOGIN, "User logged in successfully");
