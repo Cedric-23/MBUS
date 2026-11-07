@@ -42,44 +42,27 @@ $latest_v = $vq === false ? false : mbus_db_fetch_assoc($vq);
 
 /* HANDLE PROFILE UPDATE */
 if(isset($_POST['update_profile'])){
-    if(!csrf_validate_token()){
+    if(!csrf_validate_token()) {
         $error = "Security validation failed. Please try again.";
     } else {
-        $full_name = trim($_POST['full_name']);
-        $email = trim($_POST['email']);
-        $phone_number = preg_replace('/\D+/', '', (string)($_POST['phone_number'] ?? ''));
-        if(strlen($phone_number) === 12 && strpos($phone_number, '63') === 0) $phone_number = '0' . substr($phone_number, 2);
-        elseif(strlen($phone_number) === 10 && $phone_number[0] === '9') $phone_number = '0' . $phone_number;
-
-        if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
-            $error = "Invalid email format";
-        } elseif ($phone_number !== '' && !preg_match('/^09\d{9}$/', $phone_number)) {
-            $error = "Phone number must be 11 digits starting with 09 (e.g., 09123456789). Leave it blank if you'd rather not add one.";
+        $full_name = trim((string)($_POST['full_name'] ?? ''));
+        $phone_number = (string)($user_data['phone_number'] ?? '');
+        if (isset($_POST['change_phone']) && $_POST['change_phone'] === '1') {
+            $phone_number = preg_replace('/\D+/', '', (string)($_POST['phone_number'] ?? ''));
+            if(strlen($phone_number) === 12 && strpos($phone_number, '63') === 0) $phone_number = '0' . substr($phone_number, 2);
+            elseif(strlen($phone_number) === 10 && $phone_number[0] === '9') $phone_number = '0' . $phone_number;
+        }
+        if ($phone_number !== '' && !preg_match('/^09\d{9}$/', $phone_number)) {
+            $error = "Phone number must be 11 digits starting with 09 (e.g., 09123456789).";
         } else {
-            $email_check = mbus_db_prepare($conn,"
-                SELECT user_id FROM users
-                WHERE LOWER(email) = LOWER(?) AND user_id != ?
-            ", [$email, $user_id]);
-
-            if(mbus_db_num_rows($email_check) > 0){
-                $error = "Email already in use by another account";
+            $updated = mbus_db_prepare($conn, "UPDATE users SET full_name = ?, phone_number = ? WHERE user_id = ?", [$full_name, $phone_number, $user_id]);
+            if ($updated === false) {
+                $error = "Profile could not be updated.";
             } else {
-                mbus_db_prepare($conn,"
-                    UPDATE users
-                    SET full_name = ?, email = ?, phone_number = ?
-                    WHERE user_id = ?
-                ", [$full_name, $email, $phone_number, $user_id]);
-
                 log_activity($conn, $user_id, ACTION_PROFILE_UPDATE, "Profile information updated");
-
                 $_SESSION['full_name'] = $full_name;
                 $success = "Profile updated successfully";
-
-                $user_query = mbus_db_prepare($conn,"
-                    SELECT user_id, full_name, email, phone_number, user_type, profile_picture
-                    FROM users
-                    WHERE user_id = ?
-                ", [$user_id]);
+                $user_query = mbus_db_prepare($conn, "SELECT user_id, full_name, email, phone_number, user_type, profile_picture FROM users WHERE user_id = ?", [$user_id]);
                 $user_data = mbus_db_fetch_assoc($user_query);
             }
         }
@@ -213,13 +196,18 @@ if(isset($_POST['upload_picture'])){
                 
                 <div class="form-group">
                     <label for="email">Email Address</label>
-                    <input type="email" name="email" id="email" value="<?php echo htmlspecialchars($user_data['email'] ?? ''); ?>" class="form-control" required>
+                    <input type="email" id="email" value="<?php echo htmlspecialchars($user_data['email'] ?? ''); ?>" class="form-control" readonly aria-readonly="true">
+                    <small class="form-hint">Email changes are managed by MBUS support.</small>
                 </div>
                 
                 <div class="form-group">
                     <label for="phone_number">Phone Number</label>
-                    <input type="tel" name="phone_number" id="phone_number" value="<?php $ph = $_POST['phone_number'] ?? ($user_data['phone_number'] ?? ''); echo htmlspecialchars(strlen(preg_replace('/\D+/', '', (string)$ph)) < 2 ? '' : $ph); ?>" class="form-control" inputmode="tel" autocomplete="tel" maxlength="16" placeholder="09XXXXXXXXX">
-                    <small class="form-hint">Format: 11 digits starting with 09 (e.g., 09123456789)</small>
+                    <div style="display:flex;gap:.5rem;align-items:center;">
+                        <input type="tel" name="phone_number" id="phone_number" value="<?php echo htmlspecialchars($user_data['phone_number'] ?? ''); ?>" class="form-control" inputmode="tel" autocomplete="tel" maxlength="16" placeholder="09XXXXXXXXX" <?php echo !empty($user_data['phone_number']) ? 'readonly aria-readonly="true"' : ''; ?>>
+                        <?php if(!empty($user_data['phone_number'])): ?><button type="button" class="btn btn-secondary" id="changePhoneBtn">Change</button><?php endif; ?>
+                    </div>
+                    <input type="hidden" name="change_phone" id="changePhone" value="0">
+                    <small class="form-hint">Your phone stays locked until you choose Change. Format: 11 digits starting with 09.</small>
                 </div>
                 
                 <div class="form-group">
@@ -288,6 +276,17 @@ function toggleSidebar() {
         document.body.classList.toggle('sidebar-open', isOpen);
     }
 }
+
+const changePhoneBtn = document.getElementById('changePhoneBtn');
+if (changePhoneBtn) changePhoneBtn.addEventListener('click', function () {
+    const input = document.getElementById('phone_number');
+    const enabled = input.hasAttribute('readonly');
+    input.toggleAttribute('readonly', !enabled);
+    input.setAttribute('aria-readonly', String(!enabled));
+    document.getElementById('changePhone').value = enabled ? '1' : '0';
+    this.textContent = enabled ? 'Keep number' : 'Change';
+    if (enabled) input.focus();
+});
 
 // Profile picture preview
 function previewProfilePicture(input) {

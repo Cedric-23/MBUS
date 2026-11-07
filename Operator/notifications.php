@@ -284,6 +284,7 @@ document.addEventListener('keydown', function(e) {
     <a href="waiting.php" class="bottom-nav-item">
         <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
+    <a href="live_map.php" class="bottom-nav-item"><i class="fa fa-map-location-dot" aria-hidden="true"></i><span>Live</span></a>
 </nav>
 <script src="../Assets/js/app-header.js"></script>
 <script src="../Assets/js/operator_tracker.js"></script>
