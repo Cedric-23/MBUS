@@ -1,6 +1,6 @@
 # Waiting riders, live bus location and the location gate
 
-After the existing MBUS schema, apply both additive migrations in order: `supabase/10_live_pickup.sql` and `supabase/11_bus_live_tracking.sql`. Migration 10 stores the latest commuter waiting signal; migration 11 stores the latest operator GPS point for each trip. Both preserve schedules, reservations, accounts and payments, and reapplying is safe. A Git push does not run migrations.
+After the existing MBUS schema, apply the additive migrations `supabase/10_live_pickup.sql` and `supabase/11_bus_live_tracking.sql` in order. Migration 10 stores the latest commuter waiting signal; migration 11 stores the latest operator GPS point for each trip. Both preserve schedules, reservations, accounts and payments, and reapplying is safe. Apply `supabase/13_route_terminal_coordinates.sql` as well to persist the canonical Morong and Harbor Point route pins. A Git push does not run database migrations.
 
 ## One Waiting tab, three roles
 
@@ -22,6 +22,12 @@ Commuter navigation is Home / Schedule / Live / Trips / Waiting. Live is trackin
 
 Once the gate has passed, `Assets/js/pickup_staff.js` starts sharing automatically on the operator dashboard without a visible map, badge, location card or trip selector. Status is available to assistive technology only; the app picks the active trip automatically and posts at most every 8.5 seconds. On `Operator/manage_trips.php` the script sends one immediate fix before watching, so changing a trip to **Departed** pins the bus location right away; the page also shows a short "Departed — pinning your location" banner. Sharing pauses when the tab is hidden and resumes when it returns.
 
+## Road route and destination estimate
+
+Commuter Schedule/Live and the Operator/Admin Waiting map draw OSRM-compatible road geometry over OpenStreetMap tiles. The canonical Morong endpoint is **Morong Bus Terminal** (`14.6798552, 120.2728757`). The SBMA endpoint is the public-facing **SBMA E-bus stop — in front of National Bookstore, Harbor Point** (`14.8243652, 120.2801434`). The Harbor Point pin identifies the mapped storefront/terminal frontage; it is not a surveyed curb coordinate.
+
+The road router supplies route geometry, road distance and estimated driving duration. For the researched endpoint pair, the current public OSRM demo response is about **31.0 km** and **31 minutes**. Live destination estimates project the latest bus pin onto that road route and scale the route estimate by remaining distance. These are road-network estimates, not live-traffic or scheduled bus-arrival predictions; traffic, stops, closures, boarding time and detours can change the actual arrival. The moving operator GPS point is not sent to the routing provider. The default public OSRM demo is best-effort only; set `MBUS_ROUTING_ENDPOINT` to a managed or self-hosted HTTPS OSRM-compatible endpoint for sustained production use. See [terminal coordinates, source notes and routing limitations](docs/route-terminal-research.md).
+
 ## API
 
 `api/live_tracking.php` reads `mbus_tracking_feed()` and writes through `mbus_tracking_mutate()` in `Includes/bus_tracking.php`.
@@ -38,6 +44,7 @@ A waiting signal expires 30 minutes after it was shared and is scoped to one tri
 node tests/waiting_ux_test.cjs
 node tests/operator_live_tracking_test.cjs
 node tests/commuter_live_tracking_test.cjs
+node tests/route_accuracy_test.cjs
 MBUS_TRACKING_TEST_DSN='pgsql:host=/var/run/postgresql;dbname=mbus_pickup_test' php tests/tracking_integration.php
 MBUS_PICKUP_TEST_DSN='pgsql:host=/var/run/postgresql;dbname=mbus_pickup_test' php tests/pickup_integration.php
 ```

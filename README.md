@@ -67,7 +67,7 @@ Public bus reservation system — PHP + Supabase PostgreSQL.
 
 Already applied if you ran setup before. To re-run:
 
-For waiting riders and live bus tracking, apply additive migrations `supabase/10_live_pickup.sql` and `supabase/11_bus_live_tracking.sql` in order. See [Waiting riders, live bus location and the location gate](LIVE_PICKUP.md) for the role flow, API payloads and local checks. A Git push does not apply database migrations.
+For waiting riders and live bus tracking, apply additive migrations `supabase/10_live_pickup.sql` and `supabase/11_bus_live_tracking.sql` in order. Apply `supabase/13_route_terminal_coordinates.sql` to persist the canonical Morong and Harbor Point terminal pins. Runtime route feeds also use those pins for known terminal names if the migration has not been applied. See [Waiting riders, live bus location and the location gate](LIVE_PICKUP.md) for the role flow, API payloads and local checks. A Git push does not apply database migrations.
 
 ```bash
 php scripts/setup_supabase.php
@@ -95,7 +95,12 @@ Check the static UI contract and API behavior locally:
 node tests/waiting_ux_test.cjs
 node tests/operator_live_tracking_test.cjs
 node tests/commuter_live_tracking_test.cjs
+node tests/route_accuracy_test.cjs
 ```
+
+## Road routes and destination estimates
+
+Commuter Schedule/Live and the Operator/Admin Waiting map use OpenStreetMap for map tiles and an OSRM-compatible road router for route geometry, road distance and estimated driving time. Live destination estimates project the latest bus pin onto the mapped road route; they are not live-traffic ETAs and exclude stops or detours. The default public OSRM demo is best-effort only; set `MBUS_ROUTING_ENDPOINT` to a managed or self-hosted HTTPS OSRM-compatible endpoint for sustained production use. See [terminal coordinates, source notes and routing limitations](docs/route-terminal-research.md) for the Morong and SBMA terminal research.
 
 ---
 

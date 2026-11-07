@@ -76,6 +76,10 @@ $navItems = $isAdmin
             <h2><span id="staffCount">0</span> waiting</h2>
             <span class="sw-sheet-sub" id="busLabel"></span>
         </div>
+        <div class="sw-route-controls">
+            <p id="staffRouteEstimate" class="sw-route-estimate" role="status" aria-live="polite">Choose a bus to see its route and destination estimate.</p>
+            <button type="button" id="staffRouteView" class="sw-route-view" disabled>Full route</button>
+        </div>
         <p id="staffEmpty" class="sw-empty">No one is waiting right now.</p>
         <ul id="staffList" class="sw-list" aria-live="polite"></ul>
     </section>
@@ -90,6 +94,7 @@ $navItems = $isAdmin
 </nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="../Assets/js/route_utils.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/route_utils.js'); ?>"></script>
 <script src="../Assets/js/staff_waiting.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/staff_waiting.js'); ?>"></script>
 <script src="../Assets/js/app-header.js"></script>
 <?php if (strtolower((string)($_SESSION['user_type'] ?? '')) === 'operator') { ?><script src="../Assets/js/operator_tracker.js"></script><?php } ?>

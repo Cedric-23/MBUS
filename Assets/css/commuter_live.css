@@ -5,7 +5,12 @@
 .dot-stale { background: #8d9bad; }
 .board-bus-pin.is-stale { background: #8d9bad; }
 .board-bus-pin.is-picked { background: var(--board-navy, #18365d); }
+.commuter-live-page .board-map-head { flex-wrap: wrap; }
 .live-map-note { color: #6b7a8d; }
+.live-route-estimate { margin-top: 0; }
+.live-route-line { color: #1e90ff; }
+.route-view-btn { min-height: 34px; padding: 0 11px; border: 1px solid #d8e1ec; border-radius: 999px; background: #fff; color: #18365d; font: inherit; font-size: .75rem; font-weight: 700; white-space: nowrap; }
+.route-view-btn:disabled { opacity: .48; }
 
 .bus-row {
   display: grid;

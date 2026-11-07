@@ -23,6 +23,10 @@
 .sw-sheet-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
 .sw-sheet-head h2 { margin: 0; font-size: 1.125rem; }
 .sw-sheet-sub { font-size: .8125rem; color: #6b7a8d; }
+.sw-route-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.sw-route-estimate { flex: 1; min-width: 0; margin: 0; padding: 7px 9px; border-radius: 10px; background: #f1f6fd; color: #385579; font-size: .75rem; line-height: 1.35; }
+.sw-route-view { flex: none; min-height: 34px; padding: 0 10px; border: 1px solid #d8e1ec; border-radius: 999px; background: #fff; color: #18365d; font: inherit; font-size: .75rem; font-weight: 700; }
+.sw-route-view:disabled { opacity: .45; }
 .sw-empty { margin: 6px 0 10px; color: #6b7a8d; font-size: .9375rem; }
 .sw-empty[hidden] { display: none; }
 .sw-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain; }

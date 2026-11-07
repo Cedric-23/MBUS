@@ -75,6 +75,16 @@
   min-height: 300px;
 }
 
+.route-estimate {
+  margin: 0;
+  padding: 12px 16px 14px;
+  color: var(--color-text-secondary, #536174);
+  background: var(--color-bg, #fff);
+  border-top: 1px solid var(--color-border, #e5eaf0);
+  font-size: var(--fs-sm, .875rem);
+  line-height: 1.45;
+}
+
 .map-placeholder {
   display: flex;
   align-items: center;

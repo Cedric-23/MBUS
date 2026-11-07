@@ -14,11 +14,12 @@ if(
 
 include "../config/db_connect.php";
 include "../Includes/csrf.php";
+require_once __DIR__ . '/../Includes/route_locations.php';
 
 /* ROUTE OPTIONS */
 $places = [
-    "Morong Terminal",
-    "SBMA"
+    "Morong Terminal" => "Morong Bus Terminal (Morong, Bataan)",
+    "SBMA" => "SBMA E-bus stop — in front of National Bookstore, Harbor Point"
 ];
 
 /* ADD ROUTE */
@@ -27,24 +28,41 @@ if(isset($_POST['add_route'])){
     if(!csrf_validate_token()){
         $error = "Security validation failed. Please try again.";
     } else {
-        $origin = $_POST['origin'];
-        $destination = $_POST['destination'];
+        $origin = isset($_POST['origin']) && is_scalar($_POST['origin']) ? trim((string)$_POST['origin']) : '';
+        $destination = isset($_POST['destination']) && is_scalar($_POST['destination']) ? trim((string)$_POST['destination']) : '';
 
         if($origin == "custom"){
-            $origin = trim($_POST['custom_origin']);
+            $origin = isset($_POST['custom_origin']) && is_scalar($_POST['custom_origin']) ? trim((string)$_POST['custom_origin']) : '';
         }
 
         if($destination == "custom"){
-            $destination = trim($_POST['custom_destination']);
+            $destination = isset($_POST['custom_destination']) && is_scalar($_POST['custom_destination']) ? trim((string)$_POST['custom_destination']) : '';
         }
 
-        $fare = trim($_POST['fare']);
-        $origin_lat = trim($_POST['origin_lat']);
-        $origin_lng = trim($_POST['origin_lng']);
-        $destination_lat = trim($_POST['destination_lat']);
-        $destination_lng = trim($_POST['destination_lng']);
+        $fare = isset($_POST['fare']) && is_scalar($_POST['fare']) ? trim((string)$_POST['fare']) : '';
+        $origin_lat = isset($_POST['origin_lat']) && is_scalar($_POST['origin_lat']) ? trim((string)$_POST['origin_lat']) : '';
+        $origin_lng = isset($_POST['origin_lng']) && is_scalar($_POST['origin_lng']) ? trim((string)$_POST['origin_lng']) : '';
+        $destination_lat = isset($_POST['destination_lat']) && is_scalar($_POST['destination_lat']) ? trim((string)$_POST['destination_lat']) : '';
+        $destination_lng = isset($_POST['destination_lng']) && is_scalar($_POST['destination_lng']) ? trim((string)$_POST['destination_lng']) : '';
 
-        if($origin == $destination){
+        $knownOrigin = mbus_route_known_terminal($origin);
+        $knownDestination = mbus_route_known_terminal($destination);
+        if ($knownOrigin) {
+            $origin_lat = (string)$knownOrigin['latitude'];
+            $origin_lng = (string)$knownOrigin['longitude'];
+        }
+        if ($knownDestination) {
+            $destination_lat = (string)$knownDestination['latitude'];
+            $destination_lng = (string)$knownDestination['longitude'];
+        }
+        $coordinatesValid = is_numeric($origin_lat) && is_numeric($origin_lng) && is_numeric($destination_lat) && is_numeric($destination_lng)
+            && is_finite((float)$origin_lat) && is_finite((float)$origin_lng) && is_finite((float)$destination_lat) && is_finite((float)$destination_lng)
+            && abs((float)$origin_lat) <= 90 && abs((float)$destination_lat) <= 90
+            && abs((float)$origin_lng) <= 180 && abs((float)$destination_lng) <= 180;
+
+        if(!$coordinatesValid){
+            $error = "Choose both route points on the map before adding this route.";
+        } elseif($origin == $destination){
             $error = "Origin and destination cannot be the same";
         } else {
             // Use prepared statement to check
@@ -94,11 +112,7 @@ if(isset($_POST['delete_route'])){
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/manage_routes.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
-
-    <!-- GOOGLE MAPS API -->
-    <script async defer
-src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_API_KEY') ?: 'YOUR_API_KEY'; ?>&callback=initMap">
-    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
@@ -178,9 +192,9 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
                 <label for="origin">Origin</label>
                 <select name="origin" id="origin" class="form-control" required>
                     <option value="">Select Origin</option>
-                    <?php foreach($places as $place){ ?>
-                    <option value="<?php echo $place; ?>">
-                        <?php echo $place; ?>
+                    <?php foreach($places as $value => $label){ ?>
+                    <option value="<?php echo htmlspecialchars($value, ENT_QUOTES); ?>">
+                        <?php echo htmlspecialchars($label); ?>
                     </option>
                     <?php } ?>
                     <option value="custom">Custom Route</option>
@@ -193,9 +207,9 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
                 <label for="destination">Destination</label>
                 <select name="destination" id="destination" class="form-control" required>
                     <option value="">Select Destination</option>
-                    <?php foreach($places as $place){ ?>
-                    <option value="<?php echo $place; ?>">
-                        <?php echo $place; ?>
+                    <?php foreach($places as $value => $label){ ?>
+                    <option value="<?php echo htmlspecialchars($value, ENT_QUOTES); ?>">
+                        <?php echo htmlspecialchars($label); ?>
                     </option>
                     <?php } ?>
                     <option value="custom">Custom Route</option>
@@ -229,9 +243,10 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
 
             <!-- MAP -->
             <div class="form-group" style="grid-column: 1 / -1;">
-                <label>Route Map (Click to set origin and destination)</label>
+                <label>Route map and road preview</label>
                 <div id="routeMap" class="map-canvas" style="height: 400px;"></div>
-                <p class="form-hint">Click on the map to set origin (first click) and destination (second click). The route will be displayed between the two points.</p>
+                <p class="form-hint">Known terminals fill their mapped pins automatically. For a custom route, click the origin and destination on the map.</p>
+                <p id="routeEstimate" class="route-estimate" role="status" aria-live="polite">Choose both stops to see a road distance and driving-time estimate.</p>
             </div>
         </div>
 
@@ -264,6 +279,7 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
                 ");
 
                 while($row = mbus_db_fetch_assoc($query)){
+                $routeDisplay = mbus_route_apply_terminal_defaults($row);
                 ?>
                 <tr>
                     <form method="POST" class="route-form">
@@ -272,7 +288,7 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
                         
                         <td data-label="Route">
                             <span class="route-badge">
-                                <?php echo htmlspecialchars($row['origin']); ?> → <?php echo htmlspecialchars($row['destination']); ?>
+                                <?php echo htmlspecialchars($routeDisplay['origin_label']); ?> → <?php echo htmlspecialchars($routeDisplay['destination_label']); ?>
                             </span>
                         </td>
                         <td data-label="Fare">₱<?php echo number_format($row['fare'], 2); ?></td>
@@ -302,13 +318,18 @@ const customDestination = document.getElementById("custom_destination");
 
 /* ORIGIN */
 origin.addEventListener("change", function(){
-    customOrigin.style.display = (this.value == "custom") ? "block" : "none";
+    clickCount = 0;
+    applyEndpoint('origin');
     updateDestination();
+    applyEndpoint('destination');
+    drawRoute();
 });
 
 /* DESTINATION */
 destination.addEventListener("change", function(){
-    customDestination.style.display = (this.value == "custom") ? "block" : "none";
+    clickCount = 0;
+    applyEndpoint('destination');
+    drawRoute();
 });
 
 /* DISABLE SAME */
@@ -367,97 +388,126 @@ document.addEventListener('keydown', function(e) {
 });
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="../Assets/js/route_utils.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/route_utils.js'); ?>"></script>
 <script>
 let map;
 let originMarker = null;
 let destinationMarker = null;
-let directionsService = null;
-let directionsRenderer = null;
 let clickCount = 0;
+let routeLine = null;
+let routeRequest = 0;
+const terminalPins = {
+    'Morong Terminal': { lat: 14.6798552, lng: 120.2728757, label: 'Morong Bus Terminal (Morong, Bataan)' },
+    'SBMA': { lat: 14.8243652, lng: 120.2801434, label: 'Harbor Point / National Bookstore frontage' }
+};
+
+function markerIcon(label) {
+    return L.divIcon({ className: 'route-endpoint-icon', html: '<span>' + label + '</span>', iconSize: [30, 36], iconAnchor: [15, 34] });
+}
+
+function setEndpoint(kind, lat, lng, label) {
+    const isOrigin = kind === 'origin';
+    document.getElementById(isOrigin ? 'origin_lat' : 'destination_lat').value = Number(lat).toFixed(7);
+    document.getElementById(isOrigin ? 'origin_lng' : 'destination_lng').value = Number(lng).toFixed(7);
+    if (!map || !window.L) return;
+    const position = [Number(lat), Number(lng)];
+    if (isOrigin) originMarker = originMarker ? originMarker.setLatLng(position) : L.marker(position, { icon: markerIcon('A'), title: 'Origin' }).addTo(map);
+    else destinationMarker = destinationMarker ? destinationMarker.setLatLng(position) : L.marker(position, { icon: markerIcon('B'), title: 'Destination' }).addTo(map);
+    (isOrigin ? originMarker : destinationMarker).bindTooltip(label || (isOrigin ? 'Origin' : 'Destination'));
+}
+
+function clearEndpoint(kind) {
+    const isOrigin = kind === 'origin';
+    document.getElementById(isOrigin ? 'origin_lat' : 'destination_lat').value = '';
+    document.getElementById(isOrigin ? 'origin_lng' : 'destination_lng').value = '';
+    if (isOrigin && originMarker) { map.removeLayer(originMarker); originMarker = null; }
+    if (!isOrigin && destinationMarker) { map.removeLayer(destinationMarker); destinationMarker = null; }
+}
+
+function applyEndpoint(kind) {
+    const select = document.getElementById(kind);
+    const custom = document.getElementById(kind === 'origin' ? 'custom_origin' : 'custom_destination');
+    const isCustom = select.value === 'custom';
+    custom.style.display = isCustom ? 'block' : 'none';
+    custom.required = isCustom;
+    if (isCustom) { clearEndpoint(kind); return; }
+    const pin = terminalPins[select.value];
+    if (pin) setEndpoint(kind, pin.lat, pin.lng, pin.label);
+    else clearEndpoint(kind);
+}
 
 function initMap() {
-    // Initialize map centered on Philippines
-    map = new google.maps.Map(document.getElementById("routeMap"), {
-        center: { lat: 14.5995, lng: 120.9842 },
-        zoom: 10,
-    });
-
-    directionsService = new google.maps.DirectionsService();
-    directionsRenderer = new google.maps.DirectionsRenderer({
-        map: map,
-        suppressMarkers: true
-    });
-
-    // Add click listener to map
-    map.addListener("click", function(event) {
-        handleMapClick(event.latLng);
-    });
+    if (!window.L) {
+        document.getElementById('routeEstimate').textContent = 'The map library did not load. Try again or choose another connection.';
+        return;
+    }
+    const morong = [14.6798552, 120.2728757];
+    const harborPoint = [14.8243652, 120.2801434];
+    map = L.map('routeMap', { zoomControl: true }).fitBounds([morong, harborPoint], { padding: [24, 24] });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · routing by OSRM'
+    }).addTo(map);
+    routeLine = L.layerGroup().addTo(map);
+    map.on('click', event => handleMapClick(event.latlng));
 }
 
 function handleMapClick(latLng) {
-    const lat = latLng.lat();
-    const lng = latLng.lng();
+    routeRequest++;
+    routeLine.clearLayers();
+    const kind = clickCount === 0 ? 'origin' : 'destination';
+    const select = document.getElementById(kind);
+    const custom = document.getElementById(kind === 'origin' ? 'custom_origin' : 'custom_destination');
+    if (select.value !== 'custom') select.value = 'custom';
+    custom.style.display = 'block';
+    custom.required = true;
+    if (!custom.value.trim()) custom.value = kind === 'origin' ? 'Custom origin' : 'Custom destination';
+    setEndpoint(kind, latLng.lat, latLng.lng, kind === 'origin' ? 'Custom origin' : 'Custom destination');
+    clickCount = kind === 'origin' ? 1 : 0;
+    if (clickCount === 0) drawRoute();
+    else document.getElementById('routeEstimate').textContent = 'Origin pinned. Click the destination on the map.';
+}
 
-    if (clickCount === 0) {
-        // Set origin
-        document.getElementById("origin_lat").value = lat;
-        document.getElementById("origin_lng").value = lng;
-
-        if (originMarker) {
-            originMarker.setMap(null);
-        }
-
-        originMarker = new google.maps.Marker({
-            position: { lat: lat, lng: lng },
-            map: map,
-            label: "A",
-            title: "Origin"
-        });
-
-        clickCount++;
-    } else if (clickCount === 1) {
-        // Set destination
-        document.getElementById("destination_lat").value = lat;
-        document.getElementById("destination_lng").value = lng;
-
-        if (destinationMarker) {
-            destinationMarker.setMap(null);
-        }
-
-        destinationMarker = new google.maps.Marker({
-            position: { lat: lat, lng: lng },
-            map: map,
-            label: "B",
-            title: "Destination"
-        });
-
-        // Draw route
-        drawRoute();
-
-        clickCount = 0;
+async function drawRoute() {
+    const estimate = document.getElementById('routeEstimate');
+    const fields = ['origin_lat', 'origin_lng', 'destination_lat', 'destination_lng'].map(id => document.getElementById(id).value.trim());
+    if (fields.some(value => value === '')) {
+        routeRequest++;
+        estimate.textContent = 'Choose both stops to see a road distance and driving-time estimate.';
+        if (routeLine) routeLine.clearLayers();
+        return;
+    }
+    const originPoint = { lat: Number(fields[0]), lng: Number(fields[1]) };
+    const destinationPoint = { lat: Number(fields[2]), lng: Number(fields[3]) };
+    if (!Number.isFinite(originPoint.lat) || !Number.isFinite(originPoint.lng) || !Number.isFinite(destinationPoint.lat) || !Number.isFinite(destinationPoint.lng)) {
+        estimate.textContent = 'Choose both stops to see a road distance and driving-time estimate.';
+        if (routeLine) routeLine.clearLayers();
+        return;
+    }
+    if (!map || !routeLine || !window.MBUSRouting) {
+        estimate.textContent = 'The map or road-routing service is unavailable right now.';
+        return;
+    }
+    const requestId = ++routeRequest;
+    estimate.textContent = 'Loading the road route and estimate…';
+    routeLine.clearLayers();
+    try {
+        const route = await window.MBUSRouting.getDrivingRoute(originPoint, destinationPoint);
+        if (requestId !== routeRequest) return;
+        L.polyline(route.points, { color: '#1e90ff', weight: 5, opacity: 0.88 }).addTo(routeLine);
+        map.fitBounds(L.latLngBounds(route.points).pad(0.12), { maxZoom: 14 });
+        estimate.textContent = window.MBUSRouting.formatDistance(route.distanceMeters) + ' road route · ' + window.MBUSRouting.formatDuration(route.durationSeconds) + ' driving. Traffic, stops and detours may add time.';
+    } catch (error) {
+        if (requestId !== routeRequest) return;
+        estimate.textContent = error.message || 'Road directions are unavailable right now.';
     }
 }
 
-function drawRoute() {
-    const originLat = parseFloat(document.getElementById("origin_lat").value);
-    const originLng = parseFloat(document.getElementById("origin_lng").value);
-    const destLat = parseFloat(document.getElementById("destination_lat").value);
-    const destLng = parseFloat(document.getElementById("destination_lng").value);
-
-    if (originLat && originLng && destLat && destLng) {
-        const request = {
-            origin: { lat: originLat, lng: originLng },
-            destination: { lat: destLat, lng: destLng },
-            travelMode: google.maps.TravelMode.DRIVING
-        };
-
-        directionsService.route(request, function(result, status) {
-            if (status === "OK") {
-                directionsRenderer.setDirections(result);
-            }
-        });
-    }
-}
+initMap();
+applyEndpoint('origin');
+applyEndpoint('destination');
+drawRoute();
 </script>
 
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">

@@ -313,6 +313,7 @@
   height: auto;
   min-height: 0;
 }
+.schedule-page .map-sheet .route-estimate { flex: 0 0 auto; }
 
 /* Empty / error states */
 .schedule-page .empty-state {

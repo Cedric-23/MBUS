@@ -1,6 +1,7 @@
 <?php
 /** Live pickup is a location signal only: no reservation, seat allocation or payment. */
 require_once __DIR__ . '/schedule_booking.php';
+require_once __DIR__ . '/route_locations.php';
 
 const MBUS_PICKUP_SETUP_MESSAGE = 'Live pickup is not enabled yet. Ask an administrator to deploy supabase/10_live_pickup.sql before using this feature.';
 
@@ -130,10 +131,11 @@ function mbus_pickup_eligible_sql(): string
 
 function mbus_pickup_schedule_payload(array $row, ?int $now = null): array
 {
+    $row = mbus_route_apply_terminal_defaults($row);
     $available = max(0, (int)$row['capacity'] - (int)$row['reserved_count']);
     $action = mbus_schedule_action($row, $available, $now);
     $result = [];
-    foreach (['schedule_id', 'bus_number', 'origin', 'destination', 'departure_time', 'arrival_time', 'trip_status', 'origin_lat', 'origin_lng', 'destination_lat', 'destination_lng'] as $key) {
+    foreach (['schedule_id', 'bus_number', 'origin', 'destination', 'origin_label', 'destination_label', 'departure_time', 'arrival_time', 'trip_status', 'origin_lat', 'origin_lng', 'destination_lat', 'destination_lng'] as $key) {
         $result[$key] = $row[$key] ?? null;
     }
     $result['schedule_id'] = (int)$row['schedule_id'];

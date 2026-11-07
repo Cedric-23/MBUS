@@ -66,9 +66,11 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
                 <span><i class="dot-bus"></i>Bus</span>
                 <span><i class="dot-stale"></i>Old location</span>
             </div>
+            <button type="button" id="routeViewButton" class="route-view-btn" disabled>Full route</button>
         </div>
         <div id="trackingMap" class="board-map" role="region" aria-label="Map of live buses"></div>
         <p id="mapMessage" class="board-map-error live-map-note" hidden></p>
+        <p id="routeEstimate" class="route-estimate live-route-estimate" role="status" aria-live="polite">Select a bus to see its road route and destination estimate.</p>
     </section>
 
     <section class="board-list-card" aria-labelledby="busListHeading">
@@ -93,6 +95,7 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
 </nav>
 <script>window.mbusLive = <?php echo json_encode(['scheduleId' => $schedule_id, 'csrfToken' => csrf_get_token()], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="../Assets/js/route_utils.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/route_utils.js'); ?>"></script>
 <script src="../Assets/js/commuter_live.js"></script>
 <script src="../Assets/js/flow-feedback.js"></script>
 <script src="../Assets/js/app-header.js"></script>

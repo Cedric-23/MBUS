@@ -12,7 +12,8 @@
     const list = el('staffList'), empty = el('staffEmpty'), filter = el('staffSchedule');
 
     let requests = [], schedules = [], locations = [], csrf = '', ready = false;
-    let map = null, layer = null, line = null, selected = null, fittedOnce = false;
+    let map = null, layer = null, line = null, routeLayer = null, selected = null, fittedOnce = false;
+    let routeKey = '', routeData = null, routeFitKey = '', routeRequest = 0, routeFailure = null, routeViewMode = 'focus';
     let busy = false, refreshing = null;
 
     const num = v => { const n = Number(v); return Number.isFinite(n) ? n : null; };
@@ -41,9 +42,10 @@
     function initMap() {
         if (!window.L) { el('staffMapError').hidden = false; return; }
         try {
-            map = L.map('staffMap', { zoomControl: false }).setView([14.678, 120.266], 15);
-            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' })
+            map = L.map('staffMap', { zoomControl: false }).setView([14.6798552, 120.2728757], 13);
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · routing by OSRM' })
                 .addTo(map).on('tileerror', () => { el('staffMapError').hidden = false; });
+            routeLayer = L.layerGroup().addTo(map);
             layer = L.layerGroup().addTo(map);
             map.on('click', () => { if (selected) { selected = null; render(); } });
         } catch (e) { map = null; el('staffMapError').hidden = false; }
@@ -74,6 +76,125 @@
 
     /* ---------- render ---------- */
     function busFor(scheduleId) { return locations.find(l => Number(l.schedule_id) === Number(scheduleId) && validPt(l.latitude, l.longitude)); }
+
+    function updateRouteButton() {
+        const button = el('staffRouteView');
+        if (!button) return;
+        button.disabled = !routeData;
+        button.textContent = routeViewMode === 'route' ? 'Focus bus' : 'Full route';
+        button.setAttribute('aria-pressed', routeViewMode === 'route' ? 'true' : 'false');
+    }
+
+    function toggleStaffRoute() {
+        if (!map || !routeData) return;
+        const selectedId = filter.value || (schedules.length === 1 ? String(schedules[0].schedule_id) : '');
+        const trip = schedules.find(s => String(s.schedule_id) === selectedId);
+        if (!trip) return;
+        if (routeViewMode === 'focus') {
+            routeViewMode = 'route';
+            const bounds = L.latLngBounds(routeData.points);
+            const bus = busFor(trip.schedule_id);
+            const rider = requests.find(r => r.request_id === selected && String(r.schedule_id) === selectedId);
+            if (bus) bounds.extend([Number(bus.latitude), Number(bus.longitude)]);
+            if (rider && validPt(rider.latitude, rider.longitude)) bounds.extend([Number(rider.latitude), Number(rider.longitude)]);
+            map.fitBounds(bounds.pad(0.08), { paddingTopLeft: [24, 105], paddingBottomRight: [24, 240], maxZoom: 12, animate: false });
+        } else {
+            routeViewMode = 'focus';
+            const bus = busFor(trip.schedule_id);
+            const rider = requests.find(r => r.request_id === selected && String(r.schedule_id) === selectedId);
+            const points = [];
+            if (rider && validPt(rider.latitude, rider.longitude)) points.push([Number(rider.latitude), Number(rider.longitude)]);
+            if (bus) points.push([Number(bus.latitude), Number(bus.longitude)]);
+            if (points.length) fit(points);
+            else map.setView([Number(trip.origin_lat), Number(trip.origin_lng)], 14, { animate: false });
+        }
+        updateRouteButton();
+    }
+
+    function updateStaffRoute() {
+        const box = el('staffRouteEstimate');
+        if (!box) return;
+        const selectedId = filter.value || (schedules.length === 1 ? String(schedules[0].schedule_id) : '');
+        const trip = schedules.find(s => String(s.schedule_id) === selectedId);
+        if (!trip) {
+            routeRequest++;
+            routeKey = ''; routeData = null; routeFailure = null;
+            if (routeLayer) routeLayer.clearLayers();
+            box.textContent = schedules.length > 1 ? 'Choose a bus to see its route and destination estimate.' : 'No active route is available.';
+            updateRouteButton();
+            return;
+        }
+        const rawPoints = [trip.origin_lat, trip.origin_lng, trip.destination_lat, trip.destination_lng];
+        if (rawPoints.some(value => value === null || value === undefined || String(value).trim() === '')) {
+            routeRequest++;
+            routeKey = ''; routeData = null; routeFailure = null;
+            box.textContent = 'This bus route needs terminal coordinates before an estimate is available.';
+            if (routeLayer) routeLayer.clearLayers();
+            updateRouteButton();
+            return;
+        }
+        const origin = { lat: Number(trip.origin_lat), lng: Number(trip.origin_lng) };
+        const destination = { lat: Number(trip.destination_lat), lng: Number(trip.destination_lng) };
+        if (![origin.lat, origin.lng, destination.lat, destination.lng].every(Number.isFinite)) {
+            routeRequest++;
+            routeKey = ''; routeData = null; routeFailure = null;
+            box.textContent = 'This bus route needs valid terminal coordinates before an estimate is available.';
+            if (routeLayer) routeLayer.clearLayers();
+            updateRouteButton();
+            return;
+        }
+        const key = String(trip.schedule_id) + ':' + [origin.lat, origin.lng, destination.lat, destination.lng].join(',');
+        if (routeKey !== key) {
+            routeKey = key; routeData = null; routeFailure = null;
+            const thisRequest = ++routeRequest;
+            if (routeLayer) routeLayer.clearLayers();
+            box.textContent = 'Loading the road route to ' + (trip.destination_label || trip.destination || 'the destination') + '…';
+            updateRouteButton();
+            if (!window.MBUSRouting || !map) { box.textContent = 'Road directions are unavailable; live bus and rider pins remain visible.'; return; }
+            window.MBUSRouting.getDrivingRoute(origin, destination).then(route => {
+                if (thisRequest !== routeRequest || routeKey !== key) return;
+                routeData = route;
+                routeFailure = null;
+                routeLayer.clearLayers();
+                L.polyline(route.points, { color: '#1e90ff', weight: 5, opacity: 0.7 }).addTo(routeLayer);
+                L.circleMarker(route.points[0], { radius: 5, color: '#fff', weight: 2, fillColor: '#1e90ff', fillOpacity: 1 }).addTo(routeLayer);
+                L.circleMarker(route.points[route.points.length - 1], { radius: 5, color: '#fff', weight: 2, fillColor: '#18365d', fillOpacity: 1 }).addTo(routeLayer);
+                routeFitKey = key;
+                if (routeViewMode === 'route') map.fitBounds(L.latLngBounds(route.points).pad(0.08), { maxZoom: 12, animate: false });
+                updateRouteButton();
+                updateStaffRoute();
+            }).catch(error => {
+                if (thisRequest !== routeRequest || routeKey !== key) return;
+                routeFailure = { key, until: Date.now() + 30000 };
+                updateRouteButton();
+                box.textContent = (error.message || 'Road directions are unavailable right now.') + ' Live bus and rider pins remain visible.';
+            });
+            return;
+        }
+        if (!routeData) {
+            if (routeFailure && routeFailure.key === key && Date.now() < routeFailure.until) return;
+            routeKey = '';
+            updateStaffRoute();
+            return;
+        }
+        const destinationName = trip.destination_label || (window.MBUSRouting ? window.MBUSRouting.displayName(trip.destination) : trip.destination) || 'destination';
+        const bus = busFor(trip.schedule_id);
+        if (!bus) {
+            box.textContent = 'To ' + destinationName + ': ' + window.MBUSRouting.formatDistance(routeData.distanceMeters) + ' road route · ' + window.MBUSRouting.formatDuration(routeData.durationSeconds) + ' driving estimate. Waiting for the first live bus pin.';
+            return;
+        }
+        const age = Date.now() - Date.parse(bus.updated_at);
+        if (!Number.isFinite(age) || age > FRESH_MS) {
+            box.textContent = 'Last bus pin ' + ago(bus.updated_at) + '. Live destination estimate returns when GPS is fresh.';
+            return;
+        }
+        const remaining = window.MBUSRouting.remainingOnRoute(routeData, [Number(bus.latitude), Number(bus.longitude)], 2500);
+        if (!remaining || !remaining.onRoute) {
+            box.textContent = 'Bus location is away from the mapped route. Destination ETA is unavailable until it returns to the route.';
+            return;
+        }
+        box.textContent = 'To ' + destinationName + ': ' + window.MBUSRouting.formatDistance(remaining.distanceMeters) + ' on the road · ' + window.MBUSRouting.formatDuration(remaining.durationSeconds) + '. Estimate excludes traffic, stops and detours.';
+    }
 
     function render() {
         const sel = filter.value;
@@ -135,12 +256,15 @@
         });
 
         if (!fittedOnce && pts.length) { fit(pts); fittedOnce = true; }
+        updateStaffRoute();
         if (map) requestAnimationFrame(() => map.invalidateSize({ pan: false }));
         sizeSheet();
     }
 
     function choose(r) {
         selected = selected === r.request_id ? null : r.request_id;
+        routeViewMode = 'focus';
+        updateRouteButton();
         render();
         if (selected) {
             const b = busFor(r.schedule_id), pts = [];
@@ -157,7 +281,7 @@
         const add = (id, label) => { id = String(id); if (!seen.has(id)) { seen.add(id); filter.append(new Option(label, id)); } };
         schedules.forEach(s => add(s.schedule_id, 'Bus ' + s.bus_number));
         locations.forEach(b => add(b.schedule_id, 'Bus ' + b.bus_number));
-        if (root.dataset.role === 'operator' && !cur && seen.size === 1) cur = Array.from(seen)[0];
+        if (!cur && seen.size === 1) cur = Array.from(seen)[0];
         if ([...filter.options].some(o => o.value === cur)) filter.value = cur;
         filter.parentElement.hidden = seen.size < 2 && root.dataset.role === 'operator';
     }
@@ -209,8 +333,9 @@
         busy = false; btn.disabled = false;
     }
 
-    filter.addEventListener('change', () => { selected = null; fittedOnce = false; render(); });
+    filter.addEventListener('change', () => { selected = null; fittedOnce = false; routeFitKey = ''; routeViewMode = 'focus'; render(); });
     el('staffRefresh').addEventListener('click', refresh);
+    el('staffRouteView').addEventListener('click', toggleStaffRoute);
     window.addEventListener('resize', () => { sizeSheet(); if (map) map.invalidateSize(); });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 

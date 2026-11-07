@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/pickup.php';
+require_once __DIR__ . '/route_locations.php';
 
 function mbus_tracking_form(array $post, string $role): array
 {
@@ -56,6 +57,7 @@ function mbus_tracking_schedule(PDO $pdo, int $scheduleId, string $role, int $us
 
 function mbus_tracking_schedule_payload(array $schedule): array
 {
+    $schedule = mbus_route_apply_terminal_defaults($schedule);
     foreach (['schedule_id'] as $key) $schedule[$key] = (int)$schedule[$key];
     foreach (['origin_lat', 'origin_lng', 'destination_lat', 'destination_lng'] as $key) {
         $schedule[$key] = isset($schedule[$key]) && is_numeric($schedule[$key]) && is_finite((float)$schedule[$key]) ? (float)$schedule[$key] : null;

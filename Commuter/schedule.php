@@ -2,6 +2,7 @@
 session_start();
 include "../config/db_connect.php";
 require_once __DIR__ . '/../Includes/schedule_booking.php';
+require_once __DIR__ . '/../Includes/route_locations.php';
 
 if(!isset($_SESSION['user_id'])){
     header("Location: ../login.php");
@@ -79,14 +80,10 @@ elseif($filter=="nextweek"){
 <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
 <link rel="stylesheet" href="../Assets/css/professional-filters.css">
 <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 
 <!-- FullCalendar CSS -->
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet'>
-
-<!-- Google Maps API -->
-<script async defer
-src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_API_KEY') ?: 'YOUR_API_KEY'; ?>&callback=initScheduleMap">
-</script>
 
 <!-- FullCalendar JS -->
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
@@ -129,6 +126,7 @@ src="https://maps.googleapis.com/maps/api/js?key=<?php echo getenv('GOOGLE_MAPS_
         <button type="button" id="scheduleMapClose" class="map-close" aria-label="Close map"><i class="fa fa-xmark" aria-hidden="true"></i></button>
     </div>
     <div id="scheduleMap" class="map-canvas"></div>
+    <p id="scheduleRouteEstimate" class="route-estimate" role="status" aria-live="polite">Road distance and driving estimate appear here.</p>
 </div>
 
 <!-- List View -->
@@ -223,6 +221,7 @@ $last_day_key = null;
 
 <div class="bus-list" role="list" aria-label="Bus schedules" data-schedule-table>
 <?php while($row=mbus_db_fetch_assoc($result)){
+$row = mbus_route_apply_terminal_defaults($row);
 $schedule_id=$row['schedule_id'];
 
 $seat_sql="SELECT COUNT(*) AS total_reserved FROM reservation
@@ -274,7 +273,7 @@ if($row['trip_status'] !== 'Departed'){
         <div class="stop">
             <span class="stop-time"><?php echo date('g:i',$dep_ts); ?><small><?php echo date('A',$dep_ts); ?></small></span>
             <span class="stop-dot" aria-hidden="true"></span>
-            <span class="stop-name"><?php echo htmlspecialchars($row['origin']); ?></span>
+            <span class="stop-name"><?php echo htmlspecialchars($row['origin_label']); ?></span>
         </div>
         <div class="leg">
             <span class="leg-note"><?php echo $duration ? htmlspecialchars($duration) : ''; ?></span>
@@ -284,7 +283,7 @@ if($row['trip_status'] !== 'Departed'){
         <div class="stop">
             <span class="stop-time"><?php echo $arr_ts ? date('g:i',$arr_ts) : '--'; ?><small><?php echo $arr_ts ? date('A',$arr_ts) : ''; ?></small></span>
             <span class="stop-dot end" aria-hidden="true"></span>
-            <span class="stop-name"><?php echo htmlspecialchars($row['destination']); ?></span>
+            <span class="stop-name"><?php echo htmlspecialchars($row['destination_label']); ?></span>
         </div>
     </div>
 
@@ -295,8 +294,8 @@ if($row['trip_status'] !== 'Departed'){
             data-origin-lng="<?php echo htmlspecialchars($row['origin_lng']); ?>"
             data-dest-lat="<?php echo htmlspecialchars($row['destination_lat']); ?>"
             data-dest-lng="<?php echo htmlspecialchars($row['destination_lng']); ?>"
-            data-origin="<?php echo htmlspecialchars($row['origin'], ENT_QUOTES); ?>"
-            data-dest="<?php echo htmlspecialchars($row['destination'], ENT_QUOTES); ?>">
+            data-origin="<?php echo htmlspecialchars($row['origin_label'], ENT_QUOTES); ?>"
+            data-dest="<?php echo htmlspecialchars($row['destination_label'], ENT_QUOTES); ?>">
             <i class="fa fa-map" aria-hidden="true"></i>Route
         </button>
         <?php } ?>
@@ -338,10 +337,14 @@ if($row['trip_status'] !== 'Departed'){
 
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="../Assets/js/route_utils.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/route_utils.js'); ?>"></script>
 <script>
 let scheduleMap;
-let scheduleDirectionsService;
-let scheduleDirectionsRenderer;
+let scheduleRouteLayer;
+let scheduleOriginMarker;
+let scheduleDestinationMarker;
+let scheduleRouteRequest = 0;
 let scheduleCalendar;
 // Anchor to the server clock, not the phone's timezone or potentially skewed clock.
 let scheduleClockOffset = <?php echo (int)round(microtime(true) * 1000); ?> - Date.now();
@@ -424,15 +427,13 @@ document.addEventListener('visibilitychange', function() {
 window.addEventListener('pageshow', function(e) { if (e.persisted) { updateScheduleCards(); refreshScheduleActions(); } });
 
 function initScheduleMap() {
-    scheduleMap = new google.maps.Map(document.getElementById("scheduleMap"), {
-        center: { lat: 14.5995, lng: 120.9842 },
-        zoom: 10,
-    });
-
-    scheduleDirectionsService = new google.maps.DirectionsService();
-    scheduleDirectionsRenderer = new google.maps.DirectionsRenderer({
-        map: scheduleMap
-    });
+    if (scheduleMap || typeof L === 'undefined') return;
+    scheduleMap = L.map('scheduleMap', { zoomControl: true }).setView([14.7521, 120.2765], 10);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · routing by OSRM'
+    }).addTo(scheduleMap);
+    scheduleRouteLayer = L.layerGroup().addTo(scheduleMap);
 }
 
 function openMapSheet(open) {
@@ -445,25 +446,36 @@ function openMapSheet(open) {
 }
 
 function viewRoute(originLat, originLng, destLat, destLng, originName, destName) {
+    const origin = { lat: Number(originLat), lng: Number(originLng) };
+    const destination = { lat: Number(destLat), lng: Number(destLng) };
     document.getElementById("scheduleMapTitle").textContent = originName + " to " + destName;
+    const estimate = document.getElementById('scheduleRouteEstimate');
     openMapSheet(true);
-    if (typeof google === "undefined" || !scheduleMap) { return; }
-
-    google.maps.event.trigger(scheduleMap, "resize");
-    scheduleDirectionsRenderer.setDirections({routes: []});
-
-    const bounds = new google.maps.LatLngBounds();
-    bounds.extend({ lat: originLat, lng: originLng });
-    bounds.extend({ lat: destLat, lng: destLng });
-    scheduleMap.fitBounds(bounds);
-
-    scheduleDirectionsService.route({
-        origin: { lat: originLat, lng: originLng },
-        destination: { lat: destLat, lng: destLng },
-        travelMode: google.maps.TravelMode.DRIVING
-    }, function(result, status) {
-        if (status === "OK") { scheduleDirectionsRenderer.setDirections(result); }
-    });
+    const requestId = ++scheduleRouteRequest;
+    if (!Number.isFinite(origin.lat) || !Number.isFinite(origin.lng) || !Number.isFinite(destination.lat) || !Number.isFinite(destination.lng)) {
+        estimate.textContent = 'This schedule has no valid terminal coordinates yet.';
+        return;
+    }
+    estimate.textContent = 'Loading the road route and estimate…';
+    window.setTimeout(async function() {
+        initScheduleMap();
+        if (!scheduleMap) { estimate.textContent = 'The map could not load.'; return; }
+        scheduleMap.invalidateSize({ pan: false });
+        scheduleRouteLayer.clearLayers();
+        scheduleOriginMarker = L.marker([origin.lat, origin.lng]).bindTooltip('Origin: ' + originName).addTo(scheduleRouteLayer);
+        scheduleDestinationMarker = L.marker([destination.lat, destination.lng]).bindTooltip('Destination: ' + destName).addTo(scheduleRouteLayer);
+        try {
+            const route = await window.MBUSRouting.getDrivingRoute(origin, destination);
+            if (requestId !== scheduleRouteRequest) return;
+            L.polyline(route.points, { color: '#1e90ff', weight: 5, opacity: 0.88 }).addTo(scheduleRouteLayer);
+            scheduleMap.fitBounds(L.latLngBounds(route.points).pad(0.12), { maxZoom: 14 });
+            estimate.textContent = window.MBUSRouting.formatDistance(route.distanceMeters) + ' road route · ' + window.MBUSRouting.formatDuration(route.durationSeconds) + ' driving. Traffic, stops and detours may add time.';
+        } catch (error) {
+            if (requestId !== scheduleRouteRequest) return;
+            estimate.textContent = error.message || 'Road directions are unavailable right now.';
+            scheduleMap.fitBounds([[origin.lat, origin.lng], [destination.lat, destination.lng]], { padding: [28, 28], maxZoom: 14 });
+        }
+    }, 80);
 }
 
 document.addEventListener("click", function(e) {

@@ -8,7 +8,8 @@
     const FRESH_MS = 120000;
     let trips = [], locations = [], serverNow = Date.now();
     let chosen = String((window.mbusLive || {}).scheduleId || '');
-    let map = null, markerLayer = null, pollTimer = null, loading = false, version = 0, fitted = false;
+    let map = null, markerLayer = null, routeLayer = null, pollTimer = null, loading = false, version = 0, fitted = false;
+    let routeKey = '', routeData = null, routeFitKey = '', routeRequestId = 0, routeFailure = null, routeViewMode = 'bus';
     const visible = () => !document.hidden;
 
     function number(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }
@@ -35,7 +36,12 @@
         box.hidden = !text;
         box.textContent = text || '';
     }
-    function routeOf(t) { return (t.origin || 'Origin') + ' to ' + (t.destination || t.route_destination || 'Endpoint'); }
+    function routeOf(t) {
+        const names = window.MBUSRouting;
+        const origin = t.origin_label || (names ? names.displayName(t.origin) : t.origin) || 'Origin';
+        const destination = t.destination_label || (names ? names.displayName(t.destination || t.route_destination) : (t.destination || t.route_destination)) || 'Endpoint';
+        return origin + ' to ' + destination;
+    }
 
     function initMap() {
         const box = el('trackingMap');
@@ -46,10 +52,11 @@
             return;
         }
         try {
-            map = L.map('trackingMap', { zoomControl: true }).setView([14.678, 120.266], 15);
-            const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
+            map = L.map('trackingMap', { zoomControl: true }).setView([14.6798552, 120.2728757], 13);
+            const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · routing by OSRM' }).addTo(map);
             tiles.on('tileerror', () => { el('mapMessage').hidden = false; el('mapMessage').textContent = 'Map tiles could not load. Bus status below is still current.'; });
             markerLayer = L.layerGroup().addTo(map);
+            routeLayer = L.layerGroup().addTo(map);
         } catch (e) {
             map = null;
             box.hidden = true;
@@ -76,7 +83,126 @@
         chosen = id ? String(id) : '';
         select.value = chosen;
         fitted = false;
+        routeFitKey = '';
+        routeViewMode = 'bus';
         render();
+    }
+
+    function updateRouteViewControl() {
+        const button = el('routeViewButton');
+        if (!button) return;
+        button.disabled = !routeData || !chosen;
+        button.textContent = routeViewMode === 'route' ? 'Focus bus' : 'Full route';
+        button.setAttribute('aria-pressed', routeViewMode === 'route' ? 'true' : 'false');
+    }
+
+    function toggleRouteView() {
+        if (!map || !routeData || !chosen) return;
+        if (routeViewMode === 'bus') {
+            routeViewMode = 'route';
+            map.fitBounds(L.latLngBounds(routeData.points).pad(0.08), { maxZoom: 12, animate: false });
+        } else {
+            routeViewMode = 'bus';
+            const trip = trips.find(t => String(t.schedule_id) === chosen);
+            const state = trip ? stateOf(trip) : null;
+            if (state && state.loc) map.setView([Number(state.loc.latitude), Number(state.loc.longitude)], 16, { animate: false });
+        }
+        updateRouteViewControl();
+    }
+
+    function clearRoute() {
+        routeRequestId++;
+        routeKey = '';
+        routeData = null;
+        routeFailure = null;
+        if (routeLayer) routeLayer.clearLayers();
+    }
+
+    function updateRouteEstimate(trip, state) {
+        const box = el('routeEstimate');
+        if (!box) return;
+        if (!trip) {
+            if (routeLayer) routeLayer.clearLayers();
+            routeKey = '';
+            routeData = null;
+            updateRouteViewControl();
+            box.textContent = trips.length > 1 ? 'Select a bus to see its road route and destination estimate.' : 'No active bus route is available.';
+            return;
+        }
+        const endpointValues = [trip.origin_lat, trip.origin_lng, trip.destination_lat, trip.destination_lng];
+        if (endpointValues.some(value => value === null || value === undefined || String(value).trim() === '')) {
+            box.textContent = 'This trip does not have mapped terminal coordinates yet.';
+            if (routeLayer) routeLayer.clearLayers();
+            routeData = null;
+            updateRouteViewControl();
+            return;
+        }
+        const origin = { lat: Number(trip.origin_lat), lng: Number(trip.origin_lng) };
+        const destination = { lat: Number(trip.destination_lat), lng: Number(trip.destination_lng) };
+        const key = String(trip.schedule_id) + ':' + [origin.lat, origin.lng, destination.lat, destination.lng].join(',');
+        if (!Number.isFinite(origin.lat) || !Number.isFinite(origin.lng) || !Number.isFinite(destination.lat) || !Number.isFinite(destination.lng)) {
+            box.textContent = 'This trip does not have mapped terminal coordinates yet.';
+            if (routeLayer) routeLayer.clearLayers();
+            routeData = null;
+            updateRouteViewControl();
+            return;
+        }
+        if (routeKey !== key) {
+            routeKey = key;
+            routeData = null;
+            routeFailure = null;
+            updateRouteViewControl();
+            const requestId = ++routeRequestId;
+            if (routeLayer) routeLayer.clearLayers();
+            box.textContent = 'Loading the road route to ' + (trip.destination_label || trip.destination || 'the destination') + '…';
+            if (!window.MBUSRouting || !map) {
+                box.textContent = 'Road directions are unavailable; the live bus pin is still shown.';
+                return;
+            }
+            window.MBUSRouting.getDrivingRoute(origin, destination).then(route => {
+                if (requestId !== routeRequestId || routeKey !== key) return;
+                routeData = route;
+                routeFailure = null;
+                routeLayer.clearLayers();
+                L.polyline(route.points, { color: '#1e90ff', weight: 5, opacity: 0.82 }).addTo(routeLayer);
+                L.circleMarker(route.points[0], { radius: 5, color: '#fff', weight: 2, fillColor: '#1e90ff', fillOpacity: 1 }).addTo(routeLayer);
+                L.circleMarker(route.points[route.points.length - 1], { radius: 5, color: '#fff', weight: 2, fillColor: '#18365d', fillOpacity: 1 }).addTo(routeLayer);
+                routeFitKey = key;
+                if (routeViewMode === 'route') {
+                    map.fitBounds(L.latLngBounds(route.points).pad(0.08), { maxZoom: 12, animate: false });
+                }
+                updateRouteViewControl();
+                updateRouteEstimate(trip, stateOf(trip));
+            }).catch(error => {
+                if (requestId !== routeRequestId || routeKey !== key) return;
+                routeFailure = { key, until: Date.now() + 30000 };
+                updateRouteViewControl();
+                box.textContent = (error.message || 'Road directions are unavailable right now.') + ' The bus pin remains available.';
+            });
+            return;
+        }
+        if (!routeData) {
+            if (routeFailure && routeFailure.key === key && Date.now() < routeFailure.until) return;
+            routeKey = '';
+            updateRouteEstimate(trip, state);
+            return;
+        }
+        const destinationName = trip.destination_label || (window.MBUSRouting ? window.MBUSRouting.displayName(trip.destination) : trip.destination) || 'destination';
+        if (!state || !state.loc) {
+            box.textContent = 'To ' + destinationName + ': ' + window.MBUSRouting.formatDistance(routeData.distanceMeters) + ' road route · ' + window.MBUSRouting.formatDuration(routeData.durationSeconds) + ' driving estimate. Waiting for the first live bus pin.';
+            return;
+        }
+        if (state.kind !== 'live') {
+            box.textContent = 'Last bus pin ' + state.label.replace(/^Last seen\s*/, '') + '. Road ETA returns when the driver shares a fresh location.';
+            return;
+        }
+        const remaining = window.MBUSRouting.remainingOnRoute(routeData, [Number(state.loc.latitude), Number(state.loc.longitude)], 2500);
+        if (!remaining || !remaining.onRoute) {
+            box.textContent = 'Bus location is away from the mapped route. Destination ETA is unavailable until it returns to the route.';
+            return;
+        }
+        box.textContent = 'To ' + destinationName + ': ' + window.MBUSRouting.formatDistance(remaining.distanceMeters) + ' on the road · ' + window.MBUSRouting.formatDuration(remaining.durationSeconds) + '. Estimate excludes traffic, stops and detours.';
+        if (remaining.distanceMeters < 75) box.textContent = 'Bus is near ' + destinationName + '. ' + window.MBUSRouting.formatDistance(remaining.distanceMeters) + ' left.';
     }
 
     function render() {
@@ -90,6 +216,7 @@
         select.replaceChildren(new Option('All buses', ''));
         trips.forEach(t => select.add(new Option((t.bus_number || 'Bus') + ' · ' + routeOf(t), String(t.schedule_id))));
         if (chosen && !trips.some(t => String(t.schedule_id) === chosen)) chosen = '';
+        if (!chosen && trips.length === 1) chosen = String(trips[0].schedule_id);
         select.value = chosen;
         select.disabled = !trips.length;
 
@@ -142,9 +269,14 @@
                 else if (bounds.length === 1) map.setView(bounds[0], 16, { animate: false });
                 else map.fitBounds(bounds, { padding: [28, 28], maxZoom: 15 });
                 fitted = true;
+            } else if (focus && routeViewMode === 'bus') {
+                map.setView(focus, Math.max(16, map.getZoom()), { animate: false });
             }
             window.requestAnimationFrame(() => map.invalidateSize({ pan: false }));
         }
+
+        const selectedTrip = trips.find(t => String(t.schedule_id) === chosen) || null;
+        updateRouteEstimate(selectedTrip, selectedTrip ? stateOf(selectedTrip) : null);
 
         const mapNote = el('mapMessage');
         if (map && trips.length && !states.some(x => x.st.loc)) {
@@ -188,6 +320,7 @@
     }
 
     select.addEventListener('change', () => pick(select.value));
+    el('routeViewButton').addEventListener('click', toggleRouteView);
     document.addEventListener('visibilitychange', () => { if (!visible()) clearTimeout(pollTimer); else load(); });
     initMap();
     load();

@@ -84,6 +84,33 @@
   border: 1px solid var(--color-border);
 }
 
+.route-estimate {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border, #d9e1eb);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary, #f4f7fb);
+  color: var(--color-text-secondary, #536174);
+  font-size: var(--fs-sm, .875rem);
+  line-height: 1.45;
+}
+
+.route-endpoint-icon { background: transparent; border: 0; }
+.route-endpoint-icon span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 2px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: #1e90ff;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 2px 7px rgba(16, 36, 61, .3);
+}
+
 .form-actions {
   display: flex;
   gap: var(--space-2);
