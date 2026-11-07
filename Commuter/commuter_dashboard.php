@@ -9,7 +9,68 @@ if(!isset($_SESSION['user_id'])){
 
 /* Load app config so date() uses the app timezone (Asia/Manila), not the server's UTC default */
 require_once __DIR__ . "/../config/app.php";
+include "../config/db_connect.php";
 include "../Includes/csrf.php";
+include "../Includes/fare.php";
+require_once __DIR__ . "/../Includes/schedule_booking.php";
+
+$user_id = (int)$_SESSION['user_id'];
+$bounds = mbus_local_bounds();
+$first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
+$hour = (int)date('G');
+$greeting = $hour < 12 ? 'Good morning' : ($hour < 18 ? 'Good afternoon' : 'Good evening');
+$passenger_type = mbus_passenger_type($conn, $user_id);
+
+/* NEXT TRIP: soonest upcoming booking (paid, on board, or a pending one still inside its 10 minutes) */
+$next = null;
+$q = mbus_db_prepare($conn, "
+    SELECT r.schedule_id, r.seat_number, r.status, r.pickup_location, r.destination,
+           s.departure_time, s.arrival_time, b.bus_number, rt.origin, rt.destination AS route_destination
+    FROM reservation r
+    JOIN schedule s ON s.schedule_id = r.schedule_id
+    JOIN buses b ON b.bus_id = s.bus_id
+    JOIN routes rt ON rt.route_id = s.route_id
+    WHERE r.user_id = ?
+      AND (r.status IN ('Paid','Confirmed','Boarded') OR (r.status = 'Pending' AND r.created_at > NOW() - INTERVAL '10 minutes'))
+      AND s.schedule_status = 'Active'
+      AND s.trip_status IN ('Scheduled','Boarding','Departed')
+      AND COALESCE(s.arrival_time, s.departure_time + INTERVAL '4 hours') >= ?
+    ORDER BY s.departure_time ASC, r.seat_number ASC", [$user_id, $bounds['now']]);
+while($q !== false && ($r = mbus_db_fetch_assoc($q))){
+    if($next === null){ $next = $r; $next['seats'] = []; $next['pending'] = false; }
+    if($r['schedule_id'] != $next['schedule_id']) break;
+    $next['seats'][] = $r['seat_number'];
+    if($r['status'] === 'Pending') $next['pending'] = true;
+    if($r['status'] === 'Boarded') $next['boarded'] = true;
+}
+
+/* LEAVING SOON: next few departures that are still open */
+$soon = [];
+$q = mbus_db_prepare($conn, "
+    SELECT s.schedule_id, s.departure_time, s.arrival_time, s.schedule_status, s.trip_status,
+           b.bus_number, b.capacity, rt.origin, rt.destination
+    FROM schedule s
+    JOIN buses b ON b.bus_id = s.bus_id
+    JOIN routes rt ON rt.route_id = s.route_id
+    WHERE s.schedule_status = 'Active' AND s.trip_status IN ('Scheduled','Boarding')
+      AND s.departure_time >= ? AND s.departure_time < ?
+    ORDER BY s.departure_time ASC LIMIT 4", [$bounds['now'], $bounds['day_after']]);
+while($q !== false && ($r = mbus_db_fetch_assoc($q))){
+    $c = mbus_db_prepare($conn, "SELECT COUNT(*) AS n FROM reservation WHERE schedule_id = ?
+        AND status IN ('Pending','Paid','Confirmed','Boarded')
+        AND (status <> 'Pending' OR created_at > NOW() - INTERVAL '10 minutes')", [(int)$r['schedule_id']]);
+    $cr = $c === false ? false : mbus_db_fetch_assoc($c);
+    $r['available'] = max(0, (int)$r['capacity'] - (int)($cr['n'] ?? 0));
+    $r['action'] = mbus_schedule_action($r, $r['available']);
+    if($r['action'] !== 'unavailable') $soon[] = $r;
+}
+
+function mbus_home_when(string $ts): string {
+    $t = strtotime($ts);
+    $day = date('Y-m-d', $t);
+    $label = $day === date('Y-m-d') ? 'Today' : ($day === date('Y-m-d', strtotime('+1 day')) ? 'Tomorrow' : date('D, M j', $t));
+    return $label . ' · ' . date('g:i A', $t);
+}
 ?>
 
 <!DOCTYPE html>
@@ -17,36 +78,28 @@ include "../Includes/csrf.php";
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token()); ?>">
+    <title>Home - MBUS</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../Assets/css/responsive.css">
-    <link rel="stylesheet" href="../Assets/css/commuter_dashboard.css">
-    <link rel="stylesheet" href="../Assets/css/commuter_sidebar.css">
-    <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
-    <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
-    <link rel="shortcut icon" href="../Assets/images/mbus_icon.png">
-    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token()); ?>">
-
-    <title>Commuter Dashboard</title>
     <link rel="stylesheet" href="../Assets/css/app-header.css">
-    <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
-    <link rel="stylesheet" href="../Assets/css/dashboard-home.css">
+    <link rel="stylesheet" href="../Assets/css/commuter_home.css">
+    <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
 </head>
 
-<body class="has-bottom-nav">
+<body class="home-page has-bottom-nav">
+<main class="main" role="main">
 
-    <!-- MAIN -->
-    <main class="main dashboard-home" role="main">
-
-        <!-- PAGE HEADER - Part of page flow (scrolls with content), like schedule.php -->
-        <header class="page-header" role="banner">
-            <div class="page-header-left">
-                <h1>Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?>!</h1>
-            </div>
-            <div class="page-header-right">
+    <header class="home-top">
+        <div>
+            <p class="home-hello"><?php echo $greeting; ?></p>
+            <h1><?php echo htmlspecialchars($first_name); ?></h1>
+        </div>
+        <div class="page-header-right">
                 <div class="profile-menu-wrap">
                     <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
                         <span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></span>
@@ -65,65 +118,84 @@ include "../Includes/csrf.php";
                     </div>
                 </div>
             </div>
-        </header>
+    </header>
 
-        <!-- Dashboard Content -->
-        <div class="dashboard-content">
-            <p class="dashboard-intro">Choose a travel window to see available bus schedules.</p>
-
-            <a class="wait-cta" href="waiting.php">
-                <span class="wait-cta-icon" aria-hidden="true"><i class="fa fa-hourglass-half"></i></span>
-                <span class="wait-cta-text"><strong>Waiting for a bus?</strong><small>Share your spot with the driver</small></span>
-                <i class="fa fa-chevron-right" aria-hidden="true"></i>
-            </a>
-
-            <!-- QUICK ACTIONS -->
-            <section class="cards" aria-labelledby="cards-heading">
-                <h2 id="cards-heading" class="dashboard-section-title">Plan your next trip</h2>
-
-                <!-- TODAY -->
-                <article class="card card-animated">
-                    <h3 class="day">Today</h3>
-                    <p class="date"><?php echo date("F d"); ?></p>
-                    <p>View today's available bus schedules.</p>
-                    <a href="schedule.php?filter=today" class="btn btn-primary">Open Schedule</a>
-                </article>
-
-                <!-- TOMORROW -->
-                <article class="card card-animated">
-                    <h3 class="day">Tomorrow</h3>
-                    <p class="date"><?php echo date("F d", strtotime("+1 day")); ?></p>
-                    <p>Check schedules for tomorrow.</p>
-                    <a href="schedule.php?filter=tomorrow" class="btn btn-primary">Open Schedule</a>
-                </article>
-
-                <!-- THIS WEEK -->
-                <article class="card card-animated">
-                    <h3 class="day">This Week</h3>
-                    <p class="date">
-                        <?php echo date("M d"); ?> -
-                        <?php echo date("M d", strtotime("+6 days")); ?>
-                    </p>
-                    <p>Browse schedules available this week.</p>
-                    <a href="schedule.php?filter=thisweek" class="btn btn-primary">Open Schedule</a>
-                </article>
-
-                <!-- NEXT WEEK -->
-                <article class="card card-animated">
-                    <h3 class="day">Next Week</h3>
-                    <p class="date">
-                        <?php echo date("M d", strtotime("+7 days")); ?> -
-                        <?php echo date("M d", strtotime("+13 days")); ?>
-                    </p>
-                    <p>View upcoming schedules for next week.</p>
-                    <a href="schedule.php?filter=nextweek" class="btn btn-primary">Open Schedule</a>
-                </article>
-
-            </section>
-
+    <?php if($next){
+        $route = ($next['pickup_location'] ?: $next['origin']) . ' to ' . ($next['destination'] ?: $next['route_destination']);
+        $seat_label = count($next['seats']) > 1 ? 'Seats ' : 'Seat ';
+        if(!empty($next['boarded'])){ $state = 'On board'; $href = 'ticket.php?schedule_id=' . (int)$next['schedule_id']; $cta = 'View ticket'; }
+        elseif($next['pending']){ $state = 'Waiting for payment'; $href = 'payment.php?schedule_id=' . (int)$next['schedule_id']; $cta = 'Pay with GCash'; }
+        else { $state = 'Ready to board'; $href = 'ticket.php?schedule_id=' . (int)$next['schedule_id']; $cta = 'Show ticket'; }
+    ?>
+    <section class="next-trip" aria-label="Your next trip">
+        <div class="next-trip-top">
+            <span class="next-state<?php echo $next['pending'] ? ' is-pending' : ''; ?>"><?php echo $state; ?></span>
+            <span class="next-when"><?php echo htmlspecialchars(mbus_home_when($next['departure_time'])); ?></span>
         </div>
+        <p class="next-route"><?php echo htmlspecialchars($route); ?></p>
+        <p class="next-meta"><?php echo htmlspecialchars($next['bus_number']); ?> &middot; <?php echo count($next['seats']) > 4 ? count($next['seats']) . ' seats' : $seat_label . htmlspecialchars(implode(', ', $next['seats'])); ?></p>
+        <a class="next-cta" href="<?php echo $href; ?>"><?php echo $cta; ?></a>
+    </section>
+    <?php } else { ?>
+    <section class="next-trip is-empty" aria-label="Book a trip">
+        <p class="next-route">Where to next?</p>
+        <p class="next-meta">Pick a bus and reserve your seat in a few taps.</p>
+        <a class="next-cta" href="schedule.php">Find a bus</a>
+    </section>
+    <?php } ?>
 
-    </main>
+    <nav class="home-actions" aria-label="Quick actions">
+        <a href="schedule.php"><span class="ico"><i class="fa fa-calendar-check" aria-hidden="true"></i></span>Book a seat</a>
+        <a href="live.php"><span class="ico"><i class="fa fa-location-dot" aria-hidden="true"></i></span>Live bus</a>
+        <a href="my_reservations.php"><span class="ico"><i class="fa fa-ticket" aria-hidden="true"></i></span>My trips</a>
+        <a href="waiting.php"><span class="ico"><i class="fa fa-hand" aria-hidden="true"></i></span>I'm waiting</a>
+    </nav>
+
+    <section class="home-section" aria-labelledby="soon-h">
+        <div class="home-section-head">
+            <h2 id="soon-h">Leaving soon</h2>
+            <a href="schedule.php?filter=today">See all</a>
+        </div>
+        <?php if(!$soon){ ?>
+            <p class="home-empty">No open departures right now. Check tomorrow's schedule.</p>
+        <?php } else { ?>
+        <ul class="soon-list">
+            <?php foreach($soon as $s){
+                $href = $s['action'] === 'reserve' ? 'reserve.php?schedule_id=' . (int)$s['schedule_id'] : 'waiting.php?schedule_id=' . (int)$s['schedule_id'];
+                $chip = $s['available'] <= 0 ? 'Full' : $s['available'] . ' left';
+                $cls = $s['available'] <= 0 ? 'full' : ($s['available'] <= 5 ? 'low' : 'ok');
+            ?>
+            <li>
+                <a href="<?php echo $href; ?>">
+                    <span class="soon-time"><?php echo date('g:i', strtotime($s['departure_time'])); ?><small><?php echo date('A', strtotime($s['departure_time'])); ?></small></span>
+                    <span class="soon-body">
+                        <strong><?php echo htmlspecialchars($s['origin'] . ' to ' . $s['destination']); ?></strong>
+                        <small><?php echo htmlspecialchars($s['bus_number']); ?> &middot; <?php echo date('Y-m-d', strtotime($s['departure_time'])) === date('Y-m-d') ? 'Today' : 'Tomorrow'; ?></small>
+                    </span>
+                    <span class="seat-chip <?php echo $cls; ?>"><?php echo $chip; ?></span>
+                </a>
+            </li>
+            <?php } ?>
+        </ul>
+        <?php } ?>
+        <div class="day-chips" aria-label="Browse by day">
+            <a href="schedule.php?filter=today">Today</a>
+            <a href="schedule.php?filter=tomorrow">Tomorrow</a>
+            <a href="schedule.php?filter=thisweek">This week</a>
+            <a href="schedule.php?filter=nextweek">Next week</a>
+        </div>
+    </section>
+
+    <?php if($passenger_type === 'Regular'){ ?>
+    <a class="home-perk" href="verification.php">
+        <span><strong>Student, senior or PWD?</strong><small>Verify your ID and get 20% off your fare.</small></span>
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+    </a>
+    <?php } else { ?>
+    <p class="home-perk is-on"><strong><?php echo htmlspecialchars($passenger_type); ?> discount active</strong><small>20% off the fare on your own seat.</small></p>
+    <?php } ?>
+
+</main>
 
 <!-- Bottom Navigation -->
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
