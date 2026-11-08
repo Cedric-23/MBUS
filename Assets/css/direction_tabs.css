@@ -1,0 +1,8 @@
+.dir-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin: 0 0 14px; border-radius: 14px; background: var(--color-bg-secondary, #eef1f5); }
+.dir-tab { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 8px; border: 0; border-radius: 11px; background: transparent; color: var(--color-text-secondary, #5b6b7f); font: inherit; font-size: .9375rem; font-weight: 600; white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.dir-tab.on { background: var(--color-surface, #fff); color: var(--color-primary, #18365d); box-shadow: 0 1px 4px rgba(24,54,93,.15); }
+.dir-tab:focus-visible { outline: 3px solid var(--color-accent, #1e90ff); outline-offset: 2px; }
+.dir-count { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: rgba(24,54,93,.1); font-size: .75rem; font-weight: 700; color: var(--color-primary, #18365d); }
+.dir-empty { margin: 12px 4px; color: var(--color-text-muted, #6b7a8d); text-align: center; }
+[data-dir][hidden] { display: none !important; }
+@media (max-width: 380px) { .dir-tab { font-size: .8125rem; } }

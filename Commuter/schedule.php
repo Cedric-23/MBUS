@@ -85,6 +85,8 @@ elseif($filter=="nextweek"){
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet'>
 
 
+<link rel="stylesheet" href="../Assets/css/direction_tabs.css">
+
 <!-- FullCalendar JS -->
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
 
@@ -209,7 +211,7 @@ $tomorrow_key = $tomorrowStart->format('Y-m-d');
 $last_day_key = null;
 ?>
 
-<div class="bus-list" role="list" aria-label="Bus schedules" data-schedule-table>
+<div class="bus-list" role="list" aria-label="Bus schedules" data-schedule-table data-dir-list>
 <?php while($row=mbus_db_fetch_assoc($result)){
 $row = mbus_route_apply_terminal_defaults($row);
 $schedule_id=$row['schedule_id'];
@@ -246,7 +248,7 @@ if($row['trip_status'] !== 'Departed'){
 }
 ?>
 
-<article class="bus-card<?php echo $available<=0 ? ' is-full' : ''; ?>" role="listitem"
+<article class="bus-card<?php echo $available<=0 ? ' is-full' : ''; ?>" role="listitem" data-dir="<?php echo stripos((string)$row['origin'], 'morong') !== false ? 'm' : 'h'; ?>"
     data-schedule-id="<?php echo (int)$schedule_id; ?>" data-schedule-action="<?php echo $action; ?>"
     data-reserve-cutoff="<?php echo $dep_ts - 30 * 60; ?>" data-unavailable-at="<?php echo $unavailable_at; ?>">
     <div class="bus-card-top">
@@ -461,5 +463,6 @@ document.addEventListener('DOMContentLoaded', initScheduleCalendar);
 
 <script src="../Assets/js/flow-feedback.js"></script>
 <script src="../Assets/js/app-header.js"></script>
+<script src="../Assets/js/direction_tabs.js"></script>
 </body>
 </html>

@@ -61,7 +61,9 @@
         for (var i = 0; i < sel.options.length; i++) if (sel.options[i].value === want) { sel.selectedIndex = i; return true; }
         sel.selectedIndex = 0; return false;
     }
+    var pickMode = !!document.querySelector('.rider-map.mode-pick');
     function fare() {
+        if (activeReq) { $('wkFare').textContent = '₱' + Number(activeReq.fare).toFixed(2); $('wkGo').disabled = false; return; }
         var a = $('wkPickup'), b = $('wkDest'), go = $('wkGo');
         var fa = a.selectedOptions[0] && a.selectedOptions[0].dataset.fare, fb = b.selectedOptions[0] && b.selectedOptions[0].dataset.fare;
         var ok = a.value && b.value && a.value !== b.value && fa && fb;
@@ -73,23 +75,40 @@
         $('wkSeat').value = seat;
         $('wkReq').value = activeReq ? activeReq.id : '';
         $('wkTitle').textContent = 'Seat ' + seat;
-        $('wkWho').textContent = activeReq ? activeReq.name + ' · pick-up request' : 'Walk-in passenger';
+        $('wkWho').textContent = activeReq ? activeReq.name + ' · pick-up' : 'Walk-in passenger';
         $('wkNameRow').hidden = !!activeReq;
         $('wkName').value = '';
-        selectVal($('wkPickup'), activeReq ? activeReq.spot : '') || selectVal($('wkPickup'), TRIP_ORIGIN);
+        $('wkReq').value = activeReq ? activeReq.id : '';
+        var sum = $('wkSummary');
+        sum.hidden = !activeReq;
+        sum.textContent = '';
+        if (activeReq) {
+            [['Pinned spot', activeReq.spot], ['Boards near', cap(activeReq.near)], ['Going to', cap(activeReq.dest)]].forEach(function (x) {
+                var row = document.createElement('div'); row.className = 'wk-line';
+                var k = document.createElement('span'); k.textContent = x[0];
+                var v = document.createElement('strong'); v.textContent = x[1];
+                row.appendChild(k); row.appendChild(v); sum.appendChild(row);
+            });
+        }
+        document.querySelectorAll('.wk-manual').forEach(function (l) { l.hidden = !!activeReq; });
+        $('wkPickup').required = !activeReq; $('wkDest').required = !activeReq;
+        selectVal($('wkPickup'), activeReq ? activeReq.near : '') || selectVal($('wkPickup'), TRIP_ORIGIN);
         selectVal($('wkDest'), activeReq ? activeReq.dest : '') || selectVal($('wkDest'), TRIP_DEST);
+        $('wkGo').textContent = activeReq ? 'Confirm seat ' + seat : 'Confirm seat';
         fare();
         sheet.hidden = true; walk.hidden = false; backdrop.hidden = false;
         document.body.style.overflow = 'hidden';
         $('walkClose').focus();
     }
+    function cap(t) { return String(t || '').toLowerCase().replace(/\b\w/g, function (c) { return c.toUpperCase(); }); }
     function setActive(req) {
         activeReq = req;
         document.querySelectorAll('#pickupList li').forEach(function (li) { li.classList.toggle('on', !!req && +li.dataset.req === req.id); });
-        document.querySelectorAll('.pk-pick').forEach(function (b) { b.textContent = req && +b.dataset.req === req.id ? 'Cancel' : 'Assign seat'; });
+        document.querySelectorAll('.rseat.open').forEach(function (b) { b.classList.toggle('ready', !!req); });
         var hint = $('ridersHint');
-        if (hint) hint.textContent = req ? 'Tap an empty seat for ' + req.name + '.' : 'Tap an empty seat to seat a walk-in. Reserved seats are locked here.';
+        if (hint) hint.textContent = req ? 'Now tap the seat ' + req.name + ' will take.' : 'Tap a person above, then tap the seat they will take.';
         var map = document.querySelector('.rider-map');
+        var hh = $('ridersHint'); if (hh) hh.classList.remove('riders-hint-warn');
         if (req && map && map.scrollIntoView) map.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     if (walk) {
@@ -104,7 +123,11 @@
         var seat = e.target.closest('.rseat[data-seat]');
         if (seat) { open(seat.dataset.seat, seat); return; }
         var add = e.target.closest('.rseat[data-add]');
-        if (add) { openWalk(add.dataset.add, add); return; }
+        if (add) {
+            if (pickMode && !activeReq) { var h = $('ridersHint'); if (h) { h.textContent = 'Pick a person from the list first.'; h.classList.add('riders-hint-warn'); } return; }
+            if (!pickMode) activeReq = null;
+            openWalk(add.dataset.add, add); return;
+        }
         var pick = e.target.closest('.pk-pick');
         if (pick) {
             var id = +pick.dataset.req, req = PICKUPS.filter(function (p) { return p.id === id; })[0];

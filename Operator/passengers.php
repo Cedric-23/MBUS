@@ -28,6 +28,32 @@ $mode_in = (string)($_GET['mode'] ?? $_POST['mode'] ?? '');
 function riders_url(array $q): string { return 'passengers.php?' . http_build_query(array_filter($q, fn($v) => $v !== '' && $v !== null && $v !== 0)); }
 function riders_dir(string $origin): string { return stripos($origin, 'morong') !== false ? 'm' : 'h'; }
 
+// Estimate a pick-up request: nearest stop to the commuter's pin (projected onto the route line between
+// the route's two terminals), the stop they are going to, and the fare between those stops.
+function riders_estimate(array $trip, $lat, $lng, string $dest_in): array
+{
+    $order = ['MORONG TERMINAL','BINARITAN','POBLACION','HILLTOP','SABANG','ANVAYA','MABAYO','MINANGA','MORONG GATE','GROUP 6','IDESS','APPAREL','GATE 2','TRIBOA','TOWER','KORYO','TECHNO','UA','NSD','PETRON','INDUSTRIAL','HARBOR POINT','MAIN GATE'];
+    if (riders_dir((string)$trip['origin']) === 'h') $order = array_reverse($order);
+    $n = count($order);
+    $di = array_search(strtoupper(trim($dest_in)), $order, true);
+    $di = $di === false ? $n - 1 : (int)$di;
+    $oLat = (float)($trip['origin_lat'] ?? 0); $oLng = (float)($trip['origin_lng'] ?? 0);
+    $dLat = (float)($trip['destination_lat'] ?? 0); $dLng = (float)($trip['destination_lng'] ?? 0);
+    $t = null;
+    if (is_numeric($lat) && is_numeric($lng) && $oLat && $oLng && $dLat && $dLng) {
+        $k = cos(deg2rad(($oLat + $dLat) / 2));
+        $vx = ($dLng - $oLng) * $k; $vy = $dLat - $oLat;
+        $len = $vx * $vx + $vy * $vy;
+        if ($len > 0) { $t = max(0.0, min(1.0, ((($lng - $oLng) * $k) * $vx + (($lat - $oLat)) * $vy) / $len)); }
+    }
+    $pi = $t === null ? 0 : (int)round($t * ($n - 1));
+    if ($pi >= $di) $pi = max(0, $di - 1);
+    $f = mbus_fare_table();
+    $fare = round(abs(($f[$order[$di]] ?? 0) - ($f[$order[$pi]] ?? 0)), 2);
+    if ($fare <= 0) $fare = max(14.00, round(75.50 * abs($di - $pi) / max(1, $n - 1), 2));
+    return ['pickup' => $order[$pi], 'dest' => $order[$di], 'fare' => $fare];
+}
+
 // Confirm boarding from a rider card (reservations only)
 if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_boarded'])){
     $back_schedule = (int)($_POST['schedule_id'] ?? 0);
@@ -56,8 +82,11 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_walkin'])){
     $msg = 'Could not seat this passenger.';
     do {
         if(!csrf_validate_token()){ $msg = 'Session expired. Try again.'; break; }
-        $sq = mbus_db_prepare($conn, "SELECT s.schedule_id, s.trip_status, bu.capacity FROM schedule s
-            JOIN buses bu ON bu.bus_id = s.bus_id
+        $sq = mbus_db_prepare($conn, "SELECT s.schedule_id, s.trip_status, bu.capacity, ro.origin,
+                to_jsonb(ro)->>'origin_lat' AS origin_lat, to_jsonb(ro)->>'origin_lng' AS origin_lng,
+                to_jsonb(ro)->>'destination_lat' AS destination_lat, to_jsonb(ro)->>'destination_lng' AS destination_lng
+            FROM schedule s
+            JOIN buses bu ON bu.bus_id = s.bus_id JOIN routes ro ON ro.route_id = s.route_id
             WHERE s.schedule_id = ? AND s.bus_id IN (SELECT bus_id FROM operator_bus_assignments WHERE operator_id = ?)", [$back_schedule, $operator_id]);
         $sc = $sq === false ? false : mbus_db_fetch_assoc($sq);
         if(!$sc){ $msg = 'Trip not found.'; break; }
@@ -69,21 +98,24 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_walkin'])){
         if($taken !== false && mbus_db_num_rows($taken) > 0){ $msg = "Seat $seat is already taken."; break; }
 
         $fares = mbus_fare_table();
-        $pickup = strtoupper(trim((string)($_POST['pickup'] ?? '')));
-        $dest = strtoupper(trim((string)($_POST['destination'] ?? '')));
-        if(!isset($fares[$pickup], $fares[$dest]) || $pickup === $dest){ $msg = 'Choose a pickup and a different drop-off stop.'; break; }
-        $fare = round(abs($fares[$dest] - $fares[$pickup]), 2);
-        if($fare <= 0){ $msg = 'Those stops have no fare between them.'; break; }
-
         $uid = null; $source = 'Walk-in'; $wname = trim((string)($_POST['name'] ?? ''));
         $wname = $wname !== '' ? mb_substr($wname, 0, 100) : 'Walk-in passenger';
         $req_id = (int)($_POST['request_id'] ?? 0);
         if($req_id > 0){
-            $rq = mbus_db_prepare($conn, "SELECT p.request_id, p.user_id, u.full_name FROM pickup_requests p JOIN users u ON u.user_id = p.user_id
+            // Pick-up: stops and fare come from the commuter's pin and chosen destination, not from the form.
+            $rq = mbus_db_prepare($conn, "SELECT p.request_id, p.user_id, p.latitude, p.longitude, p.destination, u.full_name FROM pickup_requests p JOIN users u ON u.user_id = p.user_id
                 WHERE p.request_id = ? AND p.schedule_id = ? AND p.status = 'Waiting' AND p.expires_at > NOW()", [$req_id, $back_schedule]);
             $rrow = $rq === false ? false : mbus_db_fetch_assoc($rq);
             if(!$rrow){ $msg = 'That pickup request is no longer waiting.'; break; }
             $uid = (int)$rrow['user_id']; $wname = $rrow['full_name']; $source = 'Pickup';
+            $est = riders_estimate($sc, $rrow['latitude'], $rrow['longitude'], (string)$rrow['destination']);
+            $pickup = $est['pickup']; $dest = $est['dest']; $fare = $est['fare'];
+        } else {
+            $pickup = strtoupper(trim((string)($_POST['pickup'] ?? '')));
+            $dest = strtoupper(trim((string)($_POST['destination'] ?? '')));
+            if(!isset($fares[$pickup], $fares[$dest]) || $pickup === $dest){ $msg = 'Choose a pickup and a different drop-off stop.'; break; }
+            $fare = round(abs($fares[$dest] - $fares[$pickup]), 2);
+            if($fare <= 0){ $msg = 'Those stops have no fare between them.'; break; }
         }
 
         $code = random_int(1000, 9999);
@@ -108,7 +140,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_walkin'])){
         $msg = "Seat $seat confirmed. Collect ₱" . number_format($fare, 2) . " cash.";
     } while(false);
     $_SESSION['riders_flash'] = $msg;
-    header("Location: " . riders_url(['schedule_id' => $back_schedule, 'dir' => $dir_in, 'mode' => 'walk']));
+    header("Location: " . riders_url(['schedule_id' => $back_schedule, 'dir' => $dir_in, 'mode' => ((int)($_POST['request_id'] ?? 0) > 0) ? 'pick' : 'walk']));
     exit();
 }
 $notice = $_SESSION['riders_flash'] ?? '';
@@ -117,7 +149,9 @@ unset($_SESSION['riders_flash']);
 // Include today's Departed trips so the operator can review the live bus and waiting riders en route.
 $since = $b['today'];
 $tq = mbus_db_prepare($conn, "
-    SELECT s.schedule_id, s.departure_time, s.trip_status, bu.bus_number, bu.capacity, ro.origin, ro.destination
+    SELECT s.schedule_id, s.departure_time, s.trip_status, bu.bus_number, bu.capacity, ro.origin, ro.destination,
+           to_jsonb(ro)->>'origin_lat' AS origin_lat, to_jsonb(ro)->>'origin_lng' AS origin_lng,
+           to_jsonb(ro)->>'destination_lat' AS destination_lat, to_jsonb(ro)->>'destination_lng' AS destination_lng
     FROM schedule s
     JOIN buses bu ON bu.bus_id = s.bus_id
     JOIN routes ro ON ro.route_id = s.route_id
@@ -152,7 +186,7 @@ if(!$selected){
     foreach($trips as $t){ if($t['departure_time'] >= $b['now']){ $selected = $t; break; } }
     if(!$selected && $trips){ $selected = $trips[0]; }
 }
-$mode = in_array($mode_in, ['res', 'walk'], true) ? $mode_in : (($selected['trip_status'] ?? '') === 'Departed' ? 'walk' : 'res');
+$mode = in_array($mode_in, ['res', 'walk', 'pick'], true) ? $mode_in : (($selected['trip_status'] ?? '') === 'Departed' ? 'walk' : 'res');
 
 $riders = [];     // seat number => details
 $pickups = [];    // waiting pick-up requests for this trip
@@ -189,11 +223,15 @@ if($selected){
             'reference' => $r['reference'],
         ];
     }
-    $pq = mbus_db_prepare($conn, "SELECT p.request_id, p.pickup_label, p.destination, p.updated_at, u.full_name
+    $pq = mbus_db_prepare($conn, "SELECT p.request_id, p.pickup_label, p.destination, p.latitude, p.longitude, p.updated_at, u.user_id, u.full_name, u.phone_number,
+            (u.profile_picture_b64 IS NOT NULL AND u.profile_picture_b64 <> '') AS has_pic, LEFT(MD5(COALESCE(u.profile_picture_b64,'')),8) AS pic_v
         FROM pickup_requests p JOIN users u ON u.user_id = p.user_id
         WHERE p.schedule_id = ? AND p.status = 'Waiting' AND p.expires_at > NOW() ORDER BY p.updated_at ASC", [(int)$selected['schedule_id']]);
     while($pq !== false && ($p = mbus_db_fetch_assoc($pq))){
-        $pickups[] = ['id' => (int)$p['request_id'], 'name' => $p['full_name'], 'spot' => $p['pickup_label'] ?: 'Pinned spot', 'dest' => $p['destination']];
+        $est = riders_estimate($selected, $p['latitude'], $p['longitude'], (string)$p['destination']);
+        $pickups[] = ['id' => (int)$p['request_id'], 'name' => $p['full_name'], 'phone' => $p['phone_number'], 'spot' => $p['pickup_label'] ?: 'Pinned spot',
+            'near' => $est['pickup'], 'dest' => $est['dest'], 'fare' => $est['fare'],
+            'photo' => in_array($p['has_pic'], [true, 1, '1', 't', 'true'], true) ? '../avatar.php?u=' . (int)$p['user_id'] . '&v=' . $p['pic_v'] : ''];
     }
 }
 $trip_open = $selected && in_array($selected['trip_status'], ['Scheduled', 'Boarding'], true);
@@ -302,6 +340,28 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
         <?php } ?>
     </nav>
 
+<?php if($mode === 'pick'){ ?>
+    <section class="pickup-panel" aria-label="Pick-up list">
+        <div class="pickup-head"><h2>Pick-up list</h2><span class="seg-count"><?php echo count($pickups); ?></span></div>
+        <?php if(!$pickups){ ?>
+            <p class="riders-hint">Nobody is waiting for this bus right now.</p>
+        <?php } else { ?>
+        <ul class="pickup-list" id="pickupList">
+            <?php foreach($pickups as $pk){ ?>
+            <li data-req="<?php echo (int)$pk['id']; ?>">
+                <button type="button" class="pk-pick" data-req="<?php echo (int)$pk['id']; ?>"<?php echo $walk_open ? '' : ' disabled'; ?>>
+                    <?php if($pk['photo']){ ?><img class="pk-photo" src="<?php echo htmlspecialchars($pk['photo']); ?>" alt=""><?php } else { ?><span class="pk-photo pk-initial"><?php echo htmlspecialchars(strtoupper(substr($pk['name'], 0, 1))); ?></span><?php } ?>
+                    <span class="pk-who"><strong><?php echo htmlspecialchars($pk['name']); ?></strong>
+                        <small>Near <?php echo htmlspecialchars(ucwords(strtolower($pk['near']))); ?> → <?php echo htmlspecialchars(ucwords(strtolower($pk['dest']))); ?></small></span>
+                    <span class="pk-fare">₱<?php echo number_format($pk['fare'], 2); ?></span>
+                </button>
+            </li>
+            <?php } ?>
+        </ul>
+        <?php } ?>
+    </section>
+<?php } ?>
+
     <section class="bus-panel" aria-label="Seats">
         <div class="bus-panel-head">
             <h2><?php echo htmlspecialchars($selected['origin']); ?> to <?php echo htmlspecialchars($selected['destination']); ?></h2>
@@ -309,8 +369,8 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
         </div>
 
         <div class="seg mode-tabs" role="tablist" aria-label="Rider type">
-            <?php foreach(['res' => 'Reservation', 'walk' => 'Walk-in'] as $m => $ml){ ?>
-            <a class="seg-tab<?php echo $mode === $m ? ' on' : ''; ?>" role="tab" aria-selected="<?php echo $mode === $m ? 'true' : 'false'; ?>" href="<?php echo htmlspecialchars(riders_url(['schedule_id' => (int)$selected['schedule_id'], 'dir' => $dir, 'mode' => $m])); ?>"><?php echo $ml; ?></a>
+            <?php foreach(['res' => 'Reservation', 'walk' => 'Walk-in', 'pick' => 'Pickup'] as $m => $ml){ ?>
+            <a class="seg-tab<?php echo $mode === $m ? ' on' : ''; ?>" role="tab" aria-selected="<?php echo $mode === $m ? 'true' : 'false'; ?>" href="<?php echo htmlspecialchars(riders_url(['schedule_id' => (int)$selected['schedule_id'], 'dir' => $dir, 'mode' => $m])); ?>"><?php echo $ml; if($m === 'pick' && $pickups){ ?><span class="seg-count"><?php echo count($pickups); ?></span><?php } ?></a>
             <?php } ?>
         </div>
 
@@ -334,15 +394,15 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
                     $info = $riders[(string)$n] ?? null;
                     if($info){
                         $cls = $info['status'] === 'Boarded' ? 'boarded' : ($info['status'] === 'Paid' ? 'paid' : 'pending');
-                        $mine = ($mode === 'walk') === (bool)$info['walk'];   // this tab owns the seat
+                        $mine = $mode === 'pick' ? $info['kind'] === 'Pickup' : ($mode === 'walk' ? $info['kind'] === 'Walk-in' : !$info['walk']);   // this tab owns the seat
                         $label = 'Seat ' . $n . ', ' . htmlspecialchars($info['name'], ENT_QUOTES) . ', ' . $info['status'];
                         if($mine){
                             echo "<button type='button' class='rseat $cls" . ($info['walk'] ? ' walkin' : '') . "' data-seat='$n' aria-label='$label'>$n</button>";
                         } else {
                             echo "<span class='rseat $cls locked" . ($info['walk'] ? ' walkin' : '') . "' aria-disabled='true' aria-label='$label (other tab)'>$n</span>";
                         }
-                    } elseif($mode === 'walk' && $walk_open){
-                        echo "<button type='button' class='rseat empty open' data-add='$n' aria-label='Seat $n empty, add walk-in'>$n</button>";
+                    } elseif(($mode === 'walk' || $mode === 'pick') && $walk_open){
+                        echo "<button type='button' class='rseat empty open' data-add='$n' aria-label='Seat $n empty, " . ($mode === 'pick' ? 'seat a pick-up' : 'add walk-in') . "'>$n</button>";
                     } else {
                         echo "<span class='rseat empty locked' aria-disabled='true' aria-label='Seat $n empty'>$n</span>";
                     }
@@ -356,28 +416,12 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
         </div>
         <p class="riders-hint" id="ridersHint"><?php
             if($mode === 'res') echo $riders ? 'Tap a reserved seat to confirm boarding. Walk-in seats are on the Walk-in tab.' : 'No reservations on this bus yet.';
-            elseif(!$walk_open) echo 'This trip is closed for walk-ins.';
-            else echo 'Tap an empty seat to seat a walk-in. Reserved seats are locked here.';
+            elseif(!$walk_open) echo 'This trip is closed.';
+            elseif($mode === 'pick') echo $pickups ? 'Tap a person above, then tap the seat they will take.' : 'No pick-up requests on this trip.';
+            else echo 'Tap an empty seat to seat a walk-in. Other seats are locked here.';
         ?></p>
     </section>
 
-<?php if($mode === 'walk'){ ?>
-    <section class="pickup-panel" aria-label="Pick-up requests">
-        <div class="pickup-head"><h2>Pick-up requests</h2><span class="seg-count"><?php echo count($pickups); ?></span></div>
-        <?php if(!$pickups){ ?>
-            <p class="riders-hint">No one has asked for a pick-up on this trip.</p>
-        <?php } else { ?>
-        <ul class="pickup-list" id="pickupList">
-            <?php foreach($pickups as $pk){ ?>
-            <li data-req="<?php echo (int)$pk['id']; ?>">
-                <span class="pk-who"><strong><?php echo htmlspecialchars($pk['name']); ?></strong><small><?php echo htmlspecialchars($pk['spot']); ?></small></span>
-                <button type="button" class="pk-pick" data-req="<?php echo (int)$pk['id']; ?>"<?php echo $walk_open ? '' : ' disabled'; ?>>Assign seat</button>
-            </li>
-            <?php } ?>
-        </ul>
-        <?php } ?>
-    </section>
-<?php } ?>
 
 <?php } } ?>
 </div>
@@ -428,15 +472,16 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
         <input type="hidden" name="dir" value="<?php echo htmlspecialchars($dir); ?>">
         <input type="hidden" name="seat" id="wkSeat" value="">
         <input type="hidden" name="request_id" id="wkReq" value="">
+        <div class="wk-summary" id="wkSummary" hidden></div>
         <label class="wk-field" id="wkNameRow">Name (optional)
             <input type="text" name="name" id="wkName" maxlength="100" autocomplete="off" placeholder="Walk-in passenger">
         </label>
-        <label class="wk-field">Pickup stop
+        <label class="wk-field wk-manual">Pickup stop
             <select name="pickup" id="wkPickup" required><option value="">Choose stop</option>
             <?php foreach($stops as $st){ echo '<option value="' . htmlspecialchars($st['key']) . '" data-fare="' . $st['fare'] . '">' . htmlspecialchars($st['label']) . '</option>'; } ?>
             </select>
         </label>
-        <label class="wk-field">Drop-off stop
+        <label class="wk-field wk-manual">Drop-off stop
             <select name="destination" id="wkDest" required><option value="">Choose stop</option>
             <?php foreach($stops as $st){ echo '<option value="' . htmlspecialchars($st['key']) . '" data-fare="' . $st['fare'] . '">' . htmlspecialchars($st['label']) . '</option>'; } ?>
             </select>

@@ -161,6 +161,7 @@ $query = mbus_db_prepare($conn, "
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/gps_status.css">
     <link rel="stylesheet" href="../Assets/css/operator/operator_trip_cards.css">
+    <link rel="stylesheet" href="../Assets/css/direction_tabs.css">
 </head>
 
 <body class="has-sidebar">
@@ -257,7 +258,7 @@ while($tr = mbus_db_fetch_assoc($query)) $trip_rows[] = $tr;
 <?php if(!$trip_rows){ ?>
 <p class="trips-empty">No trips here. Try another filter.</p>
 <?php } ?>
-<div class="trip-cards">
+<div class="trip-cards" data-dir-list>
 <?php foreach($trip_rows as $row){
     $sid = (int)$row['schedule_id'];
     $pq = mbus_db_prepare($conn, "SELECT reservation.reservation_id, reservation.seat_number, reservation.pickup_location, reservation.destination, reservation.status, users.full_name
@@ -269,7 +270,7 @@ while($tr = mbus_db_fetch_assoc($query)) $trip_rows[] = $tr;
     $boarded = count(array_filter($riders, fn($r) => $r['status'] === 'Boarded'));
     $is_open = $open_schedule === $sid;
 ?>
-<article class="trip-card trip-row" data-schedule-id="<?php echo $sid; ?>" data-trip-status="<?php echo htmlspecialchars($row['trip_status'], ENT_QUOTES); ?>">
+<article class="trip-card trip-row" data-dir="<?php echo stripos((string)$row['origin'], 'morong') !== false ? 'm' : 'h'; ?>" data-schedule-id="<?php echo $sid; ?>" data-trip-status="<?php echo htmlspecialchars($row['trip_status'], ENT_QUOTES); ?>">
     <div class="tc-top">
         <span class="tc-bus"><i class="fa fa-bus" aria-hidden="true"></i> <?php echo htmlspecialchars($row['bus_number']); ?><small><?php echo htmlspecialchars($row['bus_type']); ?></small></span>
         <span class="status-badge <?php echo strtolower($row['trip_status']); ?>"><?php echo htmlspecialchars($row['trip_status']); ?></span>
@@ -409,5 +410,6 @@ document.addEventListener('keydown', function(e) {
 </nav>
 <script src="../Assets/js/app-header.js"></script>
 <script src="../Assets/js/operator_tracker.js"></script>
+<script src="../Assets/js/direction_tabs.js"></script>
 </body>
 </html>
