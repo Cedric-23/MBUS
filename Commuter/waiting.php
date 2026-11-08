@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/app.php';
 session_start();
 require_once __DIR__ . '/../Includes/csrf.php';
+require_once __DIR__ . '/../config/db_connect.php';
 
 if (!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?? '')) !== 'commuter') {
     header('Location: ../login.php');
@@ -10,9 +11,12 @@ if (!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?
 
 $avatar = basename((string)($_SESSION['profile_picture'] ?? ''));
 $avatarPath = __DIR__ . '/../Assets/profile_pictures/' . $avatar;
-$profileImage = ($avatar !== '' && strtolower($avatar) !== 'default.png' && is_file($avatarPath))
+$pq = mbus_db_prepare($conn, "SELECT LEFT(MD5(COALESCE(profile_picture_b64,'')),8) AS pic_v, (profile_picture_b64 IS NOT NULL AND profile_picture_b64 <> '') AS has_pic FROM users WHERE user_id = ?", [(int)$_SESSION['user_id']]);
+$pr = $pq === false ? null : mbus_db_fetch_assoc($pq);
+$hasDbPic = !empty($pr['has_pic']) && $pr['has_pic'] !== 'f';
+$profileImage = $hasDbPic ? '../avatar.php?v=' . rawurlencode((string)$pr['pic_v']) : (($avatar !== '' && strtolower($avatar) !== 'default.png' && is_file($avatarPath))
     ? '../Assets/profile_pictures/' . rawurlencode($avatar) . '?v=' . rawurlencode((string)filemtime($avatarPath))
-    : '../Assets/images/mbus_icon.png';
+    : '../Assets/images/mbus_icon.png');
 ?>
 <!DOCTYPE html>
 <html lang="en">

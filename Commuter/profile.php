@@ -125,7 +125,7 @@ $phone_locked = ($ph !== '' && !isset($error));
 <section class="card pf-hero">
     <div class="pf-photo">
         <?php if($has_pic){ ?>
-            <img id="pfImg" src="avatar.php?v=<?php echo htmlspecialchars($user_data['pic_v']); ?>" alt="Your photo" width="96" height="96">
+            <img id="pfImg" src="../avatar.php?v=<?php echo htmlspecialchars($user_data['pic_v']); ?>" alt="Your photo" width="96" height="96">
         <?php } else { ?>
             <span id="pfInitial" class="pf-initial" aria-hidden="true"><?php echo htmlspecialchars($initial); ?></span>
             <img id="pfImg" alt="Your photo" width="96" height="96" hidden>

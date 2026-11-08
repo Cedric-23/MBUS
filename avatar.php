@@ -1,7 +1,7 @@
 <?php
-// Serves the signed-in user's own profile picture from the database.
+// Serves the signed-in user's own profile picture (any role) from the database.
 session_start();
-include "../config/db_connect.php";
+include "config/db_connect.php";
 if (!isset($_SESSION['user_id'])) { http_response_code(403); exit; }
 $q = mbus_db_prepare($conn, "SELECT profile_picture_b64, profile_picture_mime FROM users WHERE user_id = ?", [$_SESSION['user_id']]);
 $r = $q === false ? false : mbus_db_fetch_assoc($q);

@@ -1,4 +1,11 @@
 document.addEventListener('DOMContentLoaded', function () {
+    // Use the photo saved on the profile page (stored in the database) in the header avatar.
+    document.querySelectorAll('.profile-avatar img').forEach(function (img) {
+        const probe = new Image();
+        probe.onload = function () { img.src = probe.src; };
+        probe.src = '../avatar.php';
+    });
+
     const trigger = document.querySelector('.profile-trigger');
     const menu = document.getElementById('profileMenu');
 

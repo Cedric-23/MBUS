@@ -21,13 +21,14 @@ if (!$trip) {
     header('Location: schedule.php');
     exit;
 }
-$profile_query = mbus_db_prepare($conn, "SELECT profile_picture FROM users WHERE user_id = ?", [(int)$_SESSION['user_id']]);
+$profile_query = mbus_db_prepare($conn, "SELECT profile_picture, LEFT(MD5(COALESCE(profile_picture_b64,'')),8) AS pic_v, (profile_picture_b64 IS NOT NULL AND profile_picture_b64 <> '') AS has_pic FROM users WHERE user_id = ?", [(int)$_SESSION['user_id']]);
 $profile_row = $profile_query === false ? null : mbus_db_fetch_assoc($profile_query);
 $profile_picture = basename((string)($profile_row['profile_picture'] ?? ''));
 $profile_path = __DIR__ . '/../Assets/profile_pictures/' . $profile_picture;
-$profile_image = ($profile_picture !== '' && strtolower($profile_picture) !== 'default.png' && is_file($profile_path))
+$has_db_pic = !empty($profile_row['has_pic']) && $profile_row['has_pic'] !== 'f';
+$profile_image = $has_db_pic ? '../avatar.php?v=' . rawurlencode((string)$profile_row['pic_v']) : (($profile_picture !== '' && strtolower($profile_picture) !== 'default.png' && is_file($profile_path))
     ? '../Assets/profile_pictures/' . rawurlencode($profile_picture) . '?v=' . rawurlencode((string)filemtime($profile_path))
-    : '../Assets/images/mbus_icon.png';
+    : '../Assets/images/mbus_icon.png');
 $config = [
     'csrfToken' => csrf_get_token(),
     'scheduleId' => (int)$trip['schedule_id'],
