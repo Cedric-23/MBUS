@@ -296,20 +296,11 @@ function mbus_pickup_mutate(PDO $pdo, string $role, int $userId, array $data): a
             $stmt = $pdo->prepare("UPDATE public.pickup_requests p SET status = 'Picked up', updated_at = clock_timestamp()
                 FROM public.schedule s WHERE s.schedule_id = p.schedule_id AND p.request_id = ? AND p.schedule_id = ?
                 AND p.status = 'Waiting' AND p.expires_at > clock_timestamp()" . $scope . '
-                RETURNING p.request_id, p.schedule_id, p.user_id, p.status, p.updated_at, p.expires_at');
+                RETURNING p.request_id, p.schedule_id, p.status, p.updated_at, p.expires_at');
             $stmt->execute($params);
             $message = 'Picked up. Give them a seat in Riders → Pickup.';
-            $picked = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($picked) {
-                // Already reserved and paid on this trip: board that seat instead of asking for a second one.
-                $bs = $pdo->prepare("UPDATE public.reservation SET status = 'Boarded' WHERE user_id = ? AND schedule_id = ? AND status IN ('Paid', 'Confirmed') RETURNING seat_number");
-                $bs->execute([$picked['user_id'], $picked['schedule_id']]);
-                $seat = $bs->fetchColumn();
-                if ($seat !== false) { $message = 'Picked up. Reserved seat ' . $seat . ' is now boarded.'; }
-            }
-            $request = $picked;
         }
-        $request = $request ?? $stmt->fetch(PDO::FETCH_ASSOC); // direct PDO: the legacy adapter discards INSERT RETURNING rows.
+        $request = $stmt->fetch(PDO::FETCH_ASSOC); // direct PDO: the legacy adapter discards INSERT RETURNING rows.
         if (!$request) {
             throw new MbusPickupException('This request has expired, changed, or is no longer waiting. Refresh and try again.', 409);
         }

@@ -105,7 +105,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_walkin'])){
             // Pick-up: stops and fare come from the commuter's pin and chosen destination, not from the form.
             $rq = mbus_db_prepare($conn, "SELECT p.request_id, p.user_id, p.latitude, p.longitude, p.destination, u.full_name FROM pickup_requests p JOIN users u ON u.user_id = p.user_id
                 WHERE p.request_id = ? AND p.schedule_id = ? AND p.status = 'Picked up'
-                AND NOT EXISTS (SELECT 1 FROM reservation rv WHERE rv.user_id = p.user_id AND rv.schedule_id = p.schedule_id AND rv.status IN ('Paid','Confirmed','Boarded'))", [$req_id, $back_schedule]);
+                AND NOT EXISTS (SELECT 1 FROM reservation rv WHERE rv.user_id = p.user_id AND rv.schedule_id = p.schedule_id AND rv.source = 'Pickup' AND rv.status IN ('Paid','Confirmed','Boarded'))", [$req_id, $back_schedule]);
             $rrow = $rq === false ? false : mbus_db_fetch_assoc($rq);
             if(!$rrow){ $msg = 'That pick-up is already seated or no longer available.'; break; }
             $uid = (int)$rrow['user_id']; $wname = $rrow['full_name']; $source = 'Pickup';
@@ -228,7 +228,7 @@ if($selected){
             (u.profile_picture_b64 IS NOT NULL AND u.profile_picture_b64 <> '') AS has_pic, LEFT(MD5(COALESCE(u.profile_picture_b64,'')),8) AS pic_v
         FROM pickup_requests p JOIN users u ON u.user_id = p.user_id
         WHERE p.schedule_id = ? AND p.status = 'Picked up'
-          AND NOT EXISTS (SELECT 1 FROM reservation rv WHERE rv.user_id = p.user_id AND rv.schedule_id = p.schedule_id AND rv.status IN ('Paid','Confirmed','Boarded'))
+          AND NOT EXISTS (SELECT 1 FROM reservation rv WHERE rv.user_id = p.user_id AND rv.schedule_id = p.schedule_id AND rv.source = 'Pickup' AND rv.status IN ('Paid','Confirmed','Boarded'))
         ORDER BY p.updated_at ASC", [(int)$selected['schedule_id']]);
     while($pq !== false && ($p = mbus_db_fetch_assoc($pq))){
         $est = riders_estimate($selected, $p['latitude'], $p['longitude'], (string)$p['destination']);
