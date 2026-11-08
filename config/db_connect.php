@@ -29,6 +29,8 @@ try {
     // has not yet been run manually. IF NOT EXISTS makes this safe on every request.
     try {
         $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(255)');
+        $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_b64 TEXT');
+        $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_mime VARCHAR(50)');
     } catch (PDOException $schema_error) {
         error_log('Profile picture schema check failed: ' . $schema_error->getMessage());
     }
