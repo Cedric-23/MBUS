@@ -46,13 +46,14 @@ if(isset($_POST['verify'])){
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="Assets/css/responsive.css">
     <link rel="stylesheet" href="login.css">
+    <link rel="stylesheet" href="Assets/css/auth.css">
 </head>
 
 <body class="login-page">
 <div class="login-container">
     
     <div class="login-brand">
-        <img src="Assets/images/mbus_logo.png" alt="MBUS Logo" class="login-logo">
+        <img src="Assets/images/mbus_icon.png" alt="MBUS Logo" class="login-logo">
         <div class="login-brand-text">
             <h2>Morong - SBMA Bus Reservation</h2>
             <p>Fast. Reliable. Connected.</p>

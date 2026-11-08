@@ -81,13 +81,14 @@ if(isset($_POST['login'])){
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="Assets/css/responsive.css">
 <link rel="stylesheet" href="login.css">
+    <link rel="stylesheet" href="Assets/css/auth.css">
 </head>
 
 <body class="login-page">
 <div class="login-container">
     
     <div class="login-brand">
-        <img src="Assets/images/mbus_logo.png" alt="MBUS Logo" class="login-logo">
+        <img src="Assets/images/mbus_icon.png" alt="MBUS Logo" class="login-logo">
         <div class="login-brand-text">
             <h2>Morong - SBMA Bus Reservation</h2>
             <p>Fast. Reliable. Connected.</p>
