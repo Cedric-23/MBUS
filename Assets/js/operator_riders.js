@@ -119,6 +119,22 @@
         });
     }
 
+    /* compact pick-up list (more than 3 waiting to be seated) */
+    var pkModal = $('pkModal');
+    function pkOpen(open) {
+        if (!pkModal) return;
+        pkModal.hidden = !open;
+        document.body.style.overflow = open ? 'hidden' : '';
+        if (open) { var f = pkModal.querySelector('.pk-pick'); if (f) f.focus(); } else if ($('pkCompact')) $('pkCompact').focus();
+    }
+    function pkLabel() {
+        var sub = $('pkCompactSub'); if (!sub) return;
+        sub.textContent = activeReq ? 'Seating ' + activeReq.name + ' · tap to change' : 'Tap to choose who to seat';
+    }
+    if ($('pkCompact')) $('pkCompact').addEventListener('click', function () { pkOpen(true); });
+    if ($('pkModalClose')) $('pkModalClose').addEventListener('click', function () { pkOpen(false); });
+    if (pkModal) pkModal.addEventListener('click', function (e) { if (e.target === pkModal) pkOpen(false); });
+
     document.addEventListener('click', function (e) {
         var seat = e.target.closest('.rseat[data-seat]');
         if (seat) { open(seat.dataset.seat, seat); return; }
@@ -132,11 +148,13 @@
         if (pick) {
             var id = +pick.dataset.req, req = PICKUPS.filter(function (p) { return p.id === id; })[0];
             setActive(activeReq && activeReq.id === id ? null : req || null);
+            if (pkModal && !pkModal.hidden) pkOpen(false);
+            pkLabel();
             return;
         }
         if (e.target.closest('#riderClose') || e.target.closest('#walkClose') || e.target === backdrop) close();
     });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && (!sheet.hidden || (walk && !walk.hidden))) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && pkModal && !pkModal.hidden) { pkOpen(false); return; } if (e.key === 'Escape' && (!sheet.hidden || (walk && !walk.hidden))) close(); });
 
     $('boardForm').addEventListener('submit', function () {
         var b = $('rdBoard');

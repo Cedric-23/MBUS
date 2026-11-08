@@ -198,6 +198,59 @@
         box.textContent = 'To ' + destinationName + ': ' + window.MBUSRouting.formatDistance(remaining.distanceMeters) + ' on the road · ' + window.MBUSRouting.formatDuration(remaining.durationSeconds) + '. Estimate excludes traffic, stops and detours.';
     }
 
+    const COMPACT_AT = 3;
+    let lastReqs = [], compactBox = null;
+    function updateCompact(reqs) {
+        const sheetEl = document.querySelector('.sw-sheet');
+        const on = reqs.length > COMPACT_AT;
+        if (sheetEl) sheetEl.classList.toggle('is-compact', on);
+        if (compactBox) { compactBox.remove(); compactBox = null; }
+        if (!on) return;
+        compactBox = node('button', undefined, 'sw-compact'); compactBox.type = 'button';
+        const stack = node('span', undefined, 'sw-stack');
+        reqs.slice(0, 4).forEach(r => { const i = node('img', undefined, 'sw-stack-img'); i.alt = ''; bindAvatarFallback(i); i.src = photoOf(r); stack.append(i); });
+        if (reqs.length > 4) stack.append(node('span', '+' + (reqs.length - 4), 'sw-stack-more'));
+        const t = node('span', undefined, 'sw-compact-text');
+        const near = reqs.find(r => r._km !== null);
+        t.append(node('strong', 'View all ' + reqs.length + ' waiting'), node('small', near ? 'Nearest: ' + (near.full_name || 'Commuter') + ' · ' + dist(near._km) : 'Tap to see everyone'));
+        compactBox.append(stack, t, node('span', '›', 'sw-compact-go'));
+        compactBox.addEventListener('click', openList);
+        list.before(compactBox);
+    }
+    function openList() {
+        const old = document.getElementById('swCard'); if (old) old.remove();
+        const back = node('div', undefined, 'sw-card-back'); back.id = 'swCard';
+        const card = node('div', undefined, 'sw-card sw-listcard'); card.setAttribute('role', 'dialog'); card.setAttribute('aria-modal', 'true'); card.setAttribute('aria-label', 'Waiting riders');
+        const head = node('div', undefined, 'sw-listcard-head');
+        head.append(node('h3', lastReqs.length + ' waiting'));
+        const x = node('button', 'Close', 'sw-listcard-x'); x.type = 'button'; head.append(x);
+        card.append(head);
+        let q = null;
+        if (lastReqs.length > 6) { q = node('input', undefined, 'sw-search'); q.type = 'search'; q.placeholder = 'Search name or spot'; q.setAttribute('aria-label', 'Search waiting riders'); card.append(q); }
+        const ul = node('ul', undefined, 'sw-minilist');
+        const draw = term => {
+            ul.replaceChildren();
+            lastReqs.filter(r => !term || ((r.full_name || '') + ' ' + (r.pickup_label || '')).toLowerCase().includes(term)).forEach(r => {
+                const li = node('li'); const b = node('button', undefined, 'sw-mini'); b.type = 'button';
+                const im = node('img', undefined, 'sw-mini-img'); im.alt = ''; bindAvatarFallback(im); im.src = photoOf(r);
+                const tx = node('span', undefined, 'sw-mini-text');
+                tx.append(node('strong', r.full_name || 'Commuter'), node('small', (r.pickup_label || 'Pinned spot') + (r.bus_number ? ' · ' + r.bus_number : '')));
+                b.append(im, tx);
+                if (r._km !== null) b.append(node('span', dist(r._km), 'sw-dist'));
+                b.addEventListener('click', () => { shut(); if (selected !== r.request_id) choose(r); showDetails(r); });
+                li.append(b); ul.append(li);
+            });
+            if (!ul.children.length) ul.append(node('li', 'No match.', 'sw-mini-none'));
+        };
+        draw('');
+        if (q) q.addEventListener('input', () => draw(q.value.trim().toLowerCase()));
+        card.append(ul); back.append(card); document.body.append(back);
+        const shut = () => { back.remove(); document.removeEventListener('keydown', esc); };
+        const esc = e => { if (e.key === 'Escape') shut(); };
+        x.addEventListener('click', shut); back.addEventListener('click', e => { if (e.target === back) shut(); });
+        document.addEventListener('keydown', esc); (q || x).focus();
+    }
+
     function render() {
         const sel = filter.value;
         const reqs = requests.filter(r => !sel || String(r.schedule_id) === sel);
@@ -210,6 +263,7 @@
         });
         reqs.sort((a, b) => (a._km === null) - (b._km === null) || a._km - b._km);
 
+        lastReqs = reqs;
         el('staffCount').textContent = String(reqs.length);
         el('busLabel').textContent = buses.length ? buses.length + (buses.length === 1 ? ' bus live' : ' buses live') : 'No bus location yet';
         empty.hidden = reqs.length > 0 || !ready;
@@ -263,6 +317,7 @@
             list.append(li);
         });
 
+        updateCompact(reqs);
         if (!fittedOnce && pts.length) { fit(pts); fittedOnce = true; }
         updateStaffRoute();
         if (map) requestAnimationFrame(() => map.invalidateSize({ pan: false }));
@@ -289,8 +344,12 @@
         const dl = node('dl', undefined, 'sw-card-list');
         rows.forEach(([k, v]) => { dl.append(node('dt', k), node('dd', v)); });
         const close = node('button', 'Close', 'sw-card-close'); close.type = 'button';
-        card.append(head, dl, close); back.append(card); document.body.append(back);
+        card.append(head, dl);
+        let pk = null;
+        if (!isAdmin) { pk = node('button', 'Picked up', 'sw-card-pick'); pk.type = 'button'; card.append(pk); }
+        card.append(close); back.append(card); document.body.append(back);
         const shut = () => { back.remove(); document.removeEventListener('keydown', esc); };
+        if (pk) pk.addEventListener('click', async () => { await pickedUp(r, pk); shut(); });
         const esc = e => { if (e.key === 'Escape') shut(); };
         close.addEventListener('click', shut); back.addEventListener('click', e => { if (e.target === back) shut(); });
         document.addEventListener('keydown', esc); close.focus();

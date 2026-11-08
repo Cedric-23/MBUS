@@ -349,6 +349,16 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
         <?php if(!$pickups){ ?>
             <p class="riders-hint">No one to seat yet. When you tap Picked up on the Waiting tab, they show here so you can give them a seat.</p>
         <?php } else { ?>
+        <?php $compact = count($pickups) > 3; ?>
+        <?php if($compact){ ?>
+        <button type="button" class="pk-compact" id="pkCompact" aria-haspopup="dialog">
+            <span class="pk-stack"><?php foreach(array_slice($pickups, 0, 4) as $i => $pk){ if($pk['photo']){ ?><img class="pk-stack-img" src="<?php echo htmlspecialchars($pk['photo']); ?>" alt=""><?php } else { ?><span class="pk-stack-img pk-initial"><?php echo htmlspecialchars(strtoupper(substr($pk['name'], 0, 1))); ?></span><?php } } if(count($pickups) > 4){ ?><span class="pk-stack-img pk-stack-more">+<?php echo count($pickups) - 4; ?></span><?php } ?></span>
+            <span class="pk-compact-text"><strong id="pkCompactTitle"><?php echo count($pickups); ?> to seat</strong><small id="pkCompactSub">Tap to choose who to seat</small></span>
+            <span class="pk-compact-go" aria-hidden="true">›</span>
+        </button>
+        <div class="pk-modal-back" id="pkModal" hidden>
+            <div class="pk-modal" role="dialog" aria-modal="true" aria-label="Pick-up list">
+                <div class="pk-modal-head"><h3><?php echo count($pickups); ?> to seat</h3><button type="button" class="pk-modal-x" id="pkModalClose">Close</button></div>
         <ul class="pickup-list" id="pickupList">
             <?php foreach($pickups as $pk){ ?>
             <li data-req="<?php echo (int)$pk['id']; ?>">
@@ -361,6 +371,22 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
             </li>
             <?php } ?>
         </ul>
+            </div>
+        </div>
+        <?php } else { ?>
+        <ul class="pickup-list" id="pickupList">
+            <?php foreach($pickups as $pk){ ?>
+            <li data-req="<?php echo (int)$pk['id']; ?>">
+                <button type="button" class="pk-pick" data-req="<?php echo (int)$pk['id']; ?>"<?php echo $walk_open ? '' : ' disabled'; ?>>
+                    <?php if($pk['photo']){ ?><img class="pk-photo" src="<?php echo htmlspecialchars($pk['photo']); ?>" alt=""><?php } else { ?><span class="pk-photo pk-initial"><?php echo htmlspecialchars(strtoupper(substr($pk['name'], 0, 1))); ?></span><?php } ?>
+                    <span class="pk-who"><strong><?php echo htmlspecialchars($pk['name']); ?></strong>
+                        <small>Near <?php echo htmlspecialchars(ucwords(strtolower($pk['near']))); ?> → <?php echo htmlspecialchars(ucwords(strtolower($pk['dest']))); ?></small></span>
+                    <span class="pk-fare">₱<?php echo number_format($pk['fare'], 2); ?></span>
+                </button>
+            </li>
+            <?php } ?>
+        </ul>
+        <?php } ?>
         <?php } ?>
     </section>
 <?php } ?>
