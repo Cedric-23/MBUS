@@ -84,4 +84,4 @@ body.login-page .form-field.plain input, body.login-page .form-field.plain selec
 body.login-page .form-field select:focus, body.login-page .form-field textarea:focus, body.login-page .form-field input[type=date]:focus { outline: none; border-color: #1e3a5f; box-shadow: 0 0 0 3px rgba(30, 58, 95, .14); }
 body.login-page .auth-check { display: flex; gap: 10px; align-items: flex-start; font-size: .875rem; color: #5b6b7f; line-height: 1.4; }
 body.login-page .auth-check input { flex: none; width: 20px; height: 20px; margin-top: 1px; accent-color: #1e3a5f; }
-body.login-page .auth-check input[type=checkbox] { width: 20px !important; height: 20px !important; min-height: 0 !important; padding: 0 !important; flex: none; }
+body.login-page .auth-check input[type=checkbox] { width: 20px !important; height: 20px !important; min-height: 0 !important; min-width: 0 !important; padding: 0 !important; flex: none; }
