@@ -63,11 +63,11 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_boarded'])){
         $reservation_id = (int)($_POST['reservation_id'] ?? 0);
         $stmt = mbus_db_prepare($conn, "UPDATE reservation r SET status='Boarded'
             WHERE r.reservation_id = ?
-              AND r.status = 'Paid'
+              AND r.status IN ('Paid', 'Confirmed')
               AND r.schedule_id IN (
                   SELECT s.schedule_id FROM schedule s
                   JOIN operator_bus_assignments oba ON oba.bus_id = s.bus_id
-                  WHERE oba.operator_id = ? AND s.trip_status IN ('Scheduled', 'Boarding')
+                  WHERE oba.operator_id = ? AND s.trip_status IN ('Scheduled', 'Boarding', 'Departed')
               )", [$reservation_id, $operator_id]);
         $ok = $stmt !== false && $conn->affectedRows > 0;
         $_SESSION['riders_flash'] = $ok ? 'Passenger boarded.' : 'Could not board this passenger.';
@@ -105,7 +105,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_walkin'])){
             // Pick-up: stops and fare come from the commuter's pin and chosen destination, not from the form.
             $rq = mbus_db_prepare($conn, "SELECT p.request_id, p.user_id, p.latitude, p.longitude, p.destination, u.full_name FROM pickup_requests p JOIN users u ON u.user_id = p.user_id
                 WHERE p.request_id = ? AND p.schedule_id = ? AND p.status = 'Picked up'
-                AND NOT EXISTS (SELECT 1 FROM reservation rv WHERE rv.user_id = p.user_id AND rv.schedule_id = p.schedule_id AND rv.source = 'Pickup' AND rv.status IN ('Paid','Confirmed','Boarded'))", [$req_id, $back_schedule]);
+                AND NOT EXISTS (SELECT 1 FROM reservation rv WHERE rv.user_id = p.user_id AND rv.schedule_id = p.schedule_id AND rv.status IN ('Paid','Confirmed','Boarded'))", [$req_id, $back_schedule]);
             $rrow = $rq === false ? false : mbus_db_fetch_assoc($rq);
             if(!$rrow){ $msg = 'That pick-up is already seated or no longer available.'; break; }
             $uid = (int)$rrow['user_id']; $wname = $rrow['full_name']; $source = 'Pickup';
@@ -204,7 +204,7 @@ if($selected){
         FROM reservation r
         LEFT JOIN users u ON u.user_id = r.user_id
         WHERE r.schedule_id = ?
-        AND (r.status IN ('Paid', 'Boarded')
+        AND (r.status IN ('Paid', 'Confirmed', 'Boarded')
              OR (r.status = 'Pending' AND r.created_at > NOW() - INTERVAL '10 minutes'))
     ", [(int)$selected['schedule_id']]);
     while($rq !== false && ($r = mbus_db_fetch_assoc($rq))){
@@ -228,7 +228,7 @@ if($selected){
             (u.profile_picture_b64 IS NOT NULL AND u.profile_picture_b64 <> '') AS has_pic, LEFT(MD5(COALESCE(u.profile_picture_b64,'')),8) AS pic_v
         FROM pickup_requests p JOIN users u ON u.user_id = p.user_id
         WHERE p.schedule_id = ? AND p.status = 'Picked up'
-          AND NOT EXISTS (SELECT 1 FROM reservation rv WHERE rv.user_id = p.user_id AND rv.schedule_id = p.schedule_id AND rv.source = 'Pickup' AND rv.status IN ('Paid','Confirmed','Boarded'))
+          AND NOT EXISTS (SELECT 1 FROM reservation rv WHERE rv.user_id = p.user_id AND rv.schedule_id = p.schedule_id AND rv.status IN ('Paid','Confirmed','Boarded'))
         ORDER BY p.updated_at ASC", [(int)$selected['schedule_id']]);
     while($pq !== false && ($p = mbus_db_fetch_assoc($pq))){
         $est = riders_estimate($selected, $p['latitude'], $p['longitude'], (string)$p['destination']);
@@ -237,7 +237,7 @@ if($selected){
             'photo' => in_array($p['has_pic'], [true, 1, '1', 't', 'true'], true) ? '../avatar.php?u=' . (int)$p['user_id'] . '&v=' . $p['pic_v'] : ''];
     }
 }
-$trip_open = $selected && in_array($selected['trip_status'], ['Scheduled', 'Boarding'], true);
+$trip_open = $selected && in_array($selected['trip_status'], ['Scheduled', 'Boarding', 'Departed'], true);
 $walk_open = $selected && in_array($selected['trip_status'], ['Scheduled', 'Boarding', 'Departed'], true);
 $stops = [];
 $ft = mbus_fare_table(); asort($ft);
@@ -422,7 +422,7 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
                 if($n <= $capacity){
                     $info = $riders[(string)$n] ?? null;
                     if($info){
-                        $cls = $info['status'] === 'Boarded' ? 'boarded' : ($info['status'] === 'Paid' ? 'paid' : 'pending');
+                        $cls = $info['status'] === 'Boarded' ? 'boarded' : (in_array($info['status'], ['Paid','Confirmed'], true) ? 'paid' : 'pending');
                         $mine = $mode === 'pick' ? $info['kind'] === 'Pickup' : ($mode === 'walk' ? $info['kind'] === 'Walk-in' : !$info['walk']);   // this tab owns the seat
                         $label = 'Seat ' . $n . ', ' . htmlspecialchars($info['name'], ENT_QUOTES) . ', ' . $info['status'];
                         if($mine){

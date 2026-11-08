@@ -418,7 +418,7 @@
                 body: new URLSearchParams({ csrf_token: csrf, action: 'picked_up', request_id: String(r.request_id) }) });
             const d = await res.json();
             if (!res.ok || d.ok !== true) throw new Error(d.message || 'Could not mark as picked up.');
-            say((r.full_name || 'Rider') + ' picked up. Seat them in Riders → Pickup.', true);
+            say((r.full_name || 'Rider') + ': ' + (d.message || 'Picked up. Seat them in Riders → Pickup.'), true);
             requests = requests.filter(x => x.request_id !== r.request_id);
             if (selected === r.request_id) selected = null;
             render(); busy = false; await refresh();

@@ -13,7 +13,7 @@
         var st = $('rdState');
         var label = (r.status === 'Pending' ? 'Unpaid' : r.status) + (r.walk ? ' · ' + r.kind : '');
         st.textContent = label;
-        st.className = 'rider-state ' + (r.status === 'Boarded' ? 'boarded' : r.status === 'Paid' ? 'paid' : 'pending');
+        st.className = 'rider-state ' + (r.status === 'Boarded' ? 'boarded' : (r.status === 'Paid' || r.status === 'Confirmed') ? 'paid' : 'pending');
         $('rdPickup').textContent = r.pickup || '-';
         $('rdDest').textContent = r.destination || '-';
         var ph = $('rdPhone');
@@ -29,7 +29,7 @@
         $('rdRef').textContent = r.reference || '-';
         $('rdId').value = r.id;
 
-        var canBoard = r.status === 'Paid' && TRIP_OPEN;
+        var canBoard = (r.status === 'Paid' || r.status === 'Confirmed') && TRIP_OPEN;
         $('boardForm').hidden = !canBoard;
         var note = $('rdNote');
         var msg = '';
