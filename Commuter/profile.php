@@ -14,116 +14,61 @@ if(!isset($_SESSION['user_id'])){
 $user_id = $_SESSION['user_id'];
 
 /* GET USER DATA */
-$user_query = mbus_db_prepare($conn,"
-    SELECT user_id, full_name, email, phone_number, user_type, profile_picture
-    FROM users
-    WHERE user_id = ?
-", [$user_id]);
-
-$user_data = mbus_db_fetch_assoc($user_query);
-
-// Handle case where user data might be false/null
+$user_sql = "SELECT user_id, full_name, email, phone_number, user_type, (profile_picture_b64 IS NOT NULL AND profile_picture_b64 <> '') AS has_pic, LEFT(MD5(COALESCE(profile_picture_b64,'')),8) AS pic_v FROM users WHERE user_id = ?";
+$user_query = mbus_db_prepare($conn, $user_sql, [$user_id]);
+$user_data = $user_query === false ? false : mbus_db_fetch_assoc($user_query);
 if (!$user_data) {
-    $user_data = [
-        'user_id' => $user_id,
-        'full_name' => '',
-        'email' => '',
-        'phone_number' => '',
-        'user_type' => 'Regular',
-        'profile_picture' => 'default.png'
-    ];
-} elseif (empty($user_data['user_type'])) {
-    $user_data['user_type'] = 'Regular';
+    $user_data = ['user_id'=>$user_id,'full_name'=>'','email'=>'','phone_number'=>'','user_type'=>'Regular','has_pic'=>false,'pic_v'=>''];
 }
 
 $passenger_type = mbus_passenger_type($conn, (int)$user_id);
 $vq = mbus_db_prepare($conn, "SELECT verification_status, verification_type, rejection_reason FROM commuter_verification WHERE user_id = ? ORDER BY verification_id DESC LIMIT 1", [$user_id]);
 $latest_v = $vq === false ? false : mbus_db_fetch_assoc($vq);
 
-/* HANDLE PROFILE UPDATE */
-if(isset($_POST['update_profile'])){
-    if(!csrf_validate_token()) {
+/* HANDLE POSTS */
+if($_SERVER['REQUEST_METHOD'] === 'POST'){
+    if(!csrf_validate_token()){
         $error = "Security validation failed. Please try again.";
-    } else {
-        $full_name = trim((string)($_POST['full_name'] ?? ''));
-        $phone_number = (string)($user_data['phone_number'] ?? '');
-        if (isset($_POST['change_phone']) && $_POST['change_phone'] === '1') {
-            $phone_number = preg_replace('/\D+/', '', (string)($_POST['phone_number'] ?? ''));
-            if(strlen($phone_number) === 12 && strpos($phone_number, '63') === 0) $phone_number = '0' . substr($phone_number, 2);
-            elseif(strlen($phone_number) === 10 && $phone_number[0] === '9') $phone_number = '0' . $phone_number;
-        }
-        if ($phone_number !== '' && !preg_match('/^09\d{9}$/', $phone_number)) {
+    } elseif(isset($_POST['update_profile'])){
+        $full_name = trim($_POST['full_name'] ?? '');
+        $phone_number = preg_replace('/\D+/', '', (string)($_POST['phone_number'] ?? ''));
+        if(strlen($phone_number) === 12 && strpos($phone_number, '63') === 0) $phone_number = '0' . substr($phone_number, 2);
+        elseif(strlen($phone_number) === 10 && $phone_number[0] === '9') $phone_number = '0' . $phone_number;
+
+        if($full_name === ''){
+            $error = "Name can't be empty.";
+        } elseif ($phone_number !== '' && !preg_match('/^09\d{9}$/', $phone_number)) {
             $error = "Phone number must be 11 digits starting with 09 (e.g., 09123456789).";
         } else {
-            $updated = mbus_db_prepare($conn, "UPDATE users SET full_name = ?, phone_number = ? WHERE user_id = ?", [$full_name, $phone_number, $user_id]);
-            if ($updated === false) {
-                $error = "Profile could not be updated.";
-            } else {
-                log_activity($conn, $user_id, ACTION_PROFILE_UPDATE, "Profile information updated");
-                $_SESSION['full_name'] = $full_name;
-                $success = "Profile updated successfully";
-                $user_query = mbus_db_prepare($conn, "SELECT user_id, full_name, email, phone_number, user_type, profile_picture FROM users WHERE user_id = ?", [$user_id]);
-                $user_data = mbus_db_fetch_assoc($user_query);
-            }
+            mbus_db_prepare($conn,"UPDATE users SET full_name = ?, phone_number = ? WHERE user_id = ?", [$full_name, $phone_number, $user_id]);
+            log_activity($conn, $user_id, ACTION_PROFILE_UPDATE, "Profile information updated");
+            $_SESSION['full_name'] = $full_name;
+            $success = "Changes saved";
         }
+    } elseif(isset($_POST['avatar_data'])){
+        $raw = (string)$_POST['avatar_data'];
+        if($raw === 'remove'){
+            $ok = mbus_db_prepare($conn,"UPDATE users SET profile_picture_b64 = NULL, profile_picture_mime = NULL WHERE user_id = ?", [$user_id]);
+            if($ok === false) $error = "Couldn't remove the photo. Please try again."; else $success = "Photo removed";
+        } elseif(preg_match('#^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$#', $raw, $m) && strlen($m[2]) <= 800000){
+            $bin = base64_decode($m[2], true);
+            $info = $bin === false ? false : @getimagesizefromstring($bin);
+            if($info && in_array($info['mime'], ['image/jpeg','image/png','image/webp'], true) && $info[0] <= 1024 && $info[1] <= 1024){
+                $ok = mbus_db_prepare($conn,"UPDATE users SET profile_picture_b64 = ?, profile_picture_mime = ? WHERE user_id = ?", [base64_encode($bin), $info['mime'], $user_id]);
+                if($ok === false) $error = "Couldn't save the photo. Please try again."; else $success = "Photo updated";
+            } else { $error = "That image couldn't be used. Try a JPG or PNG."; }
+        } else { $error = "That image couldn't be used. Try a JPG or PNG."; }
     }
+    $user_query = mbus_db_prepare($conn, $user_sql, [$user_id]);
+    $fresh = $user_query === false ? false : mbus_db_fetch_assoc($user_query);
+    if($fresh) $user_data = $fresh;
 }
-
-/* HANDLE PROFILE PICTURE UPLOAD */
-if (isset($_POST['upload_picture'])) {
-    if (!csrf_validate_token()) {
-        $picture_error = "Security validation failed. Please try again.";
-    } elseif (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === 0) {
-        $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-        $filename = $_FILES['profile_picture']['name'];
-        $file_ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        $max_size = 5 * 1024 * 1024;
-
-        if ($_FILES['profile_picture']['size'] > $max_size) {
-            $picture_error = "File too large. Maximum size is 5MB.";
-        } elseif (!in_array($file_ext, $allowed, true)) {
-            $picture_error = "Invalid file type. Only JPG, JPEG, PNG, GIF, and WebP are allowed.";
-        } else {
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
-            $mime_type = finfo_file($finfo, $_FILES['profile_picture']['tmp_name']);
-            finfo_close($finfo);
-            $allowed_mimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-
-            if (!in_array($mime_type, $allowed_mimes, true)) {
-                $picture_error = "Invalid file content. Only images are allowed.";
-            } elseif (getimagesize($_FILES['profile_picture']['tmp_name']) === false) {
-                $picture_error = "Invalid image file.";
-            } else {
-                // Dimensions are intentionally unrestricted; CSS crops the image into an avatar.
-                $new_filename = "profile_" . $user_id . "_" . time() . "." . $file_ext;
-                $upload_dir = "../Assets/profile_pictures/";
-                $upload_path = $upload_dir . $new_filename;
-                if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
-
-                if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $upload_path)) {
-                    $picture_updated = mbus_db_prepare($conn, "UPDATE users SET profile_picture = ? WHERE user_id = ?", [$new_filename, $user_id]);
-                    if ($picture_updated === false) {
-                        @unlink($upload_path);
-                        error_log('Profile picture database update failed for user ' . (int)$user_id . ': ' . mbus_db_error($conn));
-                        $picture_error = "The picture was uploaded but could not be saved to your profile.";
-                    } else {
-                        $user_data['profile_picture'] = $new_filename;
-                        $_SESSION['profile_picture'] = $new_filename;
-                        $picture_success = "Profile picture updated successfully";
-                    }
-                } else {
-                    $picture_error = "Failed to upload profile picture.";
-                }
-            }
-        }
-    } else {
-        $picture_error = "No file uploaded or upload error.";
-    }
-}
-$profile_picture_name = basename((string)($user_data['profile_picture'] ?? ''));
-$profile_avatar_path = ($profile_picture_name !== '' && $profile_picture_name !== 'default.png' && is_file("../Assets/profile_pictures/" . $profile_picture_name))
-    ? "../Assets/profile_pictures/" . rawurlencode($profile_picture_name) . "?v=" . rawurlencode((string)filemtime("../Assets/profile_pictures/" . $profile_picture_name))
-    : "../Assets/images/mbus_icon.png";
+$has_pic = !empty($user_data['has_pic']) && $user_data['has_pic'] !== 'f';
+$initial = strtoupper(substr(trim($user_data['full_name'] ?? '') ?: 'U', 0, 1));
+$ph = $user_data['phone_number'] ?? '';
+if(isset($error) && isset($_POST['phone_number'])) $ph = $_POST['phone_number'];
+$ph = strlen(preg_replace('/\D+/', '', (string)$ph)) < 2 ? '' : $ph;
+$phone_locked = ($ph !== '' && !isset($error));
 ?>
 
 <!DOCTYPE html>
@@ -137,15 +82,16 @@ $profile_avatar_path = ($profile_picture_name !== '' && $profile_picture_name !=
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/commuter_sidebar.css">
+    <link rel="stylesheet" href="../Assets/css/profile.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/commuter_verification.css">
-    <link rel="stylesheet" href="../Assets/css/profile.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/profile.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/commuter_profile.css">
 </head>
-<body class="has-bottom-nav">
+<body class="has-bottom-nav verify-page profile-page">
 
 <main class="main" role="main">
 
@@ -158,7 +104,7 @@ $profile_avatar_path = ($profile_picture_name !== '' && $profile_picture_name !=
             <div class="page-header-right">
                 <div class="profile-menu-wrap">
                     <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
-                        <span class="profile-avatar" aria-hidden="true"><img src="<?php echo htmlspecialchars($profile_avatar_path); ?>" alt=""></span>
+                        <span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></span>
                     </button>
                     <div class="profile-menu" id="profileMenu" role="menu">
                         <div class="profile-menu-header">
@@ -172,117 +118,95 @@ $profile_avatar_path = ($profile_picture_name !== '' && $profile_picture_name !=
             </div>
 </header>
 
-<?php foreach([['success','success'],['error','error'],['picture_success','success'],['picture_error','error']] as [$var,$type]){ if(isset($$var)){ ?>
+<?php foreach([['success','success'],['error','error']] as [$var,$type]){ if(isset($$var)){ ?>
 <div class="alert alert-<?php echo $type; ?>" role="<?php echo $type === 'error' ? 'alert' : 'status'; ?>"><?php echo htmlspecialchars($$var); ?></div>
 <?php } } ?>
 
-<div class="profile-container">
-    <section class="card profile-info-section">
-        <h2 class="section-title">
-            <i class="fa fa-id-card" aria-hidden="true"></i> Profile Information
-        </h2>
-        
-        
-        
-        <form method="POST" class="profile-form">
-            <?php csrf_field(); ?>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="full_name">Full Name</label>
-                    <input type="text" name="full_name" id="full_name" value="<?php echo htmlspecialchars($user_data['full_name'] ?? ''); ?>" class="form-control" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="phone_number">Phone Number</label>
-                    <div style="display:flex;gap:.5rem;align-items:center;">
-                        <input type="tel" name="phone_number" id="phone_number" value="<?php echo htmlspecialchars($user_data['phone_number'] ?? ''); ?>" class="form-control" inputmode="tel" autocomplete="tel" maxlength="16" placeholder="09XXXXXXXXX" <?php echo !empty($user_data['phone_number']) ? 'readonly aria-readonly="true"' : ''; ?>>
-                        <?php if(!empty($user_data['phone_number'])): ?><button type="button" class="btn btn-secondary" id="changePhoneBtn">Change</button><?php endif; ?>
-                    </div>
-                    <input type="hidden" name="change_phone" id="changePhone" value="0">
-                    <small class="form-hint"><?php echo !empty($user_data['phone_number']) ? 'Tap Change to edit. Format: 09XXXXXXXXX.' : 'Format: 09XXXXXXXXX.'; ?></small>
-                </div>
-                
-                <div class="form-group">
-                    <label for="user_type">Passenger Type</label>
-                    <input type="text" id="user_type" value="<?php echo htmlspecialchars($passenger_type); ?>" class="form-control" disabled aria-disabled="true">
-                    <small class="form-hint"><?php
-                        if($passenger_type !== 'Regular') echo '20% fare discount active.';
-                        elseif($latest_v && $latest_v['verification_status'] === 'Pending') echo 'Your ' . htmlspecialchars($latest_v['verification_type']) . ' ID is under review.';
-                        elseif($latest_v && $latest_v['verification_status'] === 'Rejected') echo 'Your last ID was rejected.';
-                        else echo 'Student, senior or PWD?';
-                    ?> <a href="verification.php?from=profile"><?php echo $passenger_type !== 'Regular' ? 'Manage verification' : ($latest_v && $latest_v['verification_status'] === 'Pending' ? 'View status' : 'Verify your ID'); ?></a></small>
-                </div>
-            </div>
-            
-            <button type="submit" name="update_profile" class="btn btn-primary">
-                <i class="fa fa-save" aria-hidden="true"></i> Update Profile
-            </button>
-        </form>
-    </section>
+<section class="card pf-hero">
+    <div class="pf-photo">
+        <?php if($has_pic){ ?>
+            <img id="pfImg" src="avatar.php?v=<?php echo htmlspecialchars($user_data['pic_v']); ?>" alt="Your photo" width="96" height="96">
+        <?php } else { ?>
+            <span id="pfInitial" class="pf-initial" aria-hidden="true"><?php echo htmlspecialchars($initial); ?></span>
+            <img id="pfImg" alt="Your photo" width="96" height="96" hidden>
+        <?php } ?>
+        <label class="pf-cam" for="pfFile" title="Change photo"><i class="fa fa-camera" aria-hidden="true"></i><span class="sr-only">Change photo</span></label>
+    </div>
+    <h2 class="pf-name"><?php echo htmlspecialchars($user_data['full_name'] ?: 'Your name'); ?></h2>
+    <p class="pf-email"><?php echo htmlspecialchars($user_data['email'] ?? ''); ?></p>
+    <span class="ptype-tag"><?php echo htmlspecialchars($passenger_type); ?> passenger</span>
+    <?php if($has_pic){ ?><button type="button" class="pf-link pf-remove" id="pfRemove">Remove photo</button><?php } ?>
+    <input type="file" id="pfFile" accept="image/jpeg,image/png,image/webp" class="sr-only">
+    <form method="POST" id="pfPhotoForm">
+        <?php csrf_field(); ?>
+        <input type="hidden" name="avatar_data" id="pfData">
+    </form>
+</section>
 
-    <section class="card profile-picture-section" aria-labelledby="profilePhotoTitle">
-        <div class="profile-photo-row">
-            <div class="profile-picture-container">
-                <img src="<?php echo htmlspecialchars($profile_avatar_path); ?>" alt="Profile photo" class="profile-picture" id="profilePreview">
-            </div>
-            <div class="profile-photo-content">
-                <h2 id="profilePhotoTitle" class="profile-photo-title">Profile photo</h2>
-                <p class="profile-photo-hint">Shown on your Waiting map pin.</p>
-                <form method="POST" enctype="multipart/form-data" class="upload-form">
-                    <?php csrf_field(); ?>
-                    <input type="file" name="profile_picture" accept="image/*" id="profilePictureInput" class="file-input" aria-label="Choose profile photo" onchange="previewProfilePicture(this)">
-                    <div class="profile-photo-actions">
-                        <label for="profilePictureInput" class="profile-photo-change"><i class="fa fa-camera" aria-hidden="true"></i> Change photo</label>
-                        <button type="submit" name="upload_picture" class="btn btn-primary profile-photo-save" disabled id="uploadPictureBtn">Save</button>
-                    </div>
-                </form>
-            </div>
+<form method="POST" class="card pf-form" id="pfForm" novalidate>
+    <?php csrf_field(); ?>
+    <input type="hidden" name="update_profile" value="1">
+
+    <div class="pf-field">
+        <label for="full_name">Full name</label>
+        <input type="text" name="full_name" id="full_name" value="<?php echo htmlspecialchars($user_data['full_name'] ?? ''); ?>" class="form-control" autocomplete="name" required>
+    </div>
+
+    <div class="pf-field">
+        <label for="phone_number">Phone number</label>
+        <div class="pf-lock">
+            <input type="tel" name="phone_number" id="phone_number" value="<?php echo htmlspecialchars($ph); ?>" class="form-control" inputmode="tel" autocomplete="tel" maxlength="16" placeholder="09XXXXXXXXX"<?php echo $phone_locked ? ' readonly aria-readonly="true"' : ''; ?>>
+            <?php if($phone_locked){ ?><button type="button" class="pf-link" id="phoneChange">Change</button><?php } ?>
         </div>
-    </section>
-</div>
+    </div>
+
+    <div class="pf-field">
+        <label for="user_type">Passenger type</label>
+        <div class="pf-lock">
+            <input type="text" id="user_type" value="<?php echo htmlspecialchars($passenger_type); ?>" class="form-control" disabled aria-disabled="true">
+            <a class="pf-link" href="verification.php?from=profile"><?php echo $passenger_type !== 'Regular' ? 'Manage' : ($latest_v && $latest_v['verification_status'] === 'Pending' ? 'View status' : 'Verify ID'); ?></a>
+        </div>
+        <small class="form-hint"><?php
+            if($passenger_type !== 'Regular') echo '20% fare discount is active.';
+            elseif($latest_v && $latest_v['verification_status'] === 'Pending') echo 'Your ' . htmlspecialchars($latest_v['verification_type']) . ' ID is under review.';
+            elseif($latest_v && $latest_v['verification_status'] === 'Rejected') echo 'Your last ID was rejected. You can send a new one.';
+            else echo 'Student, senior or PWD? Verify your ID for 20% off.';
+        ?></small>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-block" id="pfSave" disabled>Save changes</button>
+</form>
 
 </main>
 
 <script>
-// Toggle sidebar
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    const toggle = document.querySelector('.sidebar-toggle');
-    
-    if (sidebar && overlay && toggle) {
-        const isOpen = sidebar.classList.toggle('open');
-        overlay.classList.toggle('active', isOpen);
-        toggle.setAttribute('aria-expanded', isOpen);
-        document.body.classList.toggle('sidebar-open', isOpen);
-    }
-}
+(function(){
+  var form=document.getElementById('pfForm'), save=document.getElementById('pfSave');
+  var start=new FormData(form);
+  function dirty(){var f=new FormData(form);return f.get('full_name')!==start.get('full_name')||f.get('phone_number')!==start.get('phone_number');}
+  form.addEventListener('input',function(){save.disabled=!dirty();});
+  <?php if(isset($error)){ ?>save.disabled=false;<?php } ?>
+  var pc=document.getElementById('phoneChange');
+  if(pc){pc.addEventListener('click',function(){var i=document.getElementById('phone_number');i.removeAttribute('readonly');pc.remove();i.focus();i.select();});}
 
-const changePhoneBtn = document.getElementById('changePhoneBtn');
-if (changePhoneBtn) changePhoneBtn.addEventListener('click', function () {
-    const input = document.getElementById('phone_number');
-    const enabled = input.hasAttribute('readonly');
-    input.toggleAttribute('readonly', !enabled);
-    input.setAttribute('aria-readonly', String(!enabled));
-    document.getElementById('changePhone').value = enabled ? '1' : '0';
-    this.textContent = enabled ? 'Keep number' : 'Change';
-    if (enabled) input.focus();
-});
-
-// Profile picture preview
-function previewProfilePicture(input) {
-    const preview = document.getElementById('profilePreview');
-    const uploadBtn = document.getElementById('uploadPictureBtn');
-    
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            preview.src = e.target.result;
-            uploadBtn.disabled = false;
-        };
-        reader.readAsDataURL(input.files[0]);
-    }
-}
+  var file=document.getElementById('pfFile'), data=document.getElementById('pfData'), pform=document.getElementById('pfPhotoForm');
+  file.addEventListener('change',function(){
+    var f=file.files&&file.files[0]; if(!f) return;
+    var img=new Image(), url=URL.createObjectURL(f);
+    img.onload=function(){
+      var n=384, side=Math.min(img.width,img.height), c=document.createElement('canvas');
+      c.width=c.height=n;
+      c.getContext('2d').drawImage(img,(img.width-side)/2,(img.height-side)/2,side,side,0,0,n,n);
+      URL.revokeObjectURL(url);
+      data.value=c.toDataURL('image/jpeg',0.85);
+      pform.submit();
+    };
+    img.onerror=function(){alert('That file is not a usable image.');};
+    img.src=url;
+  });
+  var rm=document.getElementById('pfRemove');
+  if(rm) rm.addEventListener('click',function(){ if(confirm('Remove your photo?')){data.value='remove';pform.submit();}});
+})();
 </script>
 
 <!-- Bottom Navigation -->

@@ -1,0 +1,22 @@
+.profile-page .main { max-width:560px; }
+.pf-hero { display:flex; flex-direction:column; align-items:center; text-align:center; padding:24px 16px 20px !important; }
+.pf-photo { position:relative; width:96px; height:96px; margin-bottom:12px; }
+.pf-photo img, .pf-initial { width:96px; height:96px; border-radius:50%; object-fit:cover; display:block; }
+.pf-photo img[hidden] { display:none; }
+.pf-initial { display:grid; place-items:center; background:var(--color-primary-light-bg); color:var(--color-primary); font-size:2.25rem; font-weight:700; }
+.pf-cam { position:absolute; right:-2px; bottom:-2px; display:grid; place-items:center; width:34px; height:34px; border-radius:50%; background:var(--color-primary); color:#fff; border:3px solid var(--color-surface); cursor:pointer; font-size:.8125rem; }
+.pf-cam:focus-visible, .pf-link:focus-visible { outline:3px solid var(--color-accent); outline-offset:2px; }
+.pf-name { margin:0; font-size:1.25rem; font-weight:700; }
+.pf-email { margin:2px 0 10px; color:var(--color-text-muted); font-size:.9375rem; word-break:break-all; }
+.pf-link { background:none; border:0; padding:8px 4px; color:var(--color-primary); font:inherit; font-size:.9375rem; font-weight:600; cursor:pointer; text-decoration:none; white-space:nowrap; }
+.pf-remove { margin-top:6px; color:#b42318; font-weight:500; }
+.pf-form { padding:var(--space-4); }
+.pf-field { margin-bottom:16px; }
+.pf-field > label { display:block; margin-bottom:6px; font-weight:600; font-size:.9375rem; }
+.pf-lock { display:flex; align-items:center; gap:8px; }
+.pf-lock .form-control { flex:1; min-width:0; }
+.profile-page .form-control { min-height:48px; font-size:1rem; border-radius:12px; width:100%; }
+.profile-page .form-control[readonly], .profile-page .form-control:disabled { background:var(--color-bg, #f4f6f8); color:var(--color-text-muted); }
+.profile-page .form-hint { display:block; margin-top:6px; color:var(--color-text-muted); font-size:.8125rem; }
+.profile-page .btn-block:disabled { opacity:.45; cursor:default; }
+.profile-page .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }

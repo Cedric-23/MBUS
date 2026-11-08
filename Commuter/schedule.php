@@ -80,10 +80,10 @@ elseif($filter=="nextweek"){
 <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
 <link rel="stylesheet" href="../Assets/css/professional-filters.css">
 <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 
 <!-- FullCalendar CSS -->
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet'>
+
 
 <!-- FullCalendar JS -->
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
@@ -118,16 +118,6 @@ elseif($filter=="nextweek"){
             </div>
 </header>
 
-<!-- Route map: opens as a bottom sheet when "Route" is tapped -->
-<div id="scheduleMapBackdrop" class="map-backdrop" hidden></div>
-<div id="scheduleMapContainer" class="map-sheet" role="dialog" aria-modal="true" aria-labelledby="scheduleMapTitle" hidden>
-    <div class="map-sheet-head">
-        <h2 id="scheduleMapTitle">Route</h2>
-        <button type="button" id="scheduleMapClose" class="map-close" aria-label="Close map"><i class="fa fa-xmark" aria-hidden="true"></i></button>
-    </div>
-    <div id="scheduleMap" class="map-canvas"></div>
-    <p id="scheduleRouteEstimate" class="route-estimate" role="status" aria-live="polite">Road distance and driving estimate appear here.</p>
-</div>
 
 <!-- List View -->
 <div id="listView">
@@ -248,7 +238,6 @@ $mins = ($arr_ts && $arr_ts > $dep_ts) ? (int)round(($arr_ts-$dep_ts)/60) : 0;
 $duration = $mins>0 ? (intdiv($mins,60)>0 ? intdiv($mins,60).' hr'.($mins%60 ? ' '.($mins%60).' min' : '') : $mins.' min') : '';
 
 $status=strtolower($row['schedule_status']);
-$has_map = $row['origin_lat'] && $row['origin_lng'] && $row['destination_lat'] && $row['destination_lng'];
 $chip_class = $available<=0 ? 'full' : ($available<=5 ? 'low' : 'ok');
 $action = $seat_data === false ? 'unavailable' : mbus_schedule_action($row, $available);
 $unavailable_at = strtotime($day_key . ' +1 day');
@@ -288,17 +277,6 @@ if($row['trip_status'] !== 'Departed'){
     </div>
 
     <div class="bus-actions">
-        <?php if($has_map){ ?>
-        <button type="button" class="btn-route view-route-btn"
-            data-origin-lat="<?php echo htmlspecialchars($row['origin_lat']); ?>"
-            data-origin-lng="<?php echo htmlspecialchars($row['origin_lng']); ?>"
-            data-dest-lat="<?php echo htmlspecialchars($row['destination_lat']); ?>"
-            data-dest-lng="<?php echo htmlspecialchars($row['destination_lng']); ?>"
-            data-origin="<?php echo htmlspecialchars($row['origin_label'], ENT_QUOTES); ?>"
-            data-dest="<?php echo htmlspecialchars($row['destination_label'], ENT_QUOTES); ?>">
-            <i class="fa fa-map" aria-hidden="true"></i>Route
-        </button>
-        <?php } ?>
         <a class="btn-reserve schedule-action-link<?php echo $action === 'unavailable' ? ' is-disabled' : ''; ?>"
             <?php if($action !== 'unavailable'){ ?>href="<?php echo $action === 'pickup' ? 'pickup.php' : 'reserve.php'; ?>?schedule_id=<?php echo (int)$schedule_id; ?>"<?php }else{ ?>aria-disabled="true" tabindex="-1"<?php } ?>><?php echo $action === 'reserve' ? 'Reserve seat' : ($action === 'pickup' ? 'Pick up' : 'Unavailable'); ?></a>
     </div>
@@ -337,14 +315,7 @@ if($row['trip_status'] !== 'Departed'){
 
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="../Assets/js/route_utils.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/route_utils.js'); ?>"></script>
 <script>
-let scheduleMap;
-let scheduleRouteLayer;
-let scheduleOriginMarker;
-let scheduleDestinationMarker;
-let scheduleRouteRequest = 0;
 let scheduleCalendar;
 // Anchor to the server clock, not the phone's timezone or potentially skewed clock.
 let scheduleClockOffset = <?php echo (int)round(microtime(true) * 1000); ?> - Date.now();
@@ -426,71 +397,6 @@ document.addEventListener('visibilitychange', function() {
 });
 window.addEventListener('pageshow', function(e) { if (e.persisted) { updateScheduleCards(); refreshScheduleActions(); } });
 
-function initScheduleMap() {
-    if (scheduleMap || typeof L === 'undefined') return;
-    scheduleMap = L.map('scheduleMap', { zoomControl: true }).setView([14.7521, 120.2765], 10);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · routing by OSRM'
-    }).addTo(scheduleMap);
-    scheduleRouteLayer = L.layerGroup().addTo(scheduleMap);
-}
-
-function openMapSheet(open) {
-    const sheet = document.getElementById("scheduleMapContainer");
-    const backdrop = document.getElementById("scheduleMapBackdrop");
-    sheet.hidden = !open;
-    backdrop.hidden = !open;
-    document.body.style.overflow = open ? "hidden" : "";
-    if (open) { document.getElementById("scheduleMapClose").focus(); }
-}
-
-function viewRoute(originLat, originLng, destLat, destLng, originName, destName) {
-    const origin = { lat: Number(originLat), lng: Number(originLng) };
-    const destination = { lat: Number(destLat), lng: Number(destLng) };
-    document.getElementById("scheduleMapTitle").textContent = originName + " to " + destName;
-    const estimate = document.getElementById('scheduleRouteEstimate');
-    openMapSheet(true);
-    const requestId = ++scheduleRouteRequest;
-    if (!Number.isFinite(origin.lat) || !Number.isFinite(origin.lng) || !Number.isFinite(destination.lat) || !Number.isFinite(destination.lng)) {
-        estimate.textContent = 'This schedule has no valid terminal coordinates yet.';
-        return;
-    }
-    estimate.textContent = 'Loading the road route and estimate…';
-    window.setTimeout(async function() {
-        initScheduleMap();
-        if (!scheduleMap) { estimate.textContent = 'The map could not load.'; return; }
-        scheduleMap.invalidateSize({ pan: false });
-        scheduleRouteLayer.clearLayers();
-        scheduleOriginMarker = L.marker([origin.lat, origin.lng]).bindTooltip('Origin: ' + originName).addTo(scheduleRouteLayer);
-        scheduleDestinationMarker = L.marker([destination.lat, destination.lng]).bindTooltip('Destination: ' + destName).addTo(scheduleRouteLayer);
-        try {
-            const route = await window.MBUSRouting.getDrivingRoute(origin, destination);
-            if (requestId !== scheduleRouteRequest) return;
-            L.polyline(route.points, { color: '#1e90ff', weight: 5, opacity: 0.88 }).addTo(scheduleRouteLayer);
-            scheduleMap.fitBounds(L.latLngBounds(route.points).pad(0.12), { maxZoom: 14 });
-            estimate.textContent = window.MBUSRouting.formatDistance(route.distanceMeters) + ' road route · ' + window.MBUSRouting.formatDuration(route.durationSeconds) + ' driving. Traffic, stops and detours may add time.';
-        } catch (error) {
-            if (requestId !== scheduleRouteRequest) return;
-            estimate.textContent = error.message || 'Road directions are unavailable right now.';
-            scheduleMap.fitBounds([[origin.lat, origin.lng], [destination.lat, destination.lng]], { padding: [28, 28], maxZoom: 14 });
-        }
-    }, 80);
-}
-
-document.addEventListener("click", function(e) {
-    const btn = e.target.closest(".view-route-btn");
-    if (btn) {
-        viewRoute(parseFloat(btn.dataset.originLat), parseFloat(btn.dataset.originLng),
-                  parseFloat(btn.dataset.destLat), parseFloat(btn.dataset.destLng),
-                  btn.dataset.origin, btn.dataset.dest);
-    } else if (e.target.closest("#scheduleMapClose") || e.target.id === "scheduleMapBackdrop") {
-        openMapSheet(false);
-    }
-});
-document.addEventListener("keydown", function(e) {
-    if (e.key === "Escape") { openMapSheet(false); }
-});
 
 function initScheduleCalendar() {
     const calendarEl = document.getElementById('calendar');
