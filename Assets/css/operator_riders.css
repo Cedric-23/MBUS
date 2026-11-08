@@ -85,3 +85,45 @@ button.rseat:focus-visible { outline: 3px solid var(--color-accent); outline-off
 
 .riders-page .page-header { margin-bottom: var(--space-3); }
 .riders-page .page-header h1 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+
+/* direction + rider-type tabs */
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: var(--color-bg-secondary); }
+.seg-tab { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 10px; border-radius: 11px; color: var(--color-text-secondary); font-weight: 600; font-size: .9375rem; text-decoration: none; text-align: center; -webkit-tap-highlight-color: transparent; }
+.seg-tab.on { background: var(--color-surface); color: var(--color-primary); box-shadow: 0 1px 4px rgba(24,54,93,.15); }
+.seg-tab:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+.seg-count { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: rgba(24,54,93,.1); font-size: .75rem; font-weight: 700; color: var(--color-primary); }
+.mode-tabs { margin: 0 0 12px; }
+
+/* locked seats (the other tab owns them) */
+.rseat.locked { opacity: .4; cursor: not-allowed; }
+.rseat.open { cursor: pointer; border-style: dashed; }
+.rseat.open:hover, .rseat.open:focus-visible { background: #e8f1ff; border-color: #2f7de1; color: #174f9c; }
+.rseat.walkin { position: relative; }
+.rseat.walkin::after { content: 'W'; position: absolute; top: 2px; right: 5px; font-size: .625rem; font-weight: 800; opacity: .8; }
+
+/* pick-up requests */
+.pickup-panel { padding: 16px; border: 1px solid var(--color-border); border-radius: 18px; background: var(--color-surface); }
+.pickup-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.pickup-head h2 { margin: 0; font-size: 1.0625rem; color: var(--color-primary); }
+.pickup-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.pickup-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 12px; }
+.pickup-list li.on { border-color: var(--color-primary); background: var(--color-primary-light-bg, #eef4fd); }
+.pk-who { min-width: 0; display: flex; flex-direction: column; }
+.pk-who strong, .pk-who small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk-who small { color: var(--color-text-muted); font-size: .8125rem; }
+.pk-pick { flex: none; min-height: 40px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--color-primary); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.pk-pick:disabled { opacity: .5; }
+
+/* walk-in sheet */
+.walk-form { display: grid; gap: 12px; margin-top: 12px; }
+.wk-field { display: grid; gap: 6px; font-weight: 600; font-size: .9375rem; }
+.wk-field input, .wk-field select { min-height: 48px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: 12px; font: inherit; background: var(--color-surface); }
+.wk-fare { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 14px; border-radius: 12px; background: var(--color-bg-secondary); }
+.wk-fare strong { font-size: 1.375rem; color: var(--color-primary); }
+.rider-board:disabled { background: #b8c4d4; }
+
+/* tighter top spacing on phones (matches the Trips page) */
+@media (max-width: 768px) {
+    .riders-page .main { padding-top: 12px; }
+    .riders-page .page-header { padding: 12px 0 0; margin-bottom: var(--space-3) !important; }
+}
