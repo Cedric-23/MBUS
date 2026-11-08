@@ -87,121 +87,77 @@ if(isset($_POST['submit_application'])){
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Apply as Operator - MBUS</title>
     
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="Assets/css/modern_theme.css">
-    <link rel="stylesheet" href="Assets/css/operator_application.css">
+    <link rel="stylesheet" href="Assets/css/responsive.css">
+    <link rel="stylesheet" href="login.css">
+    <link rel="stylesheet" href="Assets/css/auth.css">
 </head>
-<body>
+<body class="login-page">
+<div class="login-container">
 
-<div class="application-container">
-    <div class="application-form glass-card">
-        <div class="form-header">
-            <img src="Assets/images/mbus_logo.png" alt="MBUS Logo" class="logo">
-            <h1>Apply as Driver/Operator</h1>
-            <p>Join our team and help provide safe and reliable transportation services.</p>
+    <div class="login-brand">
+        <img src="Assets/images/mbus_icon.png" alt="MBUS Logo" class="login-logo">
+        <div class="login-brand-text"><h2>Morong - SBMA Bus Reservation</h2></div>
+    </div>
+
+    <div class="login-card">
+        <div class="login-header">
+            <h3>Apply as Operator</h3>
+            <p>Tell us about you and your vehicle</p>
         </div>
-        
+
         <?php if(isset($success)): ?>
-            <div class="notice success">
-                <i class="fa fa-check-circle"></i>
-                <?php echo $success; ?>
-                <br><br>
-                <a href="login.php" class="btn-modern btn-primary">Go to Login</a>
-            </div>
+            <div class="login-alert login-alert-success" role="status"><i class="fa fa-check-circle" aria-hidden="true"></i><span><?php echo $success; ?></span></div>
+            <a href="login.php" class="btn-block" style="display:grid;place-items:center;text-decoration:none;">Go to Login</a>
         <?php else: ?>
-        
+
         <?php if(isset($error)): ?>
-            <div class="notice error">
-                <i class="fa fa-exclamation-circle"></i>
-                <?php echo $error; ?>
-            </div>
+            <div class="login-alert login-alert-error" role="alert"><i class="fa fa-exclamation-circle" aria-hidden="true"></i><span><?php echo $error; ?></span></div>
         <?php endif; ?>
-        
-        <form method="POST" enctype="multipart/form-data" class="operator-form">
-            <h2><i class="fa fa-user"></i> Personal Information</h2>
-            
-            <div class="form-group">
-                <label>Full Name</label>
-                <input type="text" name="full_name" class="input-modern" required placeholder="Enter your full name">
-            </div>
-            
-            <div class="form-group">
-                <label>Email Address</label>
-                <input type="email" name="email" class="input-modern" required placeholder="Enter your email">
-            </div>
-            
-            <div class="form-group">
-                <label>Phone Number</label>
-                <input type="tel" name="phone_number" class="input-modern" pattern="09\d{9}" maxlength="11" placeholder="09XXXXXXXXX" required>
-                <small>Format: 11 digits starting with 09 (e.g., 09123456789)</small>
-            </div>
-            
-            <div class="form-group">
-                <label>Address</label>
-                <textarea name="address" class="input-modern" required placeholder="Enter your complete address" rows="3"></textarea>
-            </div>
-            
-            <h2><i class="fa fa-id-card"></i> License Information</h2>
-            
-            <div class="form-group">
-                <label>License Number</label>
-                <input type="text" name="license_number" class="input-modern" required placeholder="Enter your license number">
-            </div>
-            
-            <div class="form-group">
-                <label>License Expiry Date</label>
-                <input type="date" name="license_expiry" class="input-modern" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Upload License Document</label>
-                <input type="file" name="license_document" class="input-modern" accept=".jpg,.jpeg,.png,.pdf" required>
-                <small>Accepted formats: JPG, JPEG, PNG, PDF</small>
-            </div>
-            
-            <h2><i class="fa fa-bus"></i> Vehicle Information</h2>
-            
-            <div class="form-group">
-                <label>Vehicle Type</label>
-                <select name="vehicle_type" class="input-modern" required>
+
+        <form method="POST" enctype="multipart/form-data" class="login-form">
+            <div class="auth-section">Personal information</div>
+            <div class="form-field"><i class="fa fa-user form-field-icon" aria-hidden="true"></i>
+                <input type="text" name="full_name" required placeholder="Full name" autocomplete="name"></div>
+            <div class="form-field"><i class="fa fa-envelope form-field-icon" aria-hidden="true"></i>
+                <input type="email" name="email" required placeholder="Email" autocomplete="email" autocapitalize="none"></div>
+            <div class="form-field"><i class="fa fa-phone form-field-icon" aria-hidden="true"></i>
+                <input type="tel" name="phone_number" pattern="09\d{9}" maxlength="11" placeholder="09XXXXXXXXX" required inputmode="tel" autocomplete="tel"></div>
+            <div class="form-field plain"><textarea name="address" required placeholder="Complete address" rows="3" aria-label="Complete address"></textarea></div>
+
+            <div class="auth-section">License</div>
+            <div class="form-field"><i class="fa fa-id-card form-field-icon" aria-hidden="true"></i>
+                <input type="text" name="license_number" required placeholder="License number"></div>
+            <div class="form-field plain"><label class="auth-label" for="licExp">License expiry date</label>
+                <input type="date" name="license_expiry" id="licExp" required></div>
+            <div class="form-field plain"><label class="auth-label" for="licDoc">License photo or PDF</label>
+                <input type="file" name="license_document" id="licDoc" accept=".jpg,.jpeg,.png,.pdf" required></div>
+
+            <div class="auth-section">Vehicle</div>
+            <div class="form-field plain"><select name="vehicle_type" required aria-label="Vehicle type">
                     <option value="">Select Vehicle Type</option>
                     <option value="Bus">Bus</option>
                     <option value="Van">Van</option>
                     <option value="Minibus">Minibus</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>Vehicle Plate Number</label>
-                <input type="text" name="vehicle_plate_number" class="input-modern" required placeholder="Enter vehicle plate number">
-            </div>
-            
-            <div class="form-group">
-                <label>Upload Vehicle Registration Document</label>
-                <input type="file" name="vehicle_document" class="input-modern" accept=".jpg,.jpeg,.png,.pdf" required>
-                <small>Accepted formats: JPG, JPEG, PNG, PDF</small>
-            </div>
-            
-            <div class="terms-agreement">
-                <label class="checkbox-label">
-                    <input type="checkbox" required>
-                    <span>I agree to the terms and conditions and certify that all information provided is accurate.</span>
-                </label>
-            </div>
-            
-            <button type="submit" name="submit_application" class="btn-modern btn-primary">
-                <i class="fa fa-paper-plane"></i> Submit Application
-            </button>
+                
+            </select></div>
+            <div class="form-field"><i class="fa fa-bus form-field-icon" aria-hidden="true"></i>
+                <input type="text" name="vehicle_plate_number" required placeholder="Plate number"></div>
+            <div class="form-field plain"><label class="auth-label" for="vehDoc">Vehicle registration (photo or PDF)</label>
+                <input type="file" name="vehicle_document" id="vehDoc" accept=".jpg,.jpeg,.png,.pdf" required></div>
+
+            <label class="auth-check"><input type="checkbox" required><span>I agree to the terms and certify that the information is accurate.</span></label>
+
+            <button type="submit" name="submit_application" class="btn-block">Submit application</button>
         </form>
-        
-        <div class="form-footer">
-            <p>Already have an account? <a href="login.php">Login here</a></p>
-            <p>Want to book a ride? <a href="register.php">Register as Commuter</a></p>
+
+        <div class="login-footer">
+            <p>Already have an account? <a href="login.php">Login</a></p>
+            <p>Want to book a ride? <a href="register.php">Register as commuter</a></p>
         </div>
-        
         <?php endif; ?>
     </div>
 </div>
-
 </body>
 </html>
