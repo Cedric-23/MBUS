@@ -146,7 +146,7 @@ if (isset($_POST['register'])) {
                     type="password" 
                     id="password" 
                     name="password" 
-                    placeholder="Create a password (8+ chars)"
+                    placeholder="Password (8+ characters)"
                     required
                     autocomplete="new-password"
                     aria-describedby="password-hint"
