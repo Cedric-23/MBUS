@@ -173,7 +173,10 @@ function mbus_pickup_feed(PDO $pdo, string $role, int $userId): array
     $requests = [];
     if ($ready) {
         $params = [];
-        $name = $role === 'commuter' ? '' : ', u.full_name, u.profile_picture';
+        $name = $role === 'commuter' ? '' : ", u.user_id, u.full_name, u.profile_picture, u.phone_number,
+            (u.profile_picture_b64 IS NOT NULL AND u.profile_picture_b64 <> '') AS has_pic, LEFT(MD5(COALESCE(u.profile_picture_b64,'')),8) AS pic_v,
+            (SELECT cv.verification_type FROM public.commuter_verification cv WHERE cv.user_id = u.user_id AND cv.verification_status = 'Approved'
+             AND (cv.expiry_date IS NULL OR cv.expiry_date >= CURRENT_DATE) ORDER BY cv.reviewed_at DESC NULLS LAST, cv.verification_id DESC LIMIT 1) AS passenger_type";
         $sql = "SELECT p.request_id, p.schedule_id, p.status, p.latitude, p.longitude, p.pickup_label,
             p.destination, p.updated_at, p.expires_at, b.bus_number, r.origin, r.destination AS route_destination,
             (p.expires_at <= NOW()) AS expired {$name}
@@ -201,6 +204,11 @@ function mbus_pickup_feed(PDO $pdo, string $role, int $userId): array
                 $row['status'] = 'Expired';
             }
             unset($row['expired']);
+            if ($role !== 'commuter') {
+                $row['has_pic'] = in_array($row['has_pic'] ?? null, [true, 1, '1', 't', 'true'], true);
+                $row['user_id'] = (int)$row['user_id'];
+                $row['passenger_type'] = $row['passenger_type'] ?: 'Regular';
+            }
             foreach (['request_id', 'schedule_id'] as $key) {
                 $row[$key] = (int)$row[$key];
             }

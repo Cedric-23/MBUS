@@ -1,9 +1,12 @@
 <?php
 session_start();
+include_once __DIR__ . '/../config/db_connect.php';
+include_once __DIR__ . '/../Includes/profile_photo.php';
 if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'operator'){
     header('Location: ../login.php');
     exit();
 }
+[$photoOk, $photoErr] = mbus_photo_handle($conn, (int)$_SESSION['user_id']);
 $name = htmlspecialchars($_SESSION['full_name'] ?? 'Operator');
 ?>
 <!DOCTYPE html>
@@ -28,6 +31,7 @@ $name = htmlspecialchars($_SESSION['full_name'] ?? 'Operator');
             </div>
         </div></div>
     </header>
+    <?php mbus_photo_card($conn, (int)$_SESSION['user_id'], (string)($_SESSION['full_name'] ?? 'Operator'), 'Operator account', $photoOk, $photoErr); ?>
     <section class="card" style="max-width:720px;margin:0 auto;"><h2><i class="fa fa-user" aria-hidden="true"></i> Account</h2><p>You are signed in as <strong><?php echo $name; ?></strong>.</p></section>
 </main>
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">

@@ -53,6 +53,8 @@
     const FALLBACK_AVATAR = '../Assets/images/mbus_icon.png';
     const busIcon = (no, stale) => L.divIcon({ className: '', iconSize: [84, 28], iconAnchor: [42, 14],
         html: '<span class="sw-bus' + (stale ? ' is-stale' : '') + '"><i class="fa fa-bus" aria-hidden="true"></i>' + String(no || 'Bus').replace(/[<>&"]/g, '') + '</span>' });
+    const isAdmin = root.dataset.role === 'admin';
+    const photoOf = r => r && r.has_pic ? '../avatar.php?u=' + encodeURIComponent(r.user_id) + '&v=' + encodeURIComponent(r.pic_v || '') : avatarUrl(r && r.profile_picture);
     const avatarUrl = picture => {
         const filename = String(picture || '').replace(/\\/g, '/').split('/').pop();
         return filename && filename.toLowerCase() !== 'default.png' && /^[A-Za-z0-9][A-Za-z0-9._-]*\.(?:jpe?g|png|gif|webp)$/i.test(filename)
@@ -65,8 +67,8 @@
             if (img.src !== new URL(FALLBACK_AVATAR, location.href).href) img.src = FALLBACK_AVATAR;
         }, { once: true });
     }
-    const personIcon = (name, on, picture) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
-        html: '<span class="sw-person' + (on ? ' is-on' : '') + '"><img src="' + avatarUrl(picture) + '" alt=""></span>' });
+    const personIcon = (name, on, r) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
+        html: '<span class="sw-person' + (on ? ' is-on' : '') + '"><img src="' + photoOf(r) + '" alt=""></span>' });
 
     function fit(points) {
         if (!map || !points.length) return;
@@ -227,9 +229,9 @@
             const ok = validPt(r.latitude, r.longitude), p = ok ? [+r.latitude, +r.longitude] : null;
             if (p && map) {
                 pts.push(p);
-                const m = L.marker(p, { icon: personIcon(r.full_name, on, r.profile_picture), title: r.full_name || 'Commuter' }).addTo(layer);
+                const m = L.marker(p, { icon: personIcon(r.full_name, on, r), title: r.full_name || 'Commuter' }).addTo(layer);
                 bindAvatarFallback(m.getElement() && m.getElement().querySelector('.sw-person img'));
-                m.on('click', () => choose(r));
+                m.on('click', () => { choose(r); if (isAdmin) showDetails(r); });
                 if (on) {
                     const b = busFor(r.schedule_id);
                     if (b) line = L.polyline([p, [+b.latitude, +b.longitude]], { color: '#1e90ff', weight: 3, dashArray: '2 8', opacity: .85 }).addTo(map);
@@ -240,7 +242,7 @@
             const avatar = node('img', undefined, 'sw-avatar');
             avatar.alt = '';
             bindAvatarFallback(avatar);
-            avatar.src = avatarUrl(r.profile_picture);
+            avatar.src = photoOf(r);
             open.append(avatar);
             const txt = node('span', undefined, 'sw-row-text');
             txt.append(node('strong', r.full_name || 'Commuter'),
@@ -248,10 +250,16 @@
             open.append(txt);
             if (r._km !== null) open.append(node('span', dist(r._km), 'sw-dist'));
             open.addEventListener('click', () => choose(r));
-            const done = node('button', 'Picked up', 'sw-done'); done.type = 'button';
-            done.disabled = !ready || !csrf || busy;
-            done.addEventListener('click', () => pickedUp(r, done));
-            li.append(open, done);
+            if (isAdmin) {
+                const more = node('button', 'Details', 'sw-done sw-details'); more.type = 'button';
+                more.addEventListener('click', () => showDetails(r));
+                li.append(open, more);
+            } else {
+                const done = node('button', 'Picked up', 'sw-done'); done.type = 'button';
+                done.disabled = !ready || !csrf || busy;
+                done.addEventListener('click', () => pickedUp(r, done));
+                li.append(open, done);
+            }
             list.append(li);
         });
 
@@ -261,6 +269,32 @@
         sizeSheet();
     }
 
+    function showDetails(r) {
+        const old = document.getElementById('swCard'); if (old) old.remove();
+        const b = busFor(r.schedule_id);
+        const d = (b && validPt(r.latitude, r.longitude)) ? km({ lat: +r.latitude, lng: +r.longitude }, { lat: +b.latitude, lng: +b.longitude }) : null;
+        const back = node('div', undefined, 'sw-card-back'); back.id = 'swCard';
+        const card = node('div', undefined, 'sw-card'); card.setAttribute('role', 'dialog'); card.setAttribute('aria-modal', 'true'); card.setAttribute('aria-label', 'Waiting passenger details');
+        const head = node('div', undefined, 'sw-card-head');
+        const img = node('img', undefined, 'sw-card-photo'); img.alt = ''; bindAvatarFallback(img); img.src = photoOf(r);
+        const who = node('div'); who.append(node('strong', r.full_name || 'Commuter'), node('small', (r.passenger_type || 'Regular') + ' passenger'));
+        head.append(img, who);
+        const rows = [
+            ['Bus', (r.bus_number || '-') + (r.origin ? ' · ' + r.origin + ' to ' + (r.route_destination || '') : '')],
+            ['Pickup spot', r.pickup_label || 'Pinned spot'],
+            ['Distance from bus', d === null ? 'Bus location unavailable' : dist(d)],
+            ['Waiting since', ago(r.updated_at) || '-'],
+            ['Phone', r.phone_number && String(r.phone_number).length > 3 ? r.phone_number : 'Not provided']
+        ];
+        const dl = node('dl', undefined, 'sw-card-list');
+        rows.forEach(([k, v]) => { dl.append(node('dt', k), node('dd', v)); });
+        const close = node('button', 'Close', 'sw-card-close'); close.type = 'button';
+        card.append(head, dl, close); back.append(card); document.body.append(back);
+        const shut = () => { back.remove(); document.removeEventListener('keydown', esc); };
+        const esc = e => { if (e.key === 'Escape') shut(); };
+        close.addEventListener('click', shut); back.addEventListener('click', e => { if (e.target === back) shut(); });
+        document.addEventListener('keydown', esc); close.focus();
+    }
     function choose(r) {
         selected = selected === r.request_id ? null : r.request_id;
         routeViewMode = 'focus';
