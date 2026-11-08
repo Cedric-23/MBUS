@@ -104,9 +104,10 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_walkin'])){
         if($req_id > 0){
             // Pick-up: stops and fare come from the commuter's pin and chosen destination, not from the form.
             $rq = mbus_db_prepare($conn, "SELECT p.request_id, p.user_id, p.latitude, p.longitude, p.destination, u.full_name FROM pickup_requests p JOIN users u ON u.user_id = p.user_id
-                WHERE p.request_id = ? AND p.schedule_id = ? AND p.status = 'Waiting' AND p.expires_at > NOW()", [$req_id, $back_schedule]);
+                WHERE p.request_id = ? AND p.schedule_id = ? AND p.status = 'Picked up'
+                AND NOT EXISTS (SELECT 1 FROM reservation rv WHERE rv.user_id = p.user_id AND rv.schedule_id = p.schedule_id AND rv.source = 'Pickup' AND rv.status IN ('Paid','Confirmed','Boarded'))", [$req_id, $back_schedule]);
             $rrow = $rq === false ? false : mbus_db_fetch_assoc($rq);
-            if(!$rrow){ $msg = 'That pickup request is no longer waiting.'; break; }
+            if(!$rrow){ $msg = 'That pick-up is already seated or no longer available.'; break; }
             $uid = (int)$rrow['user_id']; $wname = $rrow['full_name']; $source = 'Pickup';
             $est = riders_estimate($sc, $rrow['latitude'], $rrow['longitude'], (string)$rrow['destination']);
             $pickup = $est['pickup']; $dest = $est['dest']; $fare = $est['fare'];
@@ -134,7 +135,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_walkin'])){
                 [(int)$rrow2['reservation_id'], $fare, 'CASH-' . $code, (string)$code]);
         }
         if($req_id > 0){
-            mbus_db_prepare($conn, "UPDATE pickup_requests SET status = 'Picked up', updated_at = clock_timestamp() WHERE request_id = ? AND status = 'Waiting'", [$req_id]);
+            
         }
         log_activity($conn, $operator_id, 'Walk-in seated', "Schedule $back_schedule, seat $seat, $source, fare $fare");
         $msg = "Seat $seat confirmed. Collect ₱" . number_format($fare, 2) . " cash.";
@@ -226,7 +227,9 @@ if($selected){
     $pq = mbus_db_prepare($conn, "SELECT p.request_id, p.pickup_label, p.destination, p.latitude, p.longitude, p.updated_at, u.user_id, u.full_name, u.phone_number,
             (u.profile_picture_b64 IS NOT NULL AND u.profile_picture_b64 <> '') AS has_pic, LEFT(MD5(COALESCE(u.profile_picture_b64,'')),8) AS pic_v
         FROM pickup_requests p JOIN users u ON u.user_id = p.user_id
-        WHERE p.schedule_id = ? AND p.status = 'Waiting' AND p.expires_at > NOW() ORDER BY p.updated_at ASC", [(int)$selected['schedule_id']]);
+        WHERE p.schedule_id = ? AND p.status = 'Picked up'
+          AND NOT EXISTS (SELECT 1 FROM reservation rv WHERE rv.user_id = p.user_id AND rv.schedule_id = p.schedule_id AND rv.source = 'Pickup' AND rv.status IN ('Paid','Confirmed','Boarded'))
+        ORDER BY p.updated_at ASC", [(int)$selected['schedule_id']]);
     while($pq !== false && ($p = mbus_db_fetch_assoc($pq))){
         $est = riders_estimate($selected, $p['latitude'], $p['longitude'], (string)$p['destination']);
         $pickups[] = ['id' => (int)$p['request_id'], 'name' => $p['full_name'], 'phone' => $p['phone_number'], 'spot' => $p['pickup_label'] ?: 'Pinned spot',
@@ -344,7 +347,7 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
     <section class="pickup-panel" aria-label="Pick-up list">
         <div class="pickup-head"><h2>Pick-up list</h2><span class="seg-count"><?php echo count($pickups); ?></span></div>
         <?php if(!$pickups){ ?>
-            <p class="riders-hint">Nobody is waiting for this bus right now.</p>
+            <p class="riders-hint">No one to seat yet. When you tap Picked up on the Waiting tab, they show here so you can give them a seat.</p>
         <?php } else { ?>
         <ul class="pickup-list" id="pickupList">
             <?php foreach($pickups as $pk){ ?>
@@ -417,7 +420,7 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
         <p class="riders-hint" id="ridersHint"><?php
             if($mode === 'res') echo $riders ? 'Tap a reserved seat to confirm boarding. Walk-in seats are on the Walk-in tab.' : 'No reservations on this bus yet.';
             elseif(!$walk_open) echo 'This trip is closed.';
-            elseif($mode === 'pick') echo $pickups ? 'Tap a person above, then tap the seat they will take.' : 'No pick-up requests on this trip.';
+            elseif($mode === 'pick') echo $pickups ? 'Tap a person above, then tap the seat they will take.' : 'No one to seat yet. Tap Picked up on the Waiting tab first.';
             else echo 'Tap an empty seat to seat a walk-in. Other seats are locked here.';
         ?></p>
     </section>

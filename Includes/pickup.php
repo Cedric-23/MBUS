@@ -298,7 +298,7 @@ function mbus_pickup_mutate(PDO $pdo, string $role, int $userId, array $data): a
                 AND p.status = 'Waiting' AND p.expires_at > clock_timestamp()" . $scope . '
                 RETURNING p.request_id, p.schedule_id, p.status, p.updated_at, p.expires_at');
             $stmt->execute($params);
-            $message = 'Pickup marked complete. No reservation or payment was changed.';
+            $message = 'Picked up. Give them a seat in Riders → Pickup.';
         }
         $request = $stmt->fetch(PDO::FETCH_ASSOC); // direct PDO: the legacy adapter discards INSERT RETURNING rows.
         if (!$request) {
