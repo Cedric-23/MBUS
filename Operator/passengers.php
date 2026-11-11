@@ -54,6 +54,7 @@ function riders_estimate(array $trip, $lat, $lng, string $dest_in): array
     return ['pickup' => $order[$pi], 'dest' => $order[$di], 'fare' => $fare];
 }
 
+mbus_db_prepare($conn, "UPDATE reservation SET status='Cancelled' WHERE status='Pending' AND created_at <= NOW() - INTERVAL '10 minutes'", []);
 // Confirm boarding from a rider card (reservations only)
 if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_boarded'])){
     $back_schedule = (int)($_POST['schedule_id'] ?? 0);
@@ -238,6 +239,11 @@ if($selected){
     }
 }
 $trip_open = $selected && in_array($selected['trip_status'], ['Scheduled', 'Boarding', 'Departed'], true);
+if(isset($_GET['poll'])){   // lightweight change check used by the page to refresh itself
+    header('Content-Type: application/json'); header('Cache-Control: no-store');
+    echo json_encode(['sig' => md5(json_encode([$riders, $pickups, $selected['trip_status'] ?? '']))]);
+    exit();
+}
 $walk_open = $selected && in_array($selected['trip_status'], ['Scheduled', 'Boarding', 'Departed'], true);
 $stops = [];
 $ft = mbus_fare_table(); asort($ft);
@@ -521,6 +527,8 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
 <script>
 const RIDERS = <?php echo json_encode($riders, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 const PICKUPS = <?php echo json_encode($pickups, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+const POLL_URL = <?php echo json_encode(riders_url(['schedule_id' => (int)($selected['schedule_id'] ?? 0), 'dir' => $dir, 'mode' => $mode, 'poll' => 1])); ?>;
+const POLL_SIG = <?php echo json_encode(md5(json_encode([$riders, $pickups, $selected['trip_status'] ?? '']))); ?>;
 const TRIP_OPEN = <?php echo $trip_open ? 'true' : 'false'; ?>;
 const TRIP_ORIGIN = <?php echo json_encode(strtoupper((string)$selected['origin'])); ?>;
 const TRIP_DEST = <?php echo json_encode(strtoupper((string)$selected['destination'])); ?>;

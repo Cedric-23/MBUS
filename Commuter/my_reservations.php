@@ -8,7 +8,7 @@ mbus_db_prepare($conn, "
     UPDATE reservation
     SET status='Cancelled'
     WHERE status='Pending'
-    AND created_at <= NOW() - INTERVAL '5 minutes'
+    AND created_at <= NOW() - INTERVAL '10 minutes'
 ", []);
 
 /* AUTH */

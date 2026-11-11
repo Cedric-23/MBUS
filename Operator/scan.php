@@ -76,8 +76,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
     if($action === 'board'){
         $up = mbus_db_prepare($conn, "
             UPDATE reservation SET status = 'Boarded'
-            WHERE user_id = ? AND schedule_id = ? AND status = 'Paid'
-            AND schedule_id IN (SELECT schedule_id FROM schedule WHERE trip_status IN ('Scheduled', 'Boarding'))
+            WHERE user_id = ? AND schedule_id = ? AND status IN ('Paid', 'Confirmed')
+            AND schedule_id IN (SELECT schedule_id FROM schedule WHERE trip_status IN ('Scheduled', 'Boarding', 'Departed'))
         ", [$user_id, $schedule_id]);
         $boarded_count = $up === false ? 0 : (int)$conn->affectedRows;
         if($boarded_count <= 0){
@@ -91,7 +91,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
     $rq = mbus_db_prepare($conn, "
         SELECT r.seat_number, r.pickup_location, r.destination, r.status
         FROM reservation r
-        WHERE r.user_id = ? AND r.schedule_id = ? AND r.status IN ('Paid', 'Boarded')
+        WHERE r.user_id = ? AND r.schedule_id = ? AND r.status IN ('Paid', 'Confirmed', 'Boarded')
         ORDER BY NULLIF(regexp_replace(r.seat_number, '\D', '', 'g'), '')::int ASC
     ", [$user_id, $schedule_id]);
     $seats = [];
@@ -102,7 +102,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $seats[] = $r['seat_number'];
         $pickup = $pickup ?: $r['pickup_location'];
         $dest = $dest ?: $r['destination'];
-        if($r['status'] === 'Paid'){ $paid++; } else { $boarded++; }
+        if($r['status'] !== 'Boarded'){ $paid++; } else { $boarded++; }
     }
     if(!$seats){
         scan_json(['ok' => false, 'error' => 'No paid reservation found for this ticket. It may be unpaid, expired or cancelled.']);
@@ -118,7 +118,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
     ", [$user_id, $schedule_id]);
     $pay = $pq === false ? false : mbus_db_fetch_assoc($pq);
 
-    $trip_open = in_array($trip['trip_status'], ['Scheduled', 'Boarding'], true);
+    $trip_open = in_array($trip['trip_status'], ['Scheduled', 'Boarding', 'Departed'], true);
     $state = $paid > 0 ? 'Paid' : 'Boarded';
     $can_board = $paid > 0 && $trip_open;
     $note = '';
@@ -170,7 +170,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         <a href="scan.php" aria-current="page"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
         <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
         <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
-        <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>    </nav>
+        <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
+    </nav>
     <div class="menu-bottom">
         <a href="../logout.php" class="logout-btn btn btn-outline btn-block"><i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
     </div>

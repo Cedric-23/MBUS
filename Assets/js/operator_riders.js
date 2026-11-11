@@ -165,3 +165,18 @@
     var on = document.querySelector('.trip-chip.on');
     if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' });
 })();
+
+/* Keep the page in step with scans and requests made elsewhere: reload when the seats or pick-up list change. */
+(function () {
+    if (typeof POLL_URL === 'undefined' || !POLL_URL) return;
+    function busy() {
+        return !!document.querySelector('.rider-sheet.open, #riderSheet:not([hidden]), #walkSheet:not([hidden]), #pkModal:not([hidden]), .sheet.open');
+    }
+    setInterval(function () {
+        if (document.hidden || busy()) return;
+        fetch(POLL_URL, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) { if (d && d.sig && d.sig !== POLL_SIG && !busy()) location.reload(); })
+            .catch(function () {});
+    }, 8000);
+})();
