@@ -34,6 +34,23 @@ try {
     } catch (PDOException $schema_error) {
         error_log('Profile picture schema check failed: ' . $schema_error->getMessage());
     }
+    // Per-ticket passenger type and discount ID (group bookings: student/senior/PWD seats).
+    try {
+        foreach ([
+            "passenger_type VARCHAR(20) DEFAULT 'Regular'",
+            "discount_status VARCHAR(20) DEFAULT 'None'",
+            "id_image_b64 TEXT",
+            "id_image_mime VARCHAR(50)",
+            "fare_amount NUMERIC(10,2)",
+            "discount_amount NUMERIC(10,2)",
+            "discount_reviewed_by INT",
+            "discount_reviewed_at TIMESTAMP",
+        ] as $col) {
+            $pdo->exec('ALTER TABLE reservation ADD COLUMN IF NOT EXISTS ' . $col);
+        }
+    } catch (PDOException $schema_error) {
+        error_log('Reservation discount schema check failed: ' . $schema_error->getMessage());
+    }
     $conn = new MbusConnection($pdo);
 } catch (PDOException $e) {
     $GLOBALS['mbus_connect_error'] = $e->getMessage();

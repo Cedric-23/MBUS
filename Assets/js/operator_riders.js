@@ -67,7 +67,7 @@
         var a = $('wkPickup'), b = $('wkDest'), go = $('wkGo');
         var fa = a.selectedOptions[0] && a.selectedOptions[0].dataset.fare, fb = b.selectedOptions[0] && b.selectedOptions[0].dataset.fare;
         var ok = a.value && b.value && a.value !== b.value && fa && fb;
-        $('wkFare').textContent = ok ? '₱' + Math.abs(parseFloat(fb) - parseFloat(fa)).toFixed(2) : '₱0.00';
+        $('wkFare').textContent = ok ? '₱' + Math.max(14, Math.abs(parseFloat(fb) - parseFloat(fa))).toFixed(2) : '₱0.00';
         go.disabled = !ok;
     }
     function openWalk(seat, trigger) {

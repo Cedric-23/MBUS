@@ -54,9 +54,47 @@
         var st = $('rState');
         st.textContent = t.state === 'Boarded' ? 'Already boarded' : 'Paid';
         st.className = 'scan-state ' + (t.state === 'Boarded' ? 'warn' : 'ok');
+        var ppl = $('rPeople');
+        ppl.textContent = '';
+        var special = (t.people || []).filter(function (p) { return p.type !== 'Regular'; });
+        ppl.hidden = !special.length;
+        special.forEach(function (p) {
+            var row = document.createElement('div');
+            row.className = 'scan-person';
+            var head = document.createElement('div');
+            head.className = 'scan-person-head';
+            var who = document.createElement('strong');
+            who.textContent = 'Seat ' + p.seat + ' · ' + p.type;
+            var chip = document.createElement('span');
+            var label = { Approved: 'ID approved', Pending: 'ID awaiting approval', Rejected: 'ID rejected', None: 'No ID' }[p.discount] || p.discount;
+            chip.className = 'scan-chip ' + String(p.discount).toLowerCase();
+            chip.textContent = label;
+            head.appendChild(who); head.appendChild(chip);
+            row.appendChild(head);
+            if (p.id) {
+                var a = document.createElement('a');
+                a.href = p.id; a.target = '_blank'; a.rel = 'noopener';
+                var img = document.createElement('img');
+                img.src = p.id; img.alt = 'Passenger ID, seat ' + p.seat; img.loading = 'lazy';
+                a.appendChild(img); row.appendChild(a);
+            } else if (p.discount === 'Approved') {
+                var ok = document.createElement('small');
+                ok.textContent = 'Verified account holder';
+                row.appendChild(ok);
+            }
+            if (p.discount === 'Rejected' && p.amount > 0) {
+                var owe = document.createElement('small');
+                owe.className = 'scan-owe';
+                owe.textContent = 'Collect ₱' + p.amount.toFixed(2) + ' (discount not approved)';
+                row.appendChild(owe);
+            }
+            ppl.appendChild(row);
+        });
         var note = $('rNote');
-        note.hidden = !t.note;
-        note.textContent = t.note || '';
+        var extra = t.owed ? 'Collect ₱' + t.owed + ' in total: discount IDs were rejected.' : '';
+        var text = [t.note, extra].filter(Boolean).join(' ');
+        note.hidden = !text;
+        note.textContent = text;
         boardBtn.hidden = !t.can_board;
         resultEl.hidden = false;
         camera.hidden = true;

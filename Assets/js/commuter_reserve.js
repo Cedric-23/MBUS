@@ -103,6 +103,9 @@ function renderPassengerTypes() {
     if (!discounted) {
         html += `<a class="verify-hint" href="verification.php">Student, senior or PWD? Verify your ID for 20% off</a>`;
     }
+    if (selectedSeats.length > 1 || !discounted) {
+        html += `<p class="verify-hint">Booking for others? Set each seat's passenger type and upload their ID at payment.</p>`;
+    }
 
     document.getElementById("passengerTypes").innerHTML = html;
 
@@ -115,8 +118,8 @@ document.getElementById("calculateBtn")
     const pickupFare = fareTable[pickup.value];
     const destinationFare = fareTable[destination.value];
 
-    let farePerSeat = destinationFare - pickupFare;
-    if (farePerSeat < 0) farePerSeat = 0;
+    let farePerSeat = Math.max(14, Math.abs(destinationFare - pickupFare));
+    if (pickup.value === destination.value || isNaN(farePerSeat)) farePerSeat = 0;
 
     let reservationFee = selectedSeats.length * 10;
     let total = 0;

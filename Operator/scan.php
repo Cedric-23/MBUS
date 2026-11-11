@@ -89,7 +89,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
 
     // lookup
     $rq = mbus_db_prepare($conn, "
-        SELECT r.seat_number, r.pickup_location, r.destination, r.status
+        SELECT r.reservation_id, r.seat_number, r.pickup_location, r.destination, r.status, r.passenger_type, r.discount_status, r.discount_amount,
+               (r.id_image_b64 IS NOT NULL) AS has_id
         FROM reservation r
         WHERE r.user_id = ? AND r.schedule_id = ? AND r.status IN ('Paid', 'Confirmed', 'Boarded')
         ORDER BY NULLIF(regexp_replace(r.seat_number, '\D', '', 'g'), '')::int ASC
@@ -98,8 +99,18 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
     $pickup = $dest = '';
     $paid = 0;
     $boarded = 0;
+    $people = [];
+    $owed = 0.0;
     while($rq !== false && ($r = mbus_db_fetch_assoc($rq))){
         $seats[] = $r['seat_number'];
+        $ptype = $r['passenger_type'] ?: 'Regular';
+        $dstat = $r['discount_status'] ?: 'None';
+        if($dstat === 'Rejected'){ $owed += (float)$r['discount_amount']; }
+        $people[] = [
+            'seat' => $r['seat_number'], 'type' => $ptype, 'discount' => $dstat,
+            'amount' => (float)$r['discount_amount'],
+            'id' => ($r['has_id'] === true || $r['has_id'] === 't' || $r['has_id'] === '1' || $r['has_id'] === 1) ? '../id_image.php?r=' . (int)$r['reservation_id'] : null,
+        ];
         $pickup = $pickup ?: $r['pickup_location'];
         $dest = $dest ?: $r['destination'];
         if($r['status'] !== 'Boarded'){ $paid++; } else { $boarded++; }
@@ -140,6 +151,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         'method' => $pay['payment_method'] ?? null,
         'reference' => $pay['payment_reference'] ?? null,
         'ticket_code' => $pay['ticket_code'] ?? null,
+        'people' => $people,
+        'owed' => $owed > 0 ? number_format($owed, 2) : null,
     ]]);
 }
 ?>
@@ -237,6 +250,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
                 <dt>Paid</dt><dd id="rPaid"></dd>
                 <dt>GCash ref</dt><dd id="rRef"></dd>
             </dl>
+            <div class="scan-people" id="rPeople" hidden></div>
             <p class="scan-note" id="rNote" hidden></p>
             <button type="button" class="scan-btn solid big" id="boardBtn">Confirm boarding</button>
         </article>

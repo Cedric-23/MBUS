@@ -48,9 +48,8 @@ function riders_estimate(array $trip, $lat, $lng, string $dest_in): array
     }
     $pi = $t === null ? 0 : (int)round($t * ($n - 1));
     if ($pi >= $di) $pi = max(0, $di - 1);
-    $f = mbus_fare_table();
-    $fare = round(abs(($f[$order[$di]] ?? 0) - ($f[$order[$pi]] ?? 0)), 2);
-    if ($fare <= 0) $fare = max(14.00, round(75.50 * abs($di - $pi) / max(1, $n - 1), 2));
+    $fare = mbus_seat_fare($order[$pi], $order[$di]);
+    if ($fare <= 0) $fare = max(MBUS_MIN_FARE, round(75.50 * abs($di - $pi) / max(1, $n - 1), 2));
     return ['pickup' => $order[$pi], 'dest' => $order[$di], 'fare' => $fare];
 }
 
@@ -98,7 +97,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_walkin'])){
             AND (status IN ('Paid','Confirmed','Boarded') OR (status = 'Pending' AND created_at > NOW() - INTERVAL '10 minutes'))", [$back_schedule, (string)$seat]);
         if($taken !== false && mbus_db_num_rows($taken) > 0){ $msg = "Seat $seat is already taken."; break; }
 
-        $fares = mbus_fare_table();
+        $fares = mbus_stop_positions();
         $uid = null; $source = 'Walk-in'; $wname = trim((string)($_POST['name'] ?? ''));
         $wname = $wname !== '' ? mb_substr($wname, 0, 100) : 'Walk-in passenger';
         $req_id = (int)($_POST['request_id'] ?? 0);
@@ -116,7 +115,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_walkin'])){
             $pickup = strtoupper(trim((string)($_POST['pickup'] ?? '')));
             $dest = strtoupper(trim((string)($_POST['destination'] ?? '')));
             if(!isset($fares[$pickup], $fares[$dest]) || $pickup === $dest){ $msg = 'Choose a pickup and a different drop-off stop.'; break; }
-            $fare = round(abs($fares[$dest] - $fares[$pickup]), 2);
+            $fare = mbus_seat_fare($pickup, $dest);
             if($fare <= 0){ $msg = 'Those stops have no fare between them.'; break; }
         }
 
@@ -246,7 +245,7 @@ if(isset($_GET['poll'])){   // lightweight change check used by the page to refr
 }
 $walk_open = $selected && in_array($selected['trip_status'], ['Scheduled', 'Boarding', 'Departed'], true);
 $stops = [];
-$ft = mbus_fare_table(); asort($ft);
+$ft = mbus_stop_positions(); asort($ft);
 foreach($ft as $k => $v){ $stops[] = ['key' => $k, 'label' => ucwords(strtolower($k)), 'fare' => $v]; }
 
 function riders_when(string $dt, string $today_key, string $tomorrow_key): string

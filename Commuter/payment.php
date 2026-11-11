@@ -59,8 +59,16 @@ while($row = mbus_db_fetch_assoc($res_query)){
 $created_at = strtotime($reservations[0]['created_at']);
 $expiry = $created_at + (10 * 60); // 10 minutes matching reserve.php
 
-// Total is always computed here; the URL value is never trusted.
-$total = mbus_quote_total($reservations, mbus_passenger_type($conn, (int)$user_id));
+$acct_type = mbus_passenger_type($conn, (int)$user_id);
+// Default passenger types: the verified account holder's own (first) seat gets their type.
+$default_types = [];
+foreach($reservations as $i => $r){
+    $default_types[$r['reservation_id']] = !empty($r['passenger_type']) && $r['passenger_type'] !== 'Regular' ? $r['passenger_type'] : ($i === 0 ? $acct_type : 'Regular');
+}
+// Total is always computed on the server; nothing from the URL or form is trusted.
+$quote = mbus_quote_lines($reservations, $default_types);
+$total = $quote['total'];
+$expired = time() > $expiry;
 
 $error = "";
 
@@ -71,32 +79,60 @@ if(isset($_POST['confirm_payment'])){
         $error = "Security validation failed. Please try again.";
     } else {
         $method = 'GCash'; // GCash is the only accepted payment method
-        $reference = mbus_db_escape($conn, $_POST['reference_number']);
+        $reference = trim((string)($_POST['reference_number'] ?? ''));
 
-        if(empty($reference)){
-            $error = "Reference number required.";
-        } else {
-            $ticket_code = "MB-" . rand(1000,9999);
-
-            // Use transaction for payment processing
-            $conn->pdo->beginTransaction();
-
-            try{
-                $get_res = mbus_db_prepare($conn, "
-                SELECT reservation_id FROM reservation
-                WHERE user_id = ?
-                AND schedule_id = ?
-                AND status = 'Pending'
-                LIMIT 1
-                ", [$user_id, $schedule_id]);
-
-                $res_data = mbus_db_fetch_assoc($get_res);
-
-                if(!$res_data){
-                    throw new Exception("No pending reservation found");
+        // Passenger type per seat; every discounted seat that is not the verified account holder's needs an ID photo.
+        $types = []; $covered = []; $ids = [];
+        foreach($reservations as $i => $r){
+            $rid = $r['reservation_id'];
+            $t = (string)(($_POST['ptype'] ?? [])[$rid] ?? 'Regular');
+            if(!in_array($t, MBUS_PASSENGER_TYPES, true)) $t = 'Regular';
+            $types[$rid] = $t;
+            $covered[$rid] = ($t !== 'Regular' && $i === 0 && $t === $acct_type);
+            if($t !== 'Regular' && !$covered[$rid]){
+                $data = (string)(($_POST['id_data'] ?? [])[$rid] ?? '');
+                if($data !== ''){
+                    if(!preg_match('#^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$#', $data, $m) || strlen($m[2]) > 1200000 || base64_decode($m[2], true) === false){
+                        $error = "Seat {$r['seat_number']}: the ID photo could not be read. Choose a JPG or PNG under 1 MB.";
+                        break;
+                    }
+                    $ids[$rid] = ['mime' => $m[1], 'b64' => $m[2]];
+                } elseif(!empty($r['id_image_b64'])){
+                    $ids[$rid] = ['mime' => $r['id_image_mime'], 'b64' => $r['id_image_b64']];
+                } else {
+                    $error = "Seat {$r['seat_number']} is a $t ticket: upload a photo of their ID.";
+                    break;
                 }
+            }
+        }
+        $quote = mbus_quote_lines($reservations, $types);
+        $total = $quote['total'];
 
-                $res_id = $res_data['reservation_id'];
+        if($error !== ""){
+            // keep the message from above
+        } elseif($expired){
+            mbus_db_prepare($conn, "UPDATE reservation SET status='Cancelled' WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'", [$user_id, $schedule_id]);
+            $error = "This reservation expired after 10 minutes. Please reserve your seats again.";
+        } elseif($reference === '' || strlen($reference) < 10){
+            $error = "Reference number required (at least 10 digits).";
+        } else {
+            $ticket_code = "MB-" . random_int(1000,9999);
+            $conn->pdo->beginTransaction();
+            try{
+                $res_id = $reservations[0]['reservation_id'];
+                foreach($quote['lines'] as $ln){
+                    $rid = $ln['reservation_id'];
+                    $status = $ln['type'] === 'Regular' ? 'None' : ($covered[$rid] ? 'Approved' : 'Pending');
+                    $up = mbus_db_prepare($conn, "
+                    UPDATE reservation
+                    SET status = 'Paid', passenger_type = ?, discount_status = ?, id_image_b64 = ?, id_image_mime = ?,
+                        fare_amount = ?, discount_amount = ?
+                    WHERE reservation_id = ? AND user_id = ? AND status = 'Pending'
+                    ", [$ln['type'], $status, $ids[$rid]['b64'] ?? null, $ids[$rid]['mime'] ?? null, $ln['base'], $ln['discount'], $rid, $user_id]);
+                    if($up === false || (int)$conn->affectedRows < 1){
+                        throw new Exception("A seat is no longer pending. Please reserve again.");
+                    }
+                }
 
                 mbus_db_prepare($conn, "
                 INSERT INTO payment(
@@ -108,30 +144,16 @@ if(isset($_POST['confirm_payment'])){
                 )
                 ", [$res_id, $total, $method, $reference, 'Paid', $ticket_code]);
 
-                $update = mbus_db_prepare($conn, "
-                UPDATE reservation
-                SET status = 'Paid'
-                WHERE user_id = ?
-                AND schedule_id = ?
-                AND status = 'Pending'
-                ", [$user_id, $schedule_id]);
-
                 $conn->pdo->commit();
+                log_activity($conn, $user_id, ACTION_PAYMENT_SUCCESS, "Payment completed for schedule $schedule_id, ticket: $ticket_code, total $total");
 
-                if($update){
-                    // Log payment
-                    log_activity($conn, $user_id, ACTION_PAYMENT_SUCCESS, "Payment completed for schedule $schedule_id, ticket: $ticket_code");
-                    
-                    // Send email confirmation
-                    $user_email_query = mbus_db_query($conn, "SELECT email FROM users WHERE user_id = '$user_id'");
-                    $user_email_data = mbus_db_fetch_assoc($user_email_query);
-                    $user_email = $user_email_data['email'] ?? '';
-                    
-                    $route_info = $reservations[0]['origin'] . " → " . $reservations[0]['route_destination'];
-                    $departure_formatted = date('F d, Y g:i A', strtotime($reservations[0]['departure_time']));
-                    
-                    $email_subject = "Payment Confirmed - Ticket: $ticket_code";
-                    $email_message = "Dear Commuter,
+                $user_email_query = mbus_db_prepare($conn, "SELECT email FROM users WHERE user_id = ?", [$user_id]);
+                $user_email_data = $user_email_query === false ? false : mbus_db_fetch_assoc($user_email_query);
+                $user_email = $user_email_data['email'] ?? '';
+                $route_info = $reservations[0]['origin'] . " → " . $reservations[0]['route_destination'];
+                $departure_formatted = date('F d, Y g:i A', strtotime($reservations[0]['departure_time']));
+                $email_subject = "Payment Confirmed - Ticket: $ticket_code";
+                $email_message = "Dear Commuter,
 
 Your payment has been confirmed!
 
@@ -141,13 +163,12 @@ Departure: $departure_formatted
 Amount: ₱" . number_format($total, 2) . "
 
 Thank you for using MBUS!";
-                    if($user_email !== ''){ send_email_notification($user_email, $email_subject, $email_message); }
-                    
-                    header("Location: ticket.php?schedule_id=$schedule_id");
-                    exit();
-                }
+                if($user_email !== ''){ send_email_notification($user_email, $email_subject, $email_message); }
+
+                header("Location: ticket.php?schedule_id=$schedule_id");
+                exit();
             } catch(Exception $e){
-                $conn->pdo->rollBack();
+                if($conn->pdo->inTransaction()){ $conn->pdo->rollBack(); }
                 $error = "Payment failed: " . $e->getMessage();
             }
         }
@@ -242,16 +263,38 @@ if(isset($_POST['cancel_reservation'])){
     <li><strong>Expected Arrival:</strong> <?php echo date("F d, Y g:i A", strtotime($reservations[0]['arrival_time'])); ?></li>
     <li><strong>Pickup:</strong> <?php echo htmlspecialchars($reservations[0]['pickup_location']); ?></li>
     <li><strong>Destination:</strong> <?php echo htmlspecialchars($reservations[0]['destination']); ?></li>
-    <?php if($total > 0){ ?><li class="trip-total"><strong>Total:</strong> <span>&#8369;<?php echo number_format($total, 2); ?></span></li><?php } ?>
+    <li class="trip-total"><strong>Total:</strong> <span>&#8369;<span id="totalAmt"><?php echo number_format($total, 2); ?></span></span></li>
 </ul>
 
 <div class="seats-section">
-    <strong>Reserved Seats:</strong>
-    <div class="seat-list">
-        <?php foreach($reservations as $r){ ?>
-        <span class="seat-tag">Seat <?php echo htmlspecialchars($r['seat_number']); ?></span>
-        <?php } ?>
+    <strong>Passengers</strong>
+    <p class="pay-hint">Booking for friends or family? Pick each seat's passenger type. Student, Senior and PWD get 20% off the fare and need a photo of their ID.</p>
+    <?php foreach($quote['lines'] as $i => $ln){
+        $rid = (int)$ln['reservation_id'];
+        $has_id = !empty($reservations[$i]['id_image_b64']);
+    ?>
+    <div class="pay-seat" data-rid="<?php echo $rid; ?>" data-base="<?php echo $ln['base']; ?>" data-first="<?php echo $i === 0 ? '1' : '0'; ?>" data-has-id="<?php echo $has_id ? '1' : '0'; ?>">
+        <div class="pay-seat-head">
+            <span class="seat-tag">Seat <?php echo htmlspecialchars((string)$ln['seat']); ?></span>
+            <select name="ptype[<?php echo $rid; ?>]" form="payForm" class="form-control pay-type" aria-label="Passenger type for seat <?php echo htmlspecialchars((string)$ln['seat']); ?>">
+                <?php foreach(MBUS_PASSENGER_TYPES as $t){ echo '<option' . ($ln['type'] === $t ? ' selected' : '') . '>' . $t . '</option>'; } ?>
+            </select>
+            <span class="pay-line">&#8369;<span class="pay-final"><?php echo number_format($ln['base'] - $ln['discount'], 2); ?></span></span>
+        </div>
+        <div class="pay-id" hidden>
+            <label class="pay-id-btn">
+                <i class="fa fa-id-card" aria-hidden="true"></i> <span class="pay-id-label">Upload ID photo</span>
+                <input type="file" accept="image/*" class="pay-file" hidden>
+            </label>
+            <img class="pay-id-prev" alt="ID preview" hidden>
+            <input type="hidden" name="id_data[<?php echo $rid; ?>]" form="payForm" class="pay-id-data">
+            <small class="pay-id-note">An admin checks this ID. If it is rejected, the difference is collected when you board.</small>
+        </div>
+        <div class="pay-own" hidden><i class="fa fa-circle-check" aria-hidden="true"></i> Your verified <?php echo htmlspecialchars($acct_type); ?> account &ndash; no ID needed</div>
     </div>
+    <?php } ?>
+    <p class="pay-fee">Reservation fee: &#8369;<?php echo number_format(MBUS_RESERVATION_FEE, 2); ?> per seat</p>
+</div>
 </div>
 
 </div>
@@ -273,7 +316,7 @@ if(isset($_POST['cancel_reservation'])){
 <div class="alert alert-error" role="alert"><?php echo $error; ?></div>
 <?php endif; ?>
 
-<form method="POST" class="payment-form">
+<form method="POST" class="payment-form" id="payForm">
     <?php csrf_field(); ?>
     
     <div class="gcash-row">
@@ -288,8 +331,8 @@ if(isset($_POST['cancel_reservation'])){
         <small class="form-hint">Find it in your GCash receipt after sending the payment.</small>
     </div>
 
-    <button type="submit" name="confirm_payment" class="btn btn-primary btn-block">
-        Confirm payment<?php if($total > 0){ echo ' &#8369;' . number_format($total, 2); } ?>
+    <button type="submit" name="confirm_payment" class="btn btn-primary btn-block"<?php echo $expired ? ' disabled' : ''; ?>>
+        Confirm payment &#8369;<span id="btnAmt"><?php echo number_format($total, 2); ?></span>
     </button>
 </form>
 
@@ -302,6 +345,58 @@ if(isset($_POST['cancel_reservation'])){
 
 </main>
 
+<script>
+(function(){
+    const acct = <?php echo json_encode($acct_type); ?>;
+    const fee = <?php echo json_encode(MBUS_RESERVATION_FEE); ?>;
+    const rate = <?php echo json_encode(MBUS_DISCOUNT_RATE); ?>;
+    const money = n => n.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const seats = Array.from(document.querySelectorAll('.pay-seat'));
+
+    function recalc(){
+        let total = 0;
+        seats.forEach(el => {
+            const type = el.querySelector('.pay-type').value;
+            const base = parseFloat(el.dataset.base) || 0;
+            const covered = type !== 'Regular' && el.dataset.first === '1' && type === acct;
+            const needsId = type !== 'Regular' && !covered;
+            const final = base - (type === 'Regular' ? 0 : Math.round(base * rate * 100) / 100);
+            el.querySelector('.pay-final').textContent = money(final);
+            el.querySelector('.pay-id').hidden = !needsId;
+            el.querySelector('.pay-own').hidden = !covered;
+            total += final + fee;
+        });
+        const t = document.getElementById('totalAmt'), b = document.getElementById('btnAmt');
+        if (t) t.textContent = money(total);
+        if (b) b.textContent = money(total);
+    }
+
+    seats.forEach(el => {
+        el.querySelector('.pay-type').addEventListener('change', recalc);
+        const file = el.querySelector('.pay-file'), data = el.querySelector('.pay-id-data');
+        const prev = el.querySelector('.pay-id-prev'), label = el.querySelector('.pay-id-label');
+        if (el.dataset.hasId === '1') label.textContent = 'ID on file (tap to replace)';
+        file.addEventListener('change', () => {
+            const f = file.files && file.files[0];
+            if (!f) return;
+            const img = new Image(), url = URL.createObjectURL(f);
+            img.onload = () => {
+                const max = 1000, k = Math.min(1, max / Math.max(img.width, img.height));
+                const c = document.createElement('canvas');
+                c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+                c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                data.value = c.toDataURL('image/jpeg', 0.8);
+                prev.src = data.value; prev.hidden = false;
+                label.textContent = 'ID attached (tap to replace)';
+                URL.revokeObjectURL(url);
+            };
+            img.onerror = () => { label.textContent = 'Could not read that photo'; URL.revokeObjectURL(url); };
+            img.src = url;
+        });
+    });
+    recalc();
+})();
+</script>
 <script>
 let countdownInterval;
 

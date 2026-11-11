@@ -55,7 +55,7 @@ $reject_booking = function(string $action) use ($schedule_id): void {
 $stops=["MORONG TERMINAL","BINARITAN","POBLACION","HILLTOP","SABANG","ANVAYA","MABAYO","MINANGA","MORONG GATE","GROUP 6","IDESS","APPAREL","GATE 2","TRIBOA","TOWER","KORYO","TECHNO","UA","NSD","PETRON","INDUSTRIAL","HARBOR POINT","MAIN GATE"];
 
 /* FARE TABLE */
-$fare_table=mbus_fare_table();
+$fare_table=mbus_stop_positions();
 $passenger_type=mbus_passenger_type($conn,(int)$user_id);
 
 /* ROUTE

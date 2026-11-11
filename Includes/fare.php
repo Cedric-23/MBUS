@@ -26,19 +26,45 @@ function mbus_passenger_type($conn, int $user_id): string {
     return $row && !empty($row['verification_type']) ? $row['verification_type'] : 'Regular';
 }
 
-function mbus_seat_fare(string $pickup, string $destination): float {
-    $t = mbus_fare_table();
-    if (!isset($t[$pickup], $t[$destination])) return 0.0;
-    return max(0.0, $t[$destination] - $t[$pickup]);
+const MBUS_MIN_FARE = 14.00;
+const MBUS_PASSENGER_TYPES = ['Regular', 'Student', 'Senior', 'PWD'];
+
+/* Distance-fare position of each stop measured from the Morong end of the route.
+   The Morong-side stops sit at 0; the table value is the fare from there. */
+function mbus_stop_positions(): array {
+    $pos = mbus_fare_table();
+    foreach (['MORONG TERMINAL', 'BINARITAN', 'POBLACION', 'HILLTOP'] as $s) { $pos[$s] = 0.0; }
+    return $pos;
 }
 
-/* The account holder's own seat (first seat) gets the discount. */
-function mbus_quote_total(array $reservations, string $passenger_type): float {
-    $total = 0.0;
-    foreach (array_values($reservations) as $i => $r) {
-        $fare = mbus_seat_fare((string)$r['pickup_location'], (string)$r['destination']);
-        if ($i === 0 && $passenger_type !== 'Regular') $fare -= $fare * MBUS_DISCOUNT_RATE;
-        $total += round($fare, 2) + MBUS_RESERVATION_FEE;
+/* One seat's base fare. Works in both directions (Morong->Harbor and back),
+   never below the minimum fare, 0 only when pickup/destination are unknown or equal. */
+function mbus_seat_fare(string $pickup, string $destination): float {
+    $p = mbus_stop_positions();
+    $pickup = strtoupper(trim($pickup)); $destination = strtoupper(trim($destination));
+    if ($pickup === $destination || !isset($p[$pickup], $p[$destination])) return 0.0;
+    return round(max(MBUS_MIN_FARE, abs($p[$destination] - $p[$pickup])), 2);
+}
+
+/* Per-seat lines: base fare, 20% discount for Student/Senior/PWD, plus reservation fee.
+   $types maps reservation_id => passenger type (missing = Regular). */
+function mbus_quote_lines(array $reservations, array $types = []): array {
+    $lines = []; $total = 0.0;
+    foreach (array_values($reservations) as $r) {
+        $type = $types[$r['reservation_id']] ?? 'Regular';
+        if (!in_array($type, MBUS_PASSENGER_TYPES, true)) $type = 'Regular';
+        $base = mbus_seat_fare((string)$r['pickup_location'], (string)$r['destination']);
+        $discount = $type === 'Regular' ? 0.0 : round($base * MBUS_DISCOUNT_RATE, 2);
+        $final = round($base - $discount + MBUS_RESERVATION_FEE, 2);
+        $lines[] = ['reservation_id' => (int)$r['reservation_id'], 'seat' => $r['seat_number'], 'type' => $type,
+                    'base' => $base, 'discount' => $discount, 'fee' => MBUS_RESERVATION_FEE, 'final' => $final];
+        $total += $final;
     }
-    return round($total, 2);
+    return ['lines' => $lines, 'total' => round($total, 2)];
+}
+
+function mbus_quote_total(array $reservations, string $passenger_type): float {
+    $types = [];
+    foreach (array_values($reservations) as $i => $r) { $types[$r['reservation_id']] = $i === 0 ? $passenger_type : 'Regular'; }
+    return mbus_quote_lines($reservations, $types)['total'];
 }

@@ -218,3 +218,16 @@
     text-align: center;
   }
 }
+/* Per-seat passenger type + ID upload */
+.pay-hint{font-size:.82rem;color:#65748a;margin:.25rem 0 .75rem}
+.pay-seat{border:1px solid #e5eaf1;border-radius:12px;padding:.6rem .75rem;margin-bottom:.5rem;background:#fff}
+.pay-seat-head{display:flex;align-items:center;gap:.6rem}
+.pay-seat-head .pay-type{flex:1;min-width:0;padding:.4rem .5rem;font-size:.9rem;margin:0}
+.pay-line{font-weight:600;white-space:nowrap}
+.pay-id{margin-top:.55rem;display:flex;flex-wrap:wrap;align-items:center;gap:.6rem}
+.pay-id[hidden],.pay-own[hidden]{display:none}
+.pay-id-btn{display:inline-flex;align-items:center;gap:.4rem;border:1px dashed #1e3a5f;color:#1e3a5f;border-radius:10px;padding:.45rem .7rem;font-size:.85rem;cursor:pointer}
+.pay-id-prev{height:48px;border-radius:6px;border:1px solid #e5eaf1}
+.pay-id-note{flex-basis:100%;color:#7a889c;font-size:.76rem}
+.pay-own{margin-top:.45rem;font-size:.8rem;color:#16794a}
+.pay-fee{font-size:.82rem;color:#65748a;margin:.4rem 0 0}

@@ -40,6 +40,32 @@ if(isset($_POST['review'])){
     }
 }
 
+/* Ticket discount review (IDs uploaded at payment for group bookings) */
+if(isset($_POST['review_ticket'])){
+    $rid = (int)($_POST['reservation_id'] ?? 0);
+    $decision = $_POST['review_ticket'] === 'approve' ? 'Approved' : 'Rejected';
+    if(!csrf_validate_token()){
+        $error = "Security validation failed. Please try again.";
+    } else {
+        $u = mbus_db_prepare($conn, "UPDATE reservation SET discount_status = ?, discount_reviewed_by = ?, discount_reviewed_at = NOW()
+            WHERE reservation_id = ? AND discount_status = 'Pending'", [$decision, (int)$_SESSION['user_id'], $rid]);
+        if($u === false || (int)$conn->affectedRows < 1){
+            $error = "That ticket was already reviewed.";
+        } else {
+            log_activity($conn, (int)$_SESSION['user_id'], $decision === 'Approved' ? ACTION_VERIFICATION_APPROVE : ACTION_VERIFICATION_REJECT, "$decision ticket discount ID for reservation #$rid");
+            $success = "Ticket discount " . strtolower($decision) . ($decision === 'Rejected' ? ". The operator will collect the difference at boarding." : ".");
+        }
+    }
+}
+$tab = ($_GET['tab'] ?? '') === 'tickets' ? 'tickets' : 'accounts';
+
+$tickets = [];
+$q = mbus_db_prepare($conn, "SELECT r.reservation_id, r.seat_number, r.passenger_type, r.discount_amount, r.status, r.pickup_location, r.destination,
+        s.departure_time, b.bus_number, u.full_name
+    FROM reservation r JOIN users u ON u.user_id = r.user_id JOIN schedule s ON s.schedule_id = r.schedule_id JOIN buses b ON b.bus_id = s.bus_id
+    WHERE r.discount_status = 'Pending' AND r.id_image_b64 IS NOT NULL ORDER BY s.departure_time, r.reservation_id", []);
+while($q !== false && ($r = mbus_db_fetch_assoc($q))) $tickets[] = $r;
+
 $pending = [];
 $q = mbus_db_prepare($conn, "SELECT v.verification_id, v.verification_type, v.document_number, v.expiry_date, v.document_mime, v.submitted_at, u.full_name, u.email
     FROM commuter_verification v JOIN users u ON u.user_id = v.user_id
@@ -127,6 +153,34 @@ while($q !== false && ($r = mbus_db_fetch_assoc($q))) $history[] = $r;
 <?php if($success){ ?><div class="alert alert-success" role="status"><?php echo htmlspecialchars($success); ?></div><?php } ?>
 <?php if($error){ ?><div class="alert alert-error" role="alert"><?php echo htmlspecialchars($error); ?></div><?php } ?>
 
+<nav class="v-tabs" aria-label="Verification type">
+    <a href="?tab=accounts" class="<?php echo $tab === 'accounts' ? 'on' : ''; ?>">Accounts <span><?php echo count($pending); ?></span></a>
+    <a href="?tab=tickets" class="<?php echo $tab === 'tickets' ? 'on' : ''; ?>">Ticket discounts <span><?php echo count($tickets); ?></span></a>
+</nav>
+
+<?php if($tab === 'tickets'){ ?>
+<p class="v-meta">IDs uploaded at payment for seats booked for other people. Check the ID matches the passenger type. A rejected ticket stays valid; the operator collects the discount back at boarding.</p>
+<?php if(!$tickets){ ?><p class="v-empty">No ticket discounts waiting.</p><?php } ?>
+<div class="v-list">
+<?php foreach($tickets as $t){ ?>
+<article class="card v-item">
+    <div class="v-item-head">
+        <div><strong>Seat <?php echo htmlspecialchars((string)$t['seat_number']); ?></strong> &middot; booked by <?php echo htmlspecialchars($t['full_name']); ?><br>
+        <small>Bus <?php echo htmlspecialchars($t['bus_number']); ?> &middot; <?php echo htmlspecialchars(date('M j, g:i A', strtotime($t['departure_time']))); ?> &middot; <?php echo htmlspecialchars($t['pickup_location']); ?> &rarr; <?php echo htmlspecialchars($t['destination']); ?></small></div>
+        <span class="v-pill"><?php echo htmlspecialchars($t['passenger_type']); ?></span>
+    </div>
+    <p class="v-meta">Discount &#8369;<?php echo number_format((float)$t['discount_amount'], 2); ?> &middot; ticket <?php echo htmlspecialchars($t['status']); ?></p>
+    <a href="../id_image.php?r=<?php echo (int)$t['reservation_id']; ?>" target="_blank" rel="noopener"><img class="v-img" src="../id_image.php?r=<?php echo (int)$t['reservation_id']; ?>" alt="Passenger ID for seat <?php echo htmlspecialchars((string)$t['seat_number']); ?>" loading="lazy"></a>
+    <form method="POST" class="v-actions">
+        <?php echo csrf_field(); ?>
+        <input type="hidden" name="reservation_id" value="<?php echo (int)$t['reservation_id']; ?>">
+        <button class="btn btn-primary" name="review_ticket" value="approve" type="submit">Approve</button>
+        <button class="btn btn-outline" name="review_ticket" value="reject" type="submit">Reject</button>
+    </form>
+</article>
+<?php } ?>
+</div>
+<?php } else { ?>
 <h2 class="v-h">Waiting for review (<?php echo count($pending); ?>)</h2>
 <?php if(!$pending){ ?><p class="v-empty">Nothing to review right now.</p><?php } ?>
 <div class="v-list">
@@ -163,8 +217,10 @@ while($q !== false && ($r = mbus_db_fetch_assoc($q))) $history[] = $r;
 <?php } ?>
 </ul>
 <?php } ?>
+<?php } /* end accounts tab */ ?>
 </main>
 <style>
+.v-tabs{display:flex;gap:.4rem;margin:0 0 .75rem}.v-tabs a{padding:.4rem .8rem;border-radius:999px;border:1px solid #e5eaf1;color:#3c4a60;text-decoration:none;font-size:.9rem}.v-tabs a.on{background:#1e3a5f;border-color:#1e3a5f;color:#fff}.v-tabs span{opacity:.75;margin-left:.2rem}
 .v-h{font-size:1.0625rem;margin:20px 0 10px}.v-empty{color:var(--color-text-muted)}
 .v-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
 .v-item{padding:16px;border-radius:16px}.v-item-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
