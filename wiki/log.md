@@ -1,0 +1,44 @@
+# Log
+
+- 2026-11-10 — Processed raw_sources/ui_task.md → wiki/ui-components.md (navigation bar component notes)
+- 2026-11-10 — Vault cleanup: removed empty raw-sources/, deleted duplicate .md.md files, renamed CLAUDE.md.md → CLAUDE.md, added wiki/index.md
+- 2026-11-11 — Plan created for Netflix clone → wiki/netflix-clone-plan.md
+- 2026-11-11 — Research completed → raw_sources/netflix-research.md
+- 2026-11-11 — UI specs completed → wiki/ui-components.md
+- 2026-11-11 — Backend specs completed → wiki/backend-api.md
+- 2026-11-11 — QA review completed → wiki/qa-report-netflix-clone.md (7 issues found: 3 High, 2 Medium, 2 Low)
+- 2026-11-11 — Debug fixes completed → wiki/debug-fixes-netflix-clone.md (5 High/Medium issues resolved: 4 fixed, 1 deferred)
+- 2026-11-11 05:32 · [[Ashuri]] — started
+- 2026-11-11 05:32 · [[Ashuri]] — ERROR — Claude Code returned an error result: API Error: Invalid URL
+- 2026-11-11 05:33 · [[Ashuri]] — started
+- 2026-11-11 05:33 · [[Ashuri]] — ERROR — Claude Code returned an error result: API Error: Invalid URL
+- 2026-11-11 05:34 · [[Ashuri]] — started
+- 2026-11-11 05:35 · [[Ashuri]] — finished — Handoff to Cedric: Research login page implementation and document findings in raw_sources/login-page-research.md
+- 2026-11-11 05:35 · [[Ashuri]] — handed off to [[Cedric]]: Handoff to Cedric: Research login page implementation and document findings in raw_sources/login-pag
+- 2026-11-11 05:35 · [[Cedric]] — started
+- 2026-11-11 05:37 · [[Cedric]] — finished — Handoff complete → Fuji + Ash (parallel): Research saved to `raw_sources/login-page-research.md` covering auth flows, da
+- 2026-11-11 05:37 · [[Cedric]] — handed off to [[Fuji]]: Handoff complete → Fuji + Ash (parallel): Research saved to `raw_sources/login-page-research.md` cov
+- 2026-11-11 05:37 · [[Cedric]] — handed off to [[Ash]]: Handoff complete → Fuji + Ash (parallel): Research saved to `raw_sources/login-page-research.md` cov
+- 2026-11-11 05:37 · [[Fuji]] — started
+- 2026-11-11 05:37 · [[Ash]] — started
+- 2026-11-11 05:40 · [[Ash]] — ERROR — Ash stopped early (error_max_turns)
+- 2026-11-11 05:49 · [[Dennice]] — started
+- 2026-11-11 05:51 · [[Dennice]] — finished — Status report for Ashuri: Found 10 issues in MBUS login page (2 HIGH: email enumeration, no rate limiting; 3 MEDIUM: har
+- 2026-11-11 05:51 · [[Dennice]] — handed off to [[Ashuri]]: Status report for Ashuri: Found 10 issues in MBUS login page (2 HIGH: email enumeration, no rate lim
+- 2026-11-11 05:51 · [[Ashuri]] — started
+- 2026-11-11 05:53 · [[Ashuri]] — finished — PUSHED: no (remote has divergent history — push rejected, fetch first)
+- 2026-11-11 06:24 · [[Ange]] — started
+- 2026-11-11 06:42 · [[Ange]] — started
+- 2026-11-11 06:51 · [[Ange]] — started
+- 2026-11-11 06:59 · [[Ange]] — started
+- 2026-11-11 07:08 · [[Ange]] — started
+- 2026-11-11 07:16 · [[Ange]] — started
+- 2026-11-11 · [[Ange]] — QA completed → wiki/qa-report.md (MBUS login.php security audit: 12 issues — 2 blocker, 5 major, 5 minor; no code changed)
+- 2026-11-11 07:25 · [[Ange]] — finished — Handoff to [[Dennice]]: MBUS `login.php` audit written to [[wiki/qa-report.md]] — 12 issues (2 blocker: session-hardenin
+- 2026-11-11 07:25 · [[Ange]] — handed off to [[Ashuri]]: Handoff to [[Dennice]]: MBUS `login.php` audit written to [[wiki/qa-report.md]] — 12 issues (2 block
+- 2026-11-11 07:25 · [[Ashuri]] — started
+- 2026-11-11 07:31 · [[Ashuri]] — finished — PUSHED: no (push rejected: remote contains work not present locally — fetch first)
+- 2026-11-11 07:33 · [[Cedric]] — started
+- 2026-11-11 07:33 · [[Cedric]] — finished — Ange's report (wiki/qa-report.md — 12 issues: 2 blockers, 5 major, 5 minor on MBUS login.php) is compiled and handed off
+- 2026-11-11 07:33 · [[Cedric]] — handed off to [[Ashuri]]: Ange's report (wiki/qa-report.md — 12 issues: 2 blockers, 5 major, 5 minor on MBUS login.php) is com
+- 2026-11-11 07:33 · [[Ashuri]] — started
