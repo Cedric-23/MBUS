@@ -1,19 +1,38 @@
 /* Compact admin resource surfaces — intentionally aligned with schedules_compact.css. */
 .resource-page {
   width: 100%;
+  max-width: 1120px;
 }
 
 .resource-intro {
+  position: relative;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
+  overflow: hidden;
+  padding: 1.05rem 1.2rem;
+  border: 1px solid #dce8f3;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f3f8fd 0%, #edf5fc 100%);
+}
+
+.resource-intro::after {
+  position: absolute;
+  right: -2rem;
+  bottom: -3.4rem;
+  width: 8rem;
+  height: 8rem;
+  border: 1px solid rgba(30, 144, 255, .12);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
 }
 
 .resource-kicker {
   margin: 0 0 .25rem;
-  color: #65748a;
+  color: #3177ad;
   font-size: .72rem;
   font-weight: 700;
   letter-spacing: .09em;
@@ -29,16 +48,18 @@
 
 .resource-description {
   margin: .3rem 0 0;
-  color: #7a889c;
+  color: #63758a;
   font-size: .84rem;
 }
 
 .resource-count {
+  position: relative;
+  z-index: 1;
   flex: 0 0 auto;
   padding: .4rem .7rem;
-  border: 1px solid #e5eaf1;
+  border: 1px solid rgba(197, 218, 235, .9);
   border-radius: 999px;
-  background: #fff;
+  background: rgba(255, 255, 255, .62);
   color: #65748a;
   font-size: .78rem;
   font-weight: 600;
@@ -69,9 +90,9 @@
   align-items: end;
   margin-top: .65rem;
   padding: .85rem;
-  border: 1px solid #e5eaf1;
+  border: 1px solid #dfe9f2;
   border-radius: 12px;
-  background: #fff;
+  background: #f8fbfe;
 }
 
 .resource-add-form .resource-field {
@@ -124,6 +145,8 @@
   justify-content: space-between;
   gap: 1rem;
   margin: .1rem 0 .4rem;
+  padding-left: .55rem;
+  border-left: 3px solid #9bcdf2;
 }
 
 .resource-list-heading h2 {
@@ -147,16 +170,25 @@
   min-height: 66px;
   margin-bottom: .4rem;
   padding: .65rem .75rem;
-  border: 1px solid #e9eef4;
+  border: 1px solid #e2eaf2;
   border-radius: 10px;
-  background: #fff;
+  background: #fbfcfe;
   color: #162033;
   transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
 
 .resource-row:hover {
-  border-color: #d8e3ef;
+  border-color: #cbddea;
+  background: #fff;
   box-shadow: 0 4px 14px rgba(24, 54, 93, .07);
+}
+
+.resource-row:nth-of-type(even) {
+  background: #f7fafd;
+}
+
+.resource-row:nth-of-type(even):hover {
+  background: #fff;
 }
 
 .resource-mark,
@@ -168,14 +200,16 @@
   width: 38px;
   height: 38px;
   border-radius: 11px;
-  background: #eef6ff;
+  border: 1px solid #d5e9f8;
+  background: #eaf5fd;
   color: #1e70bf;
   font-size: .92rem;
 }
 
 .resource-avatar {
+  border-color: #d9e5f0;
   border-radius: 50%;
-  background: #edf4fb;
+  background: #edf3f8;
   color: #285f8f;
   font-size: .78rem;
   font-weight: 750;
@@ -222,7 +256,8 @@
   gap: .35rem;
   padding: .3rem .55rem;
   border-radius: 999px;
-  background: #eff6ff;
+  border: 1px solid #dcecf8;
+  background: #f0f7fd;
   color: #285f8f;
   font-size: .75rem;
   font-weight: 650;
@@ -230,6 +265,7 @@
 }
 
 .resource-tag--ordinary {
+  border-color: #d9efdf;
   background: #f0fdf4;
   color: #28734b;
 }
@@ -283,6 +319,9 @@
 .resource-empty {
   margin: 0;
   padding: 2rem 0;
+  border: 1px dashed #d6e4ef;
+  border-radius: 10px;
+  background: #f8fbfe;
   color: #7a889c;
   text-align: center;
 }
