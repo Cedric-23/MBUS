@@ -45,6 +45,17 @@ if(isset($_POST['delete_bus'])){
         $success = "Bus deleted successfully";
     }
 }
+
+$bus_query = mbus_db_query($conn, "
+    SELECT * FROM buses
+    ORDER BY bus_id DESC
+");
+$bus_rows = [];
+if($bus_query !== false){
+    while($bus = mbus_db_fetch_assoc($bus_query)){
+        $bus_rows[] = $bus;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -59,6 +70,7 @@ if(isset($_POST['delete_bus'])){
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/manage_buses.css">
+    <link rel="stylesheet" href="../Assets/css/admin/manage_resources.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
@@ -127,95 +139,73 @@ if(isset($_POST['delete_bus'])){
 <div class="alert alert-error" role="alert"><?php echo $error; ?></div>
 <?php endif; ?>
 
-<!-- ADD BUS -->
-<section class="card" style="margin-bottom: var(--space-6);">
-    <h2>Add New Bus</h2>
+<section class="resource-page" aria-labelledby="bus-page-heading">
+    <div class="resource-intro">
+        <div>
+            <p class="resource-kicker">Fleet</p>
+            <h2 class="resource-heading" id="bus-page-heading">Keep the fleet ready to roll</h2>
+            <p class="resource-description">Manage the buses available for new schedules.</p>
+        </div>
+        <span class="resource-count"><?php echo count($bus_rows); ?> <?php echo count($bus_rows) === 1 ? 'bus' : 'buses'; ?></span>
+    </div>
 
-    <form method="POST" class="form-section">
-        <?php csrf_field(); ?>
-        
-        <div class="form-grid">
-            <!-- BUS NUMBER -->
-            <div class="form-group">
-                <label for="bus_number">Bus Number</label>
-                <input type="text" name="bus_number" id="bus_number" class="form-control" required>
+    <details class="resource-add" <?php echo isset($error) && isset($_POST['add_bus']) ? 'open' : ''; ?>>
+        <summary class="btn btn-primary btn-sm"><i class="fa fa-plus" aria-hidden="true"></i> Add bus</summary>
+        <form method="POST" class="resource-add-form">
+            <?php csrf_field(); ?>
+            <div class="resource-field">
+                <label for="bus_number">Bus number</label>
+                <input type="text" name="bus_number" id="bus_number" class="form-control" placeholder="e.g. 101" required>
             </div>
-
-            <!-- BUS TYPE -->
-            <div class="form-group">
-                <label for="bus_type">Bus Type</label>
+            <div class="resource-field">
+                <label for="bus_type">Bus type</label>
                 <select name="bus_type" id="bus_type" class="form-control" required>
-                    <option value="">Select Type</option>
+                    <option value="">Select type</option>
                     <option value="Aircon">Aircon</option>
                     <option value="Ordinary">Ordinary</option>
                 </select>
             </div>
-
-            <!-- CAPACITY -->
-            <div class="form-group">
+            <div class="resource-field">
                 <label for="capacity">Capacity</label>
-                <input type="number" name="capacity" id="capacity" class="form-control" required min="1" max="100">
+                <input type="number" name="capacity" id="capacity" class="form-control" min="1" max="100" placeholder="Seats" required>
             </div>
+            <div class="resource-add-actions">
+                <button type="submit" name="add_bus" class="btn btn-primary btn-sm"><i class="fa fa-check" aria-hidden="true"></i> Save bus</button>
+            </div>
+        </form>
+    </details>
+
+    <section class="resource-list" aria-labelledby="bus-list-heading">
+        <div class="resource-list-heading">
+            <h2 id="bus-list-heading">Fleet inventory</h2>
+            <span class="resource-list-note">Newest buses first</span>
         </div>
-
-        <div class="form-actions">
-            <button type="submit" name="add_bus" class="btn btn-primary">
-                <i class="fa fa-plus" aria-hidden="true"></i> Add Bus
-            </button>
-        </div>
-    </form>
-</section>
-
-<!-- BUS LIST -->
-<section class="card">
-    <h2>Bus List</h2>
-
-    <div class="table-responsive">
-        <table class="buses-table">
-            <thead>
-                <tr>
-                    <th scope="col">Bus Number</th>
-                    <th scope="col">Bus Type</th>
-                    <th scope="col">Capacity</th>
-                    <th scope="col">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                $query = mbus_db_query($conn, "
-                    SELECT * FROM buses
-                    ORDER BY bus_id DESC
-                ");
-
-                while($row = mbus_db_fetch_assoc($query)){
-                    $type_class = strtolower($row['bus_type']) == 'aircon' ? 'badge-primary' : 'badge-success';
-                ?>
-                <tr>
-                    <form method="POST" class="bus-form">
-                        <?php csrf_field(); ?>
-                        <input type="hidden" name="bus_id" value="<?php echo $row['bus_id']; ?>">
-                        
-                        <td data-label="Bus Number"><?php echo htmlspecialchars($row['bus_number']); ?></td>
-                        <td data-label="Bus Type">
-                            <span class="badge <?php echo $type_class; ?>">
-                                <?php echo htmlspecialchars($row['bus_type']); ?>
-                            </span>
-                        </td>
-                        <td data-label="Capacity"><?php echo htmlspecialchars($row['capacity']); ?></td>
-                        <td data-label="Actions">
-                            <div class="action-buttons">
-                                <button type="submit" name="delete_bus" class="btn btn-sm btn-danger delete-btn" 
-                                    onclick="return confirm('Delete this bus?')">
-                                    <i class="fa fa-trash" aria-hidden="true"></i> Delete
-                                </button>
-                            </div>
-                        </td>
-                    </form>
-                </tr>
-                <?php } ?>
-            </tbody>
-        </table>
-    </div>
+        <?php if(!$bus_rows): ?>
+            <p class="resource-empty">No buses yet. Add one to make it available for scheduling.</p>
+        <?php endif; ?>
+        <?php foreach($bus_rows as $row):
+            $is_aircon = strtolower((string)$row['bus_type']) === 'aircon';
+        ?>
+            <article class="resource-row">
+                <span class="resource-mark" aria-hidden="true"><i class="fa fa-bus"></i></span>
+                <div class="resource-main">
+                    <p class="resource-name">Bus <?php echo htmlspecialchars((string)$row['bus_number']); ?></p>
+                    <div class="resource-meta">
+                        <span><i class="fa fa-chair" aria-hidden="true"></i><?php echo htmlspecialchars((string)$row['capacity']); ?> seats</span>
+                        <span><i class="fa fa-hashtag" aria-hidden="true"></i>Fleet ID <?php echo (int)$row['bus_id']; ?></span>
+                    </div>
+                </div>
+                <span class="resource-tag <?php echo $is_aircon ? '' : 'resource-tag--ordinary'; ?>"><?php echo htmlspecialchars((string)$row['bus_type']); ?></span>
+                <form method="POST" class="resource-actions">
+                    <?php csrf_field(); ?>
+                    <input type="hidden" name="bus_id" value="<?php echo (int)$row['bus_id']; ?>">
+                    <button type="submit" name="delete_bus" class="resource-icon-btn resource-icon-btn--danger" title="Delete bus" aria-label="Delete bus <?php echo htmlspecialchars((string)$row['bus_number']); ?>" onclick="return confirm('Delete this bus?')">
+                        <i class="fa fa-trash" aria-hidden="true"></i>
+                    </button>
+                </form>
+            </article>
+        <?php endforeach; ?>
+    </section>
 </section>
 
 </main>

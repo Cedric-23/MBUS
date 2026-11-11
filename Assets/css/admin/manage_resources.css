@@ -1,0 +1,358 @@
+/* Compact admin resource surfaces — intentionally aligned with schedules_compact.css. */
+.resource-page {
+  width: 100%;
+}
+
+.resource-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.resource-kicker {
+  margin: 0 0 .25rem;
+  color: #65748a;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.resource-heading {
+  margin: 0;
+  color: #162033;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.resource-description {
+  margin: .3rem 0 0;
+  color: #7a889c;
+  font-size: .84rem;
+}
+
+.resource-count {
+  flex: 0 0 auto;
+  padding: .4rem .7rem;
+  border: 1px solid #e5eaf1;
+  border-radius: 999px;
+  background: #fff;
+  color: #65748a;
+  font-size: .78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.resource-add {
+  margin: 0 0 1.15rem;
+}
+
+.resource-add > summary {
+  list-style: none;
+  width: auto;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.resource-add > summary::-webkit-details-marker {
+  display: none;
+}
+
+.resource-add-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: .7rem;
+  align-items: end;
+  margin-top: .65rem;
+  padding: .85rem;
+  border: 1px solid #e5eaf1;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.resource-add-form .resource-field {
+  min-width: 0;
+}
+
+.resource-add-form label {
+  display: block;
+  margin: 0 0 .3rem;
+  color: #65748a;
+  font-size: .72rem;
+  font-weight: 650;
+}
+
+.resource-add-form .form-control {
+  min-width: 0;
+  min-height: 42px;
+  margin: 0;
+  padding: .5rem .65rem;
+  border: 1px solid #e5eaf1;
+  border-radius: 8px;
+  background: #fbfcfe;
+  color: #162033;
+  font-size: .84rem;
+}
+
+.resource-add-form .form-control:focus {
+  border-color: #1e90ff;
+  box-shadow: 0 0 0 3px rgba(30, 144, 255, .12);
+}
+
+.resource-add-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: .45rem;
+}
+
+.resource-add-actions .btn {
+  min-height: 42px;
+}
+
+.resource-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.resource-list-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: .1rem 0 .4rem;
+}
+
+.resource-list-heading h2 {
+  margin: 0;
+  color: #65748a;
+  font-size: .8rem;
+  font-weight: 650;
+  letter-spacing: .01em;
+}
+
+.resource-list-note {
+  color: #9aa6b6;
+  font-size: .76rem;
+}
+
+.resource-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: .75rem;
+  min-height: 66px;
+  margin-bottom: .4rem;
+  padding: .65rem .75rem;
+  border: 1px solid #e9eef4;
+  border-radius: 10px;
+  background: #fff;
+  color: #162033;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.resource-row:hover {
+  border-color: #d8e3ef;
+  box-shadow: 0 4px 14px rgba(24, 54, 93, .07);
+}
+
+.resource-mark,
+.resource-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: #eef6ff;
+  color: #1e70bf;
+  font-size: .92rem;
+}
+
+.resource-avatar {
+  border-radius: 50%;
+  background: #edf4fb;
+  color: #285f8f;
+  font-size: .78rem;
+  font-weight: 750;
+}
+
+.resource-main {
+  min-width: 0;
+}
+
+.resource-name {
+  overflow: hidden;
+  margin: 0;
+  color: #162033;
+  font-size: .9rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resource-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem .8rem;
+  margin-top: .18rem;
+  color: #7a889c;
+  font-size: .78rem;
+}
+
+.resource-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  min-width: 0;
+}
+
+.resource-meta i {
+  color: #9aa6b6;
+  font-size: .72rem;
+}
+
+.resource-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .3rem .55rem;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #285f8f;
+  font-size: .75rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.resource-tag--ordinary {
+  background: #f0fdf4;
+  color: #28734b;
+}
+
+.resource-tag::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+.resource-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: .15rem;
+  margin: 0;
+}
+
+.resource-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #7a889c;
+  cursor: pointer;
+}
+
+.resource-icon-btn:hover {
+  background: #f1f5f9;
+  color: #1e3a5f;
+}
+
+.resource-icon-btn--danger:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.resource-icon-btn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+.resource-empty {
+  margin: 0;
+  padding: 2rem 0;
+  color: #7a889c;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .resource-add-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .resource-add-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .resource-intro {
+    align-items: flex-start;
+  }
+
+  .resource-add-form {
+    grid-template-columns: 1fr;
+  }
+
+  .resource-add-actions {
+    grid-column: auto;
+  }
+
+  .resource-add-actions .btn {
+    width: 100%;
+  }
+
+  .resource-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "mark main actions"
+      "mark tag actions";
+    align-items: start;
+    gap: .25rem .65rem;
+    padding: .7rem;
+  }
+
+  .resource-mark,
+  .resource-avatar {
+    grid-area: mark;
+    margin-top: .05rem;
+  }
+
+  .resource-main {
+    grid-area: main;
+  }
+
+  .resource-tag {
+    grid-area: tag;
+    justify-self: start;
+    margin-top: .2rem;
+  }
+
+  .resource-actions {
+    grid-area: actions;
+    align-self: center;
+  }
+
+  .resource-meta {
+    display: grid;
+    gap: .18rem;
+  }
+
+  .resource-list-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: .15rem;
+  }
+}

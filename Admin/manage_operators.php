@@ -63,6 +63,18 @@ if(isset($_POST['delete_operator'])){
         $success = "Operator deleted successfully";
     }
 }
+
+$operator_query = mbus_db_query($conn, "
+    SELECT * FROM users
+    WHERE LOWER(user_type)='operator'
+    ORDER BY user_id DESC
+");
+$operator_rows = [];
+if($operator_query !== false){
+    while($operator = mbus_db_fetch_assoc($operator_query)){
+        $operator_rows[] = $operator;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -77,6 +89,7 @@ if(isset($_POST['delete_operator'])){
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/manage_operators.css">
+    <link rel="stylesheet" href="../Assets/css/admin/manage_resources.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
@@ -145,92 +158,75 @@ if(isset($_POST['delete_operator'])){
 <div class="alert alert-error" role="alert"><?php echo $error; ?></div>
 <?php endif; ?>
 
-<!-- ADD OPERATOR -->
-<section class="card" style="margin-bottom: var(--space-6);">
-    <h2>Create Operator Account</h2>
-    <form method="POST" class="form-section">
-        <?php csrf_field(); ?>
-        
-        <div class="form-grid">
-            <div class="form-group">
-                <label for="full_name">Full Name</label>
-                <input type="text" name="full_name" id="full_name" class="form-control" required>
-            </div>
+<section class="resource-page" aria-labelledby="operator-page-heading">
+    <div class="resource-intro">
+        <div>
+            <p class="resource-kicker">People</p>
+            <h2 class="resource-heading" id="operator-page-heading">Keep operator access tidy</h2>
+            <p class="resource-description">Create and remove the accounts used to run active trips.</p>
+        </div>
+        <span class="resource-count"><?php echo count($operator_rows); ?> <?php echo count($operator_rows) === 1 ? 'operator' : 'operators'; ?></span>
+    </div>
 
-            <div class="form-group">
+    <details class="resource-add" <?php echo isset($error) && isset($_POST['add_operator']) ? 'open' : ''; ?>>
+        <summary class="btn btn-primary btn-sm"><i class="fa fa-plus" aria-hidden="true"></i> Add operator</summary>
+        <form method="POST" class="resource-add-form">
+            <?php csrf_field(); ?>
+            <div class="resource-field">
+                <label for="full_name">Full name</label>
+                <input type="text" name="full_name" id="full_name" class="form-control" placeholder="Operator name" required>
+            </div>
+            <div class="resource-field">
                 <label for="email">Email</label>
-                <input type="email" name="email" id="email" class="form-control" required>
+                <input type="email" name="email" id="email" class="form-control" placeholder="name@example.com" required>
             </div>
-
-            <div class="form-group">
-                <label for="phone_number">Phone Number</label>
+            <div class="resource-field">
+                <label for="phone_number">Phone number</label>
                 <input type="text" name="phone_number" id="phone_number" class="form-control" pattern="09\d{9}" maxlength="11" placeholder="09XXXXXXXXX" required>
             </div>
-
-            <div class="form-group">
+            <div class="resource-field">
                 <label for="password">Password</label>
-                <input type="password" name="password" id="password" class="form-control" required>
+                <input type="password" name="password" id="password" class="form-control" placeholder="Temporary password" required>
             </div>
+            <div class="resource-add-actions">
+                <button type="submit" name="add_operator" class="btn btn-primary btn-sm"><i class="fa fa-check" aria-hidden="true"></i> Save operator</button>
+            </div>
+        </form>
+    </details>
+
+    <section class="resource-list" aria-labelledby="operator-list-heading">
+        <div class="resource-list-heading">
+            <h2 id="operator-list-heading">Operator directory</h2>
+            <span class="resource-list-note">Newest accounts first</span>
         </div>
-
-        <div class="form-actions">
-            <button type="submit" name="add_operator" class="btn btn-primary">
-                <i class="fa fa-plus" aria-hidden="true"></i> Create Operator
-            </button>
-        </div>
-    </form>
-</section>
-
-<!-- OPERATOR LIST -->
-<section class="card">
-    <h2>Operator List</h2>
-
-    <div class="table-responsive">
-        <table class="operators-table">
-            <thead>
-                <tr>
-                    <th scope="col">Full Name</th>
-                    <th scope="col">Email</th>
-                    <th scope="col">Phone Number</th>
-                    <th scope="col">Role</th>
-                    <th scope="col">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                $query = mbus_db_query($conn, "
-                    SELECT * FROM users
-                    WHERE LOWER(user_type)='operator'
-                    ORDER BY user_id DESC
-                ");
-
-                while($row = mbus_db_fetch_assoc($query)){
-                ?>
-                <tr>
-                    <form method="POST" class="operator-form">
-                        <?php csrf_field(); ?>
-                        <input type="hidden" name="user_id" value="<?php echo $row['user_id']; ?>">
-                        
-                        <td data-label="Full Name"><?php echo htmlspecialchars($row['full_name']); ?></td>
-                        <td data-label="Email"><?php echo htmlspecialchars($row['email']); ?></td>
-                        <td data-label="Phone Number"><?php echo htmlspecialchars($row['phone_number']); ?></td>
-                        <td data-label="Role">
-                            <span class="badge badge-primary">Operator</span>
-                        </td>
-                        <td data-label="Actions">
-                            <div class="action-buttons">
-                                <button type="submit" name="delete_operator" class="btn btn-sm btn-danger delete-btn" 
-                                    onclick="return confirm('Delete this operator?')">
-                                    <i class="fa fa-trash" aria-hidden="true"></i> Delete
-                                </button>
-                            </div>
-                        </td>
-                    </form>
-                </tr>
-                <?php } ?>
-            </tbody>
-        </table>
-    </div>
+        <?php if(!$operator_rows): ?>
+            <p class="resource-empty">No operator accounts yet. Add one to assign trip access.</p>
+        <?php endif; ?>
+        <?php foreach($operator_rows as $row):
+            $name = trim((string)$row['full_name']);
+            $name_parts = preg_split('/\s+/', $name, -1, PREG_SPLIT_NO_EMPTY);
+            $initials = strtoupper(substr($name_parts[0] ?? 'O', 0, 1) . (count($name_parts) > 1 ? substr($name_parts[count($name_parts) - 1], 0, 1) : ''));
+        ?>
+            <article class="resource-row">
+                <span class="resource-avatar" aria-hidden="true"><?php echo htmlspecialchars($initials); ?></span>
+                <div class="resource-main">
+                    <p class="resource-name"><?php echo htmlspecialchars($name); ?></p>
+                    <div class="resource-meta">
+                        <span><i class="fa fa-envelope" aria-hidden="true"></i><?php echo htmlspecialchars((string)$row['email']); ?></span>
+                        <span><i class="fa fa-phone" aria-hidden="true"></i><?php echo htmlspecialchars((string)$row['phone_number']); ?></span>
+                    </div>
+                </div>
+                <span class="resource-tag">Operator</span>
+                <form method="POST" class="resource-actions">
+                    <?php csrf_field(); ?>
+                    <input type="hidden" name="user_id" value="<?php echo (int)$row['user_id']; ?>">
+                    <button type="submit" name="delete_operator" class="resource-icon-btn resource-icon-btn--danger" title="Delete operator" aria-label="Delete operator <?php echo htmlspecialchars($name); ?>" onclick="return confirm('Delete this operator?')">
+                        <i class="fa fa-trash" aria-hidden="true"></i>
+                    </button>
+                </form>
+            </article>
+        <?php endforeach; ?>
+    </section>
 </section>
 
 </main>
