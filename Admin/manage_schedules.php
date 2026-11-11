@@ -191,7 +191,7 @@ $route_options = function($selected=null) use ($route_rows){
 
 <!-- ADD SCHEDULE -->
 <details class="sc-add" <?php echo isset($error) && isset($_POST['add_schedule']) ? 'open' : ''; ?>>
-    <summary class="btn btn-primary btn-sm"><i class="fa fa-plus" aria-hidden="true"></i> Add schedule</summary>
+    <summary class="sc-link strong">+ Add schedule</summary>
     <form method="POST" class="sc-add-form">
         <?php csrf_field(); ?>
         <select name="bus_id" aria-label="Bus" class="form-control" required>
@@ -205,7 +205,7 @@ $route_options = function($selected=null) use ($route_rows){
         <select name="schedule_status" aria-label="Status" class="form-control">
             <option value="Active">Active</option><option value="Cancelled">Cancelled</option><option value="Completed">Completed</option>
         </select>
-        <button type="submit" name="add_schedule" class="btn btn-primary btn-sm">Save</button>
+        <button type="submit" name="add_schedule" class="sc-link strong">Save</button>
     </form>
 </details>
 
@@ -226,18 +226,16 @@ $route_options = function($selected=null) use ($route_rows){
         <div class="sc-main">
             <span class="sc-time"><?php echo date('g:i A', $dep); ?><small> – <?php echo date('g:i A', $arr); ?></small></span>
             <span class="sc-route"><?php echo htmlspecialchars($row['origin']); ?> → <?php echo htmlspecialchars($row['destination']); ?></span>
-            <span class="sc-bus"><i class="fa fa-bus" aria-hidden="true"></i> Bus <?php echo htmlspecialchars((string)$bn); ?></span>
+            <span class="sc-bus">Bus <?php echo htmlspecialchars((string)$bn); ?></span>
             <span class="sc-status sc-<?php echo strtolower($status); ?>"><?php echo htmlspecialchars($status); ?></span>
             <span class="sc-actions">
-                <button type="button" class="sc-edit-btn" onclick="scEdit(this,true)"><i class="fa fa-pen" aria-hidden="true"></i> Edit</button>
+                <button type="button" class="sc-link" onclick="scEdit(this,true)">Edit</button>
                 <button type="submit" form="<?php echo $fid; ?>" name="delete_schedule" class="sc-icon sc-del" onclick="return confirm('Delete this schedule?')" aria-label="Delete schedule"><i class="fa fa-trash" aria-hidden="true"></i></button>
             </span>
         </div>
         <div class="sc-meta">
-            <span><i class="fa fa-clock" aria-hidden="true"></i> <?php $mins=max(0,(int)round(($arr-$dep)/60)); echo intdiv($mins,60).'h '.($mins%60).'m'; ?></span>
-            <span><i class="fa fa-chair" aria-hidden="true"></i> <?php echo (int)$row['taken']; ?>/<?php echo (int)$row['capacity']; ?> seats</span>
-            <?php if(!empty($row['bus_type'])): ?><span><i class="fa fa-snowflake" aria-hidden="true"></i> <?php echo htmlspecialchars($row['bus_type']); ?></span><?php endif; ?>
-            <?php if(!empty($row['trip_status'])): ?><span class="sc-trip"><?php echo htmlspecialchars($row['trip_status']); ?></span><?php endif; ?>
+            <span><?php echo (int)$row['taken']; ?>/<?php echo (int)$row['capacity']; ?> seats</span>
+            <?php if(!empty($row['trip_status']) && $row['trip_status'] !== 'Scheduled'): ?><span><?php echo htmlspecialchars($row['trip_status']); ?></span><?php endif; ?>
         </div>
         <div class="sc-edit" hidden>
             <select form="<?php echo $fid; ?>" name="bus_id" aria-label="Bus" class="form-control"><?php echo $bus_options($row['bus_id']); ?></select>
@@ -248,8 +246,8 @@ $route_options = function($selected=null) use ($route_rows){
                 <?php foreach(['Active','Cancelled','Completed'] as $st){ echo '<option'.($status===$st?' selected':'').'>'.$st.'</option>'; } ?>
             </select>
             <span class="sc-edit-actions">
-                <button type="submit" form="<?php echo $fid; ?>" name="update_schedule" class="btn btn-sm btn-primary">Save</button>
-                <button type="button" class="btn btn-sm btn-outline" onclick="scEdit(this,false)">Cancel</button>
+                <button type="submit" form="<?php echo $fid; ?>" name="update_schedule" class="sc-link strong">Save</button>
+                <button type="button" class="sc-link" onclick="scEdit(this,false)">Cancel</button>
             </span>
         </div>
     </article>

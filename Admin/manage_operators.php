@@ -164,14 +164,14 @@ $assigned = count(array_filter($op_list, fn($x) => !empty($x['buses'])));
 </div>
 
 <details class="sc-add" <?php echo isset($error) && isset($_POST['add_operator']) ? 'open' : ''; ?>>
-    <summary class="btn btn-primary btn-sm"><i class="fa fa-plus" aria-hidden="true"></i> Add operator</summary>
+    <summary class="sc-link strong">+ Add operator</summary>
     <form method="POST" class="sc-add-form">
         <?php csrf_field(); ?>
         <input type="text" name="full_name" class="form-control" placeholder="Full name" aria-label="Full name" required>
         <input type="email" name="email" class="form-control" placeholder="Email" aria-label="Email" required>
         <input type="text" name="phone_number" class="form-control" pattern="09\d{9}" maxlength="11" placeholder="09XXXXXXXXX" aria-label="Phone number" required>
         <input type="password" name="password" class="form-control" placeholder="Password" aria-label="Password" minlength="8" required>
-        <button type="submit" name="add_operator" class="btn btn-primary btn-sm">Create</button>
+        <button type="submit" name="add_operator" class="sc-link strong">Create</button>
     </form>
 </details>
 
@@ -188,7 +188,7 @@ $assigned = count(array_filter($op_list, fn($x) => !empty($x['buses'])));
             <small><?php echo htmlspecialchars($row['email']); ?> &middot; <?php echo htmlspecialchars((string)$row['phone_number']); ?></small>
         </span>
         <?php if(!empty($row['buses'])): ?>
-            <span class="sc-chip green"><i class="fa fa-bus" aria-hidden="true"></i> Bus <?php echo htmlspecialchars($row['buses']); ?></span>
+            <span class="sc-chip green">Bus <?php echo htmlspecialchars($row['buses']); ?></span>
         <?php else: ?>
             <span class="sc-chip amber">No bus</span>
         <?php endif; ?>

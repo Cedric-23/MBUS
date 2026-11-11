@@ -165,7 +165,7 @@ $aircon = count(array_filter($bus_list, fn($x) => strtolower($x['bus_type']) ===
 </div>
 
 <details class="sc-add" <?php echo isset($error) && isset($_POST['add_bus']) ? 'open' : ''; ?>>
-    <summary class="btn btn-primary btn-sm"><i class="fa fa-plus" aria-hidden="true"></i> Add bus</summary>
+    <summary class="sc-link strong">+ Add bus</summary>
     <form method="POST" class="sc-add-form">
         <?php csrf_field(); ?>
         <input type="text" name="bus_number" class="form-control" placeholder="Bus number" aria-label="Bus number" required>
@@ -173,7 +173,7 @@ $aircon = count(array_filter($bus_list, fn($x) => strtolower($x['bus_type']) ===
             <option value="">Type</option><option value="Aircon">Aircon</option><option value="Ordinary">Ordinary</option>
         </select>
         <input type="number" name="capacity" class="form-control" placeholder="Seats" aria-label="Capacity" min="1" max="100" required>
-        <button type="submit" name="add_bus" class="btn btn-primary btn-sm">Save</button>
+        <button type="submit" name="add_bus" class="sc-link strong">Save</button>
     </form>
 </details>
 
@@ -188,15 +188,14 @@ $aircon = count(array_filter($bus_list, fn($x) => strtolower($x['bus_type']) ===
         <span class="sc-avatar bus"><i class="fa fa-bus" aria-hidden="true"></i></span>
         <span class="sc-who">
             <strong>Bus <?php echo htmlspecialchars($row['bus_number']); ?></strong>
-            <small><?php echo !empty($row['operators']) ? htmlspecialchars($row['operators']) : 'No operator assigned'; ?></small>
+            <small><?php echo !empty($row['operators']) ? htmlspecialchars($row['operators']) : 'No operator'; ?> &middot; <?php echo (int)$row['upcoming']; ?> upcoming</small>
         </span>
         <span class="sc-chip <?php echo $is_ac ? '' : 'green'; ?>"><?php echo htmlspecialchars($row['bus_type']); ?> &middot; <?php echo (int)$row['capacity']; ?> seats</span>
         <span class="sc-actions">
-            <button type="button" class="sc-edit-btn" onclick="scEdit(this,true)"><i class="fa fa-pen" aria-hidden="true"></i> Edit</button>
+            <button type="button" class="sc-link" onclick="scEdit(this,true)">Edit</button>
             <button type="submit" form="<?php echo $fid; ?>" name="delete_bus" class="sc-icon sc-del" onclick="return confirm('Delete this bus?')" aria-label="Delete bus"><i class="fa fa-trash" aria-hidden="true"></i></button>
         </span>
     </div>
-    <div class="sc-meta"><span><i class="fa fa-calendar" aria-hidden="true"></i> <?php echo (int)$row['upcoming']; ?> upcoming trip<?php echo (int)$row['upcoming'] === 1 ? '' : 's'; ?></span></div>
     <div class="sc-edit" hidden>
         <input type="text" form="<?php echo $fid; ?>" name="bus_number" class="form-control" value="<?php echo htmlspecialchars($row['bus_number'], ENT_QUOTES); ?>" aria-label="Bus number">
         <select form="<?php echo $fid; ?>" name="bus_type" class="form-control" aria-label="Bus type">
@@ -204,8 +203,8 @@ $aircon = count(array_filter($bus_list, fn($x) => strtolower($x['bus_type']) ===
         </select>
         <input type="number" form="<?php echo $fid; ?>" name="capacity" class="form-control" min="1" max="100" value="<?php echo (int)$row['capacity']; ?>" aria-label="Capacity">
         <span class="sc-edit-actions">
-            <button type="submit" form="<?php echo $fid; ?>" name="update_bus" class="btn btn-sm btn-primary">Save</button>
-            <button type="button" class="btn btn-sm btn-outline" onclick="scEdit(this,false)">Cancel</button>
+            <button type="submit" form="<?php echo $fid; ?>" name="update_bus" class="sc-link strong">Save</button>
+            <button type="button" class="sc-link" onclick="scEdit(this,false)">Cancel</button>
         </span>
     </div>
     <form id="<?php echo $fid; ?>" method="POST" hidden><?php csrf_field(); ?><input type="hidden" name="bus_id" value="<?php echo (int)$row['bus_id']; ?>"></form>
