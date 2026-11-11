@@ -29,7 +29,6 @@ if (!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !==
     <a href="manage_schedules.php" class="bottom-nav-item"><i class="fa fa-calendar"></i><span>Schedules</span></a>
     <a href="live_map.php" class="bottom-nav-item active"><i class="fa fa-map-location-dot"></i><span>Live</span></a>
     <a href="manage_buses.php" class="bottom-nav-item"><i class="fa fa-bus"></i><span>Buses</span></a>
-    <a href="notifications.php" class="bottom-nav-item"><i class="fa fa-bell"></i><span>Alerts</span></a>
 </nav>
 <script>
 const fallbackAvatar = '../Assets/images/mbus_icon.png';

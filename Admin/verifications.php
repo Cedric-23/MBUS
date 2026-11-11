@@ -35,7 +35,6 @@ if(isset($_POST['review'])){
                 $msg = "Your verification was rejected: $reason";
                 log_activity($conn, (int)$_SESSION['user_id'], ACTION_VERIFICATION_REJECT, "Rejected verification #$vid");
             }
-            mbus_db_prepare($conn, "INSERT INTO notification(user_id, message, notification_date, status) VALUES(?, ?, NOW(), 'Unread')", [(int)$v['user_id'], $msg]);
             $success = "Request " . strtolower($decision) . ".";
         }
     }

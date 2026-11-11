@@ -50,7 +50,6 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_dashboard.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
-    <link rel="stylesheet" href="../Assets/css/professional-notifications.css">
     <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
     <link rel="shortcut icon" href="../Assets/images/mbus_icon.png">
 
@@ -79,7 +78,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
             <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
             <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
-            <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>            <a href="notifications.php"><i class="fa fa-bell" aria-hidden="true"></i> Notifications</a>
+            <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
         </nav>
 
         <div class="menu-bottom">

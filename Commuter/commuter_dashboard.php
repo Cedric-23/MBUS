@@ -112,7 +112,6 @@ function mbus_home_when(string $ts): string {
                             <span class="profile-menu-role">Commuter account</span>
                         </div>
                         <a href="waiting.php" role="menuitem"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
-                        <a href="notifications.php" role="menuitem"><i class="fa fa-bell" aria-hidden="true"></i> Updates</a>
                         <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>

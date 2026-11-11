@@ -28,29 +28,6 @@ if($expiry_result === false){
     die("Reservation service is temporarily unavailable. Please try again.");
 }
 
-/* NOTIFY USER OF EXPIRED RESERVATIONS */
-$expired_query = mbus_db_prepare($conn,"
-SELECT reservation_id, user_id, ticket_code
-FROM reservation
-WHERE status='Cancelled'
-AND created_at<=NOW()-INTERVAL '10 minutes'
-AND created_at>NOW()-INTERVAL '10 minutes 30 seconds'
-", []);
-if($expired_query === false){
-    die("Reservation service is temporarily unavailable. Please try again.");
-}
-
-while($expired_query !== false && ($expired = mbus_db_fetch_assoc($expired_query))){
-    $notification_msg = "Your reservation (Ticket: {$expired['ticket_code']}) has expired due to non-payment within 10 minutes.";
-    $notification_result = mbus_db_prepare($conn,"
-    INSERT INTO notification(user_id, message, notification_date, status)
-    VALUES(?, ?, NOW(), 'Unread')
-    ", [(int)$expired['user_id'], $notification_msg]);
-    if($notification_result === false){
-        die("Reservation service is temporarily unavailable. Please try again.");
-    }
-}
-
 /* AUTH */
 $user_id=$_SESSION['user_id'];
 

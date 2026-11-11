@@ -155,23 +155,6 @@ if($recent_activity_query === false){
     <div class="page-header-left">
         <h1>Analytics Dashboard</h1>
     </div>
-    <div class="page-header-right">
-        <!-- Notification Bell - Top right, part of header flow -->
-        <div class="notification-container">
-            <button class="notification-bell" onclick="toggleNotifications(event)" aria-label="Notifications" aria-expanded="false" aria-controls="notificationDropdown">
-                <i class="fa fa-bell" aria-hidden="true"></i>
-                <span class="notification-badge" id="notificationBadge" aria-live="polite">0</span>
-            </button>
-            <div class="notification-dropdown" id="notificationDropdown" role="menu" aria-label="Notifications">
-                <div class="notification-dropdown-header" data-count="0">
-                    <span>Notifications</span>
-                </div>
-                <div class="notification-list" id="notificationList" role="list">
-                    <div class="notification-empty">Loading notifications...</div>
-                </div>
-            </div>
-        </div>
-    </div>
 
             <div class="page-header-right">
                 <div class="profile-menu-wrap">
@@ -321,8 +304,6 @@ if($recent_activity_query === false){
 </main>
 
 <script>
-let notificationDropdownOpen = false;
-
 // Toggle sidebar for mobile
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
@@ -350,95 +331,6 @@ function toggleSidebar() {
     }
 }
 
-// Toggle notification dropdown
-function toggleNotifications(event) {
-    event.stopPropagation();
-    const dropdown = document.getElementById('notificationDropdown');
-    const bell = document.querySelector('.notification-bell');
-    notificationDropdownOpen = !notificationDropdownOpen;
-
-    if (notificationDropdownOpen) {
-        dropdown.classList.add('active');
-        if (bell) bell.setAttribute('aria-expanded', 'true');
-        loadNotifications();
-    } else {
-        dropdown.classList.remove('active');
-        if (bell) bell.setAttribute('aria-expanded', 'false');
-    }
-}
-
-// Load notifications
-function loadNotifications() {
-    fetch('../api/get_notifications.php')
-        .then(response => response.json())
-        .then(data => {
-            updateNotificationBadge(data.unread_count);
-            renderNotifications(data.notifications);
-        })
-        .catch(error => {
-            console.error('Error loading notifications:', error);
-        });
-}
-
-// Update notification badge
-function updateNotificationBadge(count) {
-    const badge = document.getElementById('notificationBadge');
-    badge.textContent = count;
-    badge.style.display = count > 0 ? 'flex' : 'none';
-
-    // Also update the dropdown header count
-    const header = document.querySelector('.notification-dropdown-header');
-    if (header) {
-        header.setAttribute('data-count', count);
-    }
-}
-
-// Render notifications
-function renderNotifications(notifications) {
-    const list = document.getElementById('notificationList');
-
-    if (notifications.length === 0) {
-        list.innerHTML = '<div class="notification-empty">No notifications</div>';
-        return;
-    }
-
-    list.innerHTML = notifications.map(notif => `
-        <div class="notification-item ${notif.status === 'Unread' ? 'unread' : ''}"
-             onclick="markAsRead(${notif.id})" role="listitem">
-            <div class="notification-message">${notif.message}</div>
-            <div class="notification-time">${notif.time_ago}</div>
-        </div>
-    `).join('');
-}
-
-// Mark notification as read
-function markAsRead(notificationId) {
-    const formData = new FormData();
-    formData.append('notification_id', notificationId);
-
-    fetch('../api/mark_notification_read.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            loadNotifications();
-        }
-    })
-    .catch(error => {
-        console.error('Error marking notification as read:', error);
-    });
-}
-
-// Close dropdown when clicking outside
-document.addEventListener('click', function(event) {
-    const container = document.querySelector('.notification-container');
-    if (!container.contains(event.target) && notificationDropdownOpen) {
-        toggleNotifications();
-    }
-});
-
 // Close sidebar when clicking a nav link on mobile
 document.querySelectorAll('.menu-top a').forEach(link => {
     link.addEventListener('click', () => {
@@ -456,11 +348,6 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Auto-refresh notifications every 30 seconds
-setInterval(loadNotifications, 30000);
-
-// Initial load
-loadNotifications();
 </script>
 
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">

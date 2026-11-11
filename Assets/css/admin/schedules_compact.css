@@ -1,0 +1,33 @@
+/* Admin schedules — compact, minimalist list */
+.sc-add{margin:0 0 1rem}
+.sc-add>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;width:auto}
+.sc-add>summary::-webkit-details-marker{display:none}
+.sc-add-form,.sc-edit{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.5rem;align-items:center}
+.sc-add-form{margin-top:.6rem;padding:.75rem;background:#fff;border:1px solid #e5eaf1;border-radius:12px}
+.sc-add-form .form-control,.sc-edit .form-control{margin:0;min-width:0;padding:.45rem .6rem;font-size:.85rem}
+.sc-list{display:flex;flex-direction:column}
+.sc-day{margin:1.1rem 0 .35rem;font-size:.8rem;font-weight:600;color:#65748a;letter-spacing:.01em}
+.sc-day:first-child{margin-top:.25rem}
+.sc-row{background:#fff;border:1px solid #e9eef4;border-radius:10px;margin-bottom:.35rem}
+.sc-main{display:grid;grid-template-columns:minmax(120px,170px) 1fr auto auto auto;gap:.75rem;align-items:center;padding:.5rem .75rem;font-size:.88rem;color:#162033}
+.sc-time{font-weight:600;white-space:nowrap}
+.sc-time small{font-weight:400;color:#7a889c}
+.sc-route{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#3c4a60}
+.sc-bus{color:#65748a;white-space:nowrap}
+.sc-status{display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;color:#65748a;white-space:nowrap}
+.sc-status::before{content:"";width:7px;height:7px;border-radius:50%;background:#16a34a}
+.sc-status.sc-cancelled::before{background:#dc2626}
+.sc-status.sc-completed::before{background:#94a3b8}
+.sc-actions{display:inline-flex;gap:.15rem}
+.sc-icon{border:0;background:transparent;color:#7a889c;width:30px;height:30px;border-radius:8px;cursor:pointer}
+.sc-icon:hover{background:#f1f5f9;color:#1e3a5f}
+.sc-icon.sc-del:hover{color:#dc2626;background:#fef2f2}
+.sc-icon:focus-visible{outline:2px solid #2563eb;outline-offset:1px}
+.sc-edit{padding:.6rem .75rem .75rem;border-top:1px dashed #e5eaf1}
+.sc-edit[hidden]{display:none}
+.sc-edit-actions{display:flex;gap:.4rem}
+.sc-empty{color:#7a889c;text-align:center;padding:2rem 0}
+@media(max-width:640px){
+  .sc-main{grid-template-columns:1fr auto;grid-template-areas:"time actions" "route status" "bus status";gap:.1rem .5rem;padding:.55rem .7rem}
+  .sc-time{grid-area:time}.sc-actions{grid-area:actions}.sc-route{grid-area:route;white-space:normal}.sc-bus{grid-area:bus;font-size:.8rem}.sc-status{grid-area:status;justify-self:end;align-self:end}
+}

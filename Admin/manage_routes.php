@@ -223,29 +223,17 @@ if(isset($_POST['delete_route'])){
                 <input type="number" step="0.01" name="fare" id="fare" class="form-control" placeholder="Enter Fare" required>
             </div>
 
-            <!-- ORIGIN COORDINATES -->
-            <div class="form-group">
-                <label>Origin Coordinates</label>
-                <div class="coord-inputs">
-                    <input type="number" step="any" name="origin_lat" id="origin_lat" class="form-control" placeholder="Latitude" required>
-                    <input type="number" step="any" name="origin_lng" id="origin_lng" class="form-control" placeholder="Longitude" required>
-                </div>
-            </div>
-
-            <!-- DESTINATION COORDINATES -->
-            <div class="form-group">
-                <label>Destination Coordinates</label>
-                <div class="coord-inputs">
-                    <input type="number" step="any" name="destination_lat" id="destination_lat" class="form-control" placeholder="Latitude" required>
-                    <input type="number" step="any" name="destination_lng" id="destination_lng" class="form-control" placeholder="Longitude" required>
-                </div>
-            </div>
+            <!-- Coordinates are set automatically from the map (hidden) -->
+            <input type="hidden" name="origin_lat" id="origin_lat">
+            <input type="hidden" name="origin_lng" id="origin_lng">
+            <input type="hidden" name="destination_lat" id="destination_lat">
+            <input type="hidden" name="destination_lng" id="destination_lng">
 
             <!-- MAP -->
             <div class="form-group" style="grid-column: 1 / -1;">
-                <label>Route map and road preview</label>
-                <div id="routeMap" class="map-canvas" style="height: 400px;"></div>
-                <p class="form-hint">Known terminals fill their mapped pins automatically. For a custom route, click the origin and destination on the map.</p>
+                <label>Route map</label>
+                <div id="routeMap" class="map-canvas" style="height: 280px;"></div>
+                <p class="form-hint">Terminals are placed automatically. For a custom route, tap the map to set the start, then the end.</p>
                 <p id="routeEstimate" class="route-estimate" role="status" aria-live="polite">Choose both stops to see a road distance and driving-time estimate.</p>
             </div>
         </div>

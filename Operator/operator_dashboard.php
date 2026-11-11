@@ -55,7 +55,6 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
     <link rel="stylesheet" href="../Assets/css/operator/operator_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/operator/operator_dashboard.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
-    <link rel="stylesheet" href="../Assets/css/professional-notifications.css">
     <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
     <link rel="shortcut icon" href="../Assets/images/mbus_icon.png">
 
@@ -85,7 +84,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
             <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
             <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
-            <a href="notifications.php"><i class="fa fa-bell" aria-hidden="true"></i> Notifications</a>
+
         </nav>
 
         <div class="menu-bottom">

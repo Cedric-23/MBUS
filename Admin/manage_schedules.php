@@ -85,6 +85,7 @@ ORDER BY departure_time ASC
     <link rel="stylesheet" href="../Assets/css/admin/manage_schedules.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/professional-filters.css">
+    <link rel="stylesheet" href="../Assets/css/admin/schedules_compact.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
@@ -159,232 +160,110 @@ ORDER BY departure_time ASC
 <a href="?filter=sbma" class="route-chip <?php echo (isset($_GET['filter']) && $_GET['filter']==='sbma') ? 'active' : ''; ?>" aria-current="<?php echo (isset($_GET['filter']) && $_GET['filter']==='sbma') ? 'page' : 'false'; ?>">SBMA → Morong</a>
 </div>
 
+<?php
+$bus_rows=[]; mbus_db_data_seek($buses, 0);
+while($b=mbus_db_fetch_assoc($buses)){ $bus_rows[]=$b; }
+$route_rows=[]; mbus_db_data_seek($routes, 0);
+while($r=mbus_db_fetch_assoc($routes)){ $route_rows[]=$r; }
+$bus_label=[]; foreach($bus_rows as $b){ $bus_label[(int)$b['bus_id']]=$b['bus_number']; }
+$filter = $_GET['filter'] ?? 'all';
+$groups=[]; $sched_ids=[];
+mbus_db_data_seek($query, 0);
+while($row = mbus_db_fetch_assoc($query)){
+    $route_type = (stripos((string)$row['origin'], 'morong') !== false) ? 'morong' : 'sbma';
+    if($filter !== 'all' && $filter !== $route_type) continue;
+    $row['route_type']=$route_type;
+    $groups[date('Y-m-d', strtotime($row['departure_time']))][]=$row;
+}
+$bus_options = function($selected=null) use ($bus_rows){
+    $o='';
+    foreach($bus_rows as $b){ $o.='<option value="'.(int)$b['bus_id'].'"'.($selected!==null && (int)$b['bus_id']===(int)$selected?' selected':'').'>Bus '.htmlspecialchars($b['bus_number']).' · '.(int)$b['capacity'].' seats</option>'; }
+    return $o;
+};
+$route_options = function($selected=null) use ($route_rows){
+    $o='';
+    foreach($route_rows as $r){ $o.='<option value="'.(int)$r['route_id'].'"'.($selected!==null && (int)$r['route_id']===(int)$selected?' selected':'').'>'.htmlspecialchars($r['origin']).' → '.htmlspecialchars($r['destination']).'</option>'; }
+    return $o;
+};
+?>
+
 <!-- ADD SCHEDULE -->
-<section class="card" style="margin-bottom: var(--space-6);">
-    <h2>Add Schedule</h2>
-    <form method="POST" class="form-section">
+<details class="sc-add" <?php echo isset($error) && isset($_POST['add_schedule']) ? 'open' : ''; ?>>
+    <summary class="btn btn-primary btn-sm"><i class="fa fa-plus" aria-hidden="true"></i> Add schedule</summary>
+    <form method="POST" class="sc-add-form">
         <?php csrf_field(); ?>
-
-        <div class="form-grid">
-            <div class="form-group">
-                <label for="bus_id">Select Bus</label>
-                <select name="bus_id" id="bus_id" class="form-control" required>
-                    <option value="">Select Bus</option>
-                    <?php
-                    mbus_db_data_seek($buses, 0);
-                    while($bus = mbus_db_fetch_assoc($buses)){ ?>
-                        <option value="<?php echo $bus['bus_id']; ?>">
-                            <?php echo htmlspecialchars($bus['bus_number']); ?> - <?php echo htmlspecialchars($bus['bus_type']); ?> - <?php echo $bus['capacity']; ?> Seats
-                        </option>
-                    <?php } ?>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="route_id">Select Route</label>
-                <select name="route_id" id="route_id" class="form-control" required>
-                    <option value="">Select Route</option>
-                    <?php
-                    mbus_db_data_seek($routes, 0);
-                    while($route = mbus_db_fetch_assoc($routes)){ ?>
-                        <option value="<?php echo $route['route_id']; ?>">
-                            <?php echo htmlspecialchars($route['origin']); ?> → <?php echo htmlspecialchars($route['destination']); ?>
-                        </option>
-                    <?php } ?>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="departure_time">Departure Time</label>
-                <input type="datetime-local" name="departure_time" id="departure_time" class="form-control" required>
-            </div>
-
-            <div class="form-group">
-                <label for="arrival_time">Arrival Time</label>
-                <input type="datetime-local" name="arrival_time" id="arrival_time" class="form-control" required>
-            </div>
-
-            <div class="form-group">
-                <label for="schedule_status">Status</label>
-                <select name="schedule_status" id="schedule_status" class="form-control">
-                    <option value="Active">Active</option>
-                    <option value="Cancelled">Cancelled</option>
-                    <option value="Completed">Completed</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="form-actions">
-            <button type="submit" name="add_schedule" class="btn btn-primary">
-                <i class="fa fa-plus" aria-hidden="true"></i> Add Schedule
-            </button>
-        </div>
+        <select name="bus_id" aria-label="Bus" class="form-control" required>
+            <option value="">Bus</option><?php echo $bus_options(); ?>
+        </select>
+        <select name="route_id" aria-label="Route" class="form-control" required>
+            <option value="">Route</option><?php echo $route_options(); ?>
+        </select>
+        <input type="datetime-local" name="departure_time" aria-label="Departure" class="form-control" required>
+        <input type="datetime-local" name="arrival_time" aria-label="Arrival" class="form-control" required>
+        <select name="schedule_status" aria-label="Status" class="form-control">
+            <option value="Active">Active</option><option value="Cancelled">Cancelled</option><option value="Completed">Completed</option>
+        </select>
+        <button type="submit" name="add_schedule" class="btn btn-primary btn-sm">Save</button>
     </form>
-</section>
+</details>
 
 <!-- SCHEDULE LIST -->
-<section class="card">
-    <div class="table-responsive">
-        <table class="schedules-table">
-            <thead>
-                <tr>
-                    <th scope="col">ID</th>
-                    <th scope="col">Bus</th>
-                    <th scope="col">Route</th>
-                    <th scope="col">Departure</th>
-                    <th scope="col">Arrival</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                mbus_db_data_seek($query, 0);
-                while($row = mbus_db_fetch_assoc($query)){
-                    // Apply filter
-                    $filter = $_GET['filter'] ?? 'all';
-                    $route_type = ($row['origin'] == 'Morong Terminal') ? 'morong' : 'sbma';
-                    if($filter !== 'all' && $filter !== $route_type) continue;
-
-                    $status_class = strtolower($row['schedule_status']);
-                ?>
-                <tr class="schedule-row" data-route="<?php echo $route_type; ?>">
-                    <?php $sched_ids[] = (int)$row['schedule_id']; $fid = 'sf-' . (int)$row['schedule_id']; ?>
-                        <td data-label="ID"><?php echo $row['schedule_id']; ?></td>
-
-                        <td data-label="Bus">
-                            <span class="view-mode">Bus <?php echo $row['bus_id']; ?></span>
-                            <div class="edit-controls">
-                                <select form="<?php echo $fid; ?>" name="bus_id" class="form-control edit-input">
-                                    <?php
-                                    mbus_db_data_seek($buses, 0);
-                                    while($bus = mbus_db_fetch_assoc($buses)){ ?>
-                                        <option value="<?php echo $bus['bus_id']; ?>"
-                                            <?php echo ($bus['bus_id'] == $row['bus_id']) ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($bus['bus_number']); ?> - <?php echo htmlspecialchars($bus['bus_type']); ?>
-                                        </option>
-                                    <?php } ?>
-                                </select>
-                            </div>
-                        </td>
-
-                        <td data-label="Route">
-                            <span class="view-mode">
-                                <span class="route-badge">
-                                    <?php echo htmlspecialchars($row['origin']); ?> → <?php echo htmlspecialchars($row['destination']); ?>
-                                </span>
-                            </span>
-                            <div class="edit-controls">
-                                <select form="<?php echo $fid; ?>" name="route_id" class="form-control edit-input">
-                                    <?php
-                                    mbus_db_data_seek($routes, 0);
-                                    while($route = mbus_db_fetch_assoc($routes)){ ?>
-                                        <option value="<?php echo $route['route_id']; ?>"
-                                            <?php echo ($route['route_id'] == $row['route_id']) ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($route['origin']); ?> → <?php echo htmlspecialchars($route['destination']); ?>
-                                        </option>
-                                    <?php } ?>
-                                </select>
-                            </div>
-                        </td>
-
-                        <td data-label="Departure">
-                            <span class="view-mode"><?php echo date('M j, Y g:i A', strtotime($row['departure_time'])); ?></span>
-                            <div class="edit-controls">
-                                <input type="datetime-local" form="<?php echo $fid; ?>" name="departure_time" class="form-control edit-input"
-                                    value="<?php echo date('Y-m-d\TH:i', strtotime($row['departure_time'])); ?>">
-                            </div>
-                        </td>
-
-                        <td data-label="Arrival">
-                            <span class="view-mode"><?php echo date('M j, Y g:i A', strtotime($row['arrival_time'])); ?></span>
-                            <div class="edit-controls">
-                                <input type="datetime-local" form="<?php echo $fid; ?>" name="arrival_time" class="form-control edit-input"
-                                    value="<?php echo date('Y-m-d\TH:i', strtotime($row['arrival_time'])); ?>">
-                            </div>
-                        </td>
-
-                        <td data-label="Status">
-                            <span class="view-mode">
-                                <span class="status-badge status-<?php echo $status_class; ?>">
-                                    <?php echo $row['schedule_status']; ?>
-                                </span>
-                            </span>
-                            <div class="edit-controls">
-                                <select form="<?php echo $fid; ?>" name="schedule_status" class="form-control edit-input">
-                                    <option value="Active" <?php echo ($row['schedule_status'] == "Active") ? 'selected' : ''; ?>>Active</option>
-                                    <option value="Cancelled" <?php echo ($row['schedule_status'] == "Cancelled") ? 'selected' : ''; ?>>Cancelled</option>
-                                    <option value="Completed" <?php echo ($row['schedule_status'] == "Completed") ? 'selected' : ''; ?>>Completed</option>
-                                </select>
-                            </div>
-                        </td>
-
-                        <td class="actions-col" data-label="Actions">
-                            <div class="action-buttons">
-                                <button type="button" class="btn btn-sm btn-primary edit-btn" onclick="editRow(this, true)">
-                                    <i class="fa fa-pen" aria-hidden="true"></i> Edit
-                                </button>
-                                <button type="submit" form="<?php echo $fid; ?>" name="update_schedule" class="btn btn-sm btn-success save-btn" hidden>
-                                    <i class="fa fa-check" aria-hidden="true"></i> Save changes
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline cancel-btn" onclick="editRow(this, false)" hidden>Cancel</button>
-                                <button type="submit" form="<?php echo $fid; ?>" name="delete_schedule" class="btn btn-sm btn-danger delete-btn"
-                                    onclick="return confirm('Delete this schedule?')">
-                                    <i class="fa fa-trash" aria-hidden="true"></i> Delete
-                                </button>
-                            </div>
-                        </td>
-                </tr>
-                <?php } ?>
-            </tbody>
-        </table>
-        <?php foreach(($sched_ids ?? []) as $sid){ ?>
-        <form id="sf-<?php echo $sid; ?>" method="POST" hidden><?php csrf_field(); ?><input type="hidden" name="schedule_id" value="<?php echo $sid; ?>"></form>
-        <?php } ?>
-    </div>
+<section class="sc-list" aria-label="Schedules">
+<?php if(!$groups): ?>
+    <p class="sc-empty">No schedules yet.</p>
+<?php endif; ?>
+<?php foreach($groups as $day => $rows): ?>
+    <h2 class="sc-day"><?php echo date('D, M j', strtotime($day)); ?></h2>
+    <?php foreach($rows as $row):
+        $sid=(int)$row['schedule_id']; $fid='sf-'.$sid; $sched_ids[]=$sid;
+        $status=(string)$row['schedule_status'];
+        $dep=strtotime($row['departure_time']); $arr=strtotime($row['arrival_time']);
+        $bn=$bus_label[(int)$row['bus_id']] ?? $row['bus_id'];
+    ?>
+    <article class="sc-row" data-route="<?php echo $row['route_type']; ?>">
+        <div class="sc-main">
+            <span class="sc-time"><?php echo date('g:i A', $dep); ?><small> – <?php echo date('g:i A', $arr); ?></small></span>
+            <span class="sc-route"><?php echo htmlspecialchars($row['origin']); ?> → <?php echo htmlspecialchars($row['destination']); ?></span>
+            <span class="sc-bus">Bus <?php echo htmlspecialchars((string)$bn); ?></span>
+            <span class="sc-status sc-<?php echo strtolower($status); ?>"><?php echo htmlspecialchars($status); ?></span>
+            <span class="sc-actions">
+                <button type="button" class="sc-icon" onclick="scEdit(this,true)" aria-label="Edit schedule"><i class="fa fa-pen" aria-hidden="true"></i></button>
+                <button type="submit" form="<?php echo $fid; ?>" name="delete_schedule" class="sc-icon sc-del" onclick="return confirm('Delete this schedule?')" aria-label="Delete schedule"><i class="fa fa-trash" aria-hidden="true"></i></button>
+            </span>
+        </div>
+        <div class="sc-edit" hidden>
+            <select form="<?php echo $fid; ?>" name="bus_id" aria-label="Bus" class="form-control"><?php echo $bus_options($row['bus_id']); ?></select>
+            <select form="<?php echo $fid; ?>" name="route_id" aria-label="Route" class="form-control"><?php echo $route_options($row['route_id']); ?></select>
+            <input type="datetime-local" form="<?php echo $fid; ?>" name="departure_time" aria-label="Departure" class="form-control" value="<?php echo date('Y-m-d\TH:i', $dep); ?>">
+            <input type="datetime-local" form="<?php echo $fid; ?>" name="arrival_time" aria-label="Arrival" class="form-control" value="<?php echo date('Y-m-d\TH:i', $arr); ?>">
+            <select form="<?php echo $fid; ?>" name="schedule_status" aria-label="Status" class="form-control">
+                <?php foreach(['Active','Cancelled','Completed'] as $st){ echo '<option'.($status===$st?' selected':'').'>'.$st.'</option>'; } ?>
+            </select>
+            <span class="sc-edit-actions">
+                <button type="submit" form="<?php echo $fid; ?>" name="update_schedule" class="btn btn-sm btn-primary">Save</button>
+                <button type="button" class="btn btn-sm btn-outline" onclick="scEdit(this,false)">Cancel</button>
+            </span>
+        </div>
+    </article>
+    <?php endforeach; ?>
+<?php endforeach; ?>
+<?php foreach($sched_ids as $sid){ ?>
+    <form id="sf-<?php echo $sid; ?>" method="POST" hidden><?php csrf_field(); ?><input type="hidden" name="schedule_id" value="<?php echo $sid; ?>"></form>
+<?php } ?>
 </section>
 
 </main>
 
 <script>
-// Edit / cancel a schedule row in place
-function editRow(btn, on) {
-    const row = btn.closest('tr');
-    row.classList.toggle('edit-mode', on);
-    row.querySelector('.edit-btn').hidden = on;
-    row.querySelector('.save-btn').hidden = !on;
-    row.querySelector('.cancel-btn').hidden = !on;
-    row.querySelector('.delete-btn').hidden = on;
-    if (!on) row.querySelectorAll('select, input[type=datetime-local]').forEach(el => { el.value = el.defaultValue; if (el.tagName === 'SELECT') Array.from(el.options).forEach(o => { o.selected = o.defaultSelected; }); });
-    else { const first = row.querySelector('.edit-input'); if (first) first.focus(); }
-}
-
-// View toggle functions
-function showListView() {
-    document.getElementById('listView').style.display = 'block';
-    document.getElementById('calendarView').style.display = 'none';
-    document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelector('.toggle-btn[onclick="showListView()"]').classList.add('active');
-}
-
-function showCalendarView() {
-    document.getElementById('listView').style.display = 'none';
-    document.getElementById('calendarView').style.display = 'block';
-    document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelector('.toggle-btn[onclick="showCalendarView()"]').classList.add('active');
-}
-
-// Filter schedules
-function filterSchedules(filter, btn) {
-    // Update URL without reload
-    const url = new URL(window.location);
-    if(filter === 'all') {
-        url.searchParams.delete('filter');
-    } else {
-        url.searchParams.set('filter', filter);
-    }
-    window.history.pushState({}, '', url);
-    location.reload();
+function scEdit(btn, on) {
+    const row = btn.closest('.sc-row');
+    row.classList.toggle('editing', on);
+    row.querySelector('.sc-edit').hidden = !on;
+    if (!on) row.querySelectorAll('.sc-edit select, .sc-edit input').forEach(el => {
+        if (el.tagName === 'SELECT') Array.from(el.options).forEach(o => { o.selected = o.defaultSelected; });
+        else el.value = el.defaultValue;
+    });
+    else { const f = row.querySelector('.sc-edit select'); if (f) f.focus(); }
 }
 
 // Toggle sidebar for mobile

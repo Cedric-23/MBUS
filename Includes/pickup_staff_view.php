@@ -61,7 +61,6 @@ $navItems = $isAdmin
                     <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
                     <span class="profile-menu-role"><?php echo $roleLabel; ?> account</span>
                 </div>
-                <a href="notifications.php" role="menuitem"><i class="fa fa-bell" aria-hidden="true"></i> Updates</a>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
         </div>
