@@ -31,11 +31,6 @@
   color: var(--color-primary-dark);
 }
 
-.edit-mode-btn {
-  min-height: 40px;
-  padding: var(--space-1) var(--space-3);
-  font-size: var(--fs-sm);
-}
 
 .filter-buttons {
   display: flex;
@@ -137,30 +132,6 @@
   color: var(--color-error-dark);
 }
 
-/* Edit controls */
-.view-mode {
-  display: inline;
-}
-
-.edit-controls {
-  display: none;
-}
-
-.edit-input {
-  width: 100%;
-  padding: var(--space-1) var(--space-2);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--fs-sm);
-  min-height: 38px;
-}
-
-.edit-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
-}
-
 .action-buttons {
   display: flex;
   gap: var(--space-1);
@@ -171,19 +142,6 @@
   min-height: 36px;
   padding: var(--space-1) var(--space-2);
   font-size: var(--fs-xs);
-}
-
-/* Edit mode active */
-.edit-mode .view-mode {
-  display: none;
-}
-
-.edit-mode .edit-controls {
-  display: block;
-}
-
-.edit-mode .edit-controls-col {
-  display: table-cell !important;
 }
 
 /* Alert */
@@ -312,14 +270,6 @@
     font-weight: 600;
     color: var(--color-text-secondary);
     font-size: var(--fs-xs);
-  }
-  
-  .table-responsive .edit-controls-col {
-    display: none;
-  }
-  
-  .edit-mode .edit-controls-col {
-    display: block !important;
   }
   
   .form-grid {
