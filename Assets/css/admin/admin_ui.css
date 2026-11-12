@@ -156,16 +156,35 @@
 .vf-dl dd{margin:0;text-align:right;font-weight:500;word-break:break-word}
 .vf-doc img{width:100%;max-height:320px;object-fit:contain;border:1px solid var(--ad-line);border-radius:10px;background:#f8fafc}
 .vf-doc{text-align:center}
-@media(max-width:860px){
-  .vf-row{grid-template-columns:28px 1fr auto !important}
-  .vf-row .ad-c:nth-child(n+3):not(.actions):not(:nth-child(7)){display:none}
-  .vf-row .ad-c:nth-child(7){grid-column:3;grid-row:1}
-  .vf-row .ad-c.actions{grid-column:2/-1;grid-row:2;justify-content:flex-start}
-  .vf-row .ad-c.person{grid-column:2;grid-row:1}
-  .vf-row .ad-c:first-child{grid-column:1;grid-row:1}
 }
 .vf-row input[type=checkbox]{width:18px !important;height:18px !important;min-width:0 !important;min-height:0 !important;padding:0 !important;margin:0}
 .vf-filters input[type=search]{width:auto !important;min-height:0 !important;flex:1 1 240px}
 .vf-filters select{width:auto !important;min-height:0 !important;flex:0 0 auto}
 .vf-filters .ad-btn{flex:0 0 auto}
 .vf-row{grid-template-columns:32px minmax(0,2.2fr) 84px 118px 130px 100px 92px 80px !important}
+
+/* Verification panel on phones: one clean card per registrant */
+@media(max-width:860px){
+  .vf-row{grid-template-columns:auto auto 1fr auto !important;grid-template-areas:"chk person person status" "chk type exp exp" "chk act act act";gap:.35rem .7rem !important;align-items:center}
+  .vf-row .c-chk{grid-area:chk}.vf-row .c-person{grid-area:person}.vf-row .c-status{grid-area:status;justify-self:end}
+  .vf-row .c-type{grid-area:type}.vf-row .c-exp{grid-area:exp;font-size:.82rem}.vf-row .c-act{grid-area:act;justify-content:flex-start !important}
+  .vf-row .c-num,.vf-row .c-sub{display:none}
+  .vf-row .c-chk:empty{display:none}
+  .vf-row:has(.c-chk:empty){grid-template-areas:"person person person status" "type exp exp exp" "act act act act"}
+  .vf-row .c-person b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .vf-row .c-person>div{min-width:0}
+}
+/* compact controls (global min-height rules made them tall) */
+.vf-filters input[type=search],.vf-filters select,.vf-filters .ad-btn{height:42px !important;min-height:0 !important;line-height:1.2;display:inline-flex;align-items:center}
+.vf-filters select{padding-right:1.8rem !important;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%236b7a90' stroke-width='2'%3E%3Cpath d='M1 1l5 5 5-5'/%3E%3C/svg%3E") no-repeat right .8rem center;appearance:none;-webkit-appearance:none}
+.ad-seg a{min-height:0 !important;display:inline-flex;align-items:center;line-height:1.2}
+.ad-btn.sm{min-height:0 !important;height:34px !important}
+.vf-tabs{flex-wrap:nowrap;overflow-x:auto}
+.vf-tabs a{white-space:nowrap}
+@media(max-width:640px){
+  .vf-filters input[type=search]{flex:1 1 100% !important}
+  .vf-filters select{flex:1 1 0 !important}
+}
+/* checkbox: beat global input rules */
+.vf-row input.vf-check,.vf-head input[type=checkbox]{-webkit-appearance:checkbox !important;appearance:auto !important;width:18px !important;height:18px !important;min-width:18px !important;min-height:18px !important;max-width:18px !important;padding:0 !important;margin:0 !important;border-radius:4px;flex:none}
+@media(max-width:860px){.vf-row .c-chk{align-self:start;padding-top:.2rem}.vf-row .c-act{justify-self:start}}

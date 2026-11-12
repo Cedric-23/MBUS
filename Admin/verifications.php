@@ -232,14 +232,14 @@ $qs = fn(array $over = []) => '?' . http_build_query(array_filter(array_merge(['
                 'mime' => $r['document_mime'], 'reason' => $r['rejection_reason'], 'pending' => $isPending, 'submitted' => date('M j, Y g:i A', strtotime($r['submitted_at']))];
         ?>
         <div class="ad-tr vf-row">
-            <div class="ad-c"><?php if($isPending): ?><input type="checkbox" name="ids[]" value="<?php echo $vid; ?>" class="vf-check" aria-label="Select <?php echo htmlspecialchars($r['full_name'], ENT_QUOTES); ?>"><?php endif; ?></div>
-            <div class="ad-c person"><span class="ad-avatar"><?php echo htmlspecialchars(strtoupper(mb_substr(trim((string)$r['full_name']) ?: '?', 0, 1))); ?></span><div><b><?php echo htmlspecialchars($r['full_name']); ?></b><small><?php echo htmlspecialchars($r['email']); ?></small></div></div>
-            <div class="ad-c"><span class="ad-pill info"><?php echo htmlspecialchars($r['verification_type']); ?></span></div>
-            <div class="ad-c vf-num"><?php echo htmlspecialchars($r['document_number'] ?: '—'); ?></div>
-            <div class="ad-c"><?php if(!$exp): ?><span class="muted">None</span><?php else: ?><span class="vf-exp <?php echo $expired ? 'bad' : ($soon ? 'warn' : ''); ?>"><?php echo date('M j, Y', strtotime($exp)); ?><?php echo $expired ? ' · Expired' : ($soon ? ' · Soon' : ''); ?></span><?php endif; ?></div>
-            <div class="ad-c"><small><?php echo date('M j, g:i A', strtotime($r['submitted_at'])); ?></small></div>
-            <div class="ad-c"><span class="ad-pill <?php echo $isPending ? 'amber' : ($r['verification_status'] === 'Approved' ? 'active' : 'cancelled'); ?>"><?php echo htmlspecialchars($r['verification_status']); ?></span></div>
-            <div class="ad-c actions"><button type="button" class="ad-btn sm" data-vf-open="<?php echo htmlspecialchars(json_encode($data), ENT_QUOTES); ?>"><?php echo $isPending ? 'Review' : 'View'; ?></button></div>
+            <div class="ad-c c-chk"><?php if($isPending): ?><input type="checkbox" name="ids[]" value="<?php echo $vid; ?>" class="vf-check" aria-label="Select <?php echo htmlspecialchars($r['full_name'], ENT_QUOTES); ?>"><?php endif; ?></div>
+            <div class="ad-c person c-person"><span class="ad-avatar"><?php echo htmlspecialchars(strtoupper(mb_substr(trim((string)$r['full_name']) ?: '?', 0, 1))); ?></span><div><b><?php echo htmlspecialchars($r['full_name']); ?></b><small><?php echo htmlspecialchars($r['email']); ?></small></div></div>
+            <div class="ad-c c-type"><span class="ad-pill info"><?php echo htmlspecialchars($r['verification_type']); ?></span></div>
+            <div class="ad-c vf-num c-num"><?php echo htmlspecialchars($r['document_number'] ?: '—'); ?></div>
+            <div class="ad-c c-exp"><?php if(!$exp): ?><span class="muted">None</span><?php else: ?><span class="vf-exp <?php echo $expired ? 'bad' : ($soon ? 'warn' : ''); ?>"><?php echo date('M j, Y', strtotime($exp)); ?><?php echo $expired ? ' · Expired' : ($soon ? ' · Soon' : ''); ?></span><?php endif; ?></div>
+            <div class="ad-c c-sub"><small><?php echo date('M j, g:i A', strtotime($r['submitted_at'])); ?></small></div>
+            <div class="ad-c c-status"><span class="ad-pill <?php echo $isPending ? 'amber' : ($r['verification_status'] === 'Approved' ? 'active' : 'cancelled'); ?>"><?php echo htmlspecialchars($r['verification_status']); ?></span></div>
+            <div class="ad-c actions c-act"><button type="button" class="ad-btn sm" data-vf-open="<?php echo htmlspecialchars(json_encode($data), ENT_QUOTES); ?>"><?php echo $isPending ? 'Review' : 'View'; ?></button></div>
         </div>
         <?php endforeach; ?>
     </div>
