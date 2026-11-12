@@ -130,7 +130,7 @@ $can_submit = !$latest || $status === 'Rejected' || ($status === 'Approved' && $
         <input class="form-control" id="document_number" name="document_number" maxlength="50" autocomplete="off" required>
     </div>
     <div class="form-group">
-        <label for="expiry_date">ID expiry date <small>(if it has one)</small></label>
+        <label for="expiry_date">ID expiry date <small>(if applicable)</small></label>
         <input class="form-control" type="date" id="expiry_date" name="expiry_date" min="<?php echo date('Y-m-d'); ?>">
     </div>
     <div class="form-group">

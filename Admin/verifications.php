@@ -9,48 +9,101 @@ include "../Includes/csrf.php";
 include "../Includes/activity_log.php";
 
 $error = ""; $success = "";
+$status_opts = ['pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected'];
+$type_opts = ['Student', 'Senior', 'PWD'];
 
+/* ---------- Review (single or bulk) ---------- */
 if(isset($_POST['review'])){
-    $vid = (int)($_POST['verification_id'] ?? 0);
+    $ids = array_values(array_unique(array_filter(array_map('intval', (array)($_POST['ids'] ?? [])), fn($i) => $i > 0)));
     $decision = $_POST['review'] === 'approve' ? 'Approved' : 'Rejected';
     $reason = trim((string)($_POST['rejection_reason'] ?? ''));
     if(!csrf_validate_token()){
-        $error = "Security validation failed. Please try again.";
+        $_SESSION['vf_flash'] = ['error', "Security validation failed. Please try again."];
+    } elseif(!$ids){
+        $_SESSION['vf_flash'] = ['error', "Select at least one registrant."];
+    } elseif($ids && count($ids) > 500){
+        $_SESSION['vf_flash'] = ['error', "Please review at most 500 registrants at a time."];
     } elseif($decision === 'Rejected' && $reason === ''){
-        $error = "Add a short reason so the commuter knows what to fix.";
+        $_SESSION['vf_flash'] = ['error', "Add a short reason so the commuter knows what to fix."];
     } else {
-        $q = mbus_db_prepare($conn, "SELECT user_id, verification_type FROM commuter_verification WHERE verification_id = ? AND verification_status = 'Pending'", [$vid]);
-        $v = $q === false ? false : mbus_db_fetch_assoc($q);
-        if(!$v){
-            $error = "That request was already reviewed.";
-        } else {
+        $done = 0; $skipped_expired = 0; $skipped_done = 0;
+        foreach($ids as $vid){
+            $q = mbus_db_prepare($conn, "SELECT user_id, verification_type, expiry_date FROM commuter_verification WHERE verification_id = ? AND verification_status = 'Pending'", [$vid]);
+            $v = $q === false ? false : mbus_db_fetch_assoc($q);
+            if(!$v){ $skipped_done++; continue; }
+            if($decision === 'Approved' && !empty($v['expiry_date']) && $v['expiry_date'] < date('Y-m-d')){ $skipped_expired++; continue; }
             mbus_db_prepare($conn, "UPDATE commuter_verification SET verification_status = ?, reviewed_at = NOW(), reviewed_by = ?, rejection_reason = ? WHERE verification_id = ?",
                 [$decision, (int)$_SESSION['user_id'], $decision === 'Rejected' ? $reason : null, $vid]);
             if($decision === 'Approved'){
                 mbus_db_prepare($conn, "UPDATE users SET verification_status = 'Approved', verification_type = ? WHERE user_id = ?", [$v['verification_type'], (int)$v['user_id']]);
-                $msg = "Your {$v['verification_type']} verification was approved. You now get 20% off your fare.";
-                log_activity($conn, (int)$_SESSION['user_id'], ACTION_VERIFICATION_APPROVE, "Approved {$v['verification_type']} verification #$vid");
             } else {
                 mbus_db_prepare($conn, "UPDATE users SET verification_status = 'Rejected', verification_type = NULL WHERE user_id = ?", [(int)$v['user_id']]);
-                $msg = "Your verification was rejected: $reason";
-                log_activity($conn, (int)$_SESSION['user_id'], ACTION_VERIFICATION_REJECT, "Rejected verification #$vid");
             }
-            $success = "Request " . strtolower($decision) . ".";
+            $done++;
         }
+        if($done){
+            log_activity($conn, (int)$_SESSION['user_id'], $decision === 'Approved' ? ACTION_VERIFICATION_APPROVE : ACTION_VERIFICATION_REJECT, "$decision $done verification(s): " . implode(',', array_slice($ids, 0, 50)));
+        }
+        $m = "$done " . strtolower($decision);
+        if($skipped_expired) $m .= ", $skipped_expired skipped (ID expired: reject or ask for a new ID)";
+        if($skipped_done) $m .= ", $skipped_done already reviewed";
+        $_SESSION['vf_flash'] = [$done ? 'success' : 'error', $m . "."];
     }
+    header("Location: verifications.php?" . http_build_query(array_filter(['status' => $_POST['f_status'] ?? '', 'type' => $_POST['f_type'] ?? '', 'q' => $_POST['f_q'] ?? '', 'page' => $_POST['f_page'] ?? ''], fn($x) => $x !== '' && $x !== null)));
+    exit();
+}
+if(!empty($_SESSION['vf_flash'])){
+    [$kind, $text] = $_SESSION['vf_flash']; unset($_SESSION['vf_flash']);
+    if($kind === 'success') $success = $text; else $error = $text;
 }
 
-$pending = [];
-$q = mbus_db_prepare($conn, "SELECT v.verification_id, v.verification_type, v.document_number, v.expiry_date, v.document_mime, v.submitted_at, u.full_name, u.email
-    FROM commuter_verification v JOIN users u ON u.user_id = v.user_id
-    WHERE v.verification_status = 'Pending' ORDER BY v.submitted_at", []);
-while($q !== false && ($r = mbus_db_fetch_assoc($q))) $pending[] = $r;
+/* ---------- Filters ---------- */
+$f_status = strtolower((string)($_GET['status'] ?? 'pending'));
+if($f_status !== 'all' && !isset($status_opts[$f_status])) $f_status = 'pending';
+$f_type = in_array($_GET['type'] ?? '', $type_opts, true) ? $_GET['type'] : '';
+$f_q = trim((string)($_GET['q'] ?? ''));
+$where = []; $params = [];
+if($f_status !== 'all'){ $where[] = "v.verification_status = ?"; $params[] = $status_opts[$f_status]; }
+if($f_type !== ''){ $where[] = "v.verification_type = ?"; $params[] = $f_type; }
+if($f_q !== ''){
+    $like = '%' . str_replace(['%', '_'], ['\%', '\_'], mb_substr($f_q, 0, 80)) . '%';
+    $where[] = "(u.full_name ILIKE ? OR u.email ILIKE ? OR COALESCE(v.document_number,'') ILIKE ?)";
+    array_push($params, $like, $like, $like);
+}
+$where_sql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+$order = $f_status === 'pending' ? 'v.submitted_at ASC' : 'COALESCE(v.reviewed_at, v.submitted_at) DESC';
+$base = "FROM commuter_verification v JOIN users u ON u.user_id = v.user_id $where_sql";
 
-$history = [];
-$q = mbus_db_prepare($conn, "SELECT v.verification_type, v.verification_status, v.reviewed_at, u.full_name
-    FROM commuter_verification v JOIN users u ON u.user_id = v.user_id
-    WHERE v.verification_status <> 'Pending' ORDER BY v.reviewed_at DESC NULLS LAST LIMIT 15", []);
-while($q !== false && ($r = mbus_db_fetch_assoc($q))) $history[] = $r;
+/* CSV export of the current filter */
+if(isset($_GET['export'])){
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="verifications-' . date('Ymd') . '.csv"');
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['Name', 'Email', 'Type', 'ID number', 'ID expiry', 'Submitted', 'Status', 'Reviewed', 'Reason']);
+    $safe = fn($x) => (is_string($x) && $x !== '' && strpos("=+-@\t\r", $x[0]) !== false) ? "'" . $x : $x;
+    $q = mbus_db_prepare($conn, "SELECT u.full_name, u.email, v.verification_type, v.document_number, v.expiry_date, v.submitted_at, v.verification_status, v.reviewed_at, v.rejection_reason $base ORDER BY $order", $params);
+    while($q !== false && ($r = mbus_db_fetch_assoc($q))){ fputcsv($out, array_map($safe, array_values($r))); }
+    exit();
+}
+
+/* Counts for the tabs */
+$counts = ['pending' => 0, 'approved' => 0, 'rejected' => 0];
+$q = mbus_db_prepare($conn, "SELECT LOWER(verification_status::text) AS s, COUNT(*) AS c FROM commuter_verification GROUP BY 1", []);
+while($q !== false && ($r = mbus_db_fetch_assoc($q))){ if(isset($counts[$r['s']])) $counts[$r['s']] = (int)$r['c']; }
+
+/* Page of rows */
+$per = 25;
+$q = mbus_db_prepare($conn, "SELECT COUNT(*) AS c $base", $params);
+$row = $q === false ? false : mbus_db_fetch_assoc($q);
+$total = $row ? (int)$row['c'] : 0;
+$pages = max(1, (int)ceil($total / $per));
+$page = min($pages, max(1, (int)($_GET['page'] ?? 1)));
+$rows = [];
+$q = mbus_db_prepare($conn, "SELECT v.verification_id, v.verification_type, v.document_number, v.expiry_date, v.document_mime, v.submitted_at,
+        v.verification_status, v.reviewed_at, v.rejection_reason, u.full_name, u.email
+    $base ORDER BY $order LIMIT $per OFFSET " . (($page - 1) * $per), $params);
+while($q !== false && ($r = mbus_db_fetch_assoc($q))) $rows[] = $r;
+$qs = fn(array $over = []) => '?' . http_build_query(array_filter(array_merge(['status' => $f_status, 'type' => $f_type, 'q' => $f_q], $over), fn($x) => $x !== '' && $x !== null));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -69,6 +122,7 @@ while($q !== false && ($r = mbus_db_fetch_assoc($q))) $history[] = $r;
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
+    <link rel="stylesheet" href="../Assets/css/admin/admin_ui.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/admin/admin_ui.css'); ?>">
 </head>
 
 <body class="has-sidebar">
@@ -124,45 +178,113 @@ while($q !== false && ($r = mbus_db_fetch_assoc($q))) $history[] = $r;
             </div>
 </header>
 
-<?php if($success){ ?><div class="alert alert-success" role="status"><?php echo htmlspecialchars($success); ?></div><?php } ?>
-<?php if($error){ ?><div class="alert alert-error" role="alert"><?php echo htmlspecialchars($error); ?></div><?php } ?>
+<?php if($success !== ''): ?><div class="alert alert-success" role="alert"><?php echo htmlspecialchars($success); ?></div><?php endif; ?>
+<?php if($error !== ''): ?><div class="alert alert-error" role="alert"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
 
-<h2 class="v-h">Waiting for review (<?php echo count($pending); ?>)</h2>
-<?php if(!$pending){ ?><p class="v-empty">Nothing to review right now.</p><?php } ?>
-<div class="v-list">
-<?php foreach($pending as $p){ ?>
-<article class="card v-item">
-    <div class="v-item-head">
-        <div><strong><?php echo htmlspecialchars($p['full_name']); ?></strong><br><small><?php echo htmlspecialchars($p['email']); ?></small></div>
-        <span class="v-pill"><?php echo htmlspecialchars($p['verification_type']); ?></span>
+<nav class="ad-seg vf-tabs" aria-label="Status">
+    <?php foreach($status_opts as $k => $label): ?>
+    <a href="<?php echo $qs(['status' => $k, 'page' => '']); ?>" class="<?php echo $f_status === $k ? 'on' : ''; ?>"><?php echo $label; ?> <span class="vf-count"><?php echo number_format($counts[$k]); ?></span></a>
+    <?php endforeach; ?>
+    <a href="<?php echo $qs(['status' => 'all', 'page' => '']); ?>" class="<?php echo $f_status === 'all' ? 'on' : ''; ?>">All <span class="vf-count"><?php echo number_format(array_sum($counts)); ?></span></a>
+</nav>
+
+<form method="GET" class="vf-filters" role="search">
+    <input type="hidden" name="status" value="<?php echo htmlspecialchars($f_status); ?>">
+    <input type="search" name="q" value="<?php echo htmlspecialchars($f_q); ?>" placeholder="Name, email or ID number" aria-label="Search registrants">
+    <select name="type" aria-label="ID type" onchange="this.form.submit()">
+        <option value="">All ID types</option>
+        <?php foreach($type_opts as $t): ?><option <?php echo $f_type === $t ? 'selected' : ''; ?>><?php echo $t; ?></option><?php endforeach; ?>
+    </select>
+    <button class="ad-btn" type="submit">Search</button>
+    <a class="ad-btn" href="<?php echo $qs(['export' => '1']); ?>" download><i class="fa fa-download" aria-hidden="true"></i> Export CSV</a>
+</form>
+
+<form method="POST" id="vfForm">
+    <?php csrf_field(); ?>
+    <input type="hidden" name="f_status" value="<?php echo htmlspecialchars($f_status); ?>">
+    <input type="hidden" name="f_type" value="<?php echo htmlspecialchars($f_type); ?>">
+    <input type="hidden" name="f_q" value="<?php echo htmlspecialchars($f_q); ?>">
+    <input type="hidden" name="f_page" value="<?php echo (int)$page; ?>">
+    <input type="hidden" name="rejection_reason" id="vfReason">
+
+    <div class="vf-bulk" id="vfBulk" hidden>
+        <span><b id="vfSel">0</b> selected</span>
+        <span class="vf-bulk-actions">
+            <button type="submit" name="review" value="approve" class="ad-btn sm primary">Approve selected</button>
+            <button type="button" class="ad-btn sm" id="vfRejectBtn">Reject selected</button>
+        </span>
     </div>
-    <p class="v-meta">ID no. <strong><?php echo htmlspecialchars($p['document_number']); ?></strong>
-    &middot; <?php echo $p['expiry_date'] ? 'expires ' . htmlspecialchars(date('M j, Y', strtotime($p['expiry_date']))) : 'no expiry'; ?>
-    &middot; sent <?php echo htmlspecialchars(date('M j, g:i A', strtotime($p['submitted_at']))); ?></p>
-    <?php if(($p['document_mime'] ?? '') === 'application/pdf'){ ?>
-        <a class="btn btn-outline" href="verification_file.php?id=<?php echo (int)$p['verification_id']; ?>" target="_blank" rel="noopener">Open PDF</a>
-    <?php } else { ?>
-        <a href="verification_file.php?id=<?php echo (int)$p['verification_id']; ?>" target="_blank" rel="noopener"><img class="v-img" src="verification_file.php?id=<?php echo (int)$p['verification_id']; ?>" alt="ID uploaded by <?php echo htmlspecialchars($p['full_name']); ?>" loading="lazy"></a>
-    <?php } ?>
-    <form method="POST" class="v-actions">
-        <?php echo csrf_field(); ?>
-        <input type="hidden" name="verification_id" value="<?php echo (int)$p['verification_id']; ?>">
-        <input class="form-control" name="rejection_reason" placeholder="Reason (required to reject)" maxlength="200">
-        <button class="btn btn-primary" name="review" value="approve" type="submit">Approve</button>
-        <button class="btn btn-outline" name="review" value="reject" type="submit">Reject</button>
-    </form>
-</article>
-<?php } ?>
-</div>
 
-<?php if($history){ ?>
-<h2 class="v-h">Recently reviewed</h2>
-<ul class="v-history">
-<?php foreach($history as $h){ ?>
-    <li><span><?php echo htmlspecialchars($h['full_name']); ?> &middot; <?php echo htmlspecialchars($h['verification_type']); ?></span><strong class="<?php echo $h['verification_status'] === 'Approved' ? 'ok' : 'no'; ?>"><?php echo htmlspecialchars($h['verification_status']); ?></strong></li>
-<?php } ?>
-</ul>
-<?php } ?>
+    <?php if(!$rows): ?>
+    <div class="ad-empty"><i class="fa fa-id-card" aria-hidden="true"></i><p>No registrants match this view.</p></div>
+    <?php else: ?>
+    <div class="ad-table vf-table">
+        <div class="ad-th vf-row"><span><input type="checkbox" id="vfAll" aria-label="Select all on this page"></span><span>Registrant</span><span>ID type</span><span>ID number</span><span>Expiry</span><span>Submitted</span><span>Status</span><span></span></div>
+        <?php foreach($rows as $r):
+            $vid = (int)$r['verification_id'];
+            $exp = $r['expiry_date'] ?: null;
+            $expired = $exp && $exp < date('Y-m-d');
+            $soon = $exp && !$expired && $exp <= date('Y-m-d', strtotime('+30 days'));
+            $isPending = $r['verification_status'] === 'Pending';
+            $data = ['id' => $vid, 'name' => $r['full_name'], 'email' => $r['email'], 'type' => $r['verification_type'], 'number' => $r['document_number'] ?: '—',
+                'expiry' => $exp ? date('M j, Y', strtotime($exp)) : 'No expiry', 'expired' => (bool)$expired, 'status' => $r['verification_status'],
+                'mime' => $r['document_mime'], 'reason' => $r['rejection_reason'], 'pending' => $isPending, 'submitted' => date('M j, Y g:i A', strtotime($r['submitted_at']))];
+        ?>
+        <div class="ad-tr vf-row">
+            <div class="ad-c"><?php if($isPending): ?><input type="checkbox" name="ids[]" value="<?php echo $vid; ?>" class="vf-check" aria-label="Select <?php echo htmlspecialchars($r['full_name'], ENT_QUOTES); ?>"><?php endif; ?></div>
+            <div class="ad-c person"><span class="ad-avatar"><?php echo htmlspecialchars(strtoupper(mb_substr(trim((string)$r['full_name']) ?: '?', 0, 1))); ?></span><div><b><?php echo htmlspecialchars($r['full_name']); ?></b><small><?php echo htmlspecialchars($r['email']); ?></small></div></div>
+            <div class="ad-c"><span class="ad-pill info"><?php echo htmlspecialchars($r['verification_type']); ?></span></div>
+            <div class="ad-c vf-num"><?php echo htmlspecialchars($r['document_number'] ?: '—'); ?></div>
+            <div class="ad-c"><?php if(!$exp): ?><span class="muted">None</span><?php else: ?><span class="vf-exp <?php echo $expired ? 'bad' : ($soon ? 'warn' : ''); ?>"><?php echo date('M j, Y', strtotime($exp)); ?><?php echo $expired ? ' · Expired' : ($soon ? ' · Soon' : ''); ?></span><?php endif; ?></div>
+            <div class="ad-c"><small><?php echo date('M j, g:i A', strtotime($r['submitted_at'])); ?></small></div>
+            <div class="ad-c"><span class="ad-pill <?php echo $isPending ? 'amber' : ($r['verification_status'] === 'Approved' ? 'active' : 'cancelled'); ?>"><?php echo htmlspecialchars($r['verification_status']); ?></span></div>
+            <div class="ad-c actions"><button type="button" class="ad-btn sm" data-vf-open="<?php echo htmlspecialchars(json_encode($data), ENT_QUOTES); ?>"><?php echo $isPending ? 'Review' : 'View'; ?></button></div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+
+    <div class="vf-pager">
+        <span>Showing <?php echo number_format(($page - 1) * $per + 1); ?>–<?php echo number_format(($page - 1) * $per + count($rows)); ?> of <?php echo number_format($total); ?></span>
+        <span class="vf-pages">
+            <?php if($page > 1): ?><a class="ad-btn sm" href="<?php echo $qs(['page' => $page - 1]); ?>">Previous</a><?php endif; ?>
+            <span>Page <?php echo $page; ?> of <?php echo $pages; ?></span>
+            <?php if($page < $pages): ?><a class="ad-btn sm" href="<?php echo $qs(['page' => $page + 1]); ?>">Next</a><?php endif; ?>
+        </span>
+    </div>
+    <?php endif; ?>
+</form>
+
+<!-- Review dialog -->
+<dialog class="ad-dialog vf-dialog" id="vfDialog" aria-labelledby="vfTitle">
+    <form method="POST" class="ad-form" id="vfOne">
+        <?php csrf_field(); ?>
+        <input type="hidden" name="f_status" value="<?php echo htmlspecialchars($f_status); ?>">
+        <input type="hidden" name="f_type" value="<?php echo htmlspecialchars($f_type); ?>">
+        <input type="hidden" name="f_q" value="<?php echo htmlspecialchars($f_q); ?>">
+        <input type="hidden" name="f_page" value="<?php echo (int)$page; ?>">
+        <input type="hidden" name="ids[]" id="vfId">
+        <header class="ad-dialog-head"><h2 id="vfTitle">Review</h2><button type="button" class="ad-x" data-vf-close aria-label="Close"><i class="fa fa-xmark" aria-hidden="true"></i></button></header>
+        <div class="ad-dialog-body">
+            <dl class="vf-dl" id="vfDl"></dl>
+            <div class="vf-doc" id="vfDoc"></div>
+            <label class="ad-field" id="vfReasonWrap"><span>Reason (required to reject)</span><input type="text" name="rejection_reason" id="vfOneReason" maxlength="200" placeholder="e.g. ID photo is blurry"></label>
+        </div>
+        <footer class="ad-dialog-foot" id="vfFoot">
+            <button type="button" class="ad-btn" data-vf-close>Close</button>
+            <button type="submit" name="review" value="reject" class="ad-btn" id="vfRej">Reject</button>
+            <button type="submit" name="review" value="approve" class="ad-btn primary" id="vfApp">Approve</button>
+        </footer>
+    </form>
+</dialog>
+
+<!-- Bulk reject reason -->
+<dialog class="ad-dialog" id="vfBulkDialog" aria-labelledby="vfBulkTitle">
+    <div class="ad-form">
+        <header class="ad-dialog-head"><h2 id="vfBulkTitle">Reject selected</h2><button type="button" class="ad-x" data-vf-close aria-label="Close"><i class="fa fa-xmark" aria-hidden="true"></i></button></header>
+        <div class="ad-dialog-body"><label class="ad-field"><span>Reason sent to every selected registrant</span><input type="text" id="vfBulkReason" maxlength="200" placeholder="e.g. ID not readable, please upload again"></label></div>
+        <footer class="ad-dialog-foot"><button type="button" class="ad-btn" data-vf-close>Cancel</button><button type="button" class="ad-btn primary" id="vfBulkGo">Reject</button></footer>
+    </div>
+</dialog>
 </main>
 <style>
 .v-tabs{display:flex;gap:.4rem;margin:0 0 .75rem}.v-tabs a{padding:.4rem .8rem;border-radius:999px;border:1px solid #e5eaf1;color:#3c4a60;text-decoration:none;font-size:.9rem}.v-tabs a.on{background:#1e3a5f;border-color:#1e3a5f;color:#fff}.v-tabs span{opacity:.75;margin-left:.2rem}
@@ -235,6 +357,7 @@ document.addEventListener('keydown', function(e) {
         <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
 </nav>
+<script src="../Assets/js/admin_verifications.js?v=<?php echo filemtime(__DIR__ . '/../Assets/js/admin_verifications.js'); ?>"></script>
 <script src="../Assets/js/app-header.js"></script>
 </body>
 </html>
