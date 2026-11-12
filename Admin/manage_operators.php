@@ -157,14 +157,7 @@ $op_list = [];
 while($oq !== false && ($row = mbus_db_fetch_assoc($oq))){ $op_list[] = $row; }
 $assigned = count(array_filter($op_list, fn($x) => !empty($x['buses'])));
 ?>
-<div class="ad-stats">
-    <div class="ad-stat"><span class="ad-ico"><i class="fa fa-user-gear" aria-hidden="true"></i></span><div><b><?php echo count($op_list); ?></b><small>Operators</small></div></div>
-    <div class="ad-stat"><span class="ad-ico green"><i class="fa fa-bus" aria-hidden="true"></i></span><div><b><?php echo $assigned; ?></b><small>Assigned to a bus</small></div></div>
-    <div class="ad-stat"><span class="ad-ico amber"><i class="fa fa-user-clock" aria-hidden="true"></i></span><div><b><?php echo count($op_list) - $assigned; ?></b><small>Unassigned</small></div></div>
-</div>
-
 <div class="ad-toolbar">
-    <label class="ad-search"><i class="fa fa-magnifying-glass" aria-hidden="true"></i><input type="search" id="adSearch" placeholder="Search name, email or bus" aria-label="Search operators"></label>
     <button type="button" class="ad-btn primary" data-ad-open="add" data-title="Add operator" data-action="add_operator"><i class="fa fa-plus" aria-hidden="true"></i> Add operator</button>
 </div>
 

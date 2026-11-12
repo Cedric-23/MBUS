@@ -157,14 +157,7 @@ $bus_list = [];
 while($bq !== false && ($row = mbus_db_fetch_assoc($bq))){ $bus_list[] = $row; }
 $aircon = count(array_filter($bus_list, fn($x) => strtolower($x['bus_type']) === 'aircon'));
 ?>
-<div class="ad-stats">
-    <div class="ad-stat"><span class="ad-ico"><i class="fa fa-bus" aria-hidden="true"></i></span><div><b><?php echo count($bus_list); ?></b><small>Total buses</small></div></div>
-    <div class="ad-stat"><span class="ad-ico green"><i class="fa fa-snowflake" aria-hidden="true"></i></span><div><b><?php echo $aircon; ?></b><small>Aircon</small></div></div>
-    <div class="ad-stat"><span class="ad-ico amber"><i class="fa fa-chair" aria-hidden="true"></i></span><div><b><?php echo array_sum(array_map(fn($x) => (int)$x['capacity'], $bus_list)); ?></b><small>Total seats</small></div></div>
-</div>
-
 <div class="ad-toolbar">
-    <label class="ad-search"><i class="fa fa-magnifying-glass" aria-hidden="true"></i><input type="search" id="adSearch" placeholder="Search bus or operator" aria-label="Search buses"></label>
     <button type="button" class="ad-btn primary" data-ad-open="add" data-title="Add bus" data-action="add_bus"><i class="fa fa-plus" aria-hidden="true"></i> Add bus</button>
 </div>
 

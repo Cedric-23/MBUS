@@ -118,3 +118,5 @@
   .ad-stat small{font-size:.7rem}
   .ad-seg a{padding:.4rem .3rem;font-size:.76rem}
 }
+.ad-toolbar .ad-btn.primary{margin-left:auto}
+.ad-toolbar{margin-top:.25rem}

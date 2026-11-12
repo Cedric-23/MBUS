@@ -176,14 +176,7 @@ while($row = mbus_db_fetch_assoc($query)){
 $bus_options = function() use ($bus_rows){ $o='<option value="">Select bus</option>'; foreach($bus_rows as $b){ $o.='<option value="'.(int)$b['bus_id'].'">Bus '.htmlspecialchars($b['bus_number']).' &middot; '.(int)$b['capacity'].' seats</option>'; } return $o; };
 $route_options = function() use ($route_rows){ $o='<option value="">Select route</option>'; foreach($route_rows as $r){ $o.='<option value="'.(int)$r['route_id'].'">'.htmlspecialchars($r['origin']).' &rarr; '.htmlspecialchars($r['destination']).'</option>'; } return $o; };
 ?>
-<div class="ad-stats">
-    <div class="ad-stat"><span class="ad-ico"><i class="fa fa-calendar-days" aria-hidden="true"></i></span><div><b><?php echo $all_count; ?></b><small>Total schedules</small></div></div>
-    <div class="ad-stat"><span class="ad-ico green"><i class="fa fa-circle-check" aria-hidden="true"></i></span><div><b><?php echo $active_count; ?></b><small>Active</small></div></div>
-    <div class="ad-stat"><span class="ad-ico amber"><i class="fa fa-clock" aria-hidden="true"></i></span><div><b><?php echo $today_count; ?></b><small>Departing today</small></div></div>
-</div>
-
 <div class="ad-toolbar">
-    <label class="ad-search"><i class="fa fa-magnifying-glass" aria-hidden="true"></i><input type="search" id="adSearch" placeholder="Search bus, route or date" aria-label="Search schedules"></label>
     <nav class="ad-seg" aria-label="Schedule filters">
         <a href="?filter=all" class="<?php echo $filter==='all' ? 'on' : ''; ?>">All</a>
         <a href="?filter=morong" class="<?php echo $filter==='morong' ? 'on' : ''; ?>">Morong &rarr; SBMA</a>
