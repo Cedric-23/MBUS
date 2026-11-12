@@ -20,13 +20,14 @@ function mbus_admin_schedule_valid(array $data, bool $with_id=false): bool
     $departure_errors=DateTimeImmutable::getLastErrors();
     $arrival_errors=DateTimeImmutable::getLastErrors();
     if($departure === false || $arrival === false || ($departure_errors !== false && ($departure_errors['warning_count'] > 0 || $departure_errors['error_count'] > 0)) || ($arrival_errors !== false && ($arrival_errors['warning_count'] > 0 || $arrival_errors['error_count'] > 0))) return false;
-    return $arrival > $departure;
+    if($arrival <= $departure){ $GLOBALS['mbus_sched_err'] = 'Arrival must be after departure (check the date too).'; return false; }
+    return true;
 }
 
 /* UPDATE */
 if(isset($_POST['update_schedule'])){
     if(!csrf_validate_token()) $error = "Security validation failed. Please try again.";
-    elseif(!mbus_admin_schedule_valid($_POST, true)) $error = "Please provide valid schedule values.";
+    elseif(!mbus_admin_schedule_valid($_POST, true)) $error = $GLOBALS['mbus_sched_err'] ?? "Please fill in bus, route, departure, arrival and status.";
     else {
         $schedule_id=(int)$_POST['schedule_id']; $bus_id=(int)$_POST['bus_id']; $route_id=(int)$_POST['route_id'];
         $departure_time=(string)$_POST['departure_time']; $arrival_time=(string)$_POST['arrival_time']; $schedule_status=(string)$_POST['schedule_status'];
@@ -50,7 +51,7 @@ if(isset($_POST['delete_schedule'])){
 /* ADD */
 if(isset($_POST['add_schedule'])){
     if(!csrf_validate_token()) $error="Security validation failed. Please try again.";
-    elseif(!mbus_admin_schedule_valid($_POST)) $error="Please provide valid schedule values.";
+    elseif(!mbus_admin_schedule_valid($_POST)) $error=$GLOBALS['mbus_sched_err'] ?? "Please fill in bus, route, departure, arrival and status.";
     else {
         $inserted=mbus_db_prepare($conn,"INSERT INTO schedule(bus_id,route_id,departure_time,arrival_time,schedule_status) VALUES(?,?,?,?,?)",[(int)$_POST['bus_id'],(int)$_POST['route_id'],(string)$_POST['departure_time'],(string)$_POST['arrival_time'],(string)$_POST['schedule_status']]);
         if($inserted===false) $error="Schedule could not be added. Please verify the selected values.";
