@@ -63,7 +63,8 @@ $acct_type = mbus_passenger_type($conn, (int)$user_id);
 // Default passenger types: the verified account holder's own (first) seat gets their type.
 $default_types = [];
 foreach($reservations as $i => $r){
-    $default_types[$r['reservation_id']] = !empty($r['passenger_type']) && $r['passenger_type'] !== 'Regular' ? $r['passenger_type'] : ($i === 0 ? $acct_type : 'Regular');
+    $stored = (!empty($r['passenger_type']) && in_array($r['passenger_type'], MBUS_PASSENGER_TYPES, true)) ? $r['passenger_type'] : 'Regular';
+    $default_types[$r['reservation_id']] = $i === 0 ? $acct_type : $stored;
 }
 // Total is always computed on the server; nothing from the URL or form is trusted.
 $quote = mbus_quote_lines($reservations, $default_types);
@@ -81,28 +82,19 @@ if(isset($_POST['confirm_payment'])){
         $method = 'GCash'; // GCash is the only accepted payment method
         $reference = trim((string)($_POST['reference_number'] ?? ''));
 
-        // Passenger type per seat; every discounted seat that is not the verified account holder's needs an ID photo.
+        // Passenger types were chosen on the reserve page and are saved on each seat.
+        // The first seat follows the account's status; extra discounted seats carry their ID photo.
         $types = []; $covered = []; $ids = [];
         foreach($reservations as $i => $r){
             $rid = $r['reservation_id'];
-            $t = (string)(($_POST['ptype'] ?? [])[$rid] ?? 'Regular');
-            if(!in_array($t, MBUS_PASSENGER_TYPES, true)) $t = 'Regular';
-            $types[$rid] = $t;
-            $covered[$rid] = ($t !== 'Regular' && $i === 0 && $t === $acct_type);
-            if($t !== 'Regular' && !$covered[$rid]){
-                $data = (string)(($_POST['id_data'] ?? [])[$rid] ?? '');
-                if($data !== ''){
-                    if(!preg_match('#^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$#', $data, $m) || strlen($m[2]) > 1200000 || base64_decode($m[2], true) === false){
-                        $error = "Seat {$r['seat_number']}: the ID photo could not be read. Choose a JPG or PNG under 1 MB.";
-                        break;
-                    }
-                    $ids[$rid] = ['mime' => $m[1], 'b64' => $m[2]];
-                } elseif(!empty($r['id_image_b64'])){
-                    $ids[$rid] = ['mime' => $r['id_image_mime'], 'b64' => $r['id_image_b64']];
-                } else {
-                    $error = "Seat {$r['seat_number']} is a $t ticket: upload a photo of their ID.";
+            $types[$rid] = $default_types[$rid];
+            $covered[$rid] = ($types[$rid] !== 'Regular' && $i === 0);
+            if($types[$rid] !== 'Regular' && !$covered[$rid]){
+                if(empty($r['id_image_b64'])){
+                    $error = "Seat {$r['seat_number']} is a {$types[$rid]} ticket without an ID photo. Please reserve again.";
                     break;
                 }
+                $ids[$rid] = ['mime' => $r['id_image_mime'], 'b64' => $r['id_image_b64']];
             }
         }
         $quote = mbus_quote_lines($reservations, $types);
@@ -122,7 +114,7 @@ if(isset($_POST['confirm_payment'])){
                 $res_id = $reservations[0]['reservation_id'];
                 foreach($quote['lines'] as $ln){
                     $rid = $ln['reservation_id'];
-                    $status = $ln['type'] === 'Regular' ? 'None' : ($covered[$rid] ? 'Approved' : 'Pending');
+                    $status = $ln['type'] === 'Regular' ? 'None' : ($covered[$rid] ? 'Approved' : 'Submitted');
                     $up = mbus_db_prepare($conn, "
                     UPDATE reservation
                     SET status = 'Paid', passenger_type = ?, discount_status = ?, id_image_b64 = ?, id_image_mime = ?,
@@ -267,30 +259,14 @@ if(isset($_POST['cancel_reservation'])){
 </ul>
 
 <div class="seats-section">
-    <strong>Passengers</strong>
-    <p class="pay-hint">Booking for friends or family? Pick each seat's passenger type. Student, Senior and PWD get 20% off the fare and need a photo of their ID.</p>
-    <?php foreach($quote['lines'] as $i => $ln){
-        $rid = (int)$ln['reservation_id'];
-        $has_id = !empty($reservations[$i]['id_image_b64']);
-    ?>
-    <div class="pay-seat" data-rid="<?php echo $rid; ?>" data-base="<?php echo $ln['base']; ?>" data-first="<?php echo $i === 0 ? '1' : '0'; ?>" data-has-id="<?php echo $has_id ? '1' : '0'; ?>">
+    <strong>Seats</strong>
+    <?php foreach($quote['lines'] as $ln){ ?>
+    <div class="pay-seat">
         <div class="pay-seat-head">
             <span class="seat-tag">Seat <?php echo htmlspecialchars((string)$ln['seat']); ?></span>
-            <select name="ptype[<?php echo $rid; ?>]" form="payForm" class="form-control pay-type" aria-label="Passenger type for seat <?php echo htmlspecialchars((string)$ln['seat']); ?>">
-                <?php foreach(MBUS_PASSENGER_TYPES as $t){ echo '<option' . ($ln['type'] === $t ? ' selected' : '') . '>' . $t . '</option>'; } ?>
-            </select>
-            <span class="pay-line">&#8369;<span class="pay-final"><?php echo number_format($ln['base'] - $ln['discount'], 2); ?></span></span>
+            <span class="pay-type-label"><?php echo htmlspecialchars($ln['type']); ?></span>
+            <span class="pay-line">&#8369;<?php echo number_format($ln['base'] - $ln['discount'], 2); ?></span>
         </div>
-        <div class="pay-id" hidden>
-            <label class="pay-id-btn">
-                <i class="fa fa-id-card" aria-hidden="true"></i> <span class="pay-id-label">Upload ID photo</span>
-                <input type="file" accept="image/*" class="pay-file" hidden>
-            </label>
-            <img class="pay-id-prev" alt="ID preview" hidden>
-            <input type="hidden" name="id_data[<?php echo $rid; ?>]" form="payForm" class="pay-id-data">
-            <small class="pay-id-note">An admin checks this ID. If it is rejected, the difference is collected when you board.</small>
-        </div>
-        <div class="pay-own" hidden><i class="fa fa-circle-check" aria-hidden="true"></i> Your verified <?php echo htmlspecialchars($acct_type); ?> account &ndash; no ID needed</div>
     </div>
     <?php } ?>
     <p class="pay-fee">Reservation fee: &#8369;<?php echo number_format(MBUS_RESERVATION_FEE, 2); ?> per seat</p>
@@ -345,58 +321,6 @@ if(isset($_POST['cancel_reservation'])){
 
 </main>
 
-<script>
-(function(){
-    const acct = <?php echo json_encode($acct_type); ?>;
-    const fee = <?php echo json_encode(MBUS_RESERVATION_FEE); ?>;
-    const rate = <?php echo json_encode(MBUS_DISCOUNT_RATE); ?>;
-    const money = n => n.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    const seats = Array.from(document.querySelectorAll('.pay-seat'));
-
-    function recalc(){
-        let total = 0;
-        seats.forEach(el => {
-            const type = el.querySelector('.pay-type').value;
-            const base = parseFloat(el.dataset.base) || 0;
-            const covered = type !== 'Regular' && el.dataset.first === '1' && type === acct;
-            const needsId = type !== 'Regular' && !covered;
-            const final = base - (type === 'Regular' ? 0 : Math.round(base * rate * 100) / 100);
-            el.querySelector('.pay-final').textContent = money(final);
-            el.querySelector('.pay-id').hidden = !needsId;
-            el.querySelector('.pay-own').hidden = !covered;
-            total += final + fee;
-        });
-        const t = document.getElementById('totalAmt'), b = document.getElementById('btnAmt');
-        if (t) t.textContent = money(total);
-        if (b) b.textContent = money(total);
-    }
-
-    seats.forEach(el => {
-        el.querySelector('.pay-type').addEventListener('change', recalc);
-        const file = el.querySelector('.pay-file'), data = el.querySelector('.pay-id-data');
-        const prev = el.querySelector('.pay-id-prev'), label = el.querySelector('.pay-id-label');
-        if (el.dataset.hasId === '1') label.textContent = 'ID on file (tap to replace)';
-        file.addEventListener('change', () => {
-            const f = file.files && file.files[0];
-            if (!f) return;
-            const img = new Image(), url = URL.createObjectURL(f);
-            img.onload = () => {
-                const max = 1000, k = Math.min(1, max / Math.max(img.width, img.height));
-                const c = document.createElement('canvas');
-                c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-                c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-                data.value = c.toDataURL('image/jpeg', 0.8);
-                prev.src = data.value; prev.hidden = false;
-                label.textContent = 'ID attached (tap to replace)';
-                URL.revokeObjectURL(url);
-            };
-            img.onerror = () => { label.textContent = 'Could not read that photo'; URL.revokeObjectURL(url); };
-            img.src = url;
-        });
-    });
-    recalc();
-})();
-</script>
 <script>
 let countdownInterval;
 

@@ -66,7 +66,7 @@
             var who = document.createElement('strong');
             who.textContent = 'Seat ' + p.seat + ' · ' + p.type;
             var chip = document.createElement('span');
-            var label = { Approved: 'ID approved', Pending: 'ID awaiting approval', Rejected: 'ID rejected', None: 'No ID' }[p.discount] || p.discount;
+            var label = { Approved: 'Verified account', Submitted: 'Check this ID', None: 'No ID' }[p.discount] || p.discount;
             chip.className = 'scan-chip ' + String(p.discount).toLowerCase();
             chip.textContent = label;
             head.appendChild(who); head.appendChild(chip);
@@ -82,17 +82,10 @@
                 ok.textContent = 'Verified account holder';
                 row.appendChild(ok);
             }
-            if (p.discount === 'Rejected' && p.amount > 0) {
-                var owe = document.createElement('small');
-                owe.className = 'scan-owe';
-                owe.textContent = 'Collect ₱' + p.amount.toFixed(2) + ' (discount not approved)';
-                row.appendChild(owe);
-            }
             ppl.appendChild(row);
         });
         var note = $('rNote');
-        var extra = t.owed ? 'Collect ₱' + t.owed + ' in total: discount IDs were rejected.' : '';
-        var text = [t.note, extra].filter(Boolean).join(' ');
+        var text = t.note || '';
         note.hidden = !text;
         note.textContent = text;
         boardBtn.hidden = !t.can_board;

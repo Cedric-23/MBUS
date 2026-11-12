@@ -105,7 +105,6 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $seats[] = $r['seat_number'];
         $ptype = $r['passenger_type'] ?: 'Regular';
         $dstat = $r['discount_status'] ?: 'None';
-        if($dstat === 'Rejected'){ $owed += (float)$r['discount_amount']; }
         $people[] = [
             'seat' => $r['seat_number'], 'type' => $ptype, 'discount' => $dstat,
             'amount' => (float)$r['discount_amount'],

@@ -22,6 +22,9 @@ if($schedule_id <= 0){
     exit();
 }
 
+// Free seats held by unpaid reservations older than 10 minutes (the unique seat index would block re-booking otherwise)
+mbus_db_prepare($conn, "UPDATE reservation SET status='Cancelled' WHERE schedule_id = ? AND status='Pending' AND created_at <= NOW()-INTERVAL '10 minutes'", [$schedule_id]);
+
 // Get seat availability
 $seat_sql = "SELECT b.capacity, COUNT(r.reservation_id) AS total_reserved
     FROM schedule s
@@ -47,8 +50,20 @@ $reserved = (int)$seat_data['total_reserved'];
 $total = (int)$seat_data['capacity'];
 $available = max(0, $total - $reserved);
 
+// Which seats are locked right now, and which of them belong to this user
+$taken = []; $mine = [];
+$tq = mbus_db_prepare($conn, "SELECT seat_number, user_id, status FROM reservation
+    WHERE schedule_id = ? AND (status IN ('Paid','Confirmed','Boarded') OR (status='Pending' AND created_at > NOW()-INTERVAL '10 minutes'))", [$schedule_id]);
+while($tq !== false && ($tr = mbus_db_fetch_assoc($tq))){
+    $n = (int)$tr['seat_number'];
+    $taken[] = $n;
+    if((int)$tr['user_id'] === (int)$_SESSION['user_id']){ $mine[] = ['seat' => $n, 'status' => $tr['status']]; }
+}
+
 echo json_encode([
     'available' => $available,
     'reserved' => $reserved,
-    'total' => $total
+    'total' => $total,
+    'taken' => $taken,
+    'mine' => $mine
 ]);

@@ -142,9 +142,10 @@ $seat_info = [];
 foreach($seats as $i => $seat_no){
     $t = (string)($types_in[(string)$seat_no] ?? 'Regular');
     if(!in_array($t, MBUS_PASSENGER_TYPES, true)) $t = 'Regular';
+    if($i === 0) $t = $passenger_type; // the first seat always follows the account's own status
     $info = ['type' => $t, 'status' => 'None', 'b64' => null, 'mime' => null];
     if($t !== 'Regular'){
-        if($i === 0 && $passenger_type !== 'Regular' && $t === $passenger_type){
+        if($i === 0){
             $info['status'] = 'Approved';
         } else {
             $d = (string)($ids_in[(string)$seat_no] ?? '');
@@ -153,7 +154,7 @@ foreach($seats as $i => $seat_no){
                 echo "Seat $seat_no needs an ID photo for the $t fare.";
                 exit();
             }
-            $info['status'] = 'Pending'; $info['mime'] = $m[1]; $info['b64'] = $m[2];
+            $info['status'] = 'Submitted'; $info['mime'] = $m[1]; $info['b64'] = $m[2];
         }
     }
     $seat_info[$seat_no] = $info;

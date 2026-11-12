@@ -95,12 +95,13 @@ const seatTypes = {};
 const seatIds = {};
 
 function seatType(seat, i) {
-    if (!seatTypes[seat]) seatTypes[seat] = i === 0 ? passengerType : "Regular";
+    if (i === 0) return passengerType;
+    if (!seatTypes[seat]) seatTypes[seat] = "Regular";
     return seatTypes[seat];
 }
 
 function seatCovered(seat, i) {
-    return i === 0 && passengerType !== "Regular" && seatType(seat, i) === passengerType;
+    return i === 0;
 }
 
 function renderPassengerTypes() {
@@ -110,7 +111,7 @@ function renderPassengerTypes() {
 
     selectedSeats.forEach((seat, i) => {
         const type = seatType(seat, i);
-        const needsId = type !== "Regular" && !seatCovered(seat, i);
+        const needsId = i > 0 && type !== "Regular";
 
         const row = document.createElement("div");
         row.className = "passenger-row pt-row";
@@ -121,6 +122,7 @@ function renderPassengerTypes() {
         const select = document.createElement("select");
         select.className = "pt-select";
         select.setAttribute("aria-label", "Passenger type for seat " + seat);
+        if (i === 0) { select.disabled = true; select.title = "Your own seat follows your account status"; }
         ["Regular", "Student", "Senior", "PWD"].forEach(t => {
             const o = document.createElement("option");
             o.value = o.textContent = t;
@@ -160,7 +162,7 @@ function renderPassengerTypes() {
         const a = document.createElement("a");
         a.className = "verify-hint";
         a.href = "verification.php";
-        a.textContent = "Verified student, senior or PWD? Verify your own ID for 20% off";
+        a.textContent = "Student, senior or PWD? Verify your account for 20% off your own seat";
         box.appendChild(a);
     }
 }
@@ -384,3 +386,51 @@ function showTopError(message) {
     }, 3000);
 
 }
+
+/* LIVE SEAT LOCKS: other people's reservations lock a seat for 10 minutes (or for good once paid);
+   unpaid seats free up again. The map refreshes on its own. */
+(function () {
+    const counter = document.querySelector(".seat-counter");
+    let warned = false;
+
+    function apply(data) {
+        const taken = new Set((data.taken || []).map(String));
+        const mine = {};
+        (data.mine || []).forEach(m => { mine[String(m.seat)] = m.status; });
+        let lost = [];
+
+        document.querySelectorAll(".seat-btn").forEach(btn => {
+            const seat = btn.dataset.seat;
+            const isTaken = taken.has(seat);
+            if (isTaken && btn.classList.contains("selected")) {
+                btn.classList.remove("selected");
+                selectedSeats = selectedSeats.filter(s => s != seat);
+                lost.push(seat);
+            }
+            btn.classList.toggle("reserved", isTaken);
+            btn.disabled = isTaken;
+            btn.setAttribute("aria-disabled", isTaken ? "true" : "false");
+            const status = mine[seat];
+            btn.classList.toggle("mine", !!status && status !== "Pending");
+            btn.title = status ? (status === "Pending" ? "Your seat, waiting for payment" : "Your seat, paid") : (isTaken ? "Taken" : "");
+        });
+
+        if (counter && typeof data.available === "number") counter.textContent = data.available + " seats left";
+        if (lost.length) {
+            showError("Seat " + lost.join(", ") + " was just taken by someone else. Please pick another.");
+            if (typeof renderPassengerTypes === "function") renderPassengerTypes();
+        }
+    }
+
+    async function poll() {
+        if (document.hidden) return;
+        try {
+            const r = await fetch("../api/get_seat_availability.php?schedule_id=" + scheduleId, { cache: "no-store" });
+            if (r.ok) apply(await r.json());
+        } catch (e) { /* offline: keep the current map */ }
+    }
+
+    poll();
+    setInterval(poll, 8000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
+})();

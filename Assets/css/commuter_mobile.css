@@ -903,3 +903,6 @@
 .reserve-page .pt-upload span{text-decoration:underline}
 .reserve-page .pt-upload img{height:36px;width:auto;border-radius:6px}
 .reserve-page .pt-upload img[hidden]{display:none}
+
+/* Your own paid seat shows green */
+.reserve-page .seat-btn.reserved.mine{background:#16a34a;color:#fff;text-decoration:none}
