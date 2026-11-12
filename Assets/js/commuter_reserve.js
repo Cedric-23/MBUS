@@ -89,31 +89,105 @@ document.getElementById("doneBtn")
 
 });
 
-/* PASSENGER TYPES: the verified account holder's own seat (first one) is discounted */
+/* PASSENGER TYPES: each seat can be Regular, Student, Senior or PWD.
+   The verified account holder's own (first) seat needs no ID; every other discounted seat needs an ID photo. */
+const seatTypes = {};
+const seatIds = {};
+
+function seatType(seat, i) {
+    if (!seatTypes[seat]) seatTypes[seat] = i === 0 ? passengerType : "Regular";
+    return seatTypes[seat];
+}
+
+function seatCovered(seat, i) {
+    return i === 0 && passengerType !== "Regular" && seatType(seat, i) === passengerType;
+}
+
 function renderPassengerTypes() {
 
-    const discounted = passengerType !== "Regular";
-    let html = "";
+    const box = document.getElementById("passengerTypes");
+    box.innerHTML = "";
 
     selectedSeats.forEach((seat, i) => {
-        const label = i === 0 ? passengerType : "Regular";
-        html += `<div class="passenger-row"><div>Seat ${seat}</div><span class="ptype-tag">${label}</span></div>`;
+        const type = seatType(seat, i);
+        const needsId = type !== "Regular" && !seatCovered(seat, i);
+
+        const row = document.createElement("div");
+        row.className = "passenger-row pt-row";
+
+        const label = document.createElement("div");
+        label.textContent = "Seat " + seat;
+
+        const select = document.createElement("select");
+        select.className = "pt-select";
+        select.setAttribute("aria-label", "Passenger type for seat " + seat);
+        ["Regular", "Student", "Senior", "PWD"].forEach(t => {
+            const o = document.createElement("option");
+            o.value = o.textContent = t;
+            if (t === type) o.selected = true;
+            select.appendChild(o);
+        });
+        select.addEventListener("change", () => {
+            seatTypes[seat] = select.value;
+            renderPassengerTypes();
+            if (document.getElementById("fareBreakdown").style.display !== "none") calculateFare();
+        });
+
+        row.appendChild(label);
+        row.appendChild(select);
+        box.appendChild(row);
+
+        if (needsId) {
+            const up = document.createElement("label");
+            up.className = "pt-upload";
+            const img = document.createElement("img");
+            img.alt = "ID preview";
+            img.hidden = !seatIds[seat];
+            if (seatIds[seat]) img.src = seatIds[seat];
+            const text = document.createElement("span");
+            text.textContent = seatIds[seat] ? "ID attached · tap to replace" : "Upload ID photo";
+            const file = document.createElement("input");
+            file.type = "file"; file.accept = "image/*"; file.hidden = true;
+            file.addEventListener("change", () => readIdPhoto(file.files && file.files[0], seat, img, text));
+            up.appendChild(img); up.appendChild(text); up.appendChild(file);
+            box.appendChild(up);
+        } else {
+            delete seatIds[seat];
+        }
     });
 
-    if (!discounted) {
-        html += `<a class="verify-hint" href="verification.php">Student, senior or PWD? Verify your ID for 20% off</a>`;
+    if (passengerType === "Regular") {
+        const a = document.createElement("a");
+        a.className = "verify-hint";
+        a.href = "verification.php";
+        a.textContent = "Verified student, senior or PWD? Verify your own ID for 20% off";
+        box.appendChild(a);
     }
-    if (selectedSeats.length > 1 || !discounted) {
-        html += `<p class="verify-hint">Booking for others? Set each seat's passenger type and upload their ID at payment.</p>`;
-    }
+}
 
-    document.getElementById("passengerTypes").innerHTML = html;
-
+/* Resize the ID photo in the browser (max 1000px JPEG) so it uploads quickly. */
+function readIdPhoto(file, seat, img, text) {
+    if (!file) return;
+    const url = URL.createObjectURL(file), image = new Image();
+    image.onload = () => {
+        const k = Math.min(1, 1000 / Math.max(image.width, image.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(image.width * k); c.height = Math.round(image.height * k);
+        c.getContext("2d").drawImage(image, 0, 0, c.width, c.height);
+        seatIds[seat] = c.toDataURL("image/jpeg", 0.8);
+        img.src = seatIds[seat]; img.hidden = false;
+        text.textContent = "ID attached · tap to replace";
+        URL.revokeObjectURL(url);
+    };
+    image.onerror = () => { text.textContent = "Could not read that photo"; URL.revokeObjectURL(url); };
+    image.src = url;
 }
 
 /* CALCULATE */
 document.getElementById("calculateBtn")
-.addEventListener("click", () => {
+.addEventListener("click", () => calculateFare());
+
+function calculateFare() {
 
     const pickupFare = fareTable[pickup.value];
     const destinationFare = fareTable[destination.value];
@@ -127,7 +201,7 @@ document.getElementById("calculateBtn")
 
     selectedSeats.forEach((seat, index) => {
 
-        let type = index === 0 ? passengerType : "Regular";
+        let type = seatType(seat, index);
         let baseFare = farePerSeat;
         let discount = 0;
 
@@ -161,7 +235,7 @@ document.getElementById("calculateBtn")
     document.getElementById("fareBreakdown").style.display = "block";
     document.getElementById("summaryPanel").classList.add("show");
 
-});
+}
 
 /* RESERVE FUNCTION */
 async function reserveSeats() {
@@ -173,6 +247,13 @@ async function reserveSeats() {
     formData.append("pickup", pickup.value);
     formData.append("destination", destination.value);
     formData.append("seats", selectedSeats.join(","));
+    const types = {}, ids = {};
+    selectedSeats.forEach((seat, i) => {
+        types[seat] = seatType(seat, i);
+        if (types[seat] !== "Regular" && !seatCovered(seat, i)) ids[seat] = seatIds[seat];
+    });
+    formData.append("types", JSON.stringify(types));
+    formData.append("ids", JSON.stringify(ids));
 
     const response = await fetch(
         "reserve.php?schedule_id=" + scheduleId,
@@ -204,6 +285,14 @@ document.getElementById("reserveBtn")
     if (!destination.value) {
         showError("Select destination.");
         return;
+    }
+
+    for (let i = 0; i < selectedSeats.length; i++) {
+        const seat = selectedSeats[i];
+        if (seatType(seat, i) !== "Regular" && !seatCovered(seat, i) && !seatIds[seat]) {
+            showError("Seat " + seat + " is a " + seatType(seat, i) + " ticket: upload their ID photo.");
+            return;
+        }
     }
 
     const btn = document.getElementById("reserveBtn");

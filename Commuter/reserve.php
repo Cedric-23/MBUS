@@ -135,6 +135,29 @@ if($capacity <= 0 || empty($requested_seats) || count($requested_seats) > $avail
     die("Invalid seat selection or insufficient capacity.");
 }
 $seats=$requested_seats;
+/* Per-seat passenger type (+ ID photo for discounted seats that are not the verified account holder's own) */
+$types_in = json_decode((string)($_POST['types'] ?? '{}'), true); if(!is_array($types_in)) $types_in = [];
+$ids_in = json_decode((string)($_POST['ids'] ?? '{}'), true); if(!is_array($ids_in)) $ids_in = [];
+$seat_info = [];
+foreach($seats as $i => $seat_no){
+    $t = (string)($types_in[(string)$seat_no] ?? 'Regular');
+    if(!in_array($t, MBUS_PASSENGER_TYPES, true)) $t = 'Regular';
+    $info = ['type' => $t, 'status' => 'None', 'b64' => null, 'mime' => null];
+    if($t !== 'Regular'){
+        if($i === 0 && $passenger_type !== 'Regular' && $t === $passenger_type){
+            $info['status'] = 'Approved';
+        } else {
+            $d = (string)($ids_in[(string)$seat_no] ?? '');
+            if(!preg_match('#^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$#', $d, $m) || strlen($m[2]) > 1200000 || base64_decode($m[2], true) === false){
+                http_response_code(422);
+                echo "Seat $seat_no needs an ID photo for the $t fare.";
+                exit();
+            }
+            $info['status'] = 'Pending'; $info['mime'] = $m[1]; $info['b64'] = $m[2];
+        }
+    }
+    $seat_info[$seat_no] = $info;
+}
 $created_reservations=[];
 try{
     $conn->pdo->beginTransaction();
@@ -201,9 +224,9 @@ FOR UPDATE
             throw new DomainException($locked_action);
         }
         $inserted = mbus_db_prepare($conn,"
-INSERT INTO reservation(ticket_code,user_id,schedule_id,seat_number,pickup_location,destination,reservation_date,created_at,status)
-VALUES(?, ?, ?, ?, ?, ?, NOW(), NOW(), 'Pending')
-", [$ticket_code, $user_id, $schedule_id, $seat, $pickup, $destination]);
+INSERT INTO reservation(ticket_code,user_id,schedule_id,seat_number,pickup_location,destination,reservation_date,created_at,status,passenger_type,discount_status,id_image_b64,id_image_mime)
+VALUES(?, ?, ?, ?, ?, ?, NOW(), NOW(), 'Pending', ?, ?, ?, ?)
+", [$ticket_code, $user_id, $schedule_id, $seat, $pickup, $destination, $seat_info[$seat]['type'], $seat_info[$seat]['status'], $seat_info[$seat]['b64'], $seat_info[$seat]['mime']]);
         if($inserted === false){
             throw new RuntimeException("Reservation insert failed");
         }
