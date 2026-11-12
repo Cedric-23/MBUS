@@ -79,7 +79,7 @@ if(isset($_POST['delete_operator'])){
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/manage_operators.css">
-    <link rel="stylesheet" href="../Assets/css/admin/schedules_compact.css">
+    <link rel="stylesheet" href="../Assets/css/admin/admin_ui.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
@@ -152,57 +152,57 @@ if(isset($_POST['delete_operator'])){
 $oq = mbus_db_query($conn, "
     SELECT u.user_id, u.full_name, u.email, u.phone_number,
       (SELECT string_agg(b.bus_number, ', ') FROM operator_bus_assignments oa JOIN buses b ON b.bus_id=oa.bus_id WHERE oa.operator_id=u.user_id) AS buses
-    FROM users u WHERE LOWER(u.user_type)='operator' ORDER BY u.user_id DESC");
+    FROM users u WHERE LOWER(u.user_type)='operator' ORDER BY u.full_name");
 $op_list = [];
 while($oq !== false && ($row = mbus_db_fetch_assoc($oq))){ $op_list[] = $row; }
 $assigned = count(array_filter($op_list, fn($x) => !empty($x['buses'])));
 ?>
-<div class="sc-summary">
-    <span><b><?php echo count($op_list); ?></b>operators</span>
-    <span><b><?php echo $assigned; ?></b>with a bus</span>
-    <span><b><?php echo count($op_list) - $assigned; ?></b>unassigned</span>
+<div class="ad-stats">
+    <div class="ad-stat"><span class="ad-ico"><i class="fa fa-user-gear" aria-hidden="true"></i></span><div><b><?php echo count($op_list); ?></b><small>Operators</small></div></div>
+    <div class="ad-stat"><span class="ad-ico green"><i class="fa fa-bus" aria-hidden="true"></i></span><div><b><?php echo $assigned; ?></b><small>Assigned to a bus</small></div></div>
+    <div class="ad-stat"><span class="ad-ico amber"><i class="fa fa-user-clock" aria-hidden="true"></i></span><div><b><?php echo count($op_list) - $assigned; ?></b><small>Unassigned</small></div></div>
 </div>
 
-<details class="sc-add" <?php echo isset($error) && isset($_POST['add_operator']) ? 'open' : ''; ?>>
-    <summary class="sc-link strong">+ Add operator</summary>
-    <form method="POST" class="sc-add-form">
-        <?php csrf_field(); ?>
-        <input type="text" name="full_name" class="form-control" placeholder="Full name" aria-label="Full name" required>
-        <input type="email" name="email" class="form-control" placeholder="Email" aria-label="Email" required>
-        <input type="text" name="phone_number" class="form-control" pattern="09\d{9}" maxlength="11" placeholder="09XXXXXXXXX" aria-label="Phone number" required>
-        <input type="password" name="password" class="form-control" placeholder="Password" aria-label="Password" minlength="8" required>
-        <button type="submit" name="add_operator" class="sc-link strong">Create</button>
-    </form>
-</details>
+<div class="ad-toolbar">
+    <label class="ad-search"><i class="fa fa-magnifying-glass" aria-hidden="true"></i><input type="search" id="adSearch" placeholder="Search name, email or bus" aria-label="Search operators"></label>
+    <button type="button" class="ad-btn primary" data-ad-open="add" data-title="Add operator" data-action="add_operator"><i class="fa fa-plus" aria-hidden="true"></i> Add operator</button>
+</div>
 
-<section class="sc-list" aria-label="Operators">
-<?php if(!$op_list): ?><p class="sc-empty">No operators yet.</p><?php endif; ?>
-<?php foreach($op_list as $row):
-    $initial = strtoupper(mb_substr(trim((string)$row['full_name']) ?: '?', 0, 1));
-?>
-<article class="sc-row <?php echo !empty($row['buses']) ? 'dir-sbma' : ''; ?>">
-    <div class="sc-main people">
-        <span class="sc-avatar"><?php echo htmlspecialchars($initial); ?></span>
-        <span class="sc-who">
-            <strong><?php echo htmlspecialchars($row['full_name']); ?></strong>
-            <small><?php echo htmlspecialchars($row['email']); ?> &middot; <?php echo htmlspecialchars((string)$row['phone_number']); ?></small>
-        </span>
-        <?php if(!empty($row['buses'])): ?>
-            <span class="sc-chip green">Bus <?php echo htmlspecialchars($row['buses']); ?></span>
-        <?php else: ?>
-            <span class="sc-chip amber">No bus</span>
-        <?php endif; ?>
-        <span class="sc-actions">
-            <form method="POST" onsubmit="return confirm('Delete this operator?')"><?php csrf_field(); ?>
-                <input type="hidden" name="user_id" value="<?php echo (int)$row['user_id']; ?>">
-                <button type="submit" name="delete_operator" class="sc-icon sc-del" aria-label="Delete operator"><i class="fa fa-trash" aria-hidden="true"></i></button>
-            </form>
-        </span>
+<?php if(!$op_list): ?><div class="ad-empty"><i class="fa fa-user-gear" aria-hidden="true"></i><p>No operators yet.</p></div><?php endif; ?>
+<div class="ad-table ops">
+    <div class="ad-th"><span>Operator</span><span>Phone</span><span>Bus</span><span></span></div>
+    <?php foreach($op_list as $row):
+        $initial = strtoupper(mb_substr(trim((string)$row['full_name']) ?: '?', 0, 1));
+    ?>
+    <div class="ad-tr" data-q="<?php echo htmlspecialchars(strtolower($row['full_name'].' '.$row['email'].' '.($row['buses'] ?? '')), ENT_QUOTES); ?>">
+        <div class="ad-c person"><span class="ad-avatar"><?php echo htmlspecialchars($initial); ?></span><div><b><?php echo htmlspecialchars($row['full_name']); ?></b><small><?php echo htmlspecialchars($row['email']); ?></small></div></div>
+        <div class="ad-c phone"><?php echo htmlspecialchars((string)$row['phone_number']); ?></div>
+        <div class="ad-c bus"><?php echo !empty($row['buses']) ? '<span class="ad-pill active"><i class="fa fa-bus" aria-hidden="true"></i> Bus '.htmlspecialchars($row['buses']).'</span>' : '<span class="ad-pill muted">No bus</span>'; ?></div>
+        <div class="ad-c actions">
+            <form method="POST" data-confirm="Delete this operator?"><?php csrf_field(); ?><input type="hidden" name="user_id" value="<?php echo (int)$row['user_id']; ?>"><button type="submit" name="delete_operator" class="ad-icon danger" aria-label="Delete operator"><i class="fa fa-trash" aria-hidden="true"></i></button></form>
+        </div>
     </div>
-</article>
-<?php endforeach; ?>
-</section>
+    <?php endforeach; ?>
+</div>
 
+<dialog class="ad-dialog" id="adDialog" aria-labelledby="adTitle">
+    <form method="POST" class="ad-form">
+        <?php csrf_field(); ?>
+        <header class="ad-dialog-head"><h2 id="adTitle">Add operator</h2><button type="button" class="ad-x" data-ad-close aria-label="Close"><i class="fa fa-xmark" aria-hidden="true"></i></button></header>
+        <div class="ad-dialog-body">
+            <label class="ad-field"><span>Full name</span><input type="text" name="full_name" required></label>
+            <label class="ad-field"><span>Email</span><input type="email" name="email" required></label>
+            <div class="ad-two">
+                <label class="ad-field"><span>Phone</span><input type="text" name="phone_number" pattern="09\d{9}" maxlength="11" placeholder="09XXXXXXXXX" required></label>
+                <label class="ad-field"><span>Password</span><input type="password" name="password" minlength="8" required placeholder="8+ characters"></label>
+            </div>
+        </div>
+        <footer class="ad-dialog-foot">
+            <button type="button" class="ad-btn" data-ad-close>Cancel</button>
+            <button type="submit" class="ad-btn primary" id="adSubmit" name="add_operator" value="1">Save</button>
+        </footer>
+    </form>
+</dialog>
 </main>
 
 <script>
@@ -263,6 +263,7 @@ document.addEventListener('keydown', function(e) {
         <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
 </nav>
+<script src="../Assets/js/admin_list.js"></script>
 <script src="../Assets/js/app-header.js"></script>
 <script src="../Assets/js/password-toggle.js"></script>
 </body>

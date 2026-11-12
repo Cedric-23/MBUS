@@ -78,7 +78,7 @@ if(isset($_POST['delete_bus'])){
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/manage_buses.css">
-    <link rel="stylesheet" href="../Assets/css/admin/schedules_compact.css">
+    <link rel="stylesheet" href="../Assets/css/admin/admin_ui.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
@@ -152,66 +152,64 @@ $bq = mbus_db_query($conn, "
     SELECT b.*,
       (SELECT COUNT(*) FROM schedule sc WHERE sc.bus_id=b.bus_id AND sc.departure_time >= NOW() AND sc.schedule_status='Active') AS upcoming,
       (SELECT string_agg(u.full_name, ', ') FROM operator_bus_assignments oa JOIN users u ON u.user_id=oa.operator_id WHERE oa.bus_id=b.bus_id) AS operators
-    FROM buses b ORDER BY b.bus_id DESC");
+    FROM buses b ORDER BY b.bus_number");
 $bus_list = [];
 while($bq !== false && ($row = mbus_db_fetch_assoc($bq))){ $bus_list[] = $row; }
 $aircon = count(array_filter($bus_list, fn($x) => strtolower($x['bus_type']) === 'aircon'));
 ?>
-<div class="sc-summary">
-    <span><b><?php echo count($bus_list); ?></b>buses</span>
-    <span><b><?php echo $aircon; ?></b>aircon</span>
-    <span><b><?php echo count($bus_list) - $aircon; ?></b>ordinary</span>
-    <span><b><?php echo array_sum(array_map(fn($x) => (int)$x['capacity'], $bus_list)); ?></b>total seats</span>
+<div class="ad-stats">
+    <div class="ad-stat"><span class="ad-ico"><i class="fa fa-bus" aria-hidden="true"></i></span><div><b><?php echo count($bus_list); ?></b><small>Total buses</small></div></div>
+    <div class="ad-stat"><span class="ad-ico green"><i class="fa fa-snowflake" aria-hidden="true"></i></span><div><b><?php echo $aircon; ?></b><small>Aircon</small></div></div>
+    <div class="ad-stat"><span class="ad-ico amber"><i class="fa fa-chair" aria-hidden="true"></i></span><div><b><?php echo array_sum(array_map(fn($x) => (int)$x['capacity'], $bus_list)); ?></b><small>Total seats</small></div></div>
 </div>
 
-<details class="sc-add" <?php echo isset($error) && isset($_POST['add_bus']) ? 'open' : ''; ?>>
-    <summary class="sc-link strong">+ Add bus</summary>
-    <form method="POST" class="sc-add-form">
-        <?php csrf_field(); ?>
-        <input type="text" name="bus_number" class="form-control" placeholder="Bus number" aria-label="Bus number" required>
-        <select name="bus_type" class="form-control" aria-label="Bus type" required>
-            <option value="">Type</option><option value="Aircon">Aircon</option><option value="Ordinary">Ordinary</option>
-        </select>
-        <input type="number" name="capacity" class="form-control" placeholder="Seats" aria-label="Capacity" min="1" max="100" required>
-        <button type="submit" name="add_bus" class="sc-link strong">Save</button>
-    </form>
-</details>
+<div class="ad-toolbar">
+    <label class="ad-search"><i class="fa fa-magnifying-glass" aria-hidden="true"></i><input type="search" id="adSearch" placeholder="Search bus or operator" aria-label="Search buses"></label>
+    <button type="button" class="ad-btn primary" data-ad-open="add" data-title="Add bus" data-action="add_bus"><i class="fa fa-plus" aria-hidden="true"></i> Add bus</button>
+</div>
 
-<section class="sc-list" aria-label="Buses">
-<?php if(!$bus_list): ?><p class="sc-empty">No buses yet.</p><?php endif; ?>
+<?php if(!$bus_list): ?><div class="ad-empty"><i class="fa fa-bus" aria-hidden="true"></i><p>No buses yet.</p></div><?php endif; ?>
+<div class="ad-cards">
 <?php foreach($bus_list as $row):
-    $fid = 'bf-' . (int)$row['bus_id'];
     $is_ac = strtolower($row['bus_type']) === 'aircon';
+    $edit = ['bus_id'=>(int)$row['bus_id'],'bus_number'=>$row['bus_number'],'bus_type'=>$row['bus_type'],'capacity'=>(int)$row['capacity']];
 ?>
-<article class="sc-row <?php echo $is_ac ? 'dir-morong' : 'dir-sbma'; ?>">
-    <div class="sc-main people">
-        <span class="sc-avatar bus"><i class="fa fa-bus" aria-hidden="true"></i></span>
-        <span class="sc-who">
-            <strong>Bus <?php echo htmlspecialchars($row['bus_number']); ?></strong>
-            <small><?php echo !empty($row['operators']) ? htmlspecialchars($row['operators']) : 'No operator'; ?> &middot; <?php echo (int)$row['upcoming']; ?> upcoming</small>
-        </span>
-        <span class="sc-chip <?php echo $is_ac ? '' : 'green'; ?>"><?php echo htmlspecialchars($row['bus_type']); ?> &middot; <?php echo (int)$row['capacity']; ?> seats</span>
-        <span class="sc-actions">
-            <button type="button" class="sc-link" onclick="scEdit(this,true)">Edit</button>
-            <button type="submit" form="<?php echo $fid; ?>" name="delete_bus" class="sc-icon sc-del" onclick="return confirm('Delete this bus?')" aria-label="Delete bus"><i class="fa fa-trash" aria-hidden="true"></i></button>
-        </span>
-    </div>
-    <div class="sc-edit" hidden>
-        <input type="text" form="<?php echo $fid; ?>" name="bus_number" class="form-control" value="<?php echo htmlspecialchars($row['bus_number'], ENT_QUOTES); ?>" aria-label="Bus number">
-        <select form="<?php echo $fid; ?>" name="bus_type" class="form-control" aria-label="Bus type">
-            <option <?php echo $is_ac ? 'selected' : ''; ?>>Aircon</option><option <?php echo !$is_ac ? 'selected' : ''; ?>>Ordinary</option>
-        </select>
-        <input type="number" form="<?php echo $fid; ?>" name="capacity" class="form-control" min="1" max="100" value="<?php echo (int)$row['capacity']; ?>" aria-label="Capacity">
-        <span class="sc-edit-actions">
-            <button type="submit" form="<?php echo $fid; ?>" name="update_bus" class="sc-link strong">Save</button>
-            <button type="button" class="sc-link" onclick="scEdit(this,false)">Cancel</button>
-        </span>
-    </div>
-    <form id="<?php echo $fid; ?>" method="POST" hidden><?php csrf_field(); ?><input type="hidden" name="bus_id" value="<?php echo (int)$row['bus_id']; ?>"></form>
+<article class="ad-card" data-q="<?php echo htmlspecialchars(strtolower('bus '.$row['bus_number'].' '.$row['bus_type'].' '.($row['operators'] ?? '')), ENT_QUOTES); ?>">
+    <header>
+        <span class="ad-ico <?php echo $is_ac ? '' : 'green'; ?>"><i class="fa fa-bus" aria-hidden="true"></i></span>
+        <div><h3>Bus <?php echo htmlspecialchars($row['bus_number']); ?></h3><span class="ad-pill <?php echo $is_ac ? 'info' : 'active'; ?>"><?php echo htmlspecialchars($row['bus_type']); ?></span></div>
+    </header>
+    <dl>
+        <div><dt>Capacity</dt><dd><?php echo (int)$row['capacity']; ?> seats</dd></div>
+        <div><dt>Upcoming</dt><dd><?php echo (int)$row['upcoming']; ?> trip<?php echo (int)$row['upcoming']===1?'':'s'; ?></dd></div>
+        <div><dt>Operator</dt><dd><?php echo !empty($row['operators']) ? htmlspecialchars($row['operators']) : '<span class="muted">Unassigned</span>'; ?></dd></div>
+    </dl>
+    <footer>
+        <button type="button" class="ad-btn sm" data-ad-open="edit" data-title="Edit bus" data-action="update_bus" data-edit="<?php echo htmlspecialchars(json_encode($edit), ENT_QUOTES); ?>"><i class="fa fa-pen" aria-hidden="true"></i> Edit</button>
+        <form method="POST" data-confirm="Delete this bus?"><?php csrf_field(); ?><input type="hidden" name="bus_id" value="<?php echo (int)$row['bus_id']; ?>"><button type="submit" name="delete_bus" class="ad-icon danger" aria-label="Delete bus"><i class="fa fa-trash" aria-hidden="true"></i></button></form>
+    </footer>
 </article>
 <?php endforeach; ?>
-</section>
+</div>
 
+<dialog class="ad-dialog" id="adDialog" aria-labelledby="adTitle">
+    <form method="POST" class="ad-form">
+        <?php csrf_field(); ?>
+        <header class="ad-dialog-head"><h2 id="adTitle">Add bus</h2><button type="button" class="ad-x" data-ad-close aria-label="Close"><i class="fa fa-xmark" aria-hidden="true"></i></button></header>
+        <div class="ad-dialog-body">
+            <input type="hidden" name="bus_id">
+            <label class="ad-field"><span>Bus number</span><input type="text" name="bus_number" required placeholder="e.g. 101"></label>
+            <div class="ad-two">
+                <label class="ad-field"><span>Type</span><select name="bus_type" required><option value="Aircon">Aircon</option><option value="Ordinary">Ordinary</option></select></label>
+                <label class="ad-field"><span>Seats</span><input type="number" name="capacity" min="1" max="100" required placeholder="40"></label>
+            </div>
+        </div>
+        <footer class="ad-dialog-foot">
+            <button type="button" class="ad-btn" data-ad-close>Cancel</button>
+            <button type="submit" class="ad-btn primary" id="adSubmit" name="add_bus" value="1">Save</button>
+        </footer>
+    </form>
+</dialog>
 </main>
 
 <script>
@@ -281,6 +279,7 @@ document.addEventListener('keydown', function(e) {
         <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
 </nav>
+<script src="../Assets/js/admin_list.js"></script>
 <script src="../Assets/js/app-header.js"></script>
 </body>
 </html>

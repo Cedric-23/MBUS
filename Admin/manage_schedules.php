@@ -87,7 +87,7 @@ ORDER BY departure_time ASC
     <link rel="stylesheet" href="../Assets/css/admin/manage_schedules.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/professional-filters.css">
-    <link rel="stylesheet" href="../Assets/css/admin/schedules_compact.css">
+    <link rel="stylesheet" href="../Assets/css/admin/admin_ui.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
@@ -155,13 +155,6 @@ ORDER BY departure_time ASC
 <div class="alert alert-error" role="alert"><?php echo $error; ?></div>
 <?php endif; ?>
 
-<!-- Filter Tabs -->
-<div class="route-filters" aria-label="Schedule filters">
-<a href="?filter=all" class="route-chip <?php echo (!isset($_GET['filter']) || $_GET['filter']==='all') ? 'active' : ''; ?>" aria-current="<?php echo (!isset($_GET['filter']) || $_GET['filter']==='all') ? 'page' : 'false'; ?>">All Routes</a>
-<a href="?filter=morong" class="route-chip <?php echo (isset($_GET['filter']) && $_GET['filter']==='morong') ? 'active' : ''; ?>" aria-current="<?php echo (isset($_GET['filter']) && $_GET['filter']==='morong') ? 'page' : 'false'; ?>">Morong → SBMA</a>
-<a href="?filter=sbma" class="route-chip <?php echo (isset($_GET['filter']) && $_GET['filter']==='sbma') ? 'active' : ''; ?>" aria-current="<?php echo (isset($_GET['filter']) && $_GET['filter']==='sbma') ? 'page' : 'false'; ?>">SBMA → Morong</a>
-</div>
-
 <?php
 $bus_rows=[]; mbus_db_data_seek($buses, 0);
 while($b=mbus_db_fetch_assoc($buses)){ $bus_rows[]=$b; }
@@ -169,95 +162,85 @@ $route_rows=[]; mbus_db_data_seek($routes, 0);
 while($r=mbus_db_fetch_assoc($routes)){ $route_rows[]=$r; }
 $bus_label=[]; foreach($bus_rows as $b){ $bus_label[(int)$b['bus_id']]=$b['bus_number']; }
 $filter = $_GET['filter'] ?? 'all';
-$groups=[]; $sched_ids=[];
+$groups=[]; $all_count=0; $active_count=0; $today_count=0;
 mbus_db_data_seek($query, 0);
 while($row = mbus_db_fetch_assoc($query)){
     $route_type = (stripos((string)$row['origin'], 'morong') !== false) ? 'morong' : 'sbma';
+    $all_count++;
+    if($row['schedule_status'] === 'Active') $active_count++;
+    if(date('Y-m-d', strtotime($row['departure_time'])) === date('Y-m-d')) $today_count++;
     if($filter !== 'all' && $filter !== $route_type) continue;
     $row['route_type']=$route_type;
     $groups[date('Y-m-d', strtotime($row['departure_time']))][]=$row;
 }
-$bus_options = function($selected=null) use ($bus_rows){
-    $o='';
-    foreach($bus_rows as $b){ $o.='<option value="'.(int)$b['bus_id'].'"'.($selected!==null && (int)$b['bus_id']===(int)$selected?' selected':'').'>Bus '.htmlspecialchars($b['bus_number']).' · '.(int)$b['capacity'].' seats</option>'; }
-    return $o;
-};
-$route_options = function($selected=null) use ($route_rows){
-    $o='';
-    foreach($route_rows as $r){ $o.='<option value="'.(int)$r['route_id'].'"'.($selected!==null && (int)$r['route_id']===(int)$selected?' selected':'').'>'.htmlspecialchars($r['origin']).' → '.htmlspecialchars($r['destination']).'</option>'; }
-    return $o;
-};
+$bus_options = function() use ($bus_rows){ $o='<option value="">Select bus</option>'; foreach($bus_rows as $b){ $o.='<option value="'.(int)$b['bus_id'].'">Bus '.htmlspecialchars($b['bus_number']).' &middot; '.(int)$b['capacity'].' seats</option>'; } return $o; };
+$route_options = function() use ($route_rows){ $o='<option value="">Select route</option>'; foreach($route_rows as $r){ $o.='<option value="'.(int)$r['route_id'].'">'.htmlspecialchars($r['origin']).' &rarr; '.htmlspecialchars($r['destination']).'</option>'; } return $o; };
 ?>
+<div class="ad-stats">
+    <div class="ad-stat"><span class="ad-ico"><i class="fa fa-calendar-days" aria-hidden="true"></i></span><div><b><?php echo $all_count; ?></b><small>Total schedules</small></div></div>
+    <div class="ad-stat"><span class="ad-ico green"><i class="fa fa-circle-check" aria-hidden="true"></i></span><div><b><?php echo $active_count; ?></b><small>Active</small></div></div>
+    <div class="ad-stat"><span class="ad-ico amber"><i class="fa fa-clock" aria-hidden="true"></i></span><div><b><?php echo $today_count; ?></b><small>Departing today</small></div></div>
+</div>
 
-<!-- ADD SCHEDULE -->
-<details class="sc-add" <?php echo isset($error) && isset($_POST['add_schedule']) ? 'open' : ''; ?>>
-    <summary class="sc-link strong">+ Add schedule</summary>
-    <form method="POST" class="sc-add-form">
-        <?php csrf_field(); ?>
-        <select name="bus_id" aria-label="Bus" class="form-control" required>
-            <option value="">Bus</option><?php echo $bus_options(); ?>
-        </select>
-        <select name="route_id" aria-label="Route" class="form-control" required>
-            <option value="">Route</option><?php echo $route_options(); ?>
-        </select>
-        <input type="datetime-local" name="departure_time" aria-label="Departure" class="form-control" required>
-        <input type="datetime-local" name="arrival_time" aria-label="Arrival" class="form-control" required>
-        <select name="schedule_status" aria-label="Status" class="form-control">
-            <option value="Active">Active</option><option value="Cancelled">Cancelled</option><option value="Completed">Completed</option>
-        </select>
-        <button type="submit" name="add_schedule" class="sc-link strong">Save</button>
-    </form>
-</details>
+<div class="ad-toolbar">
+    <label class="ad-search"><i class="fa fa-magnifying-glass" aria-hidden="true"></i><input type="search" id="adSearch" placeholder="Search bus, route or date" aria-label="Search schedules"></label>
+    <nav class="ad-seg" aria-label="Schedule filters">
+        <a href="?filter=all" class="<?php echo $filter==='all' ? 'on' : ''; ?>">All</a>
+        <a href="?filter=morong" class="<?php echo $filter==='morong' ? 'on' : ''; ?>">Morong &rarr; SBMA</a>
+        <a href="?filter=sbma" class="<?php echo $filter==='sbma' ? 'on' : ''; ?>">SBMA &rarr; Morong</a>
+    </nav>
+    <button type="button" class="ad-btn primary" data-ad-open="add" data-title="Add schedule" data-action="add_schedule"><i class="fa fa-plus" aria-hidden="true"></i> Add schedule</button>
+</div>
 
-<!-- SCHEDULE LIST -->
-<section class="sc-list" aria-label="Schedules">
-<?php if(!$groups): ?>
-    <p class="sc-empty">No schedules yet.</p>
-<?php endif; ?>
+<?php if(!$groups): ?><div class="ad-empty"><i class="fa fa-calendar-xmark" aria-hidden="true"></i><p>No schedules found.</p></div><?php endif; ?>
 <?php foreach($groups as $day => $rows): ?>
-    <h2 class="sc-day"><?php echo date('D, M j', strtotime($day)); ?></h2>
-    <?php foreach($rows as $row):
-        $sid=(int)$row['schedule_id']; $fid='sf-'.$sid; $sched_ids[]=$sid;
-        $status=(string)$row['schedule_status'];
-        $dep=strtotime($row['departure_time']); $arr=strtotime($row['arrival_time']);
-        $bn=$bus_label[(int)$row['bus_id']] ?? $row['bus_id'];
-    ?>
-    <article class="sc-row dir-<?php echo $row['route_type']; ?> st-<?php echo strtolower($status); ?>" data-route="<?php echo $row['route_type']; ?>">
-        <div class="sc-main">
-            <span class="sc-time"><?php echo date('g:i A', $dep); ?><small> – <?php echo date('g:i A', $arr); ?></small></span>
-            <span class="sc-route"><?php echo htmlspecialchars($row['origin']); ?> → <?php echo htmlspecialchars($row['destination']); ?></span>
-            <span class="sc-bus">Bus <?php echo htmlspecialchars((string)$bn); ?></span>
-            <span class="sc-status sc-<?php echo strtolower($status); ?>"><?php echo htmlspecialchars($status); ?></span>
-            <span class="sc-actions">
-                <button type="button" class="sc-link" onclick="scEdit(this,true)">Edit</button>
-                <button type="submit" form="<?php echo $fid; ?>" name="delete_schedule" class="sc-icon sc-del" onclick="return confirm('Delete this schedule?')" aria-label="Delete schedule"><i class="fa fa-trash" aria-hidden="true"></i></button>
-            </span>
+<section class="ad-group" data-group>
+    <h2 class="ad-day"><?php echo date('l, M j', strtotime($day)); ?> <span><?php echo count($rows); ?> trip<?php echo count($rows)===1?'':'s'; ?></span></h2>
+    <div class="ad-table">
+        <div class="ad-th"><span>Departure</span><span>Route</span><span>Bus</span><span>Seats</span><span>Status</span><span></span></div>
+        <?php foreach($rows as $row):
+            $sid=(int)$row['schedule_id']; $status=(string)$row['schedule_status'];
+            $dep=strtotime($row['departure_time']); $arr=strtotime($row['arrival_time']);
+            $bn=$bus_label[(int)$row['bus_id']] ?? $row['bus_id'];
+            $cap=max(1,(int)$row['capacity']); $taken=(int)$row['taken']; $pct=min(100,(int)round($taken*100/$cap));
+            $edit=['schedule_id'=>$sid,'bus_id'=>(int)$row['bus_id'],'route_id'=>(int)$row['route_id'],'departure_time'=>date('Y-m-d\TH:i',$dep),'arrival_time'=>date('Y-m-d\TH:i',$arr),'schedule_status'=>$status];
+        ?>
+        <div class="ad-tr" data-q="<?php echo htmlspecialchars(strtolower($row['origin'].' '.$row['destination'].' bus '.$bn.' '.date('M j l', $dep).' '.$status), ENT_QUOTES); ?>">
+            <div class="ad-c time"><b><?php echo date('g:i A', $dep); ?></b><small>to <?php echo date('g:i A', $arr); ?></small></div>
+            <div class="ad-c route"><span class="ad-dir <?php echo $row['route_type']; ?>"></span><span><?php echo htmlspecialchars($row['origin']); ?> <i class="fa fa-arrow-right" aria-hidden="true"></i> <?php echo htmlspecialchars($row['destination']); ?></span></div>
+            <div class="ad-c bus"><i class="fa fa-bus" aria-hidden="true"></i> Bus <?php echo htmlspecialchars((string)$bn); ?></div>
+            <div class="ad-c seats"><div class="ad-bar"><i style="width:<?php echo $pct; ?>%"></i></div><small><?php echo $taken; ?>/<?php echo $cap; ?></small></div>
+            <div class="ad-c status"><span class="ad-pill <?php echo strtolower($status); ?>"><?php echo htmlspecialchars($status); ?></span></div>
+            <div class="ad-c actions">
+                <button type="button" class="ad-icon" data-ad-open="edit" data-title="Edit schedule" data-action="update_schedule" data-edit="<?php echo htmlspecialchars(json_encode($edit), ENT_QUOTES); ?>" aria-label="Edit schedule"><i class="fa fa-pen" aria-hidden="true"></i></button>
+                <form method="POST" data-confirm="Delete this schedule?"><?php csrf_field(); ?><input type="hidden" name="schedule_id" value="<?php echo $sid; ?>"><button type="submit" name="delete_schedule" class="ad-icon danger" aria-label="Delete schedule"><i class="fa fa-trash" aria-hidden="true"></i></button></form>
+            </div>
         </div>
-        <div class="sc-meta">
-            <span><?php echo (int)$row['taken']; ?>/<?php echo (int)$row['capacity']; ?> seats</span>
-            <?php if(!empty($row['trip_status']) && $row['trip_status'] !== 'Scheduled'): ?><span><?php echo htmlspecialchars($row['trip_status']); ?></span><?php endif; ?>
-        </div>
-        <div class="sc-edit" hidden>
-            <select form="<?php echo $fid; ?>" name="bus_id" aria-label="Bus" class="form-control"><?php echo $bus_options($row['bus_id']); ?></select>
-            <select form="<?php echo $fid; ?>" name="route_id" aria-label="Route" class="form-control"><?php echo $route_options($row['route_id']); ?></select>
-            <input type="datetime-local" form="<?php echo $fid; ?>" name="departure_time" aria-label="Departure" class="form-control" value="<?php echo date('Y-m-d\TH:i', $dep); ?>">
-            <input type="datetime-local" form="<?php echo $fid; ?>" name="arrival_time" aria-label="Arrival" class="form-control" value="<?php echo date('Y-m-d\TH:i', $arr); ?>">
-            <select form="<?php echo $fid; ?>" name="schedule_status" aria-label="Status" class="form-control">
-                <?php foreach(['Active','Cancelled','Completed'] as $st){ echo '<option'.($status===$st?' selected':'').'>'.$st.'</option>'; } ?>
-            </select>
-            <span class="sc-edit-actions">
-                <button type="submit" form="<?php echo $fid; ?>" name="update_schedule" class="sc-link strong">Save</button>
-                <button type="button" class="sc-link" onclick="scEdit(this,false)">Cancel</button>
-            </span>
-        </div>
-    </article>
-    <?php endforeach; ?>
-<?php endforeach; ?>
-<?php foreach($sched_ids as $sid){ ?>
-    <form id="sf-<?php echo $sid; ?>" method="POST" hidden><?php csrf_field(); ?><input type="hidden" name="schedule_id" value="<?php echo $sid; ?>"></form>
-<?php } ?>
+        <?php endforeach; ?>
+    </div>
 </section>
+<?php endforeach; ?>
 
+<dialog class="ad-dialog" id="adDialog" aria-labelledby="adTitle">
+    <form method="POST" class="ad-form">
+        <?php csrf_field(); ?>
+        <header class="ad-dialog-head"><h2 id="adTitle">Add schedule</h2><button type="button" class="ad-x" data-ad-close aria-label="Close"><i class="fa fa-xmark" aria-hidden="true"></i></button></header>
+        <div class="ad-dialog-body">
+            <input type="hidden" name="schedule_id">
+            <label class="ad-field"><span>Bus</span><select name="bus_id" required><?php echo $bus_options(); ?></select></label>
+            <label class="ad-field"><span>Route</span><select name="route_id" required><?php echo $route_options(); ?></select></label>
+            <div class="ad-two">
+                <label class="ad-field"><span>Departure</span><input type="datetime-local" name="departure_time" required></label>
+                <label class="ad-field"><span>Arrival</span><input type="datetime-local" name="arrival_time" required></label>
+            </div>
+            <label class="ad-field"><span>Status</span><select name="schedule_status"><option>Active</option><option>Cancelled</option><option>Completed</option></select></label>
+        </div>
+        <footer class="ad-dialog-foot">
+            <button type="button" class="ad-btn" data-ad-close>Cancel</button>
+            <button type="submit" class="ad-btn primary" id="adSubmit" name="add_schedule" value="1">Save</button>
+        </footer>
+    </form>
+</dialog>
 </main>
 
 <script>
@@ -329,6 +312,7 @@ document.addEventListener('keydown', function(e) {
         <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
 </nav>
+<script src="../Assets/js/admin_list.js"></script>
 <script src="../Assets/js/app-header.js"></script>
 </body>
 </html>
