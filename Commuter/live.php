@@ -26,6 +26,7 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="../Assets/css/waiting_board.css">
     <link rel="stylesheet" href="../Assets/css/commuter_live.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_live.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
 </head>
 <body class="has-bottom-nav waiting-board-page commuter-live-page live-page">
 <main class="main" role="main">

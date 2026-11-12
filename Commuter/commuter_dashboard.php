@@ -89,6 +89,7 @@ function mbus_home_when(string $ts): string {
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/commuter_home.css">
     <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
+    <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
 </head>
 
 <body class="home-page has-bottom-nav">

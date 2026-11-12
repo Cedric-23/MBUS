@@ -275,6 +275,7 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/operator_riders.css">
     <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
+    <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
 </head>
 <body class="has-sidebar has-bottom-nav riders-page">
 

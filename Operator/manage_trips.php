@@ -162,6 +162,7 @@ $query = mbus_db_prepare($conn, "
     <link rel="stylesheet" href="../Assets/css/gps_status.css">
     <link rel="stylesheet" href="../Assets/css/operator/operator_trip_cards.css">
     <link rel="stylesheet" href="../Assets/css/direction_tabs.css">
+    <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
 </head>
 
 <body class="has-sidebar">

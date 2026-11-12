@@ -50,6 +50,7 @@ $config = [
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/commuter_pickup.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_pickup.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
 </head>
 <body class="pickup-page">
     <div id="pickupMap" class="pickup-map" role="region" aria-label="Map showing you and the bus"></div>

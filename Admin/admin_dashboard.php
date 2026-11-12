@@ -60,6 +60,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/commuter_home.css">
     <link rel="stylesheet" href="../Assets/css/staff_home.css">
+    <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
 </head>
 
 <body class="has-sidebar staff-home">
@@ -128,6 +129,8 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
         <div class="today-strip" aria-label="Today">
             <div><b><?php echo $trips_today; ?></b><span>Trips today</span></div>
             <div><b><?php echo $riders_today; ?></b><span>Booked riders today</span></div>
+            <div><b><?php echo $counts['Buses']; ?></b><span>Buses</span></div>
+            <div><b><?php echo $pending; ?></b><span>ID requests</span></div>
         </div>
 
         <section class="home-section" aria-labelledby="manage-h">
