@@ -120,3 +120,6 @@
 }
 .ad-toolbar .ad-btn.primary{margin-left:auto}
 .ad-toolbar{margin-top:.25rem}
+/* keep the dialog centred even if a global reset removes the default auto margins */
+.ad-dialog[open]{position:fixed;inset:0;margin:auto;height:fit-content;max-height:calc(100vh - 2rem);overflow:auto}
+.ad-dialog-body{align-items:stretch}
