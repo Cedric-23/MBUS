@@ -28,3 +28,7 @@ services:
         value: https://xeczvnheaixpfattbwsk.supabase.co
       - key: SUPABASE_ANON_KEY
         sync: false
+      - key: PAYMONGO_SECRET_KEY
+        sync: false
+      - key: PAYMONGO_WEBHOOK_SECRET
+        sync: false

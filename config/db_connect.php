@@ -51,6 +51,16 @@ try {
     } catch (PDOException $schema_error) {
         error_log('Reservation discount schema check failed: ' . $schema_error->getMessage());
     }
+    // PayMongo GCash checkout sessions: one row per redirect, finalized by the webhook or the return page.
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS paymongo_checkout (
+            session_id TEXT PRIMARY KEY, user_id INT NOT NULL, schedule_id INT NOT NULL,
+            reservation_ids TEXT NOT NULL, lines TEXT NOT NULL, amount NUMERIC(10,2) NOT NULL,
+            checkout_url TEXT, status TEXT NOT NULL DEFAULT 'Created', payment_ref TEXT, ticket_code TEXT,
+            created_at TIMESTAMP DEFAULT NOW(), paid_at TIMESTAMP)");
+    } catch (PDOException $schema_error) {
+        error_log('PayMongo schema check failed: ' . $schema_error->getMessage());
+    }
     // Operator application documents live in the database (the web host's disk is temporary).
     try {
         foreach (["license_document_b64 TEXT", "license_document_mime VARCHAR(50)", "vehicle_document_b64 TEXT", "vehicle_document_mime VARCHAR(50)"] as $col) {

@@ -5,6 +5,7 @@ include "../Includes/activity_log.php";
 include "../Includes/email_helper.php";
 include "../Includes/csrf.php";
 include "../Includes/fare.php";
+include "../Includes/paymongo.php";
 
 if(!isset($_SESSION['user_id'])){
     header("Location: ../login.php");
@@ -73,8 +74,65 @@ $expired = time() > $expiry;
 
 $error = "";
 
-/* CONFIRM PAYMENT */
-if(isset($_POST['confirm_payment'])){
+
+/* PAY WITH GCASH (PayMongo redirect) */
+if(isset($_POST['pay_gcash']) && paymongo_enabled()){
+    if(!csrf_validate_token()){
+        $error = "Security validation failed. Please try again.";
+    } elseif($expired){
+        mbus_db_prepare($conn, "UPDATE reservation SET status='Cancelled' WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'", [$user_id, $schedule_id]);
+        $error = "This reservation expired after 10 minutes. Please reserve your seats again.";
+    } else {
+        $types = []; $covered = [];
+        foreach($reservations as $i => $r){
+            $rid = $r['reservation_id'];
+            $types[$rid] = $default_types[$rid];
+            $covered[$rid] = ($types[$rid] !== 'Regular' && $i === 0);
+            if($types[$rid] !== 'Regular' && !$covered[$rid] && empty($r['id_image_b64'])){
+                $error = "Seat {$r['seat_number']} is a {$types[$rid]} ticket without an ID photo. Please reserve again.";
+                break;
+            }
+        }
+        if($error === ''){
+            $q2 = mbus_quote_lines($reservations, $types);
+            $idsJson = json_encode(array_map(fn($r) => (int)$r['reservation_id'], $reservations));
+            $linesJson = json_encode(array_map(fn($l) => $l + ['covered' => !empty($covered[$l['reservation_id']])], $q2['lines']));
+            try{
+                // Reuse a still-open checkout for the same seats and amount instead of opening a new one.
+                $ex = $conn->pdo->prepare("SELECT checkout_url FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? AND status = 'Created'
+                    AND reservation_ids = ? AND amount = ? AND created_at > NOW() - INTERVAL '25 minutes' ORDER BY created_at DESC LIMIT 1");
+                $ex->execute([$user_id, $schedule_id, $idsJson, $q2['total']]);
+                $url = $ex->fetchColumn();
+                if(!$url){
+                    $items = [];
+                    foreach($q2['lines'] as $l){
+                        $items[] = ['name' => 'Seat ' . $l['seat'] . ' (' . $l['type'] . ')', 'amount' => (int)round($l['final'] * 100)];
+                    }
+                    $base = paymongo_base_url();
+                    $co = paymongo_create_gcash_checkout($items,
+                        'MBUS ' . $reservations[0]['origin'] . ' to ' . $reservations[0]['route_destination'],
+                        'MBUS-' . $reservations[0]['reservation_id'],
+                        $base . '/Commuter/payment_return.php?schedule_id=' . (int)$schedule_id,
+                        $base . '/Commuter/payment.php?schedule_id=' . (int)$schedule_id,
+                        ['user_id' => (string)$user_id, 'schedule_id' => (string)$schedule_id, 'reservation_ids' => implode(',', json_decode($idsJson, true))]);
+                    $conn->pdo->prepare("INSERT INTO paymongo_checkout (session_id, user_id, schedule_id, reservation_ids, lines, amount, checkout_url) VALUES (?,?,?,?,?,?,?)")
+                        ->execute([$co['id'], $user_id, $schedule_id, $idsJson, $linesJson, $q2['total'], $co['checkout_url']]);
+                    // Restart the 10-minute hold so the payer has time to finish in GCash.
+                    $conn->pdo->prepare("UPDATE reservation SET created_at = NOW() WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'")->execute([$user_id, $schedule_id]);
+                    $url = $co['checkout_url'];
+                }
+                header("Location: " . $url);
+                exit();
+            } catch(Throwable $e){
+                $error = $e instanceof RuntimeException ? $e->getMessage() : "Could not start the GCash payment. Please try again.";
+                if(!($e instanceof RuntimeException)) error_log('GCash checkout start failed: ' . $e->getMessage());
+            }
+        }
+    }
+}
+
+/* CONFIRM PAYMENT (manual reference, only when PayMongo is not configured) */
+if(isset($_POST['confirm_payment']) && !paymongo_enabled()){
     // Validate CSRF token
     if(!csrf_validate_token()){
         $error = "Security validation failed. Please try again.";
@@ -181,6 +239,11 @@ if(isset($_POST['cancel_reservation'])){
         AND status='Pending'
         ", [$user_id, $schedule_id]);
         
+        if(paymongo_enabled()){
+            $open = mbus_db_prepare($conn, "SELECT session_id FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? AND status = 'Created'", [$user_id, $schedule_id]);
+            while($open !== false && ($o = mbus_db_fetch_assoc($open))){ paymongo_expire_session($o['session_id']); }
+            mbus_db_prepare($conn, "UPDATE paymongo_checkout SET status = 'Cancelled' WHERE user_id = ? AND schedule_id = ? AND status = 'Created'", [$user_id, $schedule_id]);
+        }
         // Log cancellation
         log_activity($conn, $user_id, ACTION_RESERVATION_CANCEL, "Cancelled pending reservation for schedule $schedule_id");
         
@@ -293,6 +356,19 @@ if(isset($_POST['cancel_reservation'])){
 <div class="alert alert-error" role="alert"><?php echo $error; ?></div>
 <?php endif; ?>
 
+<?php if(paymongo_enabled()): ?>
+<form method="POST" class="payment-form" id="payForm">
+    <?php csrf_field(); ?>
+    <div class="gcash-row">
+        <span class="gcash-mark" aria-hidden="true"><i class="fa fa-mobile-alt"></i></span>
+        <span class="gcash-text"><strong>GCash</strong><small>You&rsquo;ll be sent to GCash to approve the payment</small></span>
+    </div>
+    <button type="submit" name="pay_gcash" value="1" class="btn btn-primary btn-block"<?php echo $expired ? ' disabled' : ''; ?>>
+        Pay &#8369;<span id="btnAmt"><?php echo number_format($total, 2); ?></span> with GCash
+    </button>
+    <small class="form-hint">Your seats stay held while you pay. Your ticket appears as soon as GCash confirms.</small>
+</form>
+<?php else: ?>
 <form method="POST" class="payment-form" id="payForm">
     <?php csrf_field(); ?>
     
@@ -312,6 +388,7 @@ if(isset($_POST['cancel_reservation'])){
         Confirm payment &#8369;<span id="btnAmt"><?php echo number_format($total, 2); ?></span>
     </button>
 </form>
+<?php endif; ?>
 
 
 </div>
