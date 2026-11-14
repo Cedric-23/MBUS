@@ -3,79 +3,62 @@ session_start();
 include "config/db_connect.php";
 include "Includes/activity_log.php";
 
+require_once "Includes/csrf.php";
+
+/** Read an uploaded photo/PDF into base64 after checking its real type and size. */
+function mbus_application_file(string $field, &$error): ?array {
+    if (!isset($_FILES[$field]) || $_FILES[$field]['error'] === UPLOAD_ERR_NO_FILE) { $error = 'Please attach all required documents.'; return null; }
+    $f = $_FILES[$field];
+    if ($f['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name'])) { $error = 'A document could not be uploaded. Try a smaller file.'; return null; }
+    if ($f['size'] > 3 * 1024 * 1024) { $error = 'Each document must be 3 MB or smaller.'; return null; }
+    $data = file_get_contents($f['tmp_name']);
+    $mime = str_starts_with($data, "\xFF\xD8\xFF") ? 'image/jpeg' : (str_starts_with($data, "\x89PNG\r\n\x1a\n") ? 'image/png' : (str_starts_with($data, '%PDF-') ? 'application/pdf' : ''));
+    if ($mime === '') { $error = 'Documents must be a JPG, PNG or PDF file.'; return null; }
+    return ['b64' => base64_encode($data), 'mime' => $mime];
+}
+
 /* HANDLE OPERATOR APPLICATION SUBMISSION */
-if(isset($_POST['submit_application'])){
-    $full_name = trim($_POST['full_name']);
-    $email = trim($_POST['email']);
-    $phone_number = trim($_POST['phone_number']);
-    $address = trim($_POST['address']);
-    $license_number = trim($_POST['license_number']);
-    $license_expiry = trim($_POST['license_expiry']);
-    $vehicle_type = trim($_POST['vehicle_type']);
-    $vehicle_plate_number = trim($_POST['vehicle_plate_number']);
-    
-    // Validate phone number
-    if(!preg_match('/^09\d{9}$/', $phone_number)){
-        $error = "Phone number must be 11 digits starting with 09 (e.g., 09123456789).";
+if (isset($_POST['submit_application'])) {
+    $full_name = trim((string)($_POST['full_name'] ?? ''));
+    $email = strtolower(trim((string)($_POST['email'] ?? '')));
+    $phone_number = trim((string)($_POST['phone_number'] ?? ''));
+    $address = trim((string)($_POST['address'] ?? ''));
+    $license_number = trim((string)($_POST['license_number'] ?? ''));
+    $license_expiry = trim((string)($_POST['license_expiry'] ?? ''));
+    $vehicle_type = trim((string)($_POST['vehicle_type'] ?? ''));
+    $plate = strtoupper(trim((string)($_POST['vehicle_plate_number'] ?? '')));
+    $expiry_ts = strtotime($license_expiry);
+
+    if (!csrf_validate_token()) {
+        $error = 'Security validation failed. Please reload the page and try again.';
+    } elseif ($full_name === '' || strlen($full_name) > 255 || $address === '' || strlen($address) > 500 || $license_number === '' || strlen($license_number) > 100 || $plate === '' || strlen($plate) > 50) {
+        $error = 'Please fill in every field with valid details.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 255) {
+        $error = 'Enter a valid email address.';
+    } elseif (!preg_match('/^09\d{9}$/', $phone_number)) {
+        $error = 'Phone number must be 11 digits starting with 09 (e.g., 09123456789).';
+    } elseif (!in_array($vehicle_type, ['Bus', 'Van', 'Minibus'], true)) {
+        $error = 'Choose a vehicle type.';
+    } elseif (!$expiry_ts || $expiry_ts < strtotime('today')) {
+        $error = 'Your license has expired. Apply again with a valid license.';
     } else {
-        $full_name = mbus_db_escape($conn, $full_name);
-        $email = mbus_db_escape($conn, $email);
-        $phone_number = mbus_db_escape($conn, $phone_number);
-        $address = mbus_db_escape($conn, $address);
-        $license_number = mbus_db_escape($conn, $license_number);
-        $license_expiry = mbus_db_escape($conn, $license_expiry);
-        $vehicle_type = mbus_db_escape($conn, $vehicle_type);
-        $vehicle_plate_number = mbus_db_escape($conn, $vehicle_plate_number);
-    
-    // Handle license document upload
-    $license_document = '';
-    if(isset($_FILES['license_document']) && $_FILES['license_document']['error'] == 0){
-        $allowed = ['jpg', 'jpeg', 'png', 'pdf'];
-        $filename = $_FILES['license_document']['name'];
-        $file_ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        
-        if(in_array($file_ext, $allowed)){
-            $new_filename = "license_" . time() . "_" . rand(1000,9999) . "." . $file_ext;
-            $upload_path = "Assets/operator_documents/" . $new_filename;
-            
-            if(!file_exists("Assets/operator_documents/")){
-                mkdir("Assets/operator_documents/", 0777, true);
-            }
-            
-            if(move_uploaded_file($_FILES['license_document']['tmp_name'], $upload_path)){
-                $license_document = $new_filename;
+        $dup = mbus_db_prepare($conn, "SELECT 1 FROM users WHERE LOWER(email) = ? UNION SELECT 1 FROM operator_application WHERE LOWER(email) = ? AND application_status::text = 'Pending'", [$email, $email]);
+        if ($dup !== false && mbus_db_num_rows($dup) > 0) {
+            $error = 'This email already has an account or a pending application. Log in, or wait for the admin to review it.';
+        } else {
+            $lic = mbus_application_file('license_document', $error);
+            $veh = $lic ? mbus_application_file('vehicle_document', $error) : null;
+            if ($lic && $veh) {
+                $ok = mbus_db_prepare($conn, "INSERT INTO operator_application
+                    (full_name, email, phone_number, address, license_number, license_expiry, vehicle_type, vehicle_plate_number,
+                     license_document_b64, license_document_mime, vehicle_document_b64, vehicle_document_mime, application_status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')",
+                    [$full_name, $email, $phone_number, $address, $license_number, $license_expiry, $vehicle_type, $plate,
+                     $lic['b64'], $lic['mime'], $veh['b64'], $veh['mime']]);
+                if ($ok === false) { $error = 'We could not save your application. Please try again.'; }
+                else { $success = 'Application submitted. An admin will review it and email you at ' . htmlspecialchars($email) . '.'; }
             }
         }
-    }
-    
-    // Handle vehicle document upload
-    $vehicle_document = '';
-    if(isset($_FILES['vehicle_document']) && $_FILES['vehicle_document']['error'] == 0){
-        $allowed = ['jpg', 'jpeg', 'png', 'pdf'];
-        $filename = $_FILES['vehicle_document']['name'];
-        $file_ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        
-        if(in_array($file_ext, $allowed)){
-            $new_filename = "vehicle_" . time() . "_" . rand(1000,9999) . "." . $file_ext;
-            $upload_path = "Assets/operator_documents/" . $new_filename;
-            
-            if(!file_exists("Assets/operator_documents/")){
-                mkdir("Assets/operator_documents/", 0777, true);
-            }
-            
-            if(move_uploaded_file($_FILES['vehicle_document']['tmp_name'], $upload_path)){
-                $vehicle_document = $new_filename;
-            }
-        }
-    }
-    
-    // Insert application
-    mbus_db_query($conn,"
-        INSERT INTO operator_application (full_name, email, phone_number, address, license_number, license_expiry, vehicle_type, vehicle_plate_number, license_document_path, vehicle_document_path)
-        VALUES ('$full_name', '$email', '$phone_number', '$address', '$license_number', '$license_expiry', '$vehicle_type', '$vehicle_plate_number', '$license_document', '$vehicle_document')
-    ");
-    
-    $success = "Application submitted successfully. Please wait for admin approval.";
     }
 }
 ?>
@@ -117,6 +100,7 @@ if(isset($_POST['submit_application'])){
         <?php endif; ?>
 
         <form method="POST" enctype="multipart/form-data" class="login-form">
+            <?php csrf_field(); ?>
             <div class="auth-section">Personal information</div>
             <div class="form-field"><i class="fa fa-user form-field-icon" aria-hidden="true"></i>
                 <input type="text" name="full_name" required placeholder="Full name" autocomplete="name"></div>
@@ -130,7 +114,7 @@ if(isset($_POST['submit_application'])){
             <div class="form-field"><i class="fa fa-id-card form-field-icon" aria-hidden="true"></i>
                 <input type="text" name="license_number" required placeholder="License number"></div>
             <div class="form-field plain"><label class="auth-label" for="licExp">License expiry date</label>
-                <input type="date" name="license_expiry" id="licExp" required></div>
+                <input type="date" name="license_expiry" id="licExp" required min="<?php echo date('Y-m-d'); ?>"></div>
             <div class="form-field plain"><label class="auth-label" for="licDoc">License photo or PDF</label>
                 <input type="file" name="license_document" id="licDoc" accept=".jpg,.jpeg,.png,.pdf" required></div>
 

@@ -1,0 +1,17 @@
+<?php
+// Serves an operator application document (license or vehicle registration) to admins only.
+session_start();
+if (strtolower((string)($_SESSION['user_type'] ?? '')) !== 'admin') { http_response_code(403); exit; }
+include "../config/db_connect.php";
+$id = (int)($_GET['id'] ?? 0);
+$doc = ($_GET['doc'] ?? '') === 'vehicle' ? 'vehicle' : 'license';
+$q = mbus_db_prepare($conn, "SELECT {$doc}_document_b64 AS b64, {$doc}_document_mime AS mime FROM operator_application WHERE application_id = ?", [$id]);
+$r = $q === false ? false : mbus_db_fetch_assoc($q);
+$bin = $r && !empty($r['b64']) ? base64_decode($r['b64'], true) : false;
+if ($bin === false || $bin === '') { http_response_code(404); echo 'No document on file.'; exit; }
+$mime = in_array($r['mime'], ['image/jpeg', 'image/png', 'application/pdf'], true) ? $r['mime'] : 'application/octet-stream';
+header('Content-Type: ' . $mime);
+header('Content-Disposition: inline; filename="' . $doc . '-' . $id . '"');
+header('X-Content-Type-Options: nosniff');
+header('Cache-Control: private, max-age=300');
+echo $bin;

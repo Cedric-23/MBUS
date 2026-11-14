@@ -51,6 +51,14 @@ try {
     } catch (PDOException $schema_error) {
         error_log('Reservation discount schema check failed: ' . $schema_error->getMessage());
     }
+    // Operator application documents live in the database (the web host's disk is temporary).
+    try {
+        foreach (["license_document_b64 TEXT", "license_document_mime VARCHAR(50)", "vehicle_document_b64 TEXT", "vehicle_document_mime VARCHAR(50)"] as $col) {
+            $pdo->exec('ALTER TABLE operator_application ADD COLUMN IF NOT EXISTS ' . $col);
+        }
+    } catch (PDOException $schema_error) {
+        error_log('Operator application schema check failed: ' . $schema_error->getMessage());
+    }
     $conn = new MbusConnection($pdo);
 } catch (PDOException $e) {
     $GLOBALS['mbus_connect_error'] = $e->getMessage();

@@ -188,3 +188,21 @@
 /* checkbox: beat global input rules */
 .vf-row input.vf-check,.vf-head input[type=checkbox]{-webkit-appearance:checkbox !important;appearance:auto !important;width:18px !important;height:18px !important;min-width:18px !important;min-height:18px !important;max-width:18px !important;padding:0 !important;margin:0 !important;border-radius:4px;flex:none}
 @media(max-width:860px){.vf-row .c-chk{align-self:start;padding-top:.2rem}.vf-row .c-act{justify-self:start}}
+/* Operator applications */
+.oa-list{display:grid;gap:12px;margin-top:14px}
+.oa-card{padding:16px;border:1px solid var(--ad-line);border-radius:16px;background:var(--ad-bg)}
+.oa-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.oa-head h2{margin:0;font-size:1.02rem;color:var(--ad-text)}.oa-head p{margin:2px 0 0;font-size:.84rem;color:var(--ad-muted,#6b7a8d);overflow-wrap:anywhere}
+.oa-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 18px;margin:14px 0 0}
+.oa-facts dt{font-size:.74rem;color:var(--ad-muted,#6b7a8d)}.oa-facts dd{margin:2px 0 0;font-size:.9rem;color:var(--ad-text);overflow-wrap:anywhere}
+.oa-bad{color:#b42318;font-weight:600}
+.oa-docs{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.oa-miss{font-size:.82rem;color:#b42318;align-self:center}
+.oa-reason{margin:12px 0 0;font-size:.86rem;color:#b42318}
+.oa-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-top:14px;padding-top:14px;border-top:1px solid var(--ad-line)}
+.oa-reject summary{list-style:none}.oa-reject summary::-webkit-details-marker{display:none}
+.oa-reject[open]{flex:1 1 100%}.oa-reject textarea{display:block;width:100%;margin:8px 0;padding:10px;border:1px solid var(--ad-line);border-radius:10px;font:inherit;font-size:.9rem}
+.oa-empty{margin:22px 0;color:#6b7a8d}
+.oa-admin{margin-top:22px;padding:14px 16px;border:1px dashed var(--ad-line);border-radius:14px}
+.oa-admin summary{cursor:pointer;font-weight:600;font-size:.92rem}.oa-admin p{margin:8px 0;font-size:.84rem;color:#6b7a8d}
+.oa-admin-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.oa-admin-form input{height:42px;padding:0 12px;border:1px solid var(--ad-line);border-radius:10px;font:inherit;font-size:.9rem;min-width:0}
