@@ -26,6 +26,7 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="../Assets/css/waiting_board.css">
     <link rel="stylesheet" href="../Assets/css/commuter_live.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_live.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/commuter_pickup.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_pickup.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
 </head>
 <body class="has-bottom-nav waiting-board-page commuter-live-page live-page">
@@ -46,6 +47,11 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
         </div>
     </header>
     <p id="liveMessage" class="board-notice" role="status" aria-live="polite" hidden></p>
+
+    <section class="lv-pickup" aria-label="Pick up">
+        <div class="lv-pick-text"><strong id="lvPickTitle">Waiting for your bus?</strong><span id="lvPickSub">Tap Pick up and the operator will see where you are.</span></div>
+        <button type="button" id="lvPickBtn" class="lv-pick-btn">Pick up</button>
+    </section>
 
     <section class="board-summary" aria-label="Summary">
         <div class="board-stat">
@@ -100,6 +106,8 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
 <script src="../Assets/js/route_utils.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/route_utils.js'); ?>"></script>
 <script src="../Assets/js/live_schedule_selection.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/live_schedule_selection.js'); ?>"></script>
 <script src="../Assets/js/commuter_live.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/commuter_live.js'); ?>"></script>
+<script src="../Assets/js/mbus_quick_pickup.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/mbus_quick_pickup.js'); ?>"></script>
+<script src="../Assets/js/commuter_live_pickup.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/commuter_live_pickup.js'); ?>"></script>
 <script src="../Assets/js/flow-feedback.js"></script>
 <script src="../Assets/js/app-header.js"></script>
 </body>

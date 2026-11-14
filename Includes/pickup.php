@@ -75,7 +75,7 @@ function mbus_pickup_validate_form(array $post, string $role): array
         throw new MbusPickupException('Invalid security token. Please refresh and try again.');
     }
     $action = $post['action'] ?? '';
-    if (!is_string($action) || !in_array($action, ['wait', 'cancel', 'picked_up'], true)) {
+    if (!is_string($action) || !in_array($action, ['wait', 'cancel', 'picked_up', 'quick'], true)) {
         throw new MbusPickupException('Unknown pickup action.');
     }
     if (($action === 'picked_up' && !in_array($role, ['operator', 'admin'], true))
@@ -83,7 +83,12 @@ function mbus_pickup_validate_form(array $post, string $role): array
         throw new MbusPickupException('This action is not permitted for your account.', 403);
     }
     $data = ['action' => $action];
-    if ($action === 'wait') {
+    if ($action === 'quick') {
+        // One-tap pickup: the server picks the trip (reserved trip first), the rider only shares a location.
+        $data['latitude'] = mbus_pickup_coordinate($post['latitude'] ?? null, 90);
+        $data['longitude'] = mbus_pickup_coordinate($post['longitude'] ?? null, 180);
+        $data['pickup_label'] = mbus_pickup_text($post['pickup_label'] ?? '', 100, false) ?: 'My location';
+    } elseif ($action === 'wait') {
         $data['schedule_id'] = mbus_pickup_positive_id($post['schedule_id'] ?? null);
         $data['latitude'] = mbus_pickup_coordinate($post['latitude'] ?? null, 90);
         $data['longitude'] = mbus_pickup_coordinate($post['longitude'] ?? null, 180);
@@ -149,6 +154,54 @@ function mbus_pickup_schedule_payload(array $row, ?int $now = null): array
     $result['action'] = $action;
     $result['stops'] = mbus_pickup_stops($row);
     return $result;
+}
+
+
+/** The commuter's own trip: earliest paid/confirmed reservation on an active trip today or later. */
+function mbus_pickup_reserved_trip(PDO $pdo, int $userId): ?array
+{
+    $stmt = $pdo->prepare("SELECT s.schedule_id, s.departure_time, s.arrival_time, s.trip_status, b.bus_number, r.origin, r.destination,
+            MIN(rv.pickup_location) AS pickup_location, MIN(rv.destination) AS stop_destination, COUNT(*) AS seats
+        FROM public.reservation rv
+        JOIN public.schedule s ON s.schedule_id = rv.schedule_id
+        JOIN public.buses b ON b.bus_id = s.bus_id
+        JOIN public.routes r ON r.route_id = s.route_id
+        WHERE rv.user_id = ? AND rv.status IN ('Paid', 'Confirmed')
+          AND s.schedule_status = 'Active' AND s.trip_status IN ('Scheduled', 'Boarding', 'Departed')
+          AND s.departure_time >= ?
+        GROUP BY s.schedule_id, s.departure_time, s.arrival_time, s.trip_status, b.bus_number, r.origin, r.destination
+        ORDER BY s.departure_time LIMIT 1");
+    $stmt->execute([$userId, date('Y-m-d 00:00:00')]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row) return null;
+    $row['schedule_id'] = (int)$row['schedule_id'];
+    $row['seats'] = (int)$row['seats'];
+    $row['departed'] = $row['trip_status'] === 'Departed';
+    $row['departure_time'] = (new DateTimeImmutable((string)$row['departure_time']))->format(DATE_ATOM);
+    $row['arrival_time'] = $row['arrival_time'] ? (new DateTimeImmutable((string)$row['arrival_time']))->format(DATE_ATOM) : null;
+    return $row;
+}
+
+/** Grab-style fallback when the rider has no reservation: the nearest live bus, else the next one boarding. */
+function mbus_pickup_nearest_trip(PDO $pdo, float $lat, float $lng): ?array
+{
+    $stmt = $pdo->prepare("SELECT s.schedule_id, r.destination, t.latitude, t.longitude
+        FROM public.schedule s JOIN public.routes r ON r.route_id = s.route_id
+        LEFT JOIN public.bus_live_tracking t ON t.schedule_id = s.schedule_id
+        WHERE s.schedule_status = 'Active' AND s.trip_status IN ('Boarding', 'Departed') AND s.departure_time >= ?
+        ORDER BY s.departure_time");
+    $stmt->execute([date('Y-m-d 00:00:00')]);
+    $best = null; $bestD = INF;
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $d = INF;
+        if ($row['latitude'] !== null) {
+            $dLa = deg2rad((float)$row['latitude'] - $lat); $dLo = deg2rad((float)$row['longitude'] - $lng);
+            $h = sin($dLa / 2) ** 2 + cos(deg2rad($lat)) * cos(deg2rad((float)$row['latitude'])) * sin($dLo / 2) ** 2;
+            $d = 6371 * 2 * asin(min(1, sqrt($h)));
+        }
+        if ($best === null || $d < $bestD) { $best = $row; $bestD = $d; }
+    }
+    return $best;
 }
 
 /** Intentionally SELECT-only: expiry never causes a heartbeat or a cleanup write. */
@@ -222,6 +275,9 @@ function mbus_pickup_feed(PDO $pdo, string $role, int $userId): array
         }
     }
     $result = ['ok' => true, 'ready' => $ready, 'schedules' => $schedules, 'requests' => $requests, 'server_time' => date(DATE_ATOM, $now)];
+    if ($role === 'commuter') {
+        $result['my_trip'] = mbus_pickup_reserved_trip($pdo, $userId);
+    }
     if (!$ready) {
         $result['message'] = MBUS_PICKUP_SETUP_MESSAGE;
     }
@@ -236,13 +292,38 @@ function mbus_pickup_mutate(PDO $pdo, string $role, int $userId, array $data): a
     // Defense in depth: callers cannot bypass role/form validation.
     $action = $data['action'] ?? '';
     if (($action === 'picked_up' && !in_array($role, ['operator', 'admin'], true))
-        || (in_array($action, ['wait', 'cancel'], true) && $role !== 'commuter')
-        || !in_array($action, ['wait', 'cancel', 'picked_up'], true)) {
+        || (in_array($action, ['wait', 'cancel', 'quick'], true) && $role !== 'commuter')
+        || !in_array($action, ['wait', 'cancel', 'picked_up', 'quick'], true)) {
         throw new MbusPickupException('This action is not permitted for your account.', 403);
     }
     $pdo->beginTransaction();
     try {
-        if ($action === 'wait') {
+        if ($action === 'quick') {
+            $trip = mbus_pickup_reserved_trip($pdo, $userId);
+            $destination = null;
+            if ($trip) {
+                $scheduleId = $trip['schedule_id'];
+                $destination = $trip['stop_destination'] ?: $trip['destination'];
+            } else {
+                $near = mbus_pickup_nearest_trip($pdo, $data['latitude'], $data['longitude']);
+                if (!$near) throw new MbusPickupException('No bus is boarding or on the road right now. Reserve a seat from Schedule, then tap Pick up.', 409);
+                $scheduleId = (int)$near['schedule_id'];
+                $destination = $near['destination'];
+            }
+            $stmt = $pdo->prepare('SELECT schedule_id FROM public.schedule WHERE schedule_id = ? FOR UPDATE');
+            $stmt->execute([$scheduleId]);
+            $stmt = $pdo->prepare("INSERT INTO public.pickup_requests
+                (user_id, schedule_id, status, latitude, longitude, pickup_label, destination, created_at, updated_at, expires_at)
+                VALUES (?, ?, 'Waiting', ?, ?, ?, ?, clock_timestamp(), clock_timestamp(), clock_timestamp() + INTERVAL '30 minutes')
+                ON CONFLICT (user_id) DO UPDATE SET
+                    request_id = EXCLUDED.request_id, schedule_id = EXCLUDED.schedule_id, status = 'Waiting',
+                    latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude, pickup_label = EXCLUDED.pickup_label,
+                    destination = EXCLUDED.destination, created_at = EXCLUDED.created_at, updated_at = EXCLUDED.updated_at,
+                    expires_at = EXCLUDED.expires_at
+                RETURNING request_id, schedule_id, status, updated_at, expires_at");
+            $stmt->execute([$userId, $scheduleId, $data['latitude'], $data['longitude'], $data['pickup_label'], strtoupper(substr((string)$destination, 0, 100))]);
+            $message = $trip ? 'The operator of your bus can see you are waiting.' : 'Waiting signal sent to the nearest bus.';
+        } elseif ($action === 'wait') {
             // Serialize against staff status changes; seat count/action are rechecked under the schedule lock.
             $stmt = $pdo->prepare('SELECT schedule_id FROM public.schedule WHERE schedule_id = ? FOR UPDATE');
             $stmt->execute([$data['schedule_id']]);
