@@ -15,16 +15,19 @@
 .page-header h1{margin:0;font-size:1.6rem!important;line-height:1.2}
 
 /* ---- Page margins: sidebar roles (admin / operator) ---- */
-body:has(> .sidebar) main,body:has(> aside.sidebar) main{margin:0 0 0 var(--u-side)!important;padding:var(--u-top) var(--u-pad) 40px!important;max-width:none!important;width:auto!important}
+body:not(.commuter-waiting-board):not(.staff-wait-page):has(> .sidebar) main,body:not(.commuter-waiting-board):not(.staff-wait-page):has(> aside.sidebar) main{margin:0 0 0 var(--u-side)!important;padding:var(--u-top) var(--u-pad) 40px!important;max-width:none!important;width:auto!important}
 
 /* ---- Page margins: commuter (no sidebar) = one centred column ---- */
-body:not(:has(.sidebar)) main{margin:0 auto!important;padding:var(--u-top) 18px 104px!important;max-width:var(--u-col)!important;width:100%}
-body:not(:has(.sidebar)) .profile-menu-wrap{right:max(18px,calc((100vw - var(--u-col))/2 + 18px))}
+body:not(.commuter-waiting-board):not(.staff-wait-page):not(:has(.sidebar)) main{margin:0 auto!important;padding:var(--u-top) 18px 104px!important;max-width:var(--u-col)!important;width:100%}
+body:not(:has(.sidebar)):not(.commuter-waiting-board):not(.staff-wait-page) .profile-menu-wrap{right:max(18px,calc((100vw - var(--u-col))/2 + 18px))}
 
 /* ---- Phones ---- */
 @media (max-width:768px){
   :root{--u-pad:16px;--u-top:14px}
-  body:has(> .sidebar) main,body:has(> aside.sidebar) main,body:not(:has(.sidebar)) main{margin:0!important;padding:var(--u-top) var(--u-pad) 104px!important;max-width:none!important}
+  body:not(.commuter-waiting-board):not(.staff-wait-page) main{margin:0!important;padding:var(--u-top) var(--u-pad) 104px!important;max-width:none!important}
   .profile-menu-wrap,body:not(:has(.sidebar)) .profile-menu-wrap{right:var(--u-pad)}
   .page-header h1{font-size:1.35rem!important}
 }
+
+/* Full-screen map boards: trigger stays top-right of the screen like everywhere else */
+.commuter-waiting-board .profile-menu-wrap,.staff-wait-page .profile-menu-wrap{top:14px;right:16px}
