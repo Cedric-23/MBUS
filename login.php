@@ -205,11 +205,13 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
                         <div class="form-password-input">
                             <div class="password-input">
                                 <label>Password</label>
-                                <input name="password" type="password" placeholder="Enter your password"
-                                       autocomplete="current-password"
-                                       <?= isset($field_errors['password']) ? 'aria-invalid="true"' : '' ?> maxlength="72"/>
-                                <i class="input-icon" data-lucide="lock"></i>
-                                <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false"></button>
+                                <div class="password-control">
+                                    <input name="password" type="password" placeholder="Enter your password"
+                                           autocomplete="current-password"
+                                           <?= isset($field_errors['password']) ? 'aria-invalid="true"' : '' ?> maxlength="72"/>
+                                    <i class="input-icon" data-lucide="lock"></i>
+                                    <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false"></button>
+                                </div>
                                 <?= mbus_field_error($field_errors, 'password') ?>
                             </div>
                         </div>
