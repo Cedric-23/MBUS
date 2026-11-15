@@ -39,7 +39,28 @@ document.querySelectorAll(".reservation-mode-tab").forEach(tab => {
 });
 
 function renderSeatDestinationControls() {
-    document.querySelectorAll(".seat-destination-mini").forEach(el => el.remove());
+    const destinationBox = document.getElementById("seatDestinations");
+    destinationBox.innerHTML = "";
+    if (reservationMode !== "multi" || selectedSeats.length < 2) return;
+
+    selectedSeats.forEach(seat => {
+        const row = document.createElement("label");
+        row.className = "passenger-row destination-row";
+        row.textContent = "Destination for seat " + seat;
+
+        const select = destination.cloneNode(false);
+        select.id = "destination_" + seat;
+        select.name = "destination_" + seat;
+        select.disabled = false;
+        select.innerHTML = destination.innerHTML;
+        select.value = seatDestinations[seat] || "";
+        select.addEventListener("change", () => {
+            seatDestinations[seat] = select.value;
+        });
+
+        row.appendChild(select);
+        destinationBox.appendChild(row);
+    });
 }
 
 /* SELECT SEATS */
@@ -141,27 +162,10 @@ document.getElementById("doneBtn")
         return;
     }
 
-    const destinationBox = document.getElementById("seatDestinations");
-    destinationBox.innerHTML = "";
     selectedSeats.forEach(seat => {
-        if (reservationMode !== "multi") {
-            seatDestinations[seat] = destination.value;
-            return;
-        }
-        const row = document.createElement("label");
-        row.className = "passenger-row destination-row";
-        row.textContent = "Destination for seat " + seat;
-        const select = destination.cloneNode(false);
-        select.id = "destination_" + seat;
-        select.name = "destination_" + seat;
-        select.disabled = false;
-        select.innerHTML = destination.innerHTML;
-        select.value = seatDestinations[seat] || "";
-        select.addEventListener("change", () => { seatDestinations[seat] = select.value; });
-        row.appendChild(select);
-        destinationBox.appendChild(row);
-        seatDestinations[seat] = select.value;
+        if (reservationMode === "solo") seatDestinations[seat] = destination.value;
     });
+    renderSeatDestinationControls();
 
     if (reservationMode === "multi" && selectedSeats.some(seat => !seatDestinations[seat])) {
         showTopError("Choose a destination for every selected seat.");
