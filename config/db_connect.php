@@ -76,11 +76,19 @@ try {
     }
     // Operator application documents live in the database (the web host's disk is temporary).
     try {
-        foreach (["license_document_b64 TEXT", "license_document_mime VARCHAR(50)", "vehicle_document_b64 TEXT", "vehicle_document_mime VARCHAR(50)"] as $col) {
+        foreach (["license_document_b64 TEXT", "license_document_mime VARCHAR(50)", "vehicle_document_b64 TEXT", "vehicle_document_mime VARCHAR(50)", "password_hash TEXT"] as $col) {
             $pdo->exec('ALTER TABLE operator_application ADD COLUMN IF NOT EXISTS ' . $col);
         }
     } catch (PDOException $schema_error) {
         error_log('Operator application schema check failed: ' . $schema_error->getMessage());
+    }
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS conductor_application (
+            application_id SERIAL PRIMARY KEY, full_name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL,
+            phone_number VARCHAR(20) NOT NULL, password_hash TEXT NOT NULL, application_status TEXT NOT NULL DEFAULT 'Pending',
+            submitted_at TIMESTAMP DEFAULT NOW(), reviewed_at TIMESTAMP, reviewed_by INT, rejection_reason TEXT, user_id INT)");
+    } catch (PDOException $schema_error) {
+        error_log('Conductor application schema check failed: ' . $schema_error->getMessage());
     }
     $conn = new MbusConnection($pdo);
 } catch (PDOException $e) {

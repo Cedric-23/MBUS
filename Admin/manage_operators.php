@@ -161,6 +161,7 @@ $assigned = count(array_filter($op_list, fn($x) => !empty($x['buses'])));
 <div class="ad-toolbar">
     <button type="button" class="ad-btn primary" data-ad-open="add" data-title="Add operator" data-action="add_operator"><i class="fa fa-plus" aria-hidden="true"></i> Add operator</button>
     <a class="ad-btn" href="operator_applications.php"><i class="fa fa-user-check" aria-hidden="true"></i> Applications</a>
+    <a class="ad-btn" href="conductor_applications.php"><i class="fa fa-user-check" aria-hidden="true"></i> Conductor applications</a>
 </div>
 
 <?php if(!$op_list): ?><div class="ad-empty"><i class="fa fa-user-gear" aria-hidden="true"></i><p>No operators yet.</p></div><?php endif; ?>

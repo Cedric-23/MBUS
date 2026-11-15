@@ -4,6 +4,7 @@ if (strtolower((string)($_SESSION['user_type'] ?? '')) !== 'admin') { header('Lo
 include "../config/db_connect.php";
 include "../Includes/csrf.php";
 include_once "../Includes/email_helper.php";
+include_once "../Includes/validation.php";
 
 $success = $_SESSION['oa_flash'] ?? ''; $error = ''; unset($_SESSION['oa_flash']);
 $admin_id = (int)$_SESSION['user_id'];
@@ -26,18 +27,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $st = $pdo->prepare("SELECT 1 FROM users WHERE LOWER(email) = LOWER(?)");
                 $st->execute([$app['email']]);
                 if ($st->fetchColumn()) throw new RuntimeException('An account with this email already exists. Reject this application or ask the applicant to use another email.');
-                $temp = oa_temp_password();
+                // Applicants choose their own password when they apply; older applications get a temporary one.
+                $temp = empty($app['password_hash']) ? oa_temp_password() : '';
+                $hashToStore = $temp !== '' ? password_hash($temp, PASSWORD_DEFAULT) : $app['password_hash'];
                 $st = $pdo->prepare("INSERT INTO users (full_name, email, phone_number, password, user_type) VALUES (?, ?, ?, ?, 'operator') RETURNING user_id");
-                $st->execute([$app['full_name'], $app['email'], $app['phone_number'], password_hash($temp, PASSWORD_DEFAULT)]);
+                $st->execute([$app['full_name'], $app['email'], $app['phone_number'], $hashToStore]);
                 $uid = (int)$st->fetchColumn();
                 $st = $pdo->prepare("UPDATE operator_application SET application_status = 'Approved', user_id = ?, reviewed_at = NOW(), reviewed_by = ?, rejection_reason = NULL WHERE application_id = ?");
                 $st->execute([$uid, $admin_id, $id]);
                 $pdo->commit();
                 $mail = "<h2>Operator application approved</h2><p>Hi " . htmlspecialchars($app['full_name']) . ", your MBUS operator account is ready.</p>"
-                    . "<p><strong>Email:</strong> " . htmlspecialchars($app['email']) . "<br><strong>Temporary password:</strong> " . htmlspecialchars($temp) . "</p>"
-                    . "<p>Log in and change your password from your profile right away.</p>";
+                    . "<p><strong>Email:</strong> " . htmlspecialchars($app['email']) . "</p>"
+                    . ($temp !== '' ? "<p><strong>Temporary password:</strong> " . htmlspecialchars($temp) . "<br>Log in and change it from your profile.</p>" : "<p>Log in with the password you chose when you applied.</p>");
                 $sent = @send_email_notification($app['email'], 'Your MBUS operator account', $mail);
-                $_SESSION['oa_flash'] = 'Approved ' . $app['full_name'] . '. Temporary password: ' . $temp . ($sent ? ' (also emailed).' : ' — email could not be sent, so give it to them directly.');
+                $_SESSION['oa_flash'] = 'Approved ' . $app['full_name'] . '. ' . ($temp !== '' ? 'Temporary password: ' . $temp . ($sent ? ' (also emailed).' : ' (email could not be sent, so give it to them directly).')
+                    : 'They can log in now with the password they chose.');
             } else {
                 $reason = trim((string)($_POST['rejection_reason'] ?? ''));
                 if ($reason === '' || strlen($reason) > 500) throw new RuntimeException('Give a short reason (up to 500 characters) when rejecting.');
@@ -56,8 +60,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['add_admin'])) {
         $name = trim((string)($_POST['full_name'] ?? '')); $email = strtolower(trim((string)($_POST['email'] ?? '')));
         $phone = trim((string)($_POST['phone_number'] ?? '')); $pw = (string)($_POST['password'] ?? '');
-        if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) $error = 'Enter a name and a valid email.';
-        elseif (!preg_match('/^09\d{9}$/', $phone)) $error = 'Phone number must be 11 digits starting with 09.';
+        if ($e = mbus_check_name($name)) $error = $e;
+        elseif ($e = mbus_check_email($email)) $error = $e;
+        elseif ($e = mbus_check_phone($phone)) $error = $e;
         elseif (strlen($pw) < 10) $error = 'Admin passwords need at least 10 characters.';
         else {
             $dup = mbus_db_prepare($conn, "SELECT 1 FROM users WHERE LOWER(email) = ?", [$email]);

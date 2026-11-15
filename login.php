@@ -4,244 +4,244 @@ session_start();
 include "config/db_connect.php";
 include "Includes/activity_log.php";
 include "Includes/csrf.php";
+include_once "Includes/validation.php";
 
-$csrf_error = '';
-$login_error = '';
+/* Local escape helper (distinct name so it can't clash with your includes) */
+function login_e($v): string {
+    return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+}
 
-if(isset($_POST['login'])){
+/*
+ * Account types are normalised to the names your dashboards already use.
+ * register.php calls them "passenger"/"driver"; the rest of the system uses
+ * "commuter"/"operator".
+ */
+$type_aliases = [
+    'passenger' => 'commuter',
+    'driver'    => 'operator',
+];
 
-    // Validate CSRF token
-    if(!csrf_validate_token()){
-        $csrf_error = 'Security validation failed. Please try again.';
+$dashboards = [
+    'commuter'  => 'Commuter/commuter_dashboard.php',
+    'operator'  => 'Operator/operator_dashboard.php',
+    'admin'     => 'Admin/admin_dashboard.php',
+    'conductor' => 'Conductor/conductor_dashboard.php',
+];
+
+$csrf_error    = '';
+$login_error   = '';
+$login_success = '';
+
+if (isset($_GET['registered'])) {
+    $login_success = 'Account created successfully. You can now sign in.';
+}
+
+$field_errors = [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    if (!csrf_validate_token()) {
+        $csrf_error = 'Security validation failed. Please reload the page and try again.';
     } else {
-        $email = trim($_POST['email']);
-        $password = trim($_POST['password']);
+        $email    = strtolower(trim((string)($_POST['email'] ?? '')));
+        $password = (string)($_POST['password'] ?? '');   // never trimmed
 
-        // Use prepared statement to prevent SQL injection
-        $sql = "SELECT * FROM users WHERE LOWER(email) = LOWER(?)";
-        $result = mbus_db_prepare($conn, $sql, [$email]);
+        $_SESSION['login_fails'] = $_SESSION['login_fails'] ?? ['n' => 0, 'until' => 0];
+        if ($email === '') $field_errors['email'] = 'Enter your email address.';
+        elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) $field_errors['email'] = 'That does not look like an email address (example: juan@gmail.com).';
+        if ($password === '') $field_errors['password'] = 'Enter your password.';
 
-        if($result === false){
-            error_log("Login query failed: " . mbus_db_error($conn));
-            $login_error = 'Login is temporarily unavailable. Please try again in a moment.';
-        } elseif(mbus_db_num_rows($result) > 0){
-
-        $user = mbus_db_fetch_assoc($result);
-
-        if(password_verify($password, $user['password'])){
-
-            // Regenerate session ID to prevent session fixation
-            session_regenerate_id(true);
-
-            $_SESSION['user_id'] = $user['user_id'];
-            $_SESSION['full_name'] = $user['full_name'];
-            $_SESSION['user_type'] = strtolower($user['user_type']);
-            $_SESSION['profile_picture'] = $user['profile_picture'] ?? 'default.png';
-
-            // Log successful login
-            log_activity($conn, $user['user_id'], ACTION_LOGIN, "User logged in successfully");
-
-            if($_SESSION['user_type'] == "commuter"){
-                header("Location: Commuter/commuter_dashboard.php");
-                exit();
-            }
-            elseif($_SESSION['user_type'] == "operator"){
-                header("Location: Operator/operator_dashboard.php");
-                exit();
-            }
-            elseif($_SESSION['user_type'] == "admin"){
-                header("Location: Admin/admin_dashboard.php");
-                exit();
-            }
-            else{
-                $login_error = 'Invalid user type';
-            }
-
+        if ($field_errors) {
+            $login_error = 'Please fix the highlighted fields.';
+        } elseif ($_SESSION['login_fails']['until'] > time()) {
+            $login_error = 'Too many wrong attempts. Try again in ' . ($_SESSION['login_fails']['until'] - time()) . ' seconds.';
         } else {
-            $login_error = 'Incorrect password';
-        }
+            $result = mbus_db_prepare($conn, "SELECT * FROM users WHERE LOWER(email) = ?", [$email]);
 
-        } else {
-            $login_error = 'User not found';
+            if ($result === false) {
+                error_log("Login query failed: " . mbus_db_error($conn));
+                $login_error = 'Login is temporarily unavailable. Please try again in a moment.';
+            } elseif (mbus_db_num_rows($result) > 0) {
+                $user = mbus_db_fetch_assoc($result);
+
+                if (!empty($user['password']) && password_verify($password, $user['password'])) {
+                    $type = strtolower(trim($user['user_type'] ?? ''));
+                    $type = $type_aliases[$type] ?? $type;
+
+                    if (!isset($dashboards[$type])) {
+                        $login_error = 'This account type cannot sign in here. Contact an admin.';
+                    } else {
+                        session_regenerate_id(true);
+                        $_SESSION['user_id']         = $user['user_id'];
+                        $_SESSION['full_name']       = $user['full_name'];
+                        $_SESSION['user_type']       = $type;
+                        $_SESSION['profile_picture'] = $user['profile_picture'] ?? 'default.png';
+                        $_SESSION['login_fails']     = ['n' => 0, 'until' => 0];
+
+                        log_activity($conn, $user['user_id'], ACTION_LOGIN, "User logged in successfully");
+                        header("Location: " . $dashboards[$type]);
+                        exit();
+                    }
+                } else {
+                    $field_errors['password'] = 'Incorrect password. Check it and try again, or use Forgot password.';
+                    $login_error = 'Incorrect password.';
+                }
+            } else {
+                // No account yet: is there an application waiting or rejected?
+                $note = '';
+                $q = mbus_db_prepare($conn, "SELECT application_status::text AS s, rejection_reason AS r FROM operator_application WHERE LOWER(email) = ? ORDER BY submitted_at DESC LIMIT 1", [$email]);
+                $row = $q !== false ? mbus_db_fetch_assoc($q) : null;
+                if (!$row) {
+                    $q = mbus_db_prepare($conn, "SELECT application_status AS s, rejection_reason AS r FROM conductor_application WHERE LOWER(email) = ? ORDER BY submitted_at DESC LIMIT 1", [$email]);
+                    $row = $q !== false ? mbus_db_fetch_assoc($q) : null;
+                }
+                if ($row && $row['s'] === 'Pending') {
+                    $note = 'Your application is still being reviewed by an admin. You can log in once it is approved.';
+                } elseif ($row && $row['s'] === 'Rejected') {
+                    $note = 'Your application was not approved' . (!empty($row['r']) ? ': ' . $row['r'] : '.') . ' You can apply again with correct details.';
+                }
+                if ($note !== '') {
+                    $login_error = $note;
+                } else {
+                    $field_errors['email'] = 'No account found with this email. Check the spelling or create an account.';
+                    $login_error = 'No account found.';
+                }
+            }
+
+            if (isset($field_errors['password']) || isset($field_errors['email'])) {
+                $f = &$_SESSION['login_fails']; $f['n']++;
+                if ($f['n'] >= 5) { $f['until'] = time() + 60; $f['n'] = 0; $login_error = 'Too many wrong attempts. Try again in 60 seconds.'; }
+                unset($f);
+            }
         }
     }
 }
-?>
 
+$has_error = ($csrf_error !== '' || $login_error !== '');
+?>
 <!DOCTYPE html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>MBUS - Sign In</title>
+        <link rel="stylesheet" href="Assets/css/global/font.css"/>
+        <link rel="stylesheet" href="Assets/css/main/register.css?v=<?= @filemtime(__DIR__ . '/Assets/css/main/register.css') ?>"/>
+        <script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+        <style>
+            .form-alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
+            .form-alert.error   { background: #fdecea; color: #b42318; border: 1px solid #f5c2be; }
+            .form-alert.success { background: #e7f6ec; color: #1a7f37; border: 1px solid #b7e4c7; }
 
-<title>MBUS Login</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<link rel="stylesheet" href="Assets/css/responsive.css">
-<link rel="stylesheet" href="login.css">
-    <link rel="stylesheet" href="Assets/css/auth.css">
-</head>
-
-<body class="login-page">
-<div class="login-container">
-    
-    <div class="login-brand">
-        <img src="Assets/images/mbus_icon.png" alt="MBUS Logo" class="login-logo">
-        <div class="login-brand-text">
-            <h2>Morong - SBMA Bus Reservation</h2>
-            <p>Fast. Reliable. Connected.</p>
-        </div>
-    </div>
-
-    <div class="login-card">
-        <div class="login-header">
-            <h3>Welcome Back</h3>
-            <p>Sign in to your account to continue</p>
-        </div>
-
-        <?php if($csrf_error): ?>
-            <div class="login-alert login-alert-error">
-                <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
-                <span><?php echo htmlspecialchars($csrf_error); ?></span>
-            </div>
-        <?php endif; ?>
-
-        <?php if($login_error): ?>
-            <div class="login-alert login-alert-error">
-                <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
-                <span><?php echo htmlspecialchars($login_error); ?></span>
-            </div>
-        <?php endif; ?>
-
-        <form method="POST" class="login-form" novalidate>
-            <?php csrf_field(); ?>
-
-            <div class="form-field">
-                <label for="email">Email Address</label>
-                <input 
-                    type="email" 
-                    autocapitalize="none" autocorrect="off" spellcheck="false"
-                    id="email" 
-                    name="email" 
-                    placeholder="Enter your email"
-                    required
-                    autocomplete="email"
-                    aria-describedby="email-hint"
-                >
-                <i class="fa-solid fa-envelope form-field-icon" aria-hidden="true"></i>
-            </div>
-
-            <div class="form-field">
-                <label for="password">Password</label>
-                <input 
-                    type="password" 
-                    id="password" 
-                    name="password" 
-                    placeholder="Enter your password"
-                    required
-                    autocomplete="current-password"
-                    aria-describedby="password-hint"
-                >
-                <i class="fa-solid fa-lock form-field-icon" aria-hidden="true"></i>
-                <button 
-                    type="button" 
-                    class="password-toggle" 
-                    aria-label="Toggle password visibility"
-                    aria-pressed="false"
-                    onmousedown="showPassword('password')"
-                    onmouseup="hidePassword('password')"
-                    onmouseleave="hidePassword('password')"
-                >
-                    <i class="fa-solid fa-eye" aria-hidden="true"></i>
-                </button>
-            </div>
-
-                        <button 
-                            type="submit" 
-                            name="login" 
-                            class="btn btn-primary btn-block login-submit"
-                        >
-                            Login
-                        </button>
-        </form>
-
-                <div class="login-footer">
-                    <p><a href="forgot_password.php" class="forgot-link">Forgot Password?</a></p>
-                    <p>Don't have an account? <a href="register.php">Register</a></p>
+            /* Login has single-column fields, so stack them full width */
+            .login-form .form-contact-input,
+            .login-form .form-password-input { display: block; width: 100%; margin-bottom: 16px; }
+            .login-form .form-email-input,
+            .login-form .password-input { width: 100%; }
+            .login-form .login-options { display: flex; justify-content: flex-end; margin-bottom: 16px; font-size: 14px; }
+            .login-form .login-options a { color: #086FCF; text-decoration: none; }
+            .login-form input[aria-invalid="true"] { border-color: #d92d20; }
+            .login-form .form-email-input,.login-form .password-input{position:relative}
+        </style>
+    </head>
+    <body>
+        <div class="left-container">
+            <div class="left-container-child-1">
+                <div class="logo-wordmark">
+                    <img src="Assets/images/mbus_logo.png" alt="logo">
                 </div>
-    </div>
+            </div>
+            <div class="left-container-child-2">
+                <div class="lc-heading">
+                    <h1>Travel smarter.</h1>
+                    <h1>Travel on time.</h1>
+                </div>
+                <div class="lc-sub-heading">
+                    <p>Your dependable way to reserve seats, manage trips, and travel with confidence.</p>
+                </div>
+            </div>
+            <div class="lc-circle-1"></div>
+            <div class="lc-circle-2"></div>
+        </div>
+        <div class="right-container">
+            <div class="form-container">
+                <div class="form-header">
+                    <div class="form-header-text">
+                        <h1>Welcome back</h1>
+                        <p>Sign in to manage your trips and bookings.</p>
+                    </div>
+                </div>
 
-</div>
+                <?php if ($csrf_error): ?>
+                    <div class="form-alert error" role="alert"><?= login_e($csrf_error) ?></div>
+                <?php endif; ?>
+                <?php if ($login_error): ?>
+                    <div class="form-alert error" role="alert"><?= login_e($login_error) ?></div>
+                <?php endif; ?>
+                <?php if ($login_success && !$has_error): ?>
+                    <div class="form-alert success" role="status"><?= login_e($login_success) ?></div>
+                <?php endif; ?>
 
-<script src="register.js"></script>
+                <form action="login.php" class="form-body login-form" method="POST" novalidate>
+                    <?php csrf_field(); ?>
 
-<script>
-// Password visibility toggle
-function showPassword(fieldId) {
-    const field = document.getElementById(fieldId);
-    const toggle = field.parentElement.querySelector('.password-toggle');
-    if (field && toggle) {
-        field.type = 'text';
-        toggle.innerHTML = '<i class="fa-solid fa-eye-slash" aria-hidden="true"></i>';
-        toggle.setAttribute('aria-pressed', 'true');
-    }
-}
+                    <div class="passenger active" id="login">
+                        <div class="form-contact-input">
+                            <div class="form-email-input">
+                                <label>Email Address</label>
+                                <input name="email" type="email" placeholder="juan@example.com"
+                                       value="<?= login_e($_POST['email'] ?? '') ?>"
+                                       autocapitalize="none" autocorrect="off" spellcheck="false"
+                                       autocomplete="email" autofocus
+                                       <?= isset($field_errors['email']) ? 'aria-invalid="true"' : '' ?> maxlength="254"/>
+                                <i class="input-icon" data-lucide="mail"></i>
+                                <?= mbus_field_error($field_errors, 'email') ?>
+                            </div>
+                        </div>
+                        <div class="form-password-input">
+                            <div class="password-input">
+                                <label>Password</label>
+                                <input name="password" type="password" placeholder="Enter your password"
+                                       autocomplete="current-password"
+                                       <?= isset($field_errors['password']) ? 'aria-invalid="true"' : '' ?> maxlength="72"/>
+                                <i class="input-icon" data-lucide="lock"></i>
+                                <?= mbus_field_error($field_errors, 'password') ?>
+                            </div>
+                        </div>
 
-function hidePassword(fieldId) {
-    const field = document.getElementById(fieldId);
-    const toggle = field.parentElement.querySelector('.password-toggle');
-    if (field && toggle) {
-        field.type = 'password';
-        toggle.innerHTML = '<i class="fa-solid fa-eye" aria-hidden="true"></i>';
-        toggle.setAttribute('aria-pressed', 'false');
-    }
-}
+                        <div class="login-options">
+                            <a href="forgot_password.php">Forgot password?</a>
+                        </div>
 
-// Form validation feedback
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('.login-form');
-    const submitBtn = document.querySelector('.login-submit');
-    
-    if (form && submitBtn) {
-        form.addEventListener('submit', function(e) {
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            
-            if (!email || !password) {
-                e.preventDefault();
-                return;
-            }
-            
-            // Show loading state
-            submitBtn.classList.add('loading');
-            submitBtn.innerHTML = '<span class="visually-hidden">Signing in...</span>';
-        });
-    }
-    
-    // Auto-focus email field
-    const emailField = document.getElementById('email');
-    if (emailField) {
-        emailField.focus();
-    }
-});
-</script>
+                        <button class="submit-button" id="login-submit" type="submit">Sign in</button>
 
-<style>
-.visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-}
-</style>
+                        
 
-<script src="Assets/js/password-toggle.js"></script>
-</body>
+                        <div class="footer">
+                            <p>Don't have an account? <a style="color: #086FCF; text-decoration: none;" href="register.php?type=passenger">Create one</a></p>
+                            <p>Want to drive with us? <a style="color: #086FCF; text-decoration: none;" href="register.php?type=driver">Apply as Driver/Operator</a></p>
+                            
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+            if (window.lucide) lucide.createIcons();
+
+            // Loading state on submit (the server doesn't depend on the button's name/value)
+            var form = document.querySelector('.login-form');
+            var submitBtn = document.getElementById('login-submit');
+            form.addEventListener('submit', function () {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Signing in…';
+            });
+            // Re-enable if the user comes back with the browser's Back button
+            window.addEventListener('pageshow', function () {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign in';
+            });
+        </script>
+    </body>
 </html>
