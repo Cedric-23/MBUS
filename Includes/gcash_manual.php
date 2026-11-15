@@ -49,21 +49,52 @@ function mbus_parse_gcash_sms(string $text): ?array {
     return ['amount' => (float)str_replace(',', '', $a[1]), 'reference' => $r[1], 'sender' => substr($sender, 0, 120)];
 }
 
-/** Match a submitted reference to a received GCash payment and, when the amount covers the fare, issue the ticket. */
+/** Close open payments older than 30 minutes so their centavo amounts can be reused. */
+function mbus_sweep_open_payments($conn): void {
+    $conn->pdo->exec("UPDATE paymongo_checkout SET status = 'Expired' WHERE status = 'Submitted' AND session_id LIKE 'manual\\_%' AND submitted_at < NOW() - INTERVAL '30 minutes'");
+}
+
+/**
+ * Open a GCash payment for the seats. The payable amount is the fare minus a unique number of centavos (1-99),
+ * so the received-money SMS identifies this booking with no reference number to type. Returns the session id.
+ */
+function mbus_open_gcash_payment($conn, int $userId, int $scheduleId, array $payload): ?string {
+    $pdo = $conn->pdo;
+    mbus_sweep_open_payments($conn);
+    $start = random_int(1, 99);
+    for ($i = 0; $i < 99; $i++) {
+        $cents = (($start + $i - 1) % 99) + 1;
+        $amount = round((float)$payload['total'] - $cents / 100, 2);
+        $sid = 'manual_' . bin2hex(random_bytes(8));
+        try {
+            $pdo->prepare("INSERT INTO paymongo_checkout (session_id, user_id, schedule_id, reservation_ids, lines, amount, status, submitted_at)
+                VALUES (?,?,?,?,?,?,'Submitted',NOW())")->execute([$sid, $userId, $scheduleId, $payload['idsJson'], $payload['linesJson'], $amount]);
+            return $sid;
+        } catch (PDOException $e) {
+            if ((string)$e->getCode() !== '23505') throw $e; // amount taken by another open payment: try the next one
+        }
+    }
+    return null;
+}
+
+/** Match an open payment to a received GCash SMS with the same amount and, if found, issue the ticket. */
 function mbus_try_autoapprove($conn, string $sessionId): array {
     $pdo = $conn->pdo;
-    $st = $pdo->prepare("SELECT reference_number, amount FROM paymongo_checkout WHERE session_id = ? AND status = 'Submitted'");
+    $st = $pdo->prepare("SELECT amount, submitted_at FROM paymongo_checkout WHERE session_id = ? AND status = 'Submitted'");
     $st->execute([$sessionId]);
     $co = $st->fetch(PDO::FETCH_ASSOC);
     if (!$co) return ['matched' => false];
-    // Claim the incoming payment atomically so it can only ever pay for one checkout.
-    $claim = $pdo->prepare("UPDATE incoming_payments SET used_by = ? WHERE reference_number = ? AND used_by IS NULL AND amount >= ? RETURNING id");
-    $claim->execute([$sessionId, $co['reference_number'], $co['amount']]);
-    $id = $claim->fetchColumn();
-    if (!$id) return ['matched' => false];
-    $res = mbus_finalize_payment($conn, $sessionId, (string)$co['reference_number']);
+    // Claim one unused incoming payment atomically so it can only ever pay for one booking.
+    $claim = $pdo->prepare("UPDATE incoming_payments SET used_by = ? WHERE id = (
+            SELECT id FROM incoming_payments WHERE used_by IS NULL AND ABS(amount - ?) < 0.005 AND received_at >= ?::timestamp - INTERVAL '2 minutes'
+            ORDER BY received_at LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, reference_number");
+    $claim->execute([$sessionId, $co['amount'], $co['submitted_at']]);
+    $in = $claim->fetch(PDO::FETCH_ASSOC);
+    if (!$in) return ['matched' => false];
+    $pdo->prepare("UPDATE paymongo_checkout SET reference_number = ? WHERE session_id = ?")->execute([$in['reference_number'], $sessionId]);
+    $res = mbus_finalize_payment($conn, $sessionId, (string)$in['reference_number']);
     if (empty($res['ok'])) {
-        $pdo->prepare("UPDATE incoming_payments SET used_by = NULL WHERE id = ?")->execute([$id]);
+        $pdo->prepare("UPDATE incoming_payments SET used_by = NULL WHERE id = ?")->execute([$in['id']]);
         return ['matched' => false, 'message' => $res['message'] ?? ''];
     }
     return ['matched' => true, 'ticket' => $res['ticket'] ?? ''];

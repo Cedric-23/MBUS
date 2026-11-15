@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$co) {
             $error = 'That payment was already reviewed.';
         } elseif (isset($_POST['approve'])) {
-            $res = mbus_finalize_payment($conn, $sid, (string)$co['reference_number']);
+            $res = mbus_finalize_payment($conn, $sid, (string)($co['reference_number'] ?: 'ADMIN-' . substr($sid, 7, 8)));
             if (!empty($res['ok'])) {
                 $conn->pdo->prepare("UPDATE paymongo_checkout SET reviewed_by = ?, reviewed_at = NOW() WHERE session_id = ?")->execute([$admin_id, $sid]);
                 $_SESSION['gp_flash'] = 'Payment approved. Ticket ' . ($res['ticket'] ?? '') . ' issued.';
@@ -64,6 +64,9 @@ $conn->pdo->exec("UPDATE paymongo_checkout SET status = 'Expired' WHERE status =
 $smsToken = mbus_sms_token($conn);
 $smsUrl = (function(){ $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https'; return ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/api/gcash_sms_webhook.php?token='; })();
 $recvQ = mbus_db_prepare($conn, "SELECT reference_number, amount, sender, received_at, used_by FROM incoming_payments ORDER BY received_at DESC LIMIT 8", []);
+$lastQ = mbus_db_prepare($conn, "SELECT EXTRACT(EPOCH FROM (NOW() - MAX(received_at))) AS secs FROM incoming_payments", []);
+$lastRow = $lastQ === false ? false : mbus_db_fetch_assoc($lastQ);
+$lastSecs = ($lastRow && $lastRow['secs'] !== null) ? (int)$lastRow['secs'] : null;
 $received = []; while ($recvQ !== false && ($rr = mbus_db_fetch_assoc($recvQ))) $received[] = $rr;
 $opts = ['submitted' => 'To verify', 'paid' => 'Approved', 'rejected' => 'Rejected'];
 $f = $_GET['status'] ?? 'submitted'; if (!isset($opts[$f])) $f = 'submitted';
@@ -172,7 +175,7 @@ $gName = mbus_setting($conn, 'gcash_name'); $gNum = mbus_setting($conn, 'gcash_n
             <strong>&#8369;<?php echo number_format((float)$c['amount'], 2); ?></strong>
         </div>
         <dl class="oa-facts">
-            <div><dt>Reference</dt><dd><?php echo htmlspecialchars((string)$c['reference_number']); ?><?php if((int)$c['dups'] > 0): ?> <span class="oa-bad">· used before</span><?php endif; ?></dd></div>
+            <div><dt>Reference</dt><dd><?php echo $c['reference_number'] ? htmlspecialchars((string)$c['reference_number']) : 'Waiting for SMS'; ?><?php if((int)$c['dups'] > 0): ?> <span class="oa-bad">· used before</span><?php endif; ?></dd></div>
             <div><dt>Trip</dt><dd><?php echo htmlspecialchars((string)$c['route']); ?><br><?php echo $c['departure'] ? date('M j, g:i A', strtotime($c['departure'])) : ''; ?></dd></div>
             <div><dt>Seats</dt><dd><?php echo htmlspecialchars(implode(', ', $seats)); ?></dd></div>
             <div><dt>Submitted</dt><dd><?php echo $c['submitted_at'] ? date('M j, g:i A', strtotime($c['submitted_at'])) : ''; ?></dd></div>
@@ -196,8 +199,9 @@ $gName = mbus_setting($conn, 'gcash_name'); $gNum = mbus_setting($conn, 'gcash_n
 
 <details class="oa-admin" <?php echo $gNum === '' ? 'open' : ''; ?>>
     <summary>Automatic payment matching (phone setup)</summary>
-    <p>Install an SMS forwarder app on the phone that has your GCash SIM (e.g. &ldquo;SMS Forwarder&rdquo; on Android). Forward messages containing &ldquo;received&rdquo; to this web address, sending the message text in a field named <code>message</code>. MBUS then confirms commuters&rsquo; tickets by itself when their reference number and amount match.</p>
+    <p>Install an SMS forwarder app on the phone that has your GCash SIM (e.g. &ldquo;SMS Forwarder&rdquo; on Android). Forward messages containing &ldquo;received&rdquo; to this web address, sending the message text in a field named <code>message</code>. Each commuter pays a unique amount (the fare minus a few centavos), so MBUS confirms their ticket by itself when the matching payment arrives.</p>
     <p><code style="word-break:break-all"><?php echo htmlspecialchars($smsUrl . $smsToken); ?></code></p>
+    <p><strong>Phone status:</strong> <?php echo $lastSecs === null ? 'no payment SMS received yet. Send yourself a small GCash amount to test.' : 'last payment SMS ' . ($lastSecs < 3600 ? max(1, (int)round($lastSecs / 60)) . ' min ago' : round($lastSecs / 3600, 1) . ' h ago') . '.'; ?></p>
     <?php if($received): ?><p>Latest payments seen:</p><ul style="margin:0 0 10px;padding-left:18px;font-size:.86rem">
     <?php foreach($received as $rc): ?><li>&#8369;<?php echo number_format((float)$rc['amount'], 2); ?> · ref <?php echo htmlspecialchars($rc['reference_number']); ?> · <?php echo $rc['used_by'] ? 'matched' : 'unmatched'; ?></li><?php endforeach; ?></ul><?php else: ?><p>No payments received yet.</p><?php endif; ?>
 </details>

@@ -68,6 +68,8 @@ try {
         $pdo->exec("CREATE TABLE IF NOT EXISTS incoming_payments (
             id SERIAL PRIMARY KEY, reference_number VARCHAR(40) UNIQUE NOT NULL, amount NUMERIC(10,2) NOT NULL,
             sender TEXT, raw_message TEXT, received_at TIMESTAMP DEFAULT NOW(), used_by TEXT)");
+        // Each open GCash payment gets its own centavo amount, so the incoming SMS identifies the booking.
+        $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS uq_manual_open_amount ON paymongo_checkout (amount) WHERE status = 'Submitted' AND session_id LIKE 'manual\\_%'");
         $pdo->exec("CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')");
     } catch (PDOException $schema_error) {
         error_log('Manual payment schema check failed: ' . $schema_error->getMessage());

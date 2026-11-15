@@ -5,12 +5,13 @@ session_start();
 include "../config/db_connect.php";
 include "../Includes/paymongo.php";
 include "../Includes/payment_finalize.php";
+include_once "../Includes/gcash_manual.php";
 
 if(!isset($_SESSION['user_id'])){ header("Location: ../login.php"); exit(); }
 $user_id = (int)$_SESSION['user_id'];
 $schedule_id = (int)($_GET['schedule_id'] ?? 0);
 
-$st = $conn->pdo->prepare("SELECT session_id, status, reject_reason FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? ORDER BY created_at DESC LIMIT 1");
+$st = $conn->pdo->prepare("SELECT session_id, status, reject_reason, amount, submitted_at FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? ORDER BY created_at DESC LIMIT 1");
 $st->execute([$user_id, $schedule_id]);
 $co = $st->fetch(PDO::FETCH_ASSOC);
 if(!$co){ header("Location: my_reservations.php"); exit(); }
@@ -32,9 +33,10 @@ if($co['status'] === 'Paid'){
         $message = 'We could not reach PayMongo just now. This page will keep trying.';
     }
 } elseif($co['status'] === 'Submitted'){
-    include_once "../Includes/gcash_manual.php";
     $m = mbus_try_autoapprove($conn, $co['session_id']);
     $state = !empty($m['matched']) ? 'paid' : 'review';
+} elseif($co['status'] === 'Expired'){
+    $state = 'expired';
 } elseif($co['status'] === 'Rejected'){
     $state = 'rejected';
     $message = trim((string)$co['reject_reason']);
@@ -42,7 +44,10 @@ if($co['status'] === 'Paid'){
     $state = 'refund';
     $message = 'Your payment arrived after the seat hold expired and a seat was taken. It will be refunded.';
 }
+if(isset($_GET['json'])){ header('Content-Type: application/json'); echo json_encode(['state' => $state]); exit(); }
 if($state === 'paid'){ header("Location: ticket.php?schedule_id=" . $schedule_id); exit(); }
+$gName = mbus_setting($conn, 'gcash_name'); $gNum = mbus_setting($conn, 'gcash_number'); $gQr = mbus_setting($conn, 'gcash_qr');
+$until = $co['submitted_at'] ? date('g:i A', strtotime($co['submitted_at']) + 15 * 60) : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -50,7 +55,7 @@ if($state === 'paid'){ header("Location: ticket.php?schedule_id=" . $schedule_id
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Confirming payment — MBUS</title>
-<?php if($state === 'waiting' || $state === 'review'): ?><meta http-equiv="refresh" content="4"><?php endif; ?>
+<?php if($state === 'waiting'): ?><meta http-equiv="refresh" content="4"><?php endif; ?>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f6fa;font-family:Inter,system-ui,sans-serif;color:#172b4d}
@@ -59,16 +64,34 @@ body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f6f
 @keyframes s{to{transform:rotate(360deg)}}
 h1{margin:0 0 8px;font-size:1.15rem}p{margin:0;color:#5b6b7e;font-size:.92rem;line-height:1.5}
 a{display:inline-flex;align-items:center;justify-content:center;min-height:46px;margin-top:18px;padding:0 20px;border-radius:13px;background:#1e3a5f;color:#fff;font-weight:700;text-decoration:none}
+p.lbl{margin:0;font-size:.82rem}.amt{margin:2px 0 6px;font-size:2.1rem;font-weight:700;color:#1e3a5f;letter-spacing:-.5px}
+.hint{font-size:.8rem;margin-top:8px}.qr{display:block;width:min(220px,70%);margin:14px auto 6px;border-radius:12px;border:1px solid #e1e7ef}
+.acct{margin:10px 0;display:grid;gap:2px}.acct strong{font-size:.98rem}.acct span{font-size:1.05rem;letter-spacing:.5px}
+.row{display:flex;gap:8px;margin-top:6px}.cp{flex:1;min-height:44px;border:1.5px solid #1e3a5f;border-radius:12px;background:#fff;color:#1e3a5f;font:700 .9rem Inter,system-ui,sans-serif;cursor:pointer}
+.wait{display:flex;align-items:center;gap:10px;margin-top:16px;padding:12px;border-radius:12px;background:#f1f5fa;text-align:left;font-size:.85rem;color:#33445c}.spin.sm{width:20px;height:20px;margin:0;border-width:3px;flex:none}
+a.alt{background:none;color:#5b6b7e;font-weight:600;min-height:40px;margin-top:6px}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
 </style>
 </head>
 <body>
 <main class="box" role="status" aria-live="polite">
 <?php if($state === 'review'): ?>
-    <div class="spin" aria-hidden="true"></div>
-    <h1>Waiting for your GCash payment</h1>
-    <p>We match your reference number as soon as GCash reports it. Your seats are held for a few minutes. If you haven&rsquo;t paid yet, send the exact amount to the GCash number shown on the payment page.</p>
-    <a href="payment.php?schedule_id=<?php echo $schedule_id; ?>">Back to payment</a>
+    <p class="lbl">Send exactly</p>
+    <p class="amt">&#8369;<?php echo number_format((float)$co['amount'], 2); ?></p>
+    <p class="hint">Use this exact amount, centavos included. It&rsquo;s how we know the payment is yours.</p>
+    <?php if($gQr !== '' && strpos($gQr, 'data:image/') === 0): ?><img class="qr" src="<?php echo htmlspecialchars($gQr, ENT_QUOTES); ?>" alt="GCash QR code"><?php endif; ?>
+    <div class="acct"><strong><?php echo htmlspecialchars($gName); ?></strong><span><?php echo htmlspecialchars($gNum); ?></span></div>
+    <div class="row">
+        <button type="button" class="cp" data-copy="<?php echo htmlspecialchars($gNum); ?>">Copy number</button>
+        <button type="button" class="cp" data-copy="<?php echo number_format((float)$co['amount'], 2, '.', ''); ?>">Copy amount</button>
+    </div>
+    <div class="wait"><div class="spin sm" aria-hidden="true"></div><span id="waitMsg">Waiting for your payment. Your ticket appears here automatically.</span></div>
+    <p class="hint">Seats held until <?php echo htmlspecialchars($until); ?>.</p>
+    <a href="my_reservations.php" class="alt">Back to my trips</a>
+<?php elseif($state === 'expired'): ?>
+    <h1>Payment window ended</h1>
+    <p>We didn&rsquo;t receive a matching payment in time. If you already paid, contact the admin with your GCash receipt. Otherwise, start again.</p>
+    <a href="payment.php?schedule_id=<?php echo $schedule_id; ?>">Try again</a>
 <?php elseif($state === 'rejected'): ?>
     <h1>Payment not accepted</h1>
     <p><?php echo $message !== '' ? htmlspecialchars($message) : 'The receipt could not be verified.'; ?> Your seats were released. Please reserve again.</p>
@@ -84,5 +107,20 @@ a{display:inline-flex;align-items:center;justify-content:center;min-height:46px;
     <a href="payment.php?schedule_id=<?php echo $schedule_id; ?>">Back to payment</a>
 <?php endif; ?>
 </main>
+<?php if($state === 'review'): ?>
+<script>
+document.querySelectorAll('.cp').forEach(function(b){b.addEventListener('click',function(){
+    var t=b.dataset.copy,l=b.textContent;
+    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(function(){var i=document.createElement('input');i.value=t;document.body.appendChild(i);i.select();document.execCommand('copy');i.remove();});
+    b.textContent='Copied';setTimeout(function(){b.textContent=l;},1500);});});
+(function poll(){
+    fetch('payment_return.php?schedule_id=<?php echo $schedule_id; ?>&json=1',{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+        if(d.state==='paid'){location.href='ticket.php?schedule_id=<?php echo $schedule_id; ?>';return;}
+        if(d.state!=='review'){location.reload();return;}
+        setTimeout(poll,4000);
+    }).catch(function(){setTimeout(poll,6000);});
+})();
+</script>
+<?php endif; ?>
 </body>
 </html>
