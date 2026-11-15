@@ -36,6 +36,7 @@ $profileImage = $hasDbPic ? '../avatar.php?v=' . rawurlencode((string)$pr['pic_v
     <link rel="stylesheet" href="../Assets/css/commuter_waiting_board.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_waiting_board.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/commuter_pickup.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_pickup.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
 </head>
 <body class="commuter-waiting-board has-bottom-nav">
 <main id="commuterWaitingBoard" class="cwb-main" data-live="../api/live_tracking.php">

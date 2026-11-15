@@ -54,17 +54,10 @@ $sql = mbus_db_prepare($conn, "
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
 </head>
 
 <body class="has-bottom-nav">
-
-<main class="main" role="main">
-                <a href="commuter_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
-                <a href="my_reservations.php"><i class="fa fa-ticket" aria-hidden="true"></i> My Reservations</a>
-                <a href="history.php" aria-current="page"><i class="fa fa-history" aria-hidden="true"></i> History</a>
-                <a href="profile.php"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
-                <a href="verification.php"><i class="fa fa-id-card" aria-hidden="true"></i> Verification</a>
-            </nav>
 
 <main class="main" role="main">
 

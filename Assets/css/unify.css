@@ -1,0 +1,30 @@
+/* MBUS layout unification — loaded LAST on every page that has the profile icon.
+   One place for: profile icon position/size, page margins, header spacing. */
+:root{--u-pad:26px;--u-top:26px;--u-side:280px;--u-col:720px}
+
+/* ---- Profile icon: same spot on every page, every role ---- */
+.profile-menu-wrap{position:fixed!important;top:var(--u-top);right:var(--u-pad);z-index:60;margin:0!important}
+.profile-trigger{width:44px!important;min-width:44px!important;height:44px!important;margin:0!important}
+.profile-avatar{width:32px!important;height:32px!important}
+.profile-menu{top:calc(100% + 8px)!important;right:0!important;left:auto!important}
+
+/* ---- Page header: same height/spacing, leaves room for the icon ---- */
+.page-header{display:flex!important;align-items:center!important;min-height:44px;margin:0 0 20px!important;padding:0 56px 0 0!important}
+.page-header-left{flex:1;min-width:0}
+.page-header-right{display:block!important;width:0;min-width:0!important;height:0;overflow:visible}
+.page-header h1{margin:0;font-size:1.6rem!important;line-height:1.2}
+
+/* ---- Page margins: sidebar roles (admin / operator) ---- */
+body:has(> .sidebar) main,body:has(> aside.sidebar) main{margin:0 0 0 var(--u-side)!important;padding:var(--u-top) var(--u-pad) 40px!important;max-width:none!important;width:auto!important}
+
+/* ---- Page margins: commuter (no sidebar) = one centred column ---- */
+body:not(:has(.sidebar)) main{margin:0 auto!important;padding:var(--u-top) 18px 104px!important;max-width:var(--u-col)!important;width:100%}
+body:not(:has(.sidebar)) .profile-menu-wrap{right:max(18px,calc((100vw - var(--u-col))/2 + 18px))}
+
+/* ---- Phones ---- */
+@media (max-width:768px){
+  :root{--u-pad:16px;--u-top:14px}
+  body:has(> .sidebar) main,body:has(> aside.sidebar) main,body:not(:has(.sidebar)) main{margin:0!important;padding:var(--u-top) var(--u-pad) 104px!important;max-width:none!important}
+  .profile-menu-wrap,body:not(:has(.sidebar)) .profile-menu-wrap{right:var(--u-pad)}
+  .page-header h1{font-size:1.35rem!important}
+}

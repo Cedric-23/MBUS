@@ -102,6 +102,7 @@ $gName = mbus_setting($conn, 'gcash_name'); $gNum = mbus_setting($conn, 'gcash_n
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_ui.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/admin/admin_ui.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
 </head>
 
 <body class="has-sidebar">
