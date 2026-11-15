@@ -14,6 +14,8 @@ if ($email === '') {
 if (isset($_POST['resend'])) {
     if (!csrf_validate_token()) {
         $error = 'Security validation failed. Please try again.';
+    } elseif (trim((string)getenv('SMTP_USERNAME')) === '' || trim((string)getenv('SMTP_PASSWORD')) === '') {
+        $error = 'Email verification is not configured. Ask the administrator to add SMTP_USERNAME and SMTP_PASSWORD in Render, then resend the code.';
     } else {
         $new_code = (string)random_int(100000, 999999);
         $new_expiry = date('Y-m-d H:i:s', strtotime('+15 minutes'));

@@ -87,6 +87,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $_POST['emailAddress'] = $email; $_POST['mobileNumber'] = $phone;
 
         if (!$errors) {
+            $smtp_ready = trim((string)getenv('SMTP_USERNAME')) !== '' && trim((string)getenv('SMTP_PASSWORD')) !== '';
+            if (!$is_conductor_application && !$smtp_ready) {
+                $error = 'Email verification is not configured yet. Please ask the administrator to add SMTP_USERNAME and SMTP_PASSWORD in the Render environment, then try again.';
+            }
+        }
+
+        if (!$errors && $error === '') {
             $dup = mbus_db_prepare($conn,
                 "SELECT 1 FROM users WHERE LOWER(email) = ?
                  UNION SELECT 1 FROM operator_application WHERE LOWER(email) = ? AND application_status::text = 'Pending'

@@ -6,6 +6,11 @@ let reviewed = false;
 const pickup = document.getElementById("pickup");
 const destination = document.getElementById("destination");
 
+function updateMultiSeatWarning() {
+    const warning = document.getElementById("multiSeatWarning");
+    warning.hidden = reservationMode !== "multi" || selectedSeats.length >= 2;
+}
+
 function hideReview() {
     reviewed = false;
     document.getElementById("summaryPanel").hidden = true;
@@ -31,6 +36,7 @@ function setReservationMode(mode) {
     selectedSeats = [];
     Object.keys(seatDestinations).forEach(seat => delete seatDestinations[seat]);
     hideReview();
+    updateMultiSeatWarning();
     renderSeatDestinationControls();
 }
 
@@ -97,6 +103,7 @@ document.querySelectorAll(".seat-btn").forEach(seat => {
         }
 
         renderSeatDestinationControls();
+        updateMultiSeatWarning();
 
     });
 
@@ -148,6 +155,7 @@ document.getElementById("doneBtn")
         return;
     }
     if (reservationMode === "multi" && selectedSeats.length < 2) {
+        updateMultiSeatWarning();
         showTopError("Multi reservation requires at least two seats.");
         return;
     }

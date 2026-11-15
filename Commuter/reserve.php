@@ -392,6 +392,7 @@ exit();
     <button type="button" class="reservation-mode-tab" id="multiModeTab" role="tab" aria-selected="false" data-mode="multi">Multi reservation</button>
 </div>
 <p class="reservation-mode-help" id="reservationModeHelp">Choose one seat. Pickup and destination above apply to your reservation.</p>
+<p class="reservation-mode-warning" id="multiSeatWarning" role="status" hidden>Select at least 2 seats for a multi reservation.</p>
 
 </div>
 

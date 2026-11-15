@@ -40,6 +40,12 @@ Public bus reservation system — PHP + Supabase PostgreSQL.
 | `SUPABASE_DB_PASSWORD` | *(secret)* |
 | `SUPABASE_URL` | `https://xeczvnheaixpfattbwsk.supabase.co` |
 | `SUPABASE_ANON_KEY` | *(secret)* |
+| `SMTP_HOST` | `smtp.gmail.com` |
+| `SMTP_PORT` | `465` |
+| `SMTP_SECURE` | `ssl` |
+| `SMTP_USERNAME` | *(Gmail address or SMTP account)* |
+| `SMTP_PASSWORD` | *(Gmail app password or SMTP password)* |
+| `SMTP_FROM` | *(optional; defaults to SMTP_USERNAME)* |
 
 ### After go-live checklist
 
