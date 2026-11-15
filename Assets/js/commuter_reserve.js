@@ -25,6 +25,8 @@ function setReservationMode(mode) {
     document.getElementById("reservationModeHelp").textContent = reservationMode === "multi"
         ? "Select at least two seats. Choose each destination during review."
         : "Choose one seat. Pickup and destination above apply to your reservation.";
+    document.getElementById("destinationGroup").hidden = reservationMode === "multi";
+    destination.required = reservationMode === "solo";
     document.querySelectorAll(".seat-btn.selected").forEach(seat => seat.classList.remove("selected"));
     selectedSeats = [];
     Object.keys(seatDestinations).forEach(seat => delete seatDestinations[seat]);
@@ -79,12 +81,11 @@ document.querySelectorAll(".seat-btn").forEach(seat => {
 
 });
 
-/* DESTINATION */
-pickup.addEventListener("change", function () {
-
+/* DESTINATION: pickup is the fixed route terminal, so only build the valid stops once. */
+function loadDestinations() {
     destination.innerHTML = "<option value=''>Select Destination</option>";
 
-    let index = route.indexOf(this.value);
+    let index = route.indexOf(pickup.value);
 
     for (let i = index + 1; i < route.length; i++) {
 
@@ -97,12 +98,13 @@ pickup.addEventListener("change", function () {
 
     }
 
-    destination.disabled = !this.value;
+    destination.disabled = !pickup.value;
     hideReview();
     selectedSeats.forEach(seat => { seatDestinations[seat] = seatDestinations[seat] || destination.value; });
     renderSeatDestinationControls();
+}
 
-});
+loadDestinations();
 
 destination.addEventListener("change", () => {
     hideReview();
@@ -134,7 +136,7 @@ document.getElementById("doneBtn")
         return;
     }
 
-    if (!destination.value) {
+    if (reservationMode === "solo" && !destination.value) {
         showTopError("Select destination.");
         return;
     }
@@ -158,6 +160,11 @@ document.getElementById("doneBtn")
         destinationBox.appendChild(row);
         seatDestinations[seat] = select.value;
     });
+
+    if (reservationMode === "multi" && selectedSeats.some(seat => !seatDestinations[seat])) {
+        showTopError("Choose a destination for every selected seat.");
+        return;
+    }
 
     renderSeatDestinationControls();
 

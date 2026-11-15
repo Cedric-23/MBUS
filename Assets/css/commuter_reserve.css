@@ -261,6 +261,14 @@
   font-size: var(--fs-sm);
 }
 
+.form-label {
+  display: block;
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+  font-size: var(--fs-sm);
+}
+
 .form-control {
   width: 100%;
   padding: var(--space-3) var(--space-4);
@@ -284,6 +292,14 @@
   background: var(--color-bg-secondary);
   color: var(--color-text-muted);
   cursor: not-allowed;
+}
+
+.fixed-stop {
+  display: flex;
+  align-items: center;
+  color: var(--color-text);
+  background: var(--color-bg-secondary);
+  cursor: default;
 }
 
 /* Summary Card */
