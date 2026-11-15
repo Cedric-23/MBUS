@@ -14,12 +14,14 @@
 .page-header-right{display:block!important;width:0;min-width:0!important;height:0;overflow:visible}
 .page-header h1{margin:0;font-size:1.6rem!important;line-height:1.2}
 
+@media (min-width:769px){
 /* ---- Page margins: sidebar roles (admin / operator) ---- */
 body:not(.commuter-waiting-board):not(.staff-wait-page):has(> .sidebar) main,body:not(.commuter-waiting-board):not(.staff-wait-page):has(> aside.sidebar) main{margin:0 0 0 var(--u-side)!important;padding:var(--u-top) var(--u-pad) 40px!important;max-width:none!important;width:auto!important}
 
 /* ---- Page margins: commuter (no sidebar) = one centred column ---- */
 body:not(.commuter-waiting-board):not(.staff-wait-page):not(:has(.sidebar)) main{margin:0 auto!important;padding:var(--u-top) 18px 104px!important;max-width:var(--u-col)!important;width:100%}
 body:not(:has(.sidebar)):not(.commuter-waiting-board):not(.staff-wait-page) .profile-menu-wrap{right:max(18px,calc((100vw - var(--u-col))/2 + 18px))}
+}
 
 /* ---- Phones ---- */
 @media (max-width:768px){
