@@ -173,14 +173,6 @@
   gap: var(--space-2);
 }
 
-.seat-map-hint {
-  grid-column: 1 / -1;
-  margin: 0 0 var(--space-1);
-  color: var(--color-text-muted);
-  font-size: var(--fs-xs);
-  text-align: center;
-}
-
 .seat-row {
   display: flex;
   align-items: center;
@@ -362,6 +354,57 @@
   color: var(--color-text);
   font-weight: 500;
   margin: 0 0 var(--space-3);
+}
+
+.summary-destination-list {
+  display: grid;
+  gap: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.summary-destination-list span {
+  display: block;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: var(--color-bg-secondary);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+}
+
+.seat-destinations {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: var(--space-3);
+}
+
+.seat-destinations .destination-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px;
+  margin: 0;
+  padding: 7px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-secondary);
+  font-size: .72rem;
+  line-height: 1.2;
+}
+
+.seat-destinations .destination-row select {
+  min-width: 0;
+  width: 100%;
+  min-height: 34px;
+  padding: 4px 7px;
+  font-size: .78rem;
+}
+
+@media (max-width: 480px) {
+  .seat-destinations {
+    grid-template-columns: 1fr;
+  }
 }
 
 .passenger-types {

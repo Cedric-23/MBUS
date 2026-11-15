@@ -144,8 +144,10 @@ document.getElementById("doneBtn")
     const destinationBox = document.getElementById("seatDestinations");
     destinationBox.innerHTML = "";
     selectedSeats.forEach(seat => {
-        seatDestinations[seat] = destination.value;
-        if (reservationMode !== "multi") return;
+        if (reservationMode !== "multi") {
+            seatDestinations[seat] = destination.value;
+            return;
+        }
         const row = document.createElement("label");
         row.className = "passenger-row destination-row";
         row.textContent = "Destination for seat " + seat;
@@ -154,7 +156,7 @@ document.getElementById("doneBtn")
         select.name = "destination_" + seat;
         select.disabled = false;
         select.innerHTML = destination.innerHTML;
-        select.value = seatDestinations[seat] || destination.value;
+        select.value = seatDestinations[seat] || "";
         select.addEventListener("change", () => { seatDestinations[seat] = select.value; });
         row.appendChild(select);
         destinationBox.appendChild(row);
@@ -177,9 +179,17 @@ document.getElementById("doneBtn")
     document.getElementById("summaryPickup").innerText =
         pickup.value;
 
-    document.getElementById("summaryDestination").innerText = reservationMode === "multi"
-        ? selectedSeats.map(seat => "Seat " + seat + ": " + seatDestinations[seat]).join(" · ")
-        : destination.value;
+    const summaryDestination = document.getElementById("summaryDestination");
+    summaryDestination.innerHTML = "";
+    if (reservationMode === "multi") {
+        selectedSeats.forEach(seat => {
+            const item = document.createElement("span");
+            item.textContent = "Seat " + seat + " · " + seatDestinations[seat];
+            summaryDestination.appendChild(item);
+        });
+    } else {
+        summaryDestination.textContent = destination.value;
+    }
 
     renderPassengerTypes();
 

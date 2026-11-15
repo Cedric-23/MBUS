@@ -401,8 +401,6 @@ exit();
 
 <div class="seat-map" role="grid" aria-label="Bus seat map">
 
-<p class="seat-map-hint">Choose one seat for yourself, or select multiple seats for a group reservation.</p>
-
 <?php
 $seat=1;
 $seat_rows=(int)ceil($capacity / 4);
@@ -481,7 +479,7 @@ echo "</div>";
     <dd id="summaryPickup">-</dd>
     
     <dt>Destination</dt>
-    <dd id="summaryDestination">-</dd>
+    <dd id="summaryDestination" class="summary-destination-list">-</dd>
 </dl>
 
 <div id="passengerTypes" class="passenger-types"></div>
