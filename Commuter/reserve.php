@@ -379,6 +379,8 @@ exit();
 
 <div class="seat-map" role="grid" aria-label="Bus seat map">
 
+<p class="seat-map-hint">Choose one seat for yourself, or select multiple seats for a group reservation.</p>
+
 <?php
 $seat=1;
 $seat_rows=(int)ceil($capacity / 4);
@@ -394,7 +396,7 @@ $class.=" reserved";
 $disabled="disabled";
 $aria_disabled="true";
 }
-echo "<button type='button' class='$class' data-seat='$seat' role='gridcell' $disabled aria-disabled='$aria_disabled' aria-label='Seat $seat'>$seat</button>";
+echo "<div class='seat-cell' data-seat-cell='$seat'><button type='button' class='$class' data-seat='$seat' role='gridcell' $disabled aria-disabled='$aria_disabled' aria-label='Seat $seat'>$seat</button></div>";
 $seat++;
 }
 if($c==2){echo "<div class='aisle' role='separator' aria-label='Aisle'></div>";}

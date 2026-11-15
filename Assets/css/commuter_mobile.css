@@ -514,6 +514,10 @@
   justify-content: center;
   gap: 8px;
 }
+.reserve-page .seat-cell {
+  flex: 1 1 0;
+  min-width: 0;
+}
 .reserve-page .seat-btn {
   flex: 1 1 0;
   width: auto;
@@ -524,6 +528,12 @@
   font-size: 1rem;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+}
+.reserve-page .seat-destination-mini {
+  width: 100%;
+  max-width: 64px;
+  min-height: 26px;
+  font-size: 0.62rem;
 }
 .reserve-page .seat-btn:hover:not(.reserved):not(.selected):not([disabled]) { transform: none; }
 .reserve-page .seat-btn:active:not(.reserved):not([disabled]) { transform: scale(0.96); }

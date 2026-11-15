@@ -4,6 +4,27 @@ const seatDestinations = {};
 const pickup = document.getElementById("pickup");
 const destination = document.getElementById("destination");
 
+function renderSeatDestinationControls() {
+    document.querySelectorAll(".seat-destination-mini").forEach(el => el.remove());
+    if (selectedSeats.length < 2 || !pickup.value) return;
+
+    selectedSeats.forEach(seat => {
+        const cell = document.querySelector('.seat-cell[data-seat-cell="' + seat + '"]');
+        if (!cell) return;
+
+        const select = document.createElement("select");
+        select.className = "seat-destination-mini";
+        select.setAttribute("aria-label", "Destination for seat " + seat);
+        select.innerHTML = destination.innerHTML;
+        select.disabled = destination.disabled;
+        select.value = seatDestinations[seat] || destination.value || "";
+        select.addEventListener("change", () => {
+            seatDestinations[seat] = select.value;
+        });
+        cell.appendChild(select);
+    });
+}
+
 /* SELECT SEATS */
 document.querySelectorAll(".seat-btn").forEach(seat => {
 
@@ -29,6 +50,8 @@ document.querySelectorAll(".seat-btn").forEach(seat => {
 
         }
 
+        renderSeatDestinationControls();
+
     });
 
 });
@@ -51,10 +74,13 @@ pickup.addEventListener("change", function () {
 
     }
 
-destination.disabled = !this.value;
+    destination.disabled = !this.value;
     selectedSeats.forEach(seat => { seatDestinations[seat] = seatDestinations[seat] || destination.value; });
+    renderSeatDestinationControls();
 
 });
+
+destination.addEventListener("change", renderSeatDestinationControls);
 
 /* DONE */
 document.getElementById("doneBtn")
@@ -94,6 +120,8 @@ document.getElementById("doneBtn")
         destinationBox.appendChild(row);
         seatDestinations[seat] = select.value;
     });
+
+    renderSeatDestinationControls();
 
     document.getElementById("summaryPanel").classList.add("show");
 
