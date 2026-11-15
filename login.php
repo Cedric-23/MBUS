@@ -33,7 +33,9 @@ $login_error   = '';
 $login_success = '';
 
 if (isset($_GET['registered'])) {
-    $login_success = 'Account created successfully. You can now sign in.';
+    $login_success = 'Account verified successfully. You can now sign in.';
+} elseif (isset($_GET['reset'])) {
+    $login_success = 'Your password was updated successfully. You can now sign in.';
 }
 
 $field_errors = [];
@@ -67,7 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $type = strtolower(trim($user['user_type'] ?? ''));
                     $type = $type_aliases[$type] ?? $type;
 
-                    if (!isset($dashboards[$type])) {
+                    if ($type === 'commuter' && empty($user['email_verified_at'])) {
+                        $login_error = 'Please verify your email address before signing in. Check your inbox for the 6-digit code.';
+                    } elseif (!isset($dashboards[$type])) {
                         $login_error = 'This account type cannot sign in here. Contact an admin.';
                     } else {
                         session_regenerate_id(true);
@@ -205,6 +209,7 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
                                        autocomplete="current-password"
                                        <?= isset($field_errors['password']) ? 'aria-invalid="true"' : '' ?> maxlength="72"/>
                                 <i class="input-icon" data-lucide="lock"></i>
+                                <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false"></button>
                                 <?= mbus_field_error($field_errors, 'password') ?>
                             </div>
                         </div>
@@ -243,5 +248,6 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
                 submitBtn.textContent = 'Sign in';
             });
         </script>
+        <script src="Assets/js/password-toggle.js"></script>
     </body>
 </html>

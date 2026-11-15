@@ -29,8 +29,10 @@ function mbus_check_password(string $pw, ?string $confirm = null): string {
     if ($pw === '') return 'Password is required.';
     if (strlen($pw) < 8) return 'Password is too short (at least 8 characters).';
     if (strlen($pw) > 72) return 'Password is too long (72 characters at most).';
-    if (!preg_match('/[A-Za-z]/', $pw)) return 'Password needs at least one letter.';
+    if (!preg_match('/[A-Z]/', $pw)) return 'Password needs at least one uppercase letter.';
+    if (!preg_match('/[a-z]/', $pw)) return 'Password needs at least one lowercase letter.';
     if (!preg_match('/\d/', $pw)) return 'Password needs at least one number.';
+    if (!preg_match('/[^A-Za-z0-9]/', $pw)) return 'Password needs at least one symbol.';
     if ($confirm !== null && $pw !== $confirm) return 'Passwords do not match.';
     return '';
 }

@@ -107,10 +107,38 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         header('Location: register.php?type=conductor'); exit();
                     }
                 } else {
-                    $ok = mbus_db_prepare($conn, "INSERT INTO users (full_name, email, phone_number, password, user_type) VALUES (?, ?, ?, ?, 'Commuter')",
-                        [$full_name, $email, $phone, $hash]);
+                    $registration_code = (string)random_int(100000, 999999);
+                    $registration_expiry = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+                    $ok = mbus_db_prepare($conn, "INSERT INTO users (full_name, email, phone_number, password, user_type, registration_code, registration_code_expiry) VALUES (?, ?, ?, ?, 'Commuter', ?, ?)",
+                        [$full_name, $email, $phone, $hash, $registration_code, $registration_expiry]);
                     if ($ok === false) { $error = 'Could not create your account. Please try again.'; }
-                    else { header('Location: login.php?registered=1'); exit(); }
+                    else {
+                        $mail_sent = false;
+                        try {
+                            require_once __DIR__ . '/PHPMailer/src/Exception.php';
+                            require_once __DIR__ . '/PHPMailer/src/PHPMailer.php';
+                            require_once __DIR__ . '/PHPMailer/src/SMTP.php';
+                            $mailer = new \PHPMailer\PHPMailer\PHPMailer(true);
+                            $mailer->isSMTP();
+                            $mailer->Host = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
+                            $mailer->SMTPAuth = true;
+                            $mailer->Username = getenv('SMTP_USERNAME') ?: '';
+                            $mailer->Password = getenv('SMTP_PASSWORD') ?: '';
+                            $mailer->SMTPSecure = getenv('SMTP_SECURE') ?: 'ssl';
+                            $mailer->Port = (int)(getenv('SMTP_PORT') ?: 465);
+                            $mailer->setFrom(getenv('SMTP_FROM') ?: $mailer->Username, 'MBUS System');
+                            $mailer->addAddress($email, $full_name);
+                            $mailer->Subject = 'Verify your MBUS account';
+                            $mailer->Body = "Your MBUS verification code is {$registration_code}. It expires in 15 minutes.";
+                            $mailer->send();
+                            $mail_sent = true;
+                        } catch (Throwable $mail_error) {
+                            error_log('Registration verification email failed: ' . $mail_error->getMessage());
+                        }
+                        $_SESSION['registration_email'] = $email;
+                        $_SESSION['registration_mail_sent'] = $mail_sent;
+                        header('Location: verify_registration.php'); exit();
+                    }
                 }
             }
         }
@@ -307,7 +335,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                             <?= mbus_field_error($errors, 'emailAddress') ?></div>
                             <div class="form-phone-input">
                                 <label>Mobile Number</label>
-                                <input name="mobileNumber" type="text" placeholder="09xx xxx xxxx" maxlength="14" inputmode="numeric" pattern="09[0-9]{9}" autocomplete="tel" value="<?= reg_old('mobileNumber') ?>" required/>
+                                <div class="phone-input"><span class="phone-prefix" aria-hidden="true">+63</span><input name="mobileNumber" type="text" placeholder="9XXXXXXXXX" maxlength="10" minlength="10" inputmode="numeric" pattern="9[0-9]{9}" autocomplete="tel" value="<?= preg_replace('/^0/', '', reg_old('mobileNumber')) ?>" required/></div>
                                 <i class="input-icon" data-lucide="phone"></i>
                             <?= mbus_field_error($errors, 'mobileNumber') ?></div>
                         </div>
@@ -365,7 +393,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                 <div class="input-group">
                                     <div class="phone-number">
                                         <label>Phone Number</label>
-                                        <input type="text" name="phone-number" placeholder="09xx xxx xxxx" maxlength="14" inputmode="numeric" pattern="09[0-9]{9}" value="<?= reg_old('phone-number') ?>" required/>
+                                <div class="phone-input"><span class="phone-prefix" aria-hidden="true">+63</span><input type="text" name="phone-number" placeholder="9XXXXXXXXX" maxlength="10" minlength="10" inputmode="numeric" pattern="9[0-9]{9}" value="<?= preg_replace('/^0/', '', reg_old('phone-number')) ?>" required/></div>
                                         <i class="input-icon" data-lucide="phone"></i>
                                     <?= mbus_field_error($errors, 'phone-number') ?></div>
                                     <div class="home-address">
@@ -505,8 +533,14 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                 </form>
             </div>
         </div>
+        <style>
+            .phone-input { display:flex; align-items:stretch; width:100%; }
+            .phone-prefix { display:grid; place-items:center; min-width:54px; padding:0 10px; border:1px solid #d5dce6; border-right:0; border-radius:12px 0 0 12px; background:#f4f6f9; color:#3b4a5f; font-weight:600; }
+            .phone-input input { flex:1; min-width:0; border-radius:0 12px 12px 0; }
+        </style>
         <script>window.MBUS_START_STEP = <?= (int)$step_with_error ?>;</script>
         <script src="register.js"></script>
         <script> if (window.lucide) lucide.createIcons(); </script>
+        <script src="Assets/js/password-toggle.js"></script>
     </body>
 </html>
