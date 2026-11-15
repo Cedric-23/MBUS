@@ -20,9 +20,11 @@ function setReservationMode(mode) {
         tab.classList.toggle("active", active);
         tab.setAttribute("aria-selected", String(active));
     });
+    const multiTab = document.getElementById("multiModeTab");
+    multiTab.textContent = reservationMode === "multi" ? "Multi reservation selected" : "Multi reservation";
     document.getElementById("reservationModeHelp").textContent = reservationMode === "multi"
-        ? "Select at least two seats. You can choose a different destination below each seat."
-        : "Choose exactly one seat for yourself.";
+        ? "Select at least two seats. Destinations are assigned during review."
+        : "Choose one seat. Select Multi reservation only when booking for more passengers.";
     document.querySelectorAll(".seat-btn.selected").forEach(seat => seat.classList.remove("selected"));
     selectedSeats = [];
     Object.keys(seatDestinations).forEach(seat => delete seatDestinations[seat]);
@@ -31,28 +33,11 @@ function setReservationMode(mode) {
 }
 
 document.querySelectorAll(".reservation-mode-tab").forEach(tab => {
-    tab.addEventListener("click", () => setReservationMode(tab.dataset.mode));
+    tab.addEventListener("click", () => setReservationMode(reservationMode === "multi" ? "solo" : tab.dataset.mode));
 });
 
 function renderSeatDestinationControls() {
     document.querySelectorAll(".seat-destination-mini").forEach(el => el.remove());
-    if (selectedSeats.length < 2 || !pickup.value) return;
-
-    selectedSeats.forEach(seat => {
-        const cell = document.querySelector('.seat-cell[data-seat-cell="' + seat + '"]');
-        if (!cell) return;
-
-        const select = document.createElement("select");
-        select.className = "seat-destination-mini";
-        select.setAttribute("aria-label", "Destination for seat " + seat);
-        select.innerHTML = destination.innerHTML;
-        select.disabled = destination.disabled;
-        select.value = seatDestinations[seat] || destination.value || "";
-        select.addEventListener("change", () => {
-            seatDestinations[seat] = select.value;
-        });
-        cell.appendChild(select);
-    });
 }
 
 /* SELECT SEATS */
