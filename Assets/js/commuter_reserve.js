@@ -23,8 +23,8 @@ function setReservationMode(mode) {
     const multiTab = document.getElementById("multiModeTab");
     multiTab.textContent = reservationMode === "multi" ? "Multi reservation selected" : "Multi reservation";
     document.getElementById("reservationModeHelp").textContent = reservationMode === "multi"
-        ? "Select at least two seats. Destinations are assigned during review."
-        : "Choose one seat. Select Multi reservation only when booking for more passengers.";
+        ? "Select at least two seats. Choose each destination during review."
+        : "Choose one seat. Pickup and destination above apply to your reservation.";
     document.querySelectorAll(".seat-btn.selected").forEach(seat => seat.classList.remove("selected"));
     selectedSeats = [];
     Object.keys(seatDestinations).forEach(seat => delete seatDestinations[seat]);
@@ -33,7 +33,7 @@ function setReservationMode(mode) {
 }
 
 document.querySelectorAll(".reservation-mode-tab").forEach(tab => {
-    tab.addEventListener("click", () => setReservationMode(reservationMode === "multi" ? "solo" : tab.dataset.mode));
+    tab.addEventListener("click", () => setReservationMode(tab.dataset.mode));
 });
 
 function renderSeatDestinationControls() {
@@ -142,6 +142,8 @@ document.getElementById("doneBtn")
     const destinationBox = document.getElementById("seatDestinations");
     destinationBox.innerHTML = "";
     selectedSeats.forEach(seat => {
+        seatDestinations[seat] = destination.value;
+        if (reservationMode !== "multi") return;
         const row = document.createElement("label");
         row.className = "passenger-row destination-row";
         row.textContent = "Destination for seat " + seat;
@@ -168,7 +170,9 @@ document.getElementById("doneBtn")
     document.getElementById("summaryPickup").innerText =
         pickup.value;
 
-    document.getElementById("summaryDestination").innerText = selectedSeats.map(seat => "Seat " + seat + ": " + seatDestinations[seat]).join(" · ");
+    document.getElementById("summaryDestination").innerText = reservationMode === "multi"
+        ? selectedSeats.map(seat => "Seat " + seat + ": " + seatDestinations[seat]).join(" · ")
+        : destination.value;
 
     renderPassengerTypes();
 

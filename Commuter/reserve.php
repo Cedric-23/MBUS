@@ -385,9 +385,10 @@ exit();
 </div>
 
 <div class="reservation-mode" role="tablist" aria-label="Reservation type">
+    <button type="button" class="reservation-mode-tab active" id="soloModeTab" role="tab" aria-selected="true" data-mode="solo">Solo reservation</button>
     <button type="button" class="reservation-mode-tab" id="multiModeTab" role="tab" aria-selected="false" data-mode="multi">Multi reservation</button>
 </div>
-<p class="reservation-mode-help" id="reservationModeHelp">Choose one seat. Select Multi reservation only when booking for more passengers.</p>
+<p class="reservation-mode-help" id="reservationModeHelp">Choose one seat. Pickup and destination above apply to your reservation.</p>
 
 </div>
 
