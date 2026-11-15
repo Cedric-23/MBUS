@@ -31,6 +31,12 @@ try {
         $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(255)');
         $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_b64 TEXT');
         $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_mime VARCHAR(50)');
+        $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code VARCHAR(6)');
+        $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_expiry TIMESTAMP NULL');
+        $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP NULL');
+        $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_code VARCHAR(6)');
+        $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_code_expiry TIMESTAMP NULL');
+        $pdo->exec("UPDATE users SET email_verified_at = NOW() WHERE email_verified_at IS NULL AND LOWER(user_type) = 'commuter' AND registration_code IS NULL");
     } catch (PDOException $schema_error) {
         error_log('Profile picture schema check failed: ' . $schema_error->getMessage());
     }

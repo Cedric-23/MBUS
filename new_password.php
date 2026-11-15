@@ -1,7 +1,8 @@
 <?php
-session_start();
 include "config/db_connect.php";
+session_start();
 include "Includes/csrf.php";
+require_once __DIR__ . "/Includes/auth_validation.php";
 
 if(!isset($_SESSION['verified'])){
     header("Location: forgot_password.php");
@@ -20,25 +21,27 @@ if(isset($_POST['reset'])){
 
         if($password != $confirm){
             $error = 'Passwords do not match';
-        } elseif(strlen($password) < 8){
-            $error = 'Password must be at least 8 characters';
+        } elseif(($password_error = mbus_validate_password($password)) !== null){
+            $error = $password_error;
         } else {
             $hashed = password_hash($password, PASSWORD_DEFAULT);
             $email = $_SESSION['reset_email'];
 
             // Use prepared statement
-            mbus_db_prepare($conn, "
+            $updated = mbus_db_prepare($conn, "
                 UPDATE users
                 SET password = ?,
                 reset_code = NULL,
                 reset_expiry = NULL
                 WHERE LOWER(email) = LOWER(?)", [$hashed, $email]);
 
-            session_destroy();
-            $success = 'Password updated successfully';
-            
-            // Redirect after short delay via meta refresh
-            header("refresh:2;url=login.php");
+            if($updated === false){
+                $error = 'Unable to update your password. Please start the reset process again.';
+            } else {
+                session_destroy();
+                header("Location: login.php?reset=success", true, 303);
+                exit();
+            }
         }
     }
 }

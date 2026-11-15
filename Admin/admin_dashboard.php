@@ -27,7 +27,7 @@ $one = function($sql, $params = []) use ($conn) {
 };
 $counts = [
     'Buses' => $one("SELECT COUNT(*) AS n FROM buses"),
-    'Operators' => $one("SELECT COUNT(*) AS n FROM users WHERE LOWER(user_type) = 'operator'"),
+    'Operators' => $one("SELECT COUNT(*) AS n FROM users WHERE LOWER(user_type) IN ('operator', 'driver')"),
     'Routes' => $one("SELECT COUNT(*) AS n FROM routes"),
     'Schedules' => $one("SELECT COUNT(*) AS n FROM schedule WHERE departure_time >= ?", [$bd['today']]),
 ];

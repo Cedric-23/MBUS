@@ -14,6 +14,7 @@ if(
 
 include "../config/db_connect.php";
 include "../Includes/csrf.php";
+include "../Includes/auth_validation.php";
 
 /* ADD OPERATOR */
 if(isset($_POST['add_operator'])){
@@ -21,16 +22,24 @@ if(isset($_POST['add_operator'])){
     if(!csrf_validate_token()){
         $error = "Security validation failed. Please try again.";
     } else {
-        $full_name = trim($_POST['full_name']);
-        $email = trim($_POST['email']);
-        $phone_number = trim($_POST['phone_number']);
-        $password = trim($_POST['password']);
+        $full_name = trim((string)($_POST['full_name'] ?? ''));
+        $email = mbus_normalize_email($_POST['email'] ?? '');
+        $phone_number = mbus_normalize_phone($_POST['phone_number'] ?? '');
+        $password = (string)($_POST['password'] ?? '');
 
-        // Validate phone number
-        if(!preg_match('/^09\d{9}$/', $phone_number)){
-            $error = "Phone number must be 11 digits starting with 09 (e.g., 09123456789).";
-        } elseif(strlen($password) < 8){
-            $error = "Password must be at least 8 characters.";
+        $name_error = mbus_validate_full_name($full_name);
+        $email_error = mbus_validate_email($email);
+        $phone_error = mbus_validate_phone($phone_number);
+        $password_error = mbus_validate_password($password, 8);
+
+        if($name_error !== null){
+            $error = $name_error;
+        } elseif($email_error !== null){
+            $error = $email_error;
+        } elseif($phone_error !== null){
+            $error = $phone_error;
+        } elseif($password_error !== null){
+            $error = $password_error;
         } else {
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
@@ -39,17 +48,25 @@ if(isset($_POST['add_operator'])){
 SELECT * FROM users WHERE LOWER(email) = LOWER(?)
 ", [$email]);
 
-            if(mbus_db_num_rows($check) > 0){
-                $error = "Email already exists";
+            if($check === false){
+                error_log('Admin operator email lookup failed: ' . mbus_db_error($conn));
+                $error = "We could not check this email address right now. Please try again.";
+            } elseif(mbus_db_num_rows($check) > 0){
+                $error = "This email address is already registered. Use another email.";
             } else {
-                mbus_db_prepare($conn, "
+                $created = mbus_db_prepare($conn, "
 INSERT INTO users
 (full_name, email, phone_number, password, user_type)
 VALUES
 (?, ?, ?, ?, 'operator')
 ", [$full_name, $email, $phone_number, $hashed_password]);
 
-                $success = "Operator account created";
+                if($created === false){
+                    error_log('Admin operator insert failed: ' . mbus_db_error($conn));
+                    $error = "Operator account could not be created. Please check the details and try again.";
+                } else {
+                    $success = "Operator account created. The operator can now log in with this email and password.";
+                }
             }
         }
     }
@@ -61,8 +78,13 @@ if(isset($_POST['delete_operator'])){
         $error = "Security validation failed. Please try again.";
     } else {
         $user_id = (int)$_POST['user_id'];
-        mbus_db_prepare($conn, "DELETE FROM users WHERE user_id = ? AND LOWER(user_type) = 'operator'", [$user_id]);
-        $success = "Operator deleted successfully";
+        $deleted = mbus_db_prepare($conn, "DELETE FROM users WHERE user_id = ? AND LOWER(user_type) IN ('operator', 'driver')", [$user_id]);
+        if($deleted === false){
+            error_log('Operator delete failed: ' . mbus_db_error($conn));
+            $error = "Operator could not be deleted. Please try again.";
+        } else {
+            $success = "Operator deleted successfully";
+        }
     }
 }
 ?>
@@ -144,17 +166,17 @@ if(isset($_POST['delete_operator'])){
 </header>
 
 <?php if(isset($success)): ?>
-<div class="alert alert-success" role="alert"><?php echo $success; ?></div>
+<div class="alert alert-success" role="alert"><?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?></div>
 <?php endif; ?>
 <?php if(isset($error)): ?>
-<div class="alert alert-error" role="alert"><?php echo $error; ?></div>
+<div class="alert alert-error" role="alert"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
 <?php endif; ?>
 
 <?php
 $oq = mbus_db_query($conn, "
     SELECT u.user_id, u.full_name, u.email, u.phone_number,
       (SELECT string_agg(b.bus_number, ', ') FROM operator_bus_assignments oa JOIN buses b ON b.bus_id=oa.bus_id WHERE oa.operator_id=u.user_id) AS buses
-    FROM users u WHERE LOWER(u.user_type)='operator' ORDER BY u.full_name");
+    FROM users u WHERE LOWER(u.user_type) IN ('operator', 'driver') ORDER BY u.full_name");
 $op_list = [];
 while($oq !== false && ($row = mbus_db_fetch_assoc($oq))){ $op_list[] = $row; }
 $assigned = count(array_filter($op_list, fn($x) => !empty($x['buses'])));
@@ -187,11 +209,11 @@ $assigned = count(array_filter($op_list, fn($x) => !empty($x['buses'])));
         <?php csrf_field(); ?>
         <header class="ad-dialog-head"><h2 id="adTitle">Add operator</h2><button type="button" class="ad-x" data-ad-close aria-label="Close"><i class="fa fa-xmark" aria-hidden="true"></i></button></header>
         <div class="ad-dialog-body">
-            <label class="ad-field"><span>Full name</span><input type="text" name="full_name" required></label>
-            <label class="ad-field"><span>Email</span><input type="email" name="email" required></label>
+            <label class="ad-field"><span>Full name</span><input type="text" name="full_name" maxlength="100" required></label>
+            <label class="ad-field"><span>Email</span><input type="email" name="email" maxlength="100" required></label>
             <div class="ad-two">
-                <label class="ad-field"><span>Phone</span><input type="text" name="phone_number" pattern="09\d{9}" maxlength="11" placeholder="09XXXXXXXXX" required></label>
-                <label class="ad-field"><span>Password</span><input type="password" name="password" minlength="8" required placeholder="8+ characters"></label>
+                <label class="ad-field"><span>Phone</span><div class="phone-input"><span class="phone-prefix" aria-hidden="true">+63</span><input type="tel" name="phone_number" inputmode="numeric" pattern="9[0-9]{9}" minlength="10" maxlength="10" placeholder="9XXXXXXXXX" required></div></label>
+                <label class="ad-field"><span>Password</span><input type="password" name="password" minlength="8" maxlength="128" required placeholder="8+ characters"></label>
             </div>
         </div>
         <footer class="ad-dialog-foot">

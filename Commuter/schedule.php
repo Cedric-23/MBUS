@@ -1,6 +1,6 @@
 <?php
-session_start();
 include "../config/db_connect.php";
+session_start();
 require_once __DIR__ . '/../Includes/schedule_booking.php';
 require_once __DIR__ . '/../Includes/route_locations.php';
 

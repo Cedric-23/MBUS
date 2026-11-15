@@ -1,6 +1,6 @@
 <?php
-session_start();
 include "../config/db_connect.php";
+session_start();
 include "../Includes/activity_log.php";
 include "../Includes/email_helper.php";
 include "../Includes/csrf.php";
@@ -120,12 +120,18 @@ if($booking_action !== 'reserve'){
 if(isset($_POST['confirm_reserve'])){
 $pickup_input=$_POST['pickup'] ?? '';
 $destination_input=$_POST['destination'] ?? '';
+$destinations_in = json_decode((string)($_POST['destinations'] ?? '{}'), true);
+if(!is_array($destinations_in)) $destinations_in = [];
 $seats_input=$_POST['seats'] ?? '';
 if(!is_string($pickup_input) || !is_string($destination_input) || !is_string($seats_input) || trim($pickup_input) === '' || trim($destination_input) === ''){
     die("Invalid reservation details.");
 }
 $pickup=mbus_db_escape($conn,$pickup_input);
 $destination=mbus_db_escape($conn,$destination_input);
+$pickup_index = array_search($pickup_input, $stops, true);
+if($pickup_index === false){
+    die("Invalid pickup location.");
+}
 $raw_seats = array_map('trim', explode(',', $seats_input));
 if(empty($raw_seats) || count(array_filter($raw_seats, function($seat){ return $seat === '' || !preg_match('/^\d+$/', $seat); })) > 0){
     die("Invalid seat selection.");
@@ -135,6 +141,17 @@ if($capacity <= 0 || empty($requested_seats) || count($requested_seats) > $avail
     die("Invalid seat selection or insufficient capacity.");
 }
 $seats=$requested_seats;
+$destination_by_seat = [];
+foreach($seats as $seat_no){
+    $seat_destination = (string)($destinations_in[(string)$seat_no] ?? $destination_input);
+    $destination_index = array_search($seat_destination, $stops, true);
+    if($destination_index === false || $destination_index <= $pickup_index){
+        http_response_code(422);
+        echo "Invalid destination for seat $seat_no. Choose a stop after the pickup location.";
+        exit();
+    }
+    $destination_by_seat[$seat_no] = mbus_db_escape($conn, $seat_destination);
+}
 /* Per-seat passenger type (+ ID photo for discounted seats that are not the verified account holder's own) */
 $types_in = json_decode((string)($_POST['types'] ?? '{}'), true); if(!is_array($types_in)) $types_in = [];
 $ids_in = json_decode((string)($_POST['ids'] ?? '{}'), true); if(!is_array($ids_in)) $ids_in = [];
@@ -227,7 +244,7 @@ FOR UPDATE
         $inserted = mbus_db_prepare($conn,"
 INSERT INTO reservation(ticket_code,user_id,schedule_id,seat_number,pickup_location,destination,reservation_date,created_at,status,passenger_type,discount_status,id_image_b64,id_image_mime)
 VALUES(?, ?, ?, ?, ?, ?, NOW(), NOW(), 'Pending', ?, ?, ?, ?)
-", [$ticket_code, $user_id, $schedule_id, $seat, $pickup, $destination, $seat_info[$seat]['type'], $seat_info[$seat]['status'], $seat_info[$seat]['b64'], $seat_info[$seat]['mime']]);
+        ", [$ticket_code, $user_id, $schedule_id, $seat, $pickup, $destination_by_seat[$seat], $seat_info[$seat]['type'], $seat_info[$seat]['status'], $seat_info[$seat]['b64'], $seat_info[$seat]['mime']]);
         if($inserted === false){
             throw new RuntimeException("Reservation insert failed");
         }
@@ -406,6 +423,7 @@ echo "</div>";
         <option value="">Select pickup first</option>
     </select>
 </div>
+<div id="seatDestinations" class="seat-destinations" aria-live="polite"></div>
 
 <button type="button" id="doneBtn" class="btn btn-primary btn-block">
     Review my trip

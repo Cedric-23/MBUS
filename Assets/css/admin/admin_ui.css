@@ -206,3 +206,4 @@
 .oa-admin summary{cursor:pointer;font-weight:600;font-size:.92rem}.oa-admin p{margin:8px 0;font-size:.84rem;color:#6b7a8d}
 .oa-admin-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
 .oa-admin-form input{height:42px;padding:0 12px;border:1px solid var(--ad-line);border-radius:10px;font:inherit;font-size:.9rem;min-width:0}
+.phone-input{display:flex;align-items:stretch;width:100%}.phone-prefix{display:grid;place-items:center;min-width:48px;padding:0 9px;border:1px solid var(--ad-line);border-right:0;border-radius:10px 0 0 10px;background:var(--ad-soft);color:var(--ad-text);font-weight:600}.phone-input input{flex:1;min-width:0;border-radius:0 10px 10px 0 !important}

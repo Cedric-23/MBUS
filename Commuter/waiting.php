@@ -69,7 +69,6 @@ $profileImage = $hasDbPic ? '../avatar.php?v=' . rawurlencode((string)$pr['pic_v
     <p id="cwbNotice" class="cwb-notice" role="status" aria-live="polite" hidden></p>
 
     <section id="cwtSheet" class="cwb-sheet cwt-sheet" aria-label="Your trip" aria-live="polite">
-        <div class="cwb-sheet-handle" aria-hidden="true"></div>
         <h2 id="cwtTitle" class="cwt-title">Checking your trip…</h2>
         <p id="cwtSub" class="cwt-sub"></p>
         <div id="cwtMeta" class="cwt-meta"></div>

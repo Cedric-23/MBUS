@@ -73,7 +73,8 @@ For waiting riders and live bus tracking, apply additive migrations `supabase/10
 php scripts/setup_supabase.php
 ```
 
-Or run SQL files in Supabase SQL Editor: `00_reset.sql` → `01_schema.sql` → `02_data.sql`.
+Or run SQL files in Supabase SQL Editor: `00_reset.sql` → `01_schema.sql` → `02_data.sql` → `07_add_operator_application.sql` → `15_password_reset.sql` → `16_registration_verification.sql`.
+The last migrations add password-reset fields and email verification for new commuter registrations.
 
 ---
 

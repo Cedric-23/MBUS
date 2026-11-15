@@ -12,7 +12,12 @@ CREATE TABLE users (
     email VARCHAR(100) NOT NULL UNIQUE,
     phone_number VARCHAR(20),
     password VARCHAR(255) NOT NULL,
-    user_type VARCHAR(50) NOT NULL
+    user_type VARCHAR(50) NOT NULL,
+    reset_code VARCHAR(6),
+    reset_expiry TIMESTAMP NULL,
+    email_verified_at TIMESTAMP NULL,
+    registration_code VARCHAR(6),
+    registration_code_expiry TIMESTAMP NULL
 );
 
 CREATE TABLE buses (

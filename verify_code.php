@@ -1,6 +1,6 @@
 <?php
-session_start();
 include "config/db_connect.php";
+session_start();
 include "Includes/csrf.php";
 
 $error = '';
@@ -21,14 +21,14 @@ if(isset($_POST['verify'])){
             // Verify code against database
             $email = $_SESSION['reset_email'];
             $result = mbus_db_prepare($conn, "SELECT reset_code, reset_expiry FROM users WHERE LOWER(email) = LOWER(?)", [$email]);
-            $user = mbus_db_fetch_assoc($result);
+            $user = $result === false ? false : mbus_db_fetch_assoc($result);
 
-            if($user && $user['reset_code'] == $code && strtotime($user['reset_expiry']) > time()){
+            if($user && hash_equals((string)$user['reset_code'], $code) && !empty($user['reset_expiry']) && strtotime($user['reset_expiry']) > time()){
                 $_SESSION['verified'] = true;
                 header("Location: new_password.php");
                 exit();
             } else {
-                $error = 'Invalid or expired code.';
+                $error = $result === false ? 'Password reset is temporarily unavailable. Please start again.' : 'Invalid or expired code.';
             }
         }
     }

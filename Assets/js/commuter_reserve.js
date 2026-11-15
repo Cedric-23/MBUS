@@ -1,4 +1,5 @@
 let selectedSeats = [];
+const seatDestinations = {};
 
 const pickup = document.getElementById("pickup");
 const destination = document.getElementById("destination");
@@ -19,6 +20,7 @@ document.querySelectorAll(".seat-btn").forEach(seat => {
             selectedSeats = selectedSeats.filter(
                 s => s != seatNumber
             );
+            delete seatDestinations[seatNumber];
 
         } else {
 
@@ -49,7 +51,8 @@ pickup.addEventListener("change", function () {
 
     }
 
-    destination.disabled = !this.value;
+destination.disabled = !this.value;
+    selectedSeats.forEach(seat => { seatDestinations[seat] = seatDestinations[seat] || destination.value; });
 
 });
 
@@ -74,6 +77,24 @@ document.getElementById("doneBtn")
         return;
     }
 
+    const destinationBox = document.getElementById("seatDestinations");
+    destinationBox.innerHTML = "";
+    selectedSeats.forEach(seat => {
+        const row = document.createElement("label");
+        row.className = "passenger-row destination-row";
+        row.textContent = "Destination for seat " + seat;
+        const select = destination.cloneNode(false);
+        select.id = "destination_" + seat;
+        select.name = "destination_" + seat;
+        select.disabled = false;
+        select.innerHTML = destination.innerHTML;
+        select.value = seatDestinations[seat] || destination.value;
+        select.addEventListener("change", () => { seatDestinations[seat] = select.value; });
+        row.appendChild(select);
+        destinationBox.appendChild(row);
+        seatDestinations[seat] = select.value;
+    });
+
     document.getElementById("summaryPanel").classList.add("show");
 
     document.getElementById("summarySeats").innerText =
@@ -82,8 +103,7 @@ document.getElementById("doneBtn")
     document.getElementById("summaryPickup").innerText =
         pickup.value;
 
-    document.getElementById("summaryDestination").innerText =
-        destination.value;
+    document.getElementById("summaryDestination").innerText = selectedSeats.map(seat => "Seat " + seat + ": " + seatDestinations[seat]).join(" · ");
 
     renderPassengerTypes();
 
@@ -192,11 +212,6 @@ document.getElementById("calculateBtn")
 function calculateFare() {
 
     const pickupFare = fareTable[pickup.value];
-    const destinationFare = fareTable[destination.value];
-
-    let farePerSeat = Math.max(14, Math.abs(destinationFare - pickupFare));
-    if (pickup.value === destination.value || isNaN(farePerSeat)) farePerSeat = 0;
-
     let reservationFee = selectedSeats.length * 10;
     let total = 0;
     let html = "";
@@ -204,6 +219,10 @@ function calculateFare() {
     selectedSeats.forEach((seat, index) => {
 
         let type = seatType(seat, index);
+        const seatDestination = seatDestinations[seat] || destination.value;
+        const destinationFare = fareTable[seatDestination];
+        let farePerSeat = Math.max(14, Math.abs(destinationFare - pickupFare));
+        if (pickup.value === seatDestination || isNaN(farePerSeat)) farePerSeat = 0;
         let baseFare = farePerSeat;
         let discount = 0;
 
@@ -216,7 +235,7 @@ function calculateFare() {
 
         html += `
         <p>
-            Seat ${seat} (${type})<br>
+            Seat ${seat} → ${seatDestination} (${type})<br>
             Base Fare: ₱${baseFare.toFixed(2)}<br>
             Discount: ₱${discount.toFixed(2)}<br>
             Final Fare: ₱${finalFare.toFixed(2)}
@@ -248,6 +267,7 @@ async function reserveSeats() {
     formData.append("csrf_token", csrfToken);
     formData.append("pickup", pickup.value);
     formData.append("destination", destination.value);
+    formData.append("destinations", JSON.stringify(seatDestinations));
     formData.append("seats", selectedSeats.join(","));
     const types = {}, ids = {};
     selectedSeats.forEach((seat, i) => {
@@ -286,6 +306,11 @@ document.getElementById("reserveBtn")
 
     if (!destination.value) {
         showError("Select destination.");
+        return;
+    }
+
+    if (selectedSeats.some(seat => !seatDestinations[seat])) {
+        showError("Set a destination for every selected seat.");
         return;
     }
 

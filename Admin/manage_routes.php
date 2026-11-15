@@ -92,9 +92,34 @@ if(isset($_POST['delete_route'])){
     if(!csrf_validate_token()){
         $error = "Security validation failed. Please try again.";
     } else {
-        $route_id = (int)$_POST['route_id'];
-        mbus_db_prepare($conn, "DELETE FROM routes WHERE route_id = ?", [$route_id]);
-        $success = "Route deleted successfully";
+        $route_id = filter_var($_POST['route_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: 0;
+        if($route_id < 1){
+            $error = "The route to delete was not identified. Please refresh the page and try again.";
+        } else {
+            // schedule.route_id intentionally has no cascade: deleting a route must not
+            // silently remove schedules, reservations, tickets, or payment history.
+            $usage = mbus_db_prepare($conn, "SELECT COUNT(*) AS n FROM schedule WHERE route_id = ?", [$route_id]);
+            if($usage === false){
+                error_log('Route usage check failed: ' . mbus_db_error($conn));
+                $error = "The route could not be checked before deletion. Please try again.";
+            } else {
+                $usage_row = mbus_db_fetch_assoc($usage);
+                $schedule_count = (int)($usage_row['n'] ?? 0);
+                if($schedule_count > 0){
+                    $error = "This route cannot be deleted because it is used by {$schedule_count} schedule" . ($schedule_count === 1 ? '' : 's') . ". Delete or move those schedules first.";
+                } else {
+                    $deleted = mbus_db_prepare($conn, "DELETE FROM routes WHERE route_id = ?", [$route_id]);
+                    if($deleted === false){
+                        error_log('Route delete failed: ' . mbus_db_error($conn));
+                        $error = "The route could not be deleted. Please try again.";
+                    } elseif($conn->affectedRows < 1){
+                        $error = "That route no longer exists. Refresh the page and try again.";
+                    } else {
+                        $success = "Route deleted successfully.";
+                    }
+                }
+            }
+        }
     }
 }
 ?>
@@ -176,10 +201,10 @@ if(isset($_POST['delete_route'])){
 </header>
 
 <?php if(isset($success)): ?>
-<div class="alert alert-success" role="alert"><?php echo $success; ?></div>
+<div class="alert alert-success" role="alert"><?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?></div>
 <?php endif; ?>
 <?php if(isset($error)): ?>
-<div class="alert alert-error" role="alert"><?php echo $error; ?></div>
+<div class="alert alert-error" role="alert"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
 <?php endif; ?>
 
 <!-- ADD ROUTE -->
@@ -270,27 +295,27 @@ if(isset($_POST['delete_route'])){
 
                 while($row = mbus_db_fetch_assoc($query)){
                 $routeDisplay = mbus_route_apply_terminal_defaults($row);
+                $deleteFormId = 'delete-route-' . (int)$row['route_id'];
                 ?>
                 <tr>
-                    <form method="POST" class="route-form">
-                        <?php csrf_field(); ?>
-                        <input type="hidden" name="route_id" value="<?php echo $row['route_id']; ?>">
-                        
-                        <td data-label="Route">
-                            <span class="route-badge">
+                    <td data-label="Route">
+                        <span class="route-badge">
                                 <?php echo htmlspecialchars($routeDisplay['origin_label']); ?> → <?php echo htmlspecialchars($routeDisplay['destination_label']); ?>
                             </span>
                         </td>
                         <td data-label="Fare">₱<?php echo number_format($row['fare'], 2); ?></td>
                         <td data-label="Actions">
                             <div class="action-buttons">
-                                <button type="submit" name="delete_route" class="btn btn-sm btn-danger delete-btn" 
-                                    onclick="return confirm('Delete this route?')">
-                                    <i class="fa fa-trash" aria-hidden="true"></i> Delete
-                                </button>
+                                <form method="POST" class="route-form" id="<?php echo htmlspecialchars($deleteFormId, ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php csrf_field(); ?>
+                                    <input type="hidden" name="route_id" value="<?php echo (int)$row['route_id']; ?>">
+                                    <button type="submit" name="delete_route" value="1" class="btn btn-sm btn-danger delete-btn"
+                                        onclick="return confirm('Delete this route?')">
+                                        <i class="fa fa-trash" aria-hidden="true"></i> Delete
+                                    </button>
+                                </form>
                             </div>
                         </td>
-                    </form>
                 </tr>
                 <?php } ?>
             </tbody>

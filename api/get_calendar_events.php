@@ -1,8 +1,8 @@
 <?php
-session_start();
 header('Content-Type: application/json');
 header('Cache-Control: no-store');
 include "../config/db_connect.php";
+session_start();
 require_once __DIR__ . '/../Includes/schedule_booking.php';
 
 if(!isset($_SESSION['user_id'])){

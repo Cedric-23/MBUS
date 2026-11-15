@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/config/app.php';
 session_start();
 
 use PHPMailer\PHPMailer\PHPMailer;
@@ -9,6 +10,12 @@ require 'PHPMailer/src/PHPMailer.php';
 require 'PHPMailer/src/SMTP.php';
 
 $status = "Sending...";
+$reset_email = (string)($_SESSION['reset_email'] ?? '');
+$reset_code = (string)($_SESSION['reset_code'] ?? '');
+if ($reset_email === '' || !preg_match('/^\d{6}$/', $reset_code)) {
+    header('Location: forgot_password.php');
+    exit();
+}
 
 try{
     $mail = new PHPMailer(true);
@@ -22,10 +29,10 @@ try{
     $mail->Port = getenv('SMTP_PORT') ?: 465;
 
     $mail->setFrom('YOUR_EMAIL@gmail.com', 'MBUS System');
-    $mail->addAddress($_SESSION['reset_email']);
+    $mail->addAddress($reset_email);
 
     $mail->Subject = 'MBUS Password Reset Code';
-    $mail->Body = "Your reset code is: ".$_SESSION['reset_code'];
+    $mail->Body = "Your reset code is: " . $reset_code;
 
     $mail->send();
 

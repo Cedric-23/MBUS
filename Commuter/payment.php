@@ -258,8 +258,11 @@ if(isset($_POST['cancel_reservation'])){
     <li><strong>Bus:</strong> <?php echo htmlspecialchars($reservations[0]['bus_number']); ?></li>
     <li><strong>Departure:</strong> <?php echo date("F d, Y g:i A", strtotime($reservations[0]['departure_time'])); ?></li>
     <li><strong>Expected Arrival:</strong> <?php echo date("F d, Y g:i A", strtotime($reservations[0]['arrival_time'])); ?></li>
-    <li><strong>Pickup:</strong> <?php echo htmlspecialchars($reservations[0]['pickup_location']); ?></li>
-    <li><strong>Destination:</strong> <?php echo htmlspecialchars($reservations[0]['destination']); ?></li>
+    <li><strong>Stops:</strong>
+        <?php foreach($reservations as $reservation): ?>
+            <span class="payment-seat-stop">Seat <?php echo htmlspecialchars((string)$reservation['seat_number']); ?>: <?php echo htmlspecialchars($reservation['pickup_location']); ?> → <?php echo htmlspecialchars($reservation['destination']); ?></span>
+        <?php endforeach; ?>
+    </li>
     <li class="trip-total"><strong>Total:</strong> <span>&#8369;<span id="totalAmt"><?php echo number_format($total, 2); ?></span></span></li>
 </ul>
 

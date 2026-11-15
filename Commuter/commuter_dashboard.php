@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . "/../config/app.php";
 session_start();
 
 /* CHECK LOGIN */
@@ -7,8 +8,6 @@ if(!isset($_SESSION['user_id'])){
     exit();
 }
 
-/* Load app config so date() uses the app timezone (Asia/Manila), not the server's UTC default */
-require_once __DIR__ . "/../config/app.php";
 include "../config/db_connect.php";
 include "../Includes/csrf.php";
 include "../Includes/fare.php";
@@ -113,7 +112,6 @@ function mbus_home_when(string $ts): string {
                             <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
                             <span class="profile-menu-role">Commuter account</span>
                         </div>
-                        <a href="waiting.php" role="menuitem"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
                         <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>

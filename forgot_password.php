@@ -1,6 +1,6 @@
 <?php
-session_start();
 include "config/db_connect.php";
+session_start();
 include "Includes/csrf.php";
 
 $error = '';
@@ -10,7 +10,8 @@ if(isset($_POST['send_code'])){
     if(!csrf_validate_token()){
         $error = 'Security validation failed. Please try again.';
     } else {
-        $email = trim($_POST['email']);
+        $email = strtolower(trim((string)($_POST['email'] ?? '')));
+        unset($_SESSION['reset_email'], $_SESSION['reset_code'], $_SESSION['verified']);
 
         // Validate email format
         if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
@@ -20,19 +21,23 @@ if(isset($_POST['send_code'])){
             $result = mbus_db_prepare($conn, "SELECT * FROM users WHERE LOWER(email) = LOWER(?)", [$email]);
 
             if(mbus_db_num_rows($result) > 0){
-                $code = rand(100000,999999);
+                $code = (string)random_int(100000,999999);
                 $expiry = date("Y-m-d H:i:s", strtotime("+15 minutes"));
 
                 // Use prepared statement for update
-                mbus_db_prepare($conn, "UPDATE users
+                $updated = mbus_db_prepare($conn, "UPDATE users
                 SET reset_code = ?, reset_expiry = ?
                 WHERE LOWER(email) = LOWER(?)", [$code, $expiry, $email]);
 
-                $_SESSION['reset_email'] = $email;
-                $_SESSION['reset_code'] = $code;
-
-                header("Location: send_reset_code.php");
-                exit();
+                if ($updated === false) {
+                    $error = 'Password reset is temporarily unavailable. Please try again later.';
+                    unset($_SESSION['reset_email'], $_SESSION['reset_code']);
+                } else {
+                    $_SESSION['reset_email'] = $email;
+                    $_SESSION['reset_code'] = $code;
+                    header("Location: send_reset_code.php");
+                    exit();
+                }
             }else{
                 $error = 'Email not found';
             }
