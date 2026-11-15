@@ -146,9 +146,6 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
             .login-form .login-options a { color: #086FCF; text-decoration: none; }
             .login-form input[aria-invalid="true"] { border-color: #d92d20; }
             .login-form .form-email-input,.login-form .password-input{position:relative}
-            .login-form .password-input > input{padding-right:52px}
-            .login-form .password-input > .password-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:40px;height:40px;display:grid;place-items:center;padding:0;border:0;background:transparent;color:#667085;cursor:pointer;z-index:2}
-            .login-form .password-input > .password-toggle:focus-visible{outline:3px solid rgba(30,58,95,.35);border-radius:10px}
         </style>
     </head>
     <body>

@@ -335,8 +335,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                             <?= mbus_field_error($errors, 'emailAddress') ?></div>
                             <div class="form-phone-input">
                                 <label>Mobile Number</label>
-                                <div class="phone-input"><span class="phone-prefix" aria-hidden="true">+63</span><input name="mobileNumber" type="text" placeholder="9XXXXXXXXX" maxlength="10" minlength="10" inputmode="numeric" pattern="9[0-9]{9}" autocomplete="tel" value="<?= preg_replace('/^0/', '', reg_old('mobileNumber')) ?>" required/></div>
-                                <i class="input-icon" data-lucide="phone"></i>
+                                <div class="phone-input"><span class="phone-prefix" aria-hidden="true">+63</span><input name="mobileNumber" type="text" placeholder="9XXXXXXXXX" maxlength="10" minlength="10" inputmode="numeric" pattern="9[0-9]{9}" autocomplete="tel" value="<?= preg_replace('/^0/', '', reg_old('mobileNumber')) ?>" required/><i class="input-icon" data-lucide="phone"></i></div>
                             <?= mbus_field_error($errors, 'mobileNumber') ?></div>
                         </div>
                         <div class="form-password-input">
@@ -393,8 +392,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                 <div class="input-group">
                                     <div class="phone-number">
                                         <label>Phone Number</label>
-                                <div class="phone-input"><span class="phone-prefix" aria-hidden="true">+63</span><input type="text" name="phone-number" placeholder="9XXXXXXXXX" maxlength="10" minlength="10" inputmode="numeric" pattern="9[0-9]{9}" value="<?= preg_replace('/^0/', '', reg_old('phone-number')) ?>" required/></div>
-                                        <i class="input-icon" data-lucide="phone"></i>
+                                <div class="phone-input"><span class="phone-prefix" aria-hidden="true">+63</span><input type="text" name="phone-number" placeholder="9XXXXXXXXX" maxlength="10" minlength="10" inputmode="numeric" pattern="9[0-9]{9}" value="<?= preg_replace('/^0/', '', reg_old('phone-number')) ?>" required/><i class="input-icon" data-lucide="phone"></i></div>
                                     <?= mbus_field_error($errors, 'phone-number') ?></div>
                                     <div class="home-address">
                                         <label>Address</label>

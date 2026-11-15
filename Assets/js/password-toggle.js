@@ -6,10 +6,9 @@
     const CLOSED_EYE = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.9 10.9 0 0 1 12 19C5.5 19 2 12 2 12a19.6 19.6 0 0 1 5.06-5.94M9.9 4.24A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a19.5 19.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>';
 
     const css = document.createElement('style');
-    css.textContent = '.pw-wrap{position:relative;display:block}.pw-wrap>input{padding-right:48px!important;width:100%;box-sizing:border-box}' +
-        '.password-toggle,.pw-eye{display:grid!important;place-items:center;width:44px;height:44px;padding:0!important;border:0;background:none;color:#6b7a8d;cursor:pointer;-webkit-tap-highlight-color:transparent}' +
-        '.pw-eye{position:absolute;right:2px;top:50%;transform:translateY(-50%)}' +
-        '.password-toggle{right:2px!important}.password-toggle:focus-visible,.pw-eye:focus-visible{outline:3px solid #1e90ff;outline-offset:-3px;border-radius:10px}';
+    css.textContent = '.pw-wrap{position:relative;display:block;width:100%}.pw-wrap>input{padding-right:52px!important;width:100%;box-sizing:border-box}' +
+        '.password-toggle,.pw-eye{display:grid!important;place-items:center;width:40px;height:40px;padding:0!important;border:0;background:transparent;color:#667085;cursor:pointer;-webkit-tap-highlight-color:transparent}' +
+        '.password-toggle:focus-visible,.pw-eye:focus-visible{outline:3px solid rgba(30,58,95,.35);outline-offset:0;border-radius:10px}';
     document.head.appendChild(css);
 
     function bind(input, btn) {
