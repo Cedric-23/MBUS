@@ -60,13 +60,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$conn->pdo->exec("UPDATE paymongo_checkout SET status = 'Expired' WHERE status = 'Submitted' AND session_id LIKE 'manual\\_%' AND submitted_at < NOW() - INTERVAL '30 minutes'");
+$smsToken = mbus_sms_token($conn);
+$smsUrl = (function(){ $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https'; return ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/api/gcash_sms_webhook.php?token='; })();
+$recvQ = mbus_db_prepare($conn, "SELECT reference_number, amount, sender, received_at, used_by FROM incoming_payments ORDER BY received_at DESC LIMIT 8", []);
+$received = []; while ($recvQ !== false && ($rr = mbus_db_fetch_assoc($recvQ))) $received[] = $rr;
 $opts = ['submitted' => 'To verify', 'paid' => 'Approved', 'rejected' => 'Rejected'];
 $f = $_GET['status'] ?? 'submitted'; if (!isset($opts[$f])) $f = 'submitted';
 $counts = array_fill_keys(array_keys($opts), 0);
 $cq = mbus_db_prepare($conn, "SELECT LOWER(status) AS s, COUNT(*) AS c FROM paymongo_checkout WHERE session_id LIKE 'manual\_%' GROUP BY 1", []);
 while ($cq !== false && ($r = mbus_db_fetch_assoc($cq))) if (isset($counts[$r['s']])) $counts[$r['s']] = (int)$r['c'];
 $rows = [];
-$q = mbus_db_prepare($conn, "SELECT c.session_id, c.amount, c.reference_number, c.submitted_at, c.status, c.reject_reason, c.lines, u.full_name, u.email,
+$q = mbus_db_prepare($conn, "SELECT (c.receipt_b64 IS NOT NULL AND c.receipt_b64 <> '') AS has_receipt, c.session_id, c.amount, c.reference_number, c.submitted_at, c.status, c.reject_reason, c.lines, u.full_name, u.email,
     (SELECT COUNT(*) FROM paymongo_checkout d WHERE d.reference_number = c.reference_number AND d.session_id <> c.session_id) AS dups,
     (SELECT r.origin || ' → ' || r.destination FROM schedule s JOIN routes r ON r.route_id = s.route_id WHERE s.schedule_id = c.schedule_id) AS route,
     (SELECT s.departure_time FROM schedule s WHERE s.schedule_id = c.schedule_id) AS departure
@@ -158,7 +163,7 @@ $gName = mbus_setting($conn, 'gcash_name'); $gNum = mbus_setting($conn, 'gcash_n
     <?php endforeach; ?>
 </nav>
 
-<?php if(!$rows): ?><p class="oa-empty">Nothing here.</p><?php endif; ?>
+<?php if(!$rows): ?><p class="oa-empty"><?php echo $f === 'submitted' ? 'Nothing needs checking. Payments confirm automatically when the SMS arrives.' : 'Nothing here.'; ?></p><?php endif; ?>
 <div class="oa-list">
 <?php foreach($rows as $c): $seats = array_map(fn($l) => $l['seat'] . ' (' . $l['type'] . ')', json_decode((string)$c['lines'], true) ?: []); ?>
     <article class="oa-card">
@@ -172,7 +177,7 @@ $gName = mbus_setting($conn, 'gcash_name'); $gNum = mbus_setting($conn, 'gcash_n
             <div><dt>Seats</dt><dd><?php echo htmlspecialchars(implode(', ', $seats)); ?></dd></div>
             <div><dt>Submitted</dt><dd><?php echo $c['submitted_at'] ? date('M j, g:i A', strtotime($c['submitted_at'])) : ''; ?></dd></div>
         </dl>
-        <div class="oa-docs"><a class="ad-btn sm" target="_blank" rel="noopener" href="payment_receipt.php?id=<?php echo urlencode($c['session_id']); ?>"><i class="fa fa-receipt" aria-hidden="true"></i> View receipt</a></div>
+        <?php if(!empty($c['has_receipt'])): ?><div class="oa-docs"><a class="ad-btn sm" target="_blank" rel="noopener" href="payment_receipt.php?id=<?php echo urlencode($c['session_id']); ?>"><i class="fa fa-receipt" aria-hidden="true"></i> View receipt</a></div><?php endif; ?>
         <?php if(strtolower($c['status']) === 'rejected' && $c['reject_reason']): ?><p class="oa-reason">Reason: <?php echo htmlspecialchars($c['reject_reason']); ?></p><?php endif; ?>
         <?php if(strtolower($c['status']) === 'submitted'): ?>
         <form method="POST" class="oa-actions">
@@ -188,6 +193,14 @@ $gName = mbus_setting($conn, 'gcash_name'); $gNum = mbus_setting($conn, 'gcash_n
     </article>
 <?php endforeach; ?>
 </div>
+
+<details class="oa-admin" <?php echo $gNum === '' ? 'open' : ''; ?>>
+    <summary>Automatic payment matching (phone setup)</summary>
+    <p>Install an SMS forwarder app on the phone that has your GCash SIM (e.g. &ldquo;SMS Forwarder&rdquo; on Android). Forward messages containing &ldquo;received&rdquo; to this web address, sending the message text in a field named <code>message</code>. MBUS then confirms commuters&rsquo; tickets by itself when their reference number and amount match.</p>
+    <p><code style="word-break:break-all"><?php echo htmlspecialchars($smsUrl . $smsToken); ?></code></p>
+    <?php if($received): ?><p>Latest payments seen:</p><ul style="margin:0 0 10px;padding-left:18px;font-size:.86rem">
+    <?php foreach($received as $rc): ?><li>&#8369;<?php echo number_format((float)$rc['amount'], 2); ?> · ref <?php echo htmlspecialchars($rc['reference_number']); ?> · <?php echo $rc['used_by'] ? 'matched' : 'unmatched'; ?></li><?php endforeach; ?></ul><?php else: ?><p>No payments received yet.</p><?php endif; ?>
+</details>
 
 <details class="oa-admin" <?php echo $gNum === '' ? 'open' : ''; ?>>
     <summary>Your GCash details</summary>

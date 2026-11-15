@@ -32,7 +32,9 @@ if($co['status'] === 'Paid'){
         $message = 'We could not reach PayMongo just now. This page will keep trying.';
     }
 } elseif($co['status'] === 'Submitted'){
-    $state = 'review';
+    include_once "../Includes/gcash_manual.php";
+    $m = mbus_try_autoapprove($conn, $co['session_id']);
+    $state = !empty($m['matched']) ? 'paid' : 'review';
 } elseif($co['status'] === 'Rejected'){
     $state = 'rejected';
     $message = trim((string)$co['reject_reason']);
@@ -48,7 +50,7 @@ if($state === 'paid'){ header("Location: ticket.php?schedule_id=" . $schedule_id
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Confirming payment — MBUS</title>
-<?php if($state === 'waiting'): ?><meta http-equiv="refresh" content="4"><?php endif; ?>
+<?php if($state === 'waiting' || $state === 'review'): ?><meta http-equiv="refresh" content="4"><?php endif; ?>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f6fa;font-family:Inter,system-ui,sans-serif;color:#172b4d}
@@ -63,9 +65,10 @@ a{display:inline-flex;align-items:center;justify-content:center;min-height:46px;
 <body>
 <main class="box" role="status" aria-live="polite">
 <?php if($state === 'review'): ?>
-    <h1>Receipt received</h1>
-    <p>An admin is checking your GCash payment. Your seats stay held, and your ticket appears under Trips once it&rsquo;s confirmed.</p>
-    <a href="my_reservations.php">View my trips</a>
+    <div class="spin" aria-hidden="true"></div>
+    <h1>Waiting for your GCash payment</h1>
+    <p>We match your reference number as soon as GCash reports it. Your seats are held for a few minutes. If you haven&rsquo;t paid yet, send the exact amount to the GCash number shown on the payment page.</p>
+    <a href="payment.php?schedule_id=<?php echo $schedule_id; ?>">Back to payment</a>
 <?php elseif($state === 'rejected'): ?>
     <h1>Payment not accepted</h1>
     <p><?php echo $message !== '' ? htmlspecialchars($message) : 'The receipt could not be verified.'; ?> Your seats were released. Please reserve again.</p>

@@ -25,5 +25,10 @@ If a payment finishes after the hold lapsed, the seats are revived when still fr
 
 The `paymongo_checkout` table is created automatically.
 
-## Free option (no PayMongo account): GCash QR + receipt
-When `PAYMONGO_SECRET_KEY` is empty, the payment page shows the admin's GCash QR and number. The commuter pays, enters the reference number and uploads the receipt. Admin → GCash payments (profile menu) shows each receipt to approve (ticket issued) or reject (seats released). Set the QR, account name and number in the "Your GCash details" section of that page. Reference numbers can't be reused.
+## Free option (no PayMongo account): GCash QR + automatic SMS matching
+When `PAYMONGO_SECRET_KEY` is empty, the payment page shows the admin's GCash QR and number. The commuter pays, then enters only the GCash reference number. No receipt upload.
+
+- The phone with the GCash SIM runs an SMS forwarder app that sends each "You have received PHP ..." SMS to `/api/gcash_sms_webhook.php?token=...` (the exact URL is shown in Admin > GCash payments > "Automatic payment matching"). Send the SMS text in a field named `message`.
+- MBUS records the amount and reference. If a commuter's reference matches and the amount covers the fare, the ticket is issued immediately. Each reference works once; an under-payment is not accepted.
+- If the SMS is late, the commuter waits on a "Waiting for your GCash payment" page that re-checks every few seconds. Unmatched attempts lapse after 30 minutes and seats are only held 15 minutes, and a user is limited to 3 unconfirmed attempts per hour, so fake reference numbers can't hog seats.
+- Admin > GCash payments keeps a fallback queue for unusual cases. Set the QR, name and number in "Your GCash details".

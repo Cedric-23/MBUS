@@ -39,3 +39,39 @@ function mbus_receipt_upload(string $field, &$error): ?array {
     if ($mime === '') { $error = 'The receipt must be a JPG or PNG image.'; return null; }
     return ['b64' => base64_encode($d), 'mime' => $mime];
 }
+
+/** Pull amount + reference out of a GCash "You have received ..." message. Returns null for anything else (e.g. money you sent). */
+function mbus_parse_gcash_sms(string $text): ?array {
+    if (!preg_match('/received/i', $text)) return null;
+    if (!preg_match('/(?:PHP|PhP|₱)\s*([\d,]+(?:\.\d{1,2})?)/u', $text, $a)) return null;
+    if (!preg_match('/Ref(?:erence)?\.?\s*(?:No\.?|Number|#)?\s*:?\s*(\d{10,20})/i', $text, $r) && !preg_match('/\b(\d{13})\b/', $text, $r)) return null;
+    $sender = preg_match('/from\s+(.+?)(?:\s+with|\.\s|\s+Ref|\s+on\s)/i', $text, $f) ? trim($f[1]) : '';
+    return ['amount' => (float)str_replace(',', '', $a[1]), 'reference' => $r[1], 'sender' => substr($sender, 0, 120)];
+}
+
+/** Match a submitted reference to a received GCash payment and, when the amount covers the fare, issue the ticket. */
+function mbus_try_autoapprove($conn, string $sessionId): array {
+    $pdo = $conn->pdo;
+    $st = $pdo->prepare("SELECT reference_number, amount FROM paymongo_checkout WHERE session_id = ? AND status = 'Submitted'");
+    $st->execute([$sessionId]);
+    $co = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$co) return ['matched' => false];
+    // Claim the incoming payment atomically so it can only ever pay for one checkout.
+    $claim = $pdo->prepare("UPDATE incoming_payments SET used_by = ? WHERE reference_number = ? AND used_by IS NULL AND amount >= ? RETURNING id");
+    $claim->execute([$sessionId, $co['reference_number'], $co['amount']]);
+    $id = $claim->fetchColumn();
+    if (!$id) return ['matched' => false];
+    $res = mbus_finalize_payment($conn, $sessionId, (string)$co['reference_number']);
+    if (empty($res['ok'])) {
+        $pdo->prepare("UPDATE incoming_payments SET used_by = NULL WHERE id = ?")->execute([$id]);
+        return ['matched' => false, 'message' => $res['message'] ?? ''];
+    }
+    return ['matched' => true, 'ticket' => $res['ticket'] ?? ''];
+}
+
+/** Shared secret the phone's SMS forwarder must send. Created on first use. */
+function mbus_sms_token($conn): string {
+    $t = mbus_setting($conn, 'sms_token');
+    if ($t === '') { $t = bin2hex(random_bytes(16)); mbus_set_setting($conn, 'sms_token', $t); }
+    return $t;
+}

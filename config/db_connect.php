@@ -65,6 +65,9 @@ try {
         foreach (["reference_number VARCHAR(40)", "receipt_b64 TEXT", "receipt_mime VARCHAR(30)", "reject_reason TEXT", "reviewed_by INT", "reviewed_at TIMESTAMP", "submitted_at TIMESTAMP"] as $col) {
             $pdo->exec('ALTER TABLE paymongo_checkout ADD COLUMN IF NOT EXISTS ' . $col);
         }
+        $pdo->exec("CREATE TABLE IF NOT EXISTS incoming_payments (
+            id SERIAL PRIMARY KEY, reference_number VARCHAR(40) UNIQUE NOT NULL, amount NUMERIC(10,2) NOT NULL,
+            sender TEXT, raw_message TEXT, received_at TIMESTAMP DEFAULT NOW(), used_by TEXT)");
         $pdo->exec("CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')");
     } catch (PDOException $schema_error) {
         error_log('Manual payment schema check failed: ' . $schema_error->getMessage());

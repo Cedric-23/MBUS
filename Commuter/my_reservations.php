@@ -98,7 +98,9 @@ $sql = mbus_db_prepare($conn, "
         $created = strtotime($row['created_at']);
         $expire = $created + (5 * 60);
         $remaining = $expire - time();
-        $awaiting = $remaining > 3600; // receipt submitted, waiting for an admin
+        $aw = $conn->pdo->prepare("SELECT 1 FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? AND status = 'Submitted' LIMIT 1");
+        $aw->execute([$_SESSION['user_id'], $row['schedule_id']]);
+        $awaiting = (bool)$aw->fetchColumn();
 
         if($remaining < 0){
             mbus_db_prepare($conn, "UPDATE reservation SET status='Cancelled' WHERE reservation_id=?", [$row['reservation_id']]);
@@ -133,7 +135,7 @@ $sql = mbus_db_prepare($conn, "
 
     <?php if($row['status'] === "Pending" && !empty($awaiting)){ ?>
     <div class="reservation-actions">
-        <a class="btn btn-outline" href="payment_return.php?schedule_id=<?php echo (int)$row['schedule_id']; ?>"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Payment awaiting verification</a>
+        <a class="btn btn-outline" href="payment_return.php?schedule_id=<?php echo (int)$row['schedule_id']; ?>"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting for GCash payment</a>
     </div>
     <?php } elseif($row['status'] === "Pending"){ ?>
 

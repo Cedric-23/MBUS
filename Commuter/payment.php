@@ -6,6 +6,7 @@ include "../Includes/email_helper.php";
 include "../Includes/csrf.php";
 include "../Includes/fare.php";
 include "../Includes/paymongo.php";
+include "../Includes/payment_finalize.php";
 include "../Includes/gcash_manual.php";
 
 if(!isset($_SESSION['user_id'])){
@@ -136,31 +137,39 @@ if(isset($_POST['submit_receipt']) && !paymongo_enabled()){
         mbus_db_prepare($conn, "UPDATE reservation SET status='Cancelled' WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'", [$user_id, $schedule_id]);
         $error = "This reservation expired after 10 minutes. Please reserve your seats again.";
     } elseif(!preg_match('/^\d{10,20}$/', $ref)){
-        $error = "Enter the GCash reference number from your receipt (digits only).";
+        $error = "Enter the 13-digit GCash reference number from your receipt.";
     } else {
+        // Stale unconfirmed attempts lapse after 30 minutes; too many recent ones pause new attempts.
+        $conn->pdo->exec("UPDATE paymongo_checkout SET status = 'Expired' WHERE status = 'Submitted' AND session_id LIKE 'manual\\_%' AND submitted_at < NOW() - INTERVAL '30 minutes'");
+        $recent = $conn->pdo->prepare("SELECT COUNT(*) FROM paymongo_checkout WHERE user_id = ? AND session_id LIKE 'manual\\_%' AND status IN ('Submitted', 'Expired', 'Rejected') AND submitted_at > NOW() - INTERVAL '1 hour'");
+        $recent->execute([$user_id]);
         $pl = mbus_checkout_payload($reservations, $default_types);
         $error = $pl['error'];
-        $receipt = $error === '' ? mbus_receipt_upload('receipt', $error) : null;
-        if($error === '' && $receipt){
+        if($error === '' && (int)$recent->fetchColumn() >= 3){
+            $error = "Too many unconfirmed attempts. Check the reference number and wait a few minutes before trying again.";
+        }
+        if($error === ''){
             $dup = $conn->pdo->prepare("SELECT 1 FROM paymongo_checkout WHERE reference_number = ? AND status IN ('Submitted', 'Paid') LIMIT 1");
             $dup->execute([$ref]);
             if($dup->fetchColumn()){
                 $error = "That reference number was already used for another payment.";
             } else {
                 try{
+                    $sid = 'manual_' . bin2hex(random_bytes(8));
                     $conn->pdo->beginTransaction();
-                    $conn->pdo->prepare("INSERT INTO paymongo_checkout (session_id, user_id, schedule_id, reservation_ids, lines, amount, status, reference_number, receipt_b64, receipt_mime, submitted_at)
-                        VALUES (?,?,?,?,?,?,'Submitted',?,?,?,NOW())")
-                        ->execute(['manual_' . bin2hex(random_bytes(8)), $user_id, $schedule_id, $pl['idsJson'], $pl['linesJson'], $pl['total'], $ref, $receipt['b64'], $receipt['mime']]);
-                    // Keep the seats held (a day) while an admin checks the receipt.
-                    $conn->pdo->prepare("UPDATE reservation SET created_at = NOW() + INTERVAL '1 day' WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'")->execute([$user_id, $schedule_id]);
+                    $conn->pdo->prepare("INSERT INTO paymongo_checkout (session_id, user_id, schedule_id, reservation_ids, lines, amount, status, reference_number, submitted_at)
+                        VALUES (?,?,?,?,?,?,'Submitted',?,NOW())")
+                        ->execute([$sid, $user_id, $schedule_id, $pl['idsJson'], $pl['linesJson'], $pl['total'], $ref]);
+                    // Hold the seats 15 more minutes while the GCash payment shows up.
+                    $conn->pdo->prepare("UPDATE reservation SET created_at = NOW() + INTERVAL '5 minutes' WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'")->execute([$user_id, $schedule_id]);
                     $conn->pdo->commit();
-                    header("Location: payment_return.php?schedule_id=" . (int)$schedule_id);
+                    $m = mbus_try_autoapprove($conn, $sid);
+                    header("Location: " . (!empty($m['matched']) ? "ticket.php?schedule_id=" : "payment_return.php?schedule_id=") . (int)$schedule_id);
                     exit();
                 } catch(Throwable $e){
                     if($conn->pdo->inTransaction()) $conn->pdo->rollBack();
-                    error_log('Receipt submit failed: ' . $e->getMessage());
-                    $error = "Could not submit your receipt. Please try again.";
+                    error_log('Reference submit failed: ' . $e->getMessage());
+                    $error = "Could not submit your payment. Please try again.";
                 }
             }
         }
@@ -313,11 +322,11 @@ if(isset($_POST['cancel_reservation'])){
 <?php else:
     $gName = mbus_setting($conn, 'gcash_name'); $gNum = mbus_setting($conn, 'gcash_number'); $gQr = mbus_setting($conn, 'gcash_qr');
 ?>
-<form method="POST" enctype="multipart/form-data" class="payment-form" id="payForm">
+<form method="POST" class="payment-form" id="payForm">
     <?php csrf_field(); ?>
     <div class="gcash-row">
         <span class="gcash-mark" aria-hidden="true"><i class="fa fa-mobile-alt"></i></span>
-        <span class="gcash-text"><strong>Pay with GCash</strong><small>Send &#8369;<?php echo number_format($total, 2); ?> then upload your receipt</small></span>
+        <span class="gcash-text"><strong>Pay with GCash</strong><small>Send exactly &#8369;<?php echo number_format($total, 2); ?>, then enter the reference number</small></span>
     </div>
     <?php if($gQr !== '' && strpos($gQr, 'data:image/') === 0): ?>
     <div class="gcash-qr"><img src="<?php echo htmlspecialchars($gQr, ENT_QUOTES); ?>" alt="GCash QR code"></div>
@@ -326,14 +335,10 @@ if(isset($_POST['cancel_reservation'])){
     <div class="form-group">
         <label for="reference_number">GCash reference number</label>
         <input type="text" name="reference_number" id="reference_number" class="form-control" placeholder="e.g. 1234567890123" inputmode="numeric" autocomplete="off" required minlength="10" maxlength="20" pattern="\d{10,20}">
-    </div>
-    <div class="form-group">
-        <label for="receipt">Receipt screenshot</label>
-        <input type="file" name="receipt" id="receipt" class="form-control" accept="image/jpeg,image/png" required>
-        <small class="form-hint">An admin checks your receipt, then your ticket is issued.</small>
+        <small class="form-hint">Your ticket is issued automatically once GCash shows your payment. It usually takes a few seconds.</small>
     </div>
     <button type="submit" name="submit_receipt" value="1" class="btn btn-primary btn-block"<?php echo ($expired || $gNum === '') ? ' disabled' : ''; ?>>
-        Submit receipt &#8369;<span id="btnAmt"><?php echo number_format($total, 2); ?></span>
+        Confirm payment &#8369;<span id="btnAmt"><?php echo number_format($total, 2); ?></span>
     </button>
 </form>
 <?php endif; ?>
