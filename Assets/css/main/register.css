@@ -57,6 +57,7 @@ body{display:flex;min-height:100vh;background:#fff}
 .login-form .password-input{position:relative}
 .login-form .password-control{position:relative;width:100%}
 .login-form .password-control>input{padding-right:52px}
+.login-form .password-control>.input-icon{left:14px;top:50%;transform:translateY(-50%);z-index:1}
 .login-form .password-control>.password-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:40px;height:40px;display:grid;place-items:center;padding:0;border:0;border-radius:10px;background:transparent;color:var(--muted);cursor:pointer;z-index:2}
 .form-phone-input>.input-icon,.phone-number>.input-icon{display:none}
 .form-tos-check,.terms-conditions{display:flex;align-items:flex-start;gap:10px;margin:6px 0 16px;font-size:.85rem;color:var(--muted)}
