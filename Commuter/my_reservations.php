@@ -98,6 +98,7 @@ $sql = mbus_db_prepare($conn, "
         $created = strtotime($row['created_at']);
         $expire = $created + (5 * 60);
         $remaining = $expire - time();
+        $awaiting = $remaining > 3600; // receipt submitted, waiting for an admin
 
         if($remaining < 0){
             mbus_db_prepare($conn, "UPDATE reservation SET status='Cancelled' WHERE reservation_id=?", [$row['reservation_id']]);
@@ -130,7 +131,11 @@ $sql = mbus_db_prepare($conn, "
         <li><strong>Expected Arrival:</strong> <?php echo date("F d, Y g:i A", strtotime($row['arrival_time'])); ?></li>
     </ul>
 
-    <?php if($row['status'] === "Pending"){ ?>
+    <?php if($row['status'] === "Pending" && !empty($awaiting)){ ?>
+    <div class="reservation-actions">
+        <a class="btn btn-outline" href="payment_return.php?schedule_id=<?php echo (int)$row['schedule_id']; ?>"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Payment awaiting verification</a>
+    </div>
+    <?php } elseif($row['status'] === "Pending"){ ?>
 
     <div class="reservation-timer">
         <span class="timer-label">Time Remaining:</span>

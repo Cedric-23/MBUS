@@ -61,6 +61,14 @@ try {
     } catch (PDOException $schema_error) {
         error_log('PayMongo schema check failed: ' . $schema_error->getMessage());
     }
+    try {
+        foreach (["reference_number VARCHAR(40)", "receipt_b64 TEXT", "receipt_mime VARCHAR(30)", "reject_reason TEXT", "reviewed_by INT", "reviewed_at TIMESTAMP", "submitted_at TIMESTAMP"] as $col) {
+            $pdo->exec('ALTER TABLE paymongo_checkout ADD COLUMN IF NOT EXISTS ' . $col);
+        }
+        $pdo->exec("CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')");
+    } catch (PDOException $schema_error) {
+        error_log('Manual payment schema check failed: ' . $schema_error->getMessage());
+    }
     // Operator application documents live in the database (the web host's disk is temporary).
     try {
         foreach (["license_document_b64 TEXT", "license_document_mime VARCHAR(50)", "vehicle_document_b64 TEXT", "vehicle_document_mime VARCHAR(50)"] as $col) {

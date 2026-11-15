@@ -231,3 +231,6 @@
 .pay-id-note{flex-basis:100%;color:#7a889c;font-size:.76rem}
 .pay-own{margin-top:.45rem;font-size:.8rem;color:#16794a}
 .pay-fee{font-size:.82rem;color:#65748a;margin:.4rem 0 0}
+.gcash-qr{display:flex;justify-content:center;margin:12px 0 4px}
+.gcash-qr img{width:min(240px,100%);height:auto;border-radius:14px;border:1px solid #e1e7ef;background:#fff}
+.gcash-acct{margin:8px 0 14px;text-align:center;font-size:.92rem;line-height:1.5;color:#33445c}

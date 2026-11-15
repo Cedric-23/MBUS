@@ -6,6 +6,7 @@ include "../Includes/email_helper.php";
 include "../Includes/csrf.php";
 include "../Includes/fare.php";
 include "../Includes/paymongo.php";
+include "../Includes/gcash_manual.php";
 
 if(!isset($_SESSION['user_id'])){
     header("Location: ../login.php");
@@ -74,6 +75,11 @@ $expired = time() > $expiry;
 
 $error = "";
 
+// A receipt is already waiting for an admin: no second payment screen.
+$sub = $conn->pdo->prepare("SELECT 1 FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? AND status = 'Submitted' LIMIT 1");
+$sub->execute([$user_id, $schedule_id]);
+if($sub->fetchColumn()){ header("Location: payment_return.php?schedule_id=" . (int)$schedule_id); exit(); }
+
 
 /* PAY WITH GCASH (PayMongo redirect) */
 if(isset($_POST['pay_gcash']) && paymongo_enabled()){
@@ -83,20 +89,10 @@ if(isset($_POST['pay_gcash']) && paymongo_enabled()){
         mbus_db_prepare($conn, "UPDATE reservation SET status='Cancelled' WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'", [$user_id, $schedule_id]);
         $error = "This reservation expired after 10 minutes. Please reserve your seats again.";
     } else {
-        $types = []; $covered = [];
-        foreach($reservations as $i => $r){
-            $rid = $r['reservation_id'];
-            $types[$rid] = $default_types[$rid];
-            $covered[$rid] = ($types[$rid] !== 'Regular' && $i === 0);
-            if($types[$rid] !== 'Regular' && !$covered[$rid] && empty($r['id_image_b64'])){
-                $error = "Seat {$r['seat_number']} is a {$types[$rid]} ticket without an ID photo. Please reserve again.";
-                break;
-            }
-        }
+        $pl = mbus_checkout_payload($reservations, $default_types);
+        $error = $pl['error'];
         if($error === ''){
-            $q2 = mbus_quote_lines($reservations, $types);
-            $idsJson = json_encode(array_map(fn($r) => (int)$r['reservation_id'], $reservations));
-            $linesJson = json_encode(array_map(fn($l) => $l + ['covered' => !empty($covered[$l['reservation_id']])], $q2['lines']));
+            $q2 = $pl['quote']; $idsJson = $pl['idsJson']; $linesJson = $pl['linesJson'];
             try{
                 // Reuse a still-open checkout for the same seats and amount instead of opening a new one.
                 $ex = $conn->pdo->prepare("SELECT checkout_url FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? AND status = 'Created'
@@ -131,95 +127,41 @@ if(isset($_POST['pay_gcash']) && paymongo_enabled()){
     }
 }
 
-/* CONFIRM PAYMENT (manual reference, only when PayMongo is not configured) */
-if(isset($_POST['confirm_payment']) && !paymongo_enabled()){
-    // Validate CSRF token
+/* SUBMIT GCASH RECEIPT (free flow: an admin verifies it before the ticket is issued) */
+if(isset($_POST['submit_receipt']) && !paymongo_enabled()){
+    $ref = preg_replace('/\s+/', '', (string)($_POST['reference_number'] ?? ''));
     if(!csrf_validate_token()){
         $error = "Security validation failed. Please try again.";
+    } elseif($expired){
+        mbus_db_prepare($conn, "UPDATE reservation SET status='Cancelled' WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'", [$user_id, $schedule_id]);
+        $error = "This reservation expired after 10 minutes. Please reserve your seats again.";
+    } elseif(!preg_match('/^\d{10,20}$/', $ref)){
+        $error = "Enter the GCash reference number from your receipt (digits only).";
     } else {
-        $method = 'GCash'; // GCash is the only accepted payment method
-        $reference = trim((string)($_POST['reference_number'] ?? ''));
-
-        // Passenger types were chosen on the reserve page and are saved on each seat.
-        // The first seat follows the account's status; extra discounted seats carry their ID photo.
-        $types = []; $covered = []; $ids = [];
-        foreach($reservations as $i => $r){
-            $rid = $r['reservation_id'];
-            $types[$rid] = $default_types[$rid];
-            $covered[$rid] = ($types[$rid] !== 'Regular' && $i === 0);
-            if($types[$rid] !== 'Regular' && !$covered[$rid]){
-                if(empty($r['id_image_b64'])){
-                    $error = "Seat {$r['seat_number']} is a {$types[$rid]} ticket without an ID photo. Please reserve again.";
-                    break;
+        $pl = mbus_checkout_payload($reservations, $default_types);
+        $error = $pl['error'];
+        $receipt = $error === '' ? mbus_receipt_upload('receipt', $error) : null;
+        if($error === '' && $receipt){
+            $dup = $conn->pdo->prepare("SELECT 1 FROM paymongo_checkout WHERE reference_number = ? AND status IN ('Submitted', 'Paid') LIMIT 1");
+            $dup->execute([$ref]);
+            if($dup->fetchColumn()){
+                $error = "That reference number was already used for another payment.";
+            } else {
+                try{
+                    $conn->pdo->beginTransaction();
+                    $conn->pdo->prepare("INSERT INTO paymongo_checkout (session_id, user_id, schedule_id, reservation_ids, lines, amount, status, reference_number, receipt_b64, receipt_mime, submitted_at)
+                        VALUES (?,?,?,?,?,?,'Submitted',?,?,?,NOW())")
+                        ->execute(['manual_' . bin2hex(random_bytes(8)), $user_id, $schedule_id, $pl['idsJson'], $pl['linesJson'], $pl['total'], $ref, $receipt['b64'], $receipt['mime']]);
+                    // Keep the seats held (a day) while an admin checks the receipt.
+                    $conn->pdo->prepare("UPDATE reservation SET created_at = NOW() + INTERVAL '1 day' WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'")->execute([$user_id, $schedule_id]);
+                    $conn->pdo->commit();
+                    header("Location: payment_return.php?schedule_id=" . (int)$schedule_id);
+                    exit();
+                } catch(Throwable $e){
+                    if($conn->pdo->inTransaction()) $conn->pdo->rollBack();
+                    error_log('Receipt submit failed: ' . $e->getMessage());
+                    $error = "Could not submit your receipt. Please try again.";
                 }
-                $ids[$rid] = ['mime' => $r['id_image_mime'], 'b64' => $r['id_image_b64']];
-            }
-        }
-        $quote = mbus_quote_lines($reservations, $types);
-        $total = $quote['total'];
-
-        if($error !== ""){
-            // keep the message from above
-        } elseif($expired){
-            mbus_db_prepare($conn, "UPDATE reservation SET status='Cancelled' WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'", [$user_id, $schedule_id]);
-            $error = "This reservation expired after 10 minutes. Please reserve your seats again.";
-        } elseif($reference === '' || strlen($reference) < 10){
-            $error = "Reference number required (at least 10 digits).";
-        } else {
-            $ticket_code = "MB-" . random_int(1000,9999);
-            $conn->pdo->beginTransaction();
-            try{
-                $res_id = $reservations[0]['reservation_id'];
-                foreach($quote['lines'] as $ln){
-                    $rid = $ln['reservation_id'];
-                    $status = $ln['type'] === 'Regular' ? 'None' : ($covered[$rid] ? 'Approved' : 'Submitted');
-                    $up = mbus_db_prepare($conn, "
-                    UPDATE reservation
-                    SET status = 'Paid', passenger_type = ?, discount_status = ?, id_image_b64 = ?, id_image_mime = ?,
-                        fare_amount = ?, discount_amount = ?
-                    WHERE reservation_id = ? AND user_id = ? AND status = 'Pending'
-                    ", [$ln['type'], $status, $ids[$rid]['b64'] ?? null, $ids[$rid]['mime'] ?? null, $ln['base'], $ln['discount'], $rid, $user_id]);
-                    if($up === false || (int)$conn->affectedRows < 1){
-                        throw new Exception("A seat is no longer pending. Please reserve again.");
-                    }
-                }
-
-                mbus_db_prepare($conn, "
-                INSERT INTO payment(
-                reservation_id, amount, payment_method,
-                payment_reference, payment_status,
-                ticket_code, payment_date
-                ) VALUES(
-                ?, ?, ?, ?, ?, ?, NOW()
-                )
-                ", [$res_id, $total, $method, $reference, 'Paid', $ticket_code]);
-
-                $conn->pdo->commit();
-                log_activity($conn, $user_id, ACTION_PAYMENT_SUCCESS, "Payment completed for schedule $schedule_id, ticket: $ticket_code, total $total");
-
-                $user_email_query = mbus_db_prepare($conn, "SELECT email FROM users WHERE user_id = ?", [$user_id]);
-                $user_email_data = $user_email_query === false ? false : mbus_db_fetch_assoc($user_email_query);
-                $user_email = $user_email_data['email'] ?? '';
-                $route_info = $reservations[0]['origin'] . " → " . $reservations[0]['route_destination'];
-                $departure_formatted = date('F d, Y g:i A', strtotime($reservations[0]['departure_time']));
-                $email_subject = "Payment Confirmed - Ticket: $ticket_code";
-                $email_message = "Dear Commuter,
-
-Your payment has been confirmed!
-
-Ticket: $ticket_code
-Route: $route_info
-Departure: $departure_formatted
-Amount: ₱" . number_format($total, 2) . "
-
-Thank you for using MBUS!";
-                if($user_email !== ''){ send_email_notification($user_email, $email_subject, $email_message); }
-
-                header("Location: ticket.php?schedule_id=$schedule_id");
-                exit();
-            } catch(Exception $e){
-                if($conn->pdo->inTransaction()){ $conn->pdo->rollBack(); }
-                $error = "Payment failed: " . $e->getMessage();
             }
         }
     }
@@ -368,24 +310,30 @@ if(isset($_POST['cancel_reservation'])){
     </button>
     <small class="form-hint">Your seats stay held while you pay. Your ticket appears as soon as GCash confirms.</small>
 </form>
-<?php else: ?>
-<form method="POST" class="payment-form" id="payForm">
+<?php else:
+    $gName = mbus_setting($conn, 'gcash_name'); $gNum = mbus_setting($conn, 'gcash_number'); $gQr = mbus_setting($conn, 'gcash_qr');
+?>
+<form method="POST" enctype="multipart/form-data" class="payment-form" id="payForm">
     <?php csrf_field(); ?>
-    
     <div class="gcash-row">
         <span class="gcash-mark" aria-hidden="true"><i class="fa fa-mobile-alt"></i></span>
-        <span class="gcash-text"><strong>GCash</strong><small>Only accepted payment method</small></span>
+        <span class="gcash-text"><strong>Pay with GCash</strong><small>Send &#8369;<?php echo number_format($total, 2); ?> then upload your receipt</small></span>
     </div>
-    <input type="hidden" name="payment_method" value="GCash">
-
+    <?php if($gQr !== '' && strpos($gQr, 'data:image/') === 0): ?>
+    <div class="gcash-qr"><img src="<?php echo htmlspecialchars($gQr, ENT_QUOTES); ?>" alt="GCash QR code"></div>
+    <?php endif; ?>
+    <p class="gcash-acct"><?php echo $gName !== '' ? '<strong>' . htmlspecialchars($gName) . '</strong><br>' : ''; ?><?php echo $gNum !== '' ? htmlspecialchars($gNum) : 'GCash details have not been set up yet. Please ask the admin.'; ?></p>
     <div class="form-group">
         <label for="reference_number">GCash reference number</label>
-        <input type="text" name="reference_number" id="reference_number" class="form-control" placeholder="e.g. 1234567890123" inputmode="numeric" autocomplete="off" required minlength="10">
-        <small class="form-hint">Find it in your GCash receipt after sending the payment.</small>
+        <input type="text" name="reference_number" id="reference_number" class="form-control" placeholder="e.g. 1234567890123" inputmode="numeric" autocomplete="off" required minlength="10" maxlength="20" pattern="\d{10,20}">
     </div>
-
-    <button type="submit" name="confirm_payment" class="btn btn-primary btn-block"<?php echo $expired ? ' disabled' : ''; ?>>
-        Confirm payment &#8369;<span id="btnAmt"><?php echo number_format($total, 2); ?></span>
+    <div class="form-group">
+        <label for="receipt">Receipt screenshot</label>
+        <input type="file" name="receipt" id="receipt" class="form-control" accept="image/jpeg,image/png" required>
+        <small class="form-hint">An admin checks your receipt, then your ticket is issued.</small>
+    </div>
+    <button type="submit" name="submit_receipt" value="1" class="btn btn-primary btn-block"<?php echo ($expired || $gNum === '') ? ' disabled' : ''; ?>>
+        Submit receipt &#8369;<span id="btnAmt"><?php echo number_format($total, 2); ?></span>
     </button>
 </form>
 <?php endif; ?>

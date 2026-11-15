@@ -10,7 +10,7 @@ if(!isset($_SESSION['user_id'])){ header("Location: ../login.php"); exit(); }
 $user_id = (int)$_SESSION['user_id'];
 $schedule_id = (int)($_GET['schedule_id'] ?? 0);
 
-$st = $conn->pdo->prepare("SELECT session_id, status FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? ORDER BY created_at DESC LIMIT 1");
+$st = $conn->pdo->prepare("SELECT session_id, status, reject_reason FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? ORDER BY created_at DESC LIMIT 1");
 $st->execute([$user_id, $schedule_id]);
 $co = $st->fetch(PDO::FETCH_ASSOC);
 if(!$co){ header("Location: my_reservations.php"); exit(); }
@@ -31,6 +31,11 @@ if($co['status'] === 'Paid'){
         error_log('Payment return check failed: ' . $e->getMessage());
         $message = 'We could not reach PayMongo just now. This page will keep trying.';
     }
+} elseif($co['status'] === 'Submitted'){
+    $state = 'review';
+} elseif($co['status'] === 'Rejected'){
+    $state = 'rejected';
+    $message = trim((string)$co['reject_reason']);
 } elseif($co['status'] === 'Needs refund'){
     $state = 'refund';
     $message = 'Your payment arrived after the seat hold expired and a seat was taken. It will be refunded.';
@@ -57,7 +62,15 @@ a{display:inline-flex;align-items:center;justify-content:center;min-height:46px;
 </head>
 <body>
 <main class="box" role="status" aria-live="polite">
-<?php if($state === 'refund'): ?>
+<?php if($state === 'review'): ?>
+    <h1>Receipt received</h1>
+    <p>An admin is checking your GCash payment. Your seats stay held, and your ticket appears under Trips once it&rsquo;s confirmed.</p>
+    <a href="my_reservations.php">View my trips</a>
+<?php elseif($state === 'rejected'): ?>
+    <h1>Payment not accepted</h1>
+    <p><?php echo $message !== '' ? htmlspecialchars($message) : 'The receipt could not be verified.'; ?> Your seats were released. Please reserve again.</p>
+    <a href="schedule.php">Back to schedules</a>
+<?php elseif($state === 'refund'): ?>
     <h1>Payment needs a refund</h1>
     <p><?php echo htmlspecialchars($message); ?></p>
     <a href="schedule.php">Back to schedules</a>

@@ -24,3 +24,6 @@ If a payment finishes after the hold lapsed, the seats are revived when still fr
 4. Pay with the PayMongo test GCash page; no real money moves. Going live needs a verified PayMongo business account and live keys.
 
 The `paymongo_checkout` table is created automatically.
+
+## Free option (no PayMongo account): GCash QR + receipt
+When `PAYMONGO_SECRET_KEY` is empty, the payment page shows the admin's GCash QR and number. The commuter pays, enters the reference number and uploads the receipt. Admin → GCash payments (profile menu) shows each receipt to approve (ticket issued) or reject (seats released). Set the QR, account name and number in the "Your GCash details" section of that page. Reference numbers can't be reused.
