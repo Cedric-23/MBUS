@@ -118,6 +118,14 @@ if($booking_action !== 'reserve'){
 
 /* RESERVE */
 if(isset($_POST['confirm_reserve'])){
+$reviewed_input = (string)($_POST['reviewed'] ?? '');
+if($reviewed_input !== '1'){
+    http_response_code(422);
+    echo 'Please review your trip before paying.';
+    exit();
+}
+$reservation_mode = (string)($_POST['reservation_mode'] ?? 'solo');
+$reservation_mode = in_array($reservation_mode, ['solo', 'multi'], true) ? $reservation_mode : '';
 $pickup_input=$_POST['pickup'] ?? '';
 $destination_input=$_POST['destination'] ?? '';
 $destinations_in = json_decode((string)($_POST['destinations'] ?? '{}'), true);
@@ -139,6 +147,11 @@ if(empty($raw_seats) || count(array_filter($raw_seats, function($seat){ return $
 $requested_seats = array_values(array_unique(array_map('intval', $raw_seats)));
 if($capacity <= 0 || empty($requested_seats) || count($requested_seats) > $available_seats || count(array_filter($requested_seats, function($seat) use ($capacity){ return $seat < 1 || $seat > $capacity; })) > 0){
     die("Invalid seat selection or insufficient capacity.");
+}
+if($reservation_mode === '' || ($reservation_mode === 'solo' && count($requested_seats) !== 1) || ($reservation_mode === 'multi' && count($requested_seats) < 2)){
+    http_response_code(422);
+    echo $reservation_mode === 'multi' ? 'Multi reservation requires at least two seats.' : 'Solo reservation allows exactly one seat.';
+    exit();
 }
 $seats=$requested_seats;
 $destination_by_seat = [];
@@ -371,6 +384,12 @@ exit();
     </div>
 </div>
 
+<div class="reservation-mode" role="tablist" aria-label="Reservation type">
+    <button type="button" class="reservation-mode-tab active" id="soloModeTab" role="tab" aria-selected="true" data-mode="solo">Solo reservation</button>
+    <button type="button" class="reservation-mode-tab" id="multiModeTab" role="tab" aria-selected="false" data-mode="multi">Multi reservation</button>
+</div>
+<p class="reservation-mode-help" id="reservationModeHelp">Choose exactly one seat for yourself.</p>
+
 </div>
 
 <div class="card seat-map-card">
@@ -438,7 +457,7 @@ echo "</div>";
 <!-- RIGHT PANEL -->
 <div class="reserve-panel reserve-panel-sidebar">
 
-<div class="card summary-card" id="summaryPanel">
+<div class="card summary-card" id="summaryPanel" hidden>
 
 <header class="summary-header">
     <h2>Reservation Summary</h2>

@@ -1,8 +1,38 @@
 let selectedSeats = [];
 const seatDestinations = {};
+let reservationMode = "solo";
+let reviewed = false;
 
 const pickup = document.getElementById("pickup");
 const destination = document.getElementById("destination");
+
+function hideReview() {
+    reviewed = false;
+    document.getElementById("summaryPanel").hidden = true;
+    document.getElementById("fareBreakdown").style.display = "none";
+    document.getElementById("seatDestinations").innerHTML = "";
+}
+
+function setReservationMode(mode) {
+    reservationMode = mode === "multi" ? "multi" : "solo";
+    document.querySelectorAll(".reservation-mode-tab").forEach(tab => {
+        const active = tab.dataset.mode === reservationMode;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", String(active));
+    });
+    document.getElementById("reservationModeHelp").textContent = reservationMode === "multi"
+        ? "Select at least two seats. You can choose a different destination below each seat."
+        : "Choose exactly one seat for yourself.";
+    document.querySelectorAll(".seat-btn.selected").forEach(seat => seat.classList.remove("selected"));
+    selectedSeats = [];
+    Object.keys(seatDestinations).forEach(seat => delete seatDestinations[seat]);
+    hideReview();
+    renderSeatDestinationControls();
+}
+
+document.querySelectorAll(".reservation-mode-tab").forEach(tab => {
+    tab.addEventListener("click", () => setReservationMode(tab.dataset.mode));
+});
 
 function renderSeatDestinationControls() {
     document.querySelectorAll(".seat-destination-mini").forEach(el => el.remove());
@@ -33,6 +63,14 @@ document.querySelectorAll(".seat-btn").forEach(seat => {
         if (this.classList.contains("reserved")) return;
 
         const seatNumber = this.dataset.seat;
+
+        hideReview();
+
+        if (reservationMode === "solo" && !this.classList.contains("selected")) {
+            document.querySelectorAll(".seat-btn.selected").forEach(other => other.classList.remove("selected"));
+            selectedSeats = [];
+            Object.keys(seatDestinations).forEach(seat => delete seatDestinations[seat]);
+        }
 
         if (this.classList.contains("selected")) {
 
@@ -75,21 +113,34 @@ pickup.addEventListener("change", function () {
     }
 
     destination.disabled = !this.value;
+    hideReview();
     selectedSeats.forEach(seat => { seatDestinations[seat] = seatDestinations[seat] || destination.value; });
     renderSeatDestinationControls();
 
 });
 
-destination.addEventListener("change", renderSeatDestinationControls);
+destination.addEventListener("change", () => {
+    hideReview();
+    renderSeatDestinationControls();
+});
 
 /* DONE */
 document.getElementById("doneBtn")
 .addEventListener("click", () => {
 
-    document.getElementById("summaryPanel").classList.remove("show");
+    hideReview();
 
     if (selectedSeats.length === 0) {
         showTopError("Please select your seat.");
+        return;
+    }
+
+    if (reservationMode === "solo" && selectedSeats.length !== 1) {
+        showTopError("Solo reservation allows exactly one seat.");
+        return;
+    }
+    if (reservationMode === "multi" && selectedSeats.length < 2) {
+        showTopError("Multi reservation requires at least two seats.");
         return;
     }
 
@@ -123,7 +174,8 @@ document.getElementById("doneBtn")
 
     renderSeatDestinationControls();
 
-    document.getElementById("summaryPanel").classList.add("show");
+    reviewed = true;
+    document.getElementById("summaryPanel").hidden = false;
 
     document.getElementById("summarySeats").innerText =
         selectedSeats.join(", ");
@@ -235,9 +287,17 @@ function readIdPhoto(file, seat, img, text) {
 
 /* CALCULATE */
 document.getElementById("calculateBtn")
-.addEventListener("click", () => calculateFare());
+.addEventListener("click", () => {
+    if (!reviewed) {
+        showError("Click Review my trip before calculating the fare.");
+        return;
+    }
+    calculateFare();
+});
 
 function calculateFare() {
+
+    if (!reviewed) return;
 
     const pickupFare = fareTable[pickup.value];
     let reservationFee = selectedSeats.length * 10;
@@ -282,7 +342,6 @@ function calculateFare() {
     document.getElementById("fareDetails").innerHTML = html;
     document.getElementById("totalAmount").innerText = total.toFixed(2);
     document.getElementById("fareBreakdown").style.display = "block";
-    document.getElementById("summaryPanel").classList.add("show");
 
 }
 
@@ -293,8 +352,10 @@ async function reserveSeats() {
 
     formData.append("confirm_reserve", "1");
     formData.append("csrf_token", csrfToken);
+    formData.append("reviewed", "1");
     formData.append("pickup", pickup.value);
     formData.append("destination", destination.value);
+    formData.append("reservation_mode", reservationMode);
     formData.append("destinations", JSON.stringify(seatDestinations));
     formData.append("seats", selectedSeats.join(","));
     const types = {}, ids = {};
@@ -321,6 +382,11 @@ async function reserveSeats() {
 /* RESERVE BUTTON */
 document.getElementById("reserveBtn")
 .addEventListener("click", async () => {
+
+    if (!reviewed) {
+        showError("Click Review my trip before paying.");
+        return;
+    }
 
     if (selectedSeats.length === 0) {
         showError("Please select your seat.");
