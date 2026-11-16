@@ -29,7 +29,6 @@ function mbus_send_reset_code(string $email, string $code): ?string
         $mail->SMTPAuth = true;
         // Never allow an SMTP outage or blocked Render egress to pin the PHP worker.
         $mail->Timeout = 10;
-        $mail->Timelimit = 15;
         $mail->SMTPKeepAlive = false;
         $mail->Username = $username;
         $mail->Password = $password;
