@@ -13,7 +13,8 @@ const commuterCss = read('Assets/css/commuter_pickup.css');
 const staffCss = read('Assets/css/staff_waiting.css');
 
 // Commuter Pick up page uses the uploaded image only when the file exists, and cache-busts it.
-assert.match(pickupPage, /SELECT profile_picture FROM users WHERE user_id = \?/);
+assert.match(pickupPage, /SELECT profile_picture, LEFT\(MD5\(COALESCE\(profile_picture_b64/);
+assert.match(pickupPage, /\.\.\/avatar\.php\?v=/);
 assert.match(pickupPage, /is_file\(\$profile_path\)/);
 assert.match(pickupPage, /\?v=' \. rawurlencode\(\(string\)filemtime\(\$profile_path\)\)/);
 assert.match(pickupPage, /'profileImage' => \$profile_image/);
@@ -27,7 +28,7 @@ assert.match(commuterMap, /FALLBACK_AVATAR/);
 assert.match(pickupFeed, /u\.full_name, u\.profile_picture/);
 assert.match(staffMap, /r\.profile_picture/);
 assert.match(staffMap, /L\.marker\(p, \{ icon: personIcon/);
-assert.match(staffMap, /<img src=\"' \+ avatarUrl\(picture\)/);
+assert.match(staffMap, /html: '<span class="sw-person'.*?<img src="' \+ photoOf\(r\)/);
 assert.match(staffMap, /filename\.toLowerCase\(\) !== 'default\.png'/);
 assert.match(staffMap, /bindAvatarFallback\(m\.getElement\(\)/);
 assert.match(staffMap, /FALLBACK_AVATAR/);

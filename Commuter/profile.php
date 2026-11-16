@@ -106,7 +106,7 @@ $phone_locked = ($ph !== '' && !isset($error));
             <div class="page-header-right">
                 <div class="profile-menu-wrap">
                     <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
-                        <span class="profile-avatar" aria-hidden="true"><?php echo strtoupper(substr($_SESSION['full_name'] ?? 'U', 0, 1)); ?></span>
+                        <span class="profile-avatar" aria-hidden="true"><?php if($has_pic){ ?><img src="../avatar.php?v=<?php echo htmlspecialchars($user_data['pic_v']); ?>" alt="" onerror="this.parentElement.textContent=this.dataset.fallback;" data-fallback="<?php echo htmlspecialchars($initial, ENT_QUOTES); ?>"><?php } else { echo htmlspecialchars($initial); } ?></span>
                     </button>
                     <div class="profile-menu" id="profileMenu" role="menu">
                         <div class="profile-menu-header">

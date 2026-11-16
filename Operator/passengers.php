@@ -308,6 +308,7 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
                     <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
                     <span class="profile-menu-role">Operator account</span>
                 </div>
+                <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
         </div>

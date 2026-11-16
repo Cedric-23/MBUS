@@ -214,14 +214,14 @@ if(isset($_POST['cancel_reservation'])){
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
-    <link rel="stylesheet" href="../Assets/css/commuter_mobile.css">
+    <link rel="stylesheet" href="../Assets/css/commuter_mobile.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_mobile.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
 </head>
 
 <body class="payment-page">
 
-<main class="main" role="main">
+<main class="main" role="main" id="paymentPageMain">
 
 <header class="page-header">
     <div class="page-header-left">
@@ -287,8 +287,6 @@ if(isset($_POST['cancel_reservation'])){
     <?php } ?>
     <div class="pay-total-row"><strong>Total to pay</strong><strong>&#8369;<?php echo number_format($total, 2); ?></strong></div>
 </div>
-</div>
-
 </div>
 
 </div>

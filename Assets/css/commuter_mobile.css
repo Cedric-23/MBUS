@@ -715,9 +715,20 @@
   border: 1px solid var(--color-border); border-radius: 50%;
   background: var(--color-surface); color: var(--color-primary); text-decoration: none;
 }
-.payment-page .payment-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; max-width: none; }
+@media (max-width: 767px) {
+  .payment-page .payment-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; max-width: none; }
+}
 .payment-page .payment-panel { min-width: 0; }
 .payment-page .card { padding: var(--space-4); border-radius: 16px; margin: 0 0 12px; }
+
+@media (min-width: 768px) {
+  /* The page-wide desktop rule in unify.css caps regular commuter pages at 720px. */
+  #paymentPageMain { max-width: 1120px !important; }
+  .payment-page .payment-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 350px);
+    max-width: 1000px;
+  }
+}
 
 .payment-page .trip-summary .route-badge {
   display: block; padding: 0; background: none; border-radius: 0;

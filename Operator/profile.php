@@ -2,12 +2,89 @@
 session_start();
 include_once __DIR__ . '/../config/db_connect.php';
 include_once __DIR__ . '/../Includes/profile_photo.php';
-if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'operator'){
+include_once __DIR__ . '/../Includes/validation.php';
+include_once __DIR__ . '/../Includes/csrf.php';
+
+if (!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'operator') {
     header('Location: ../login.php');
     exit();
 }
-[$photoOk, $photoErr] = mbus_photo_handle($conn, (int)$_SESSION['user_id']);
-$name = htmlspecialchars($_SESSION['full_name'] ?? 'Operator');
+
+$userId = (int)$_SESSION['user_id'];
+$loadProfile = static function () use ($conn, $userId) {
+    $query = mbus_db_prepare($conn, "SELECT full_name, email, phone_number FROM users WHERE user_id = ?", [$userId]);
+    return $query === false ? false : mbus_db_fetch_assoc($query);
+};
+$profile = $loadProfile();
+if (!$profile) {
+    http_response_code(404);
+    exit('Operator account not found.');
+}
+
+[$photoOk, $photoErr] = mbus_photo_handle($conn, $userId);
+$profileErrors = [];
+$profileSuccess = '';
+$formValues = [
+    'full_name' => (string)$profile['full_name'],
+    'email' => (string)$profile['email'],
+    'phone_number' => (string)($profile['phone_number'] ?? ''),
+];
+
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['update_profile'])) {
+    $formValues = [
+        'full_name' => trim((string)($_POST['full_name'] ?? '')),
+        'email' => trim((string)($_POST['email'] ?? '')),
+        'phone_number' => trim((string)($_POST['phone_number'] ?? '')),
+    ];
+
+    if (!csrf_validate_token()) {
+        $profileErrors['form'] = 'Security validation failed. Please reload and try again.';
+    } else {
+        $nameError = mbus_check_full_name($formValues['full_name']);
+        if ($nameError !== '') $profileErrors['full_name'] = $nameError;
+
+        $emailError = mbus_check_email($formValues['email']);
+        if ($emailError === '' && strlen($formValues['email']) > 100) $emailError = 'Email must be 100 characters or less.';
+        if ($emailError !== '') $profileErrors['email'] = $emailError;
+
+        $phoneError = mbus_check_phone($formValues['phone_number']);
+        if ($phoneError !== '') $profileErrors['phone_number'] = $phoneError;
+
+        if (!isset($profileErrors['email'])) {
+            $duplicate = mbus_db_prepare($conn, "SELECT user_id FROM users WHERE LOWER(email) = LOWER(?) AND user_id <> ? LIMIT 1", [$formValues['email'], $userId]);
+            if ($duplicate === false) {
+                $profileErrors['form'] = 'Unable to check the email address right now. Please try again.';
+            } elseif (mbus_db_fetch_assoc($duplicate)) {
+                $profileErrors['email'] = 'That email address is already linked to another account.';
+            }
+        }
+
+        if (!$profileErrors) {
+            $updated = mbus_db_prepare($conn, "UPDATE users SET full_name = ?, email = ?, phone_number = ? WHERE user_id = ?", [
+                $formValues['full_name'], $formValues['email'], $formValues['phone_number'], $userId,
+            ]);
+            if ($updated === false) {
+                error_log('Operator profile update failed: ' . mbus_db_error($conn));
+                $profileErrors['form'] = 'Your changes could not be saved. Please try again.';
+            } else {
+                $_SESSION['full_name'] = $formValues['full_name'];
+                $_SESSION['email'] = $formValues['email'];
+                $_SESSION['phone_number'] = $formValues['phone_number'];
+                $profileSuccess = 'Profile details saved.';
+                $profile = $loadProfile();
+                if ($profile) {
+                    $formValues = [
+                        'full_name' => (string)$profile['full_name'],
+                        'email' => (string)$profile['email'],
+                        'phone_number' => (string)($profile['phone_number'] ?? ''),
+                    ];
+                }
+            }
+        }
+    }
+}
+
+$name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -21,7 +98,7 @@ $name = htmlspecialchars($_SESSION['full_name'] ?? 'Operator');
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
 </head>
-<body class="has-bottom-nav">
+<body class="has-bottom-nav profile-page operator-profile">
 <main class="main" role="main">
     <header class="page-header" role="banner">
         <div class="page-header-left"><h1>My Profile</h1></div>
@@ -29,21 +106,50 @@ $name = htmlspecialchars($_SESSION['full_name'] ?? 'Operator');
             <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><img src="<?php $avatar = basename((string)($_SESSION['profile_picture'] ?? '')); echo htmlspecialchars(($avatar !== '' && $avatar !== 'default.png') ? '../Assets/profile_pictures/' . rawurlencode($avatar) : '../Assets/images/mbus_icon.png'); ?>" alt=""></span></button>
             <div class="profile-menu" id="profileMenu" role="menu">
                 <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $name; ?></span><span class="profile-menu-role">Operator account</span></div>
+                <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
         </div></div>
     </header>
-    <?php mbus_photo_card($conn, (int)$_SESSION['user_id'], (string)($_SESSION['full_name'] ?? 'Operator'), 'Operator account', $photoOk, $photoErr); ?>
-    <section class="card" style="max-width:720px;margin:0 auto;"><h2><i class="fa fa-user" aria-hidden="true"></i> Account</h2><p>You are signed in as <strong><?php echo $name; ?></strong>.</p></section>
+
+    <?php mbus_photo_card($conn, $userId, (string)($_SESSION['full_name'] ?? 'Operator'), 'Operator account', $photoOk, $photoErr); ?>
+    <?php if ($profileSuccess !== ''): ?><div class="alert alert-success" role="status" style="max-width:720px;margin:0 auto 12px;"><?php echo htmlspecialchars($profileSuccess); ?></div><?php endif; ?>
+    <?php if (isset($profileErrors['form'])): ?><div class="alert alert-error" role="alert" style="max-width:720px;margin:0 auto 12px;"><?php echo htmlspecialchars($profileErrors['form']); ?></div><?php endif; ?>
+
+    <section class="card pf-form" style="max-width:720px;margin:0 auto 16px;">
+        <h2><i class="fa fa-user-pen" aria-hidden="true"></i> Account details</h2>
+        <p class="form-hint">Update the details used for your operator account and future sign-ins.</p>
+        <form method="POST" id="operatorProfileForm">
+            <?php csrf_field(); ?>
+            <input type="hidden" name="update_profile" value="1">
+            <div class="pf-field">
+                <label for="operatorFullName">Full name</label>
+                <input class="form-control" type="text" id="operatorFullName" name="full_name" value="<?php echo htmlspecialchars($formValues['full_name']); ?>" maxlength="100" autocomplete="name" required aria-describedby="operatorFullNameHint<?php echo isset($profileErrors['full_name']) ? ' full_name-error' : ''; ?>">
+                <small class="form-hint" id="operatorFullNameHint">Enter your first and last name.</small>
+                <?php echo mbus_field_error($profileErrors, 'full_name'); ?>
+            </div>
+            <div class="pf-field">
+                <label for="operatorEmail">Email address</label>
+                <input class="form-control" type="email" id="operatorEmail" name="email" value="<?php echo htmlspecialchars($formValues['email']); ?>" maxlength="100" autocomplete="email" required aria-describedby="operatorEmailHint<?php echo isset($profileErrors['email']) ? ' email-error' : ''; ?>">
+                <small class="form-hint" id="operatorEmailHint">This email will be used the next time you sign in.</small>
+                <?php echo mbus_field_error($profileErrors, 'email'); ?>
+            </div>
+            <div class="pf-field">
+                <label for="operatorPhone">Phone number</label>
+                <input class="form-control" type="tel" id="operatorPhone" name="phone_number" value="<?php echo htmlspecialchars($formValues['phone_number']); ?>" maxlength="20" inputmode="tel" autocomplete="tel" required aria-describedby="operatorPhoneHint<?php echo isset($profileErrors['phone_number']) ? ' phone_number-error' : ''; ?>">
+                <small class="form-hint" id="operatorPhoneHint">Use a Philippine mobile number, e.g. 09123456789.</small>
+                <?php echo mbus_field_error($profileErrors, 'phone_number'); ?>
+            </div>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+        </form>
+    </section>
 </main>
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="operator_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
     <a href="manage_trips.php" class="bottom-nav-item"><i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span></a>
     <a href="scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
     <a href="passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
-    <a href="waiting.php" class="bottom-nav-item">
-        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
-    </a>
+    <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
 </nav>
 <script src="../Assets/js/app-header.js"></script>
 <script src="../Assets/js/operator_tracker.js"></script>

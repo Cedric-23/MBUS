@@ -34,12 +34,9 @@ $profileImage = $hasDbPic ? '../avatar.php?v=' . rawurlencode((string)$pr['pic_v
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="../Assets/css/commuter_waiting_board.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_waiting_board.css'); ?>">
-    <link rel="stylesheet" href="../Assets/css/commuter_pickup.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_pickup.css'); ?>">
-    <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
-    <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
 </head>
 <body class="commuter-waiting-board has-bottom-nav">
-<main id="commuterWaitingBoard" class="cwb-main" data-live="../api/live_tracking.php">
+<main id="commuterWaitingBoard" class="cwb-main" data-endpoint="../api/live_tracking.php">
     <header class="cwb-header">
         <div class="cwb-title">
             <h1>Waiting</h1>
@@ -63,20 +60,29 @@ $profileImage = $hasDbPic ? '../avatar.php?v=' . rawurlencode((string)$pr['pic_v
         </div>
     </header>
 
-    <div id="cwbMap" class="cwb-map" role="region" aria-label="Map of your trip"></div>
+    <div id="cwbEmpty" class="cwb-empty" hidden>
+        <span class="cwb-empty-icon"><i class="fa fa-hourglass-half" aria-hidden="true"></i></span>
+        <h2>You’re not waiting yet</h2>
+        <p>Choose a bus and pin your pickup spot first.</p>
+        <a href="schedule.php" class="cwb-empty-action">Choose a bus</a>
+    </div>
+
+    <div id="cwbMap" class="cwb-map" role="region" aria-label="Map showing your waiting bus and pickup spot" hidden></div>
     <div id="cwbLocationPill" class="cwb-location-pill" hidden><span class="cwb-status-dot"></span><span id="cwbLocationText"></span></div>
-    <p id="cwbMapError" class="cwb-map-error" role="status" hidden>Map tiles are unavailable right now. Your trip status is still shown below.</p>
+    <p id="cwbMapError" class="cwb-map-error" role="status" hidden>Map tiles are unavailable right now. Your bus status is still shown below.</p>
     <p id="cwbNotice" class="cwb-notice" role="status" aria-live="polite" hidden></p>
 
-    <section id="cwtSheet" class="cwb-sheet cwt-sheet" aria-label="Your trip" aria-live="polite">
-        <h2 id="cwtTitle" class="cwt-title">Checking your trip…</h2>
-        <p id="cwtSub" class="cwt-sub"></p>
-        <div id="cwtMeta" class="cwt-meta"></div>
-        <div class="cwt-actions">
-            <a id="cwtLink" class="cwt-btn" href="schedule.php" hidden>Find a trip</a>
-            <button type="button" id="cwtNotify" class="cwt-btn" hidden>Notify as waiting</button>
-            <button type="button" id="cwtCancel" class="cwt-btn is-ghost" hidden>Cancel waiting</button>
+    <section id="cwbSheet" class="cwb-sheet" aria-label="Your waiting bus" hidden>
+        <div class="cwb-sheet-handle" aria-hidden="true"></div>
+        <div class="cwb-sheet-head">
+            <h2><span id="cwbCount">1</span> waiting</h2>
+            <span id="cwbBusLiveCount" class="cwb-sheet-sub"></span>
         </div>
+        <div class="cwb-route-controls">
+            <p id="cwbRouteEstimate" class="cwb-route-estimate" role="status" aria-live="polite">Loading your bus route…</p>
+            <button type="button" id="cwbRouteView" class="cwb-route-view" disabled>Full route</button>
+        </div>
+        <ul id="cwbList" class="cwb-list" aria-live="polite"></ul>
     </section>
 </main>
 
@@ -90,8 +96,8 @@ $profileImage = $hasDbPic ? '../avatar.php?v=' . rawurlencode((string)$pr['pic_v
 
 <script>window.mbusWaitingBoard = <?php echo json_encode(['csrfToken' => csrf_get_token(), 'profileImage' => $profileImage], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="../Assets/js/mbus_quick_pickup.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/mbus_quick_pickup.js'); ?>"></script>
-<script src="../Assets/js/commuter_waiting_trip.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/commuter_waiting_trip.js'); ?>"></script>
+<script src="../Assets/js/route_utils.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/route_utils.js'); ?>"></script>
+<script src="../Assets/js/commuter_waiting_board.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/commuter_waiting_board.js'); ?>"></script>
 <script src="../Assets/js/app-header.js"></script>
 </body>
 </html>

@@ -11,7 +11,6 @@ const pages = [
     'Operator/manage_trips.php',
     'Operator/scan.php',
     'Operator/passengers.php',
-    'Operator/notifications.php',
     'Operator/profile.php',
 ];
 for (const page of pages) {

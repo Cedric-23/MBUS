@@ -106,6 +106,7 @@ node tests/commuter_live_tracking_test.cjs
 node tests/minimal_profile_and_route_path_test.cjs
 node tests/route_accuracy_test.cjs
 node tests/reservation_qa_regression_test.cjs
+node tests/qa_16_19_regression_test.cjs
 php tests/ticket_qr_pdf_test.php
 ```
 

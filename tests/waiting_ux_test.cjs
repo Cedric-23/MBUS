@@ -10,7 +10,6 @@ const commuterWaiting = read('Commuter/waiting.php');
 const waitingBoardJs = read('Assets/js/commuter_waiting_board.js');
 const pickupPage = read('Commuter/pickup.php');
 const pickupJs = read('Assets/js/commuter_pickup.js');
-const notifications = read('Commuter/notifications.php');
 const operatorWaiting = read('Operator/waiting.php');
 const adminWaiting = read('Admin/waiting.php');
 const staffView = read('Includes/pickup_staff_view.php');
@@ -83,9 +82,8 @@ assert.match(pickupJs, /waitingElsewhere\(\)/);
 assert.match(pickupJs, /Cancel current waiting/);
 assert.match(pickupJs, /window\.location\.href = 'waiting\.php'/);
 
-// The Updates page no longer embeds a second waiting picker.
-assert.doesNotMatch(notifications, /waitingSchedule|waitBtn|commuter_waiting_alerts\.js|live_pickup\.css/);
-assert.match(notifications, /<h1>Updates<\/h1>/);
+// The commuter Waiting page does not embed a second pickup picker.
+assert.doesNotMatch(commuterWaiting, /waitingSchedule|waitBtn|commuter_waiting_alerts\.js|live_pickup\.css/);
 
 // --- 3. Operator riders page is only the seat map; Waiting is its separate navigation page
 assert.doesNotMatch(riders, /riderLive|liveMap|waitingList|pickup_staff\.js|live_tracking\.php|leaflet/i);

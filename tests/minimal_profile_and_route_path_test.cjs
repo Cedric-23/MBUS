@@ -22,9 +22,9 @@ const normalizeSelection = value => JSON.parse(JSON.stringify(value));
 
 assert.doesNotMatch(profile, /<label for="email">Email Address|id="email"/);
 assert.match(profile, /SELECT user_id, full_name, email, phone_number/);
-assert.match(profile, /profilePhotoTitle/);
+assert.match(profile, /profile-avatar[^>]*>[\s\S]*?avatar\.php\?v=/);
 assert.match(profile, /Change photo/);
-assert.match(profile, /profile-photo-save/);
+assert.match(profile, /id="pfPhotoForm"/);
 assert.match(profileCss, /width: 64px;/);
 assert.match(profileCss, /height: 64px;/);
 
