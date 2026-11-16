@@ -285,7 +285,6 @@ if(isset($_POST['cancel_reservation'])){
         </div>
     </div>
     <?php } ?>
-    <div class="pay-total-row"><strong>Total to pay</strong><strong>&#8369;<?php echo number_format($total, 2); ?></strong></div>
 </div>
 </div>
 
