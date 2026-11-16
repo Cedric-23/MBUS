@@ -44,8 +44,13 @@ function send_email_notification($to_email, $subject, $message, $from_email = 'n
     </html>
     ";
     
+    // Render's free plan has no mail server and blocks SMTP; use the HTTPS sender when configured
+    require_once __DIR__ . '/reset_mailer.php';
+    $http = mbus_send_http_message($to_email, $subject, $html_message, trim(strip_tags($message)));
+    if ($http !== false) return $http === null;
+
     // Send email
-    return mail($to_email, $subject, $html_message, implode("\r\n", $headers));
+    return @mail($to_email, $subject, $html_message, implode("\r\n", $headers));
 }
 
 // Email templates for different actions

@@ -1,5 +1,6 @@
 <?php
 session_start();
+header('Cache-Control: no-store, max-age=0'); // never show an old copy (and an old timer) after Back
 include "../config/db_connect.php";
 include "../Includes/activity_log.php";
 include "../Includes/email_helper.php";
@@ -59,8 +60,10 @@ while($row = mbus_db_fetch_assoc($res_query)){
     $reservations[] = $row;
 }
 
-$created_at = strtotime($reservations[0]['created_at']);
+// The hold ends when the EARLIEST pending seat expires (reserve.php cancels each seat on its own clock).
+$created_at = min(array_map(function($r){ return strtotime($r['created_at']); }, $reservations));
 $expiry = $created_at + (10 * 60); // 10 minutes matching reserve.php
+$remaining_seconds = max(0, $expiry - time()); // counted down in the browser without trusting the phone's clock
 
 $acct_type = mbus_passenger_type($conn, (int)$user_id);
 // Default passenger types: the verified account holder's own (first) seat gets their type.
@@ -178,16 +181,17 @@ if(isset($_POST['cancel_reservation'])){
         AND schedule_id=?
         AND status='Pending'
         ", [$user_id, $schedule_id]);
-        
+
         if(paymongo_enabled()){
             $open = mbus_db_prepare($conn, "SELECT session_id FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? AND status = 'Created'", [$user_id, $schedule_id]);
             while($open !== false && ($o = mbus_db_fetch_assoc($open))){ paymongo_expire_session($o['session_id']); }
-            mbus_db_prepare($conn, "UPDATE paymongo_checkout SET status = 'Cancelled' WHERE user_id = ? AND schedule_id = ? AND status = 'Created'", [$user_id, $schedule_id]);
         }
+        // Free any open payment so its exact amount can be reused and nothing is matched to a cancelled booking.
+        mbus_db_prepare($conn, "UPDATE paymongo_checkout SET status = 'Cancelled' WHERE user_id = ? AND schedule_id = ? AND status IN ('Created','Submitted')", [$user_id, $schedule_id]);
         // Log cancellation
         log_activity($conn, $user_id, ACTION_RESERVATION_CANCEL, "Cancelled pending reservation for schedule $schedule_id");
         
-        header("Location: schedule.php");
+        header("Location: schedule.php?cancelled=1");
         exit();
     }
 }
@@ -273,11 +277,16 @@ if(isset($_POST['cancel_reservation'])){
         <div class="pay-seat-head">
             <span class="seat-tag">Seat <?php echo htmlspecialchars((string)$ln['seat']); ?></span>
             <span class="pay-type-label"><?php echo htmlspecialchars($ln['type']); ?></span>
-            <span class="pay-line">&#8369;<?php echo number_format($ln['base'] - $ln['discount'], 2); ?></span>
+            <span class="pay-line">&#8369;<?php echo number_format($ln['final'], 2); ?></span>
+        </div>
+        <div class="pay-breakdown">
+            <span>Fare</span><span>&#8369;<?php echo number_format($ln['base'], 2); ?></span>
+            <?php if($ln['discount'] > 0): ?><span>Discount (<?php echo htmlspecialchars($ln['type']); ?>)</span><span>&minus;&#8369;<?php echo number_format($ln['discount'], 2); ?></span><?php endif; ?>
+            <span>Reservation fee</span><span>&#8369;<?php echo number_format($ln['fee'], 2); ?></span>
         </div>
     </div>
     <?php } ?>
-    <p class="pay-fee">Reservation fee: &#8369;<?php echo number_format(MBUS_RESERVATION_FEE, 2); ?> per seat</p>
+    <div class="pay-total-row"><strong>Total to pay</strong><strong>&#8369;<?php echo number_format($total, 2); ?></strong></div>
 </div>
 </div>
 
@@ -328,6 +337,10 @@ if(isset($_POST['cancel_reservation'])){
 </form>
 <?php endif; ?>
 
+<form method="POST" class="cancel-form" onsubmit="return confirm('Cancel this reservation and release your seats?');">
+    <?php csrf_field(); ?>
+    <button type="submit" name="cancel_reservation" value="1" class="btn btn-block btn-cancel-reservation">Cancel reservation</button>
+</form>
 
 </div>
 
@@ -341,13 +354,15 @@ if(isset($_POST['cancel_reservation'])){
 let countdownInterval;
 
 function startCountdown() {
-    const expiry = <?php echo $expiry; ?> * 1000; // Convert to milliseconds
+    // Seconds left as told by the server, counted down with the browser's own stopwatch,
+    // so a wrong phone clock (or coming back to a cached page) can't change the time.
+    const t0 = performance.now();
+    const expiry = Date.now() + <?php echo (int)$remaining_seconds; ?> * 1000;
     const countdownEl = document.getElementById('countdown');
     const timerBox = document.getElementById('timerBox');
     
     function update() {
-        const now = Date.now();
-        const diff = expiry - now;
+        const diff = <?php echo (int)$remaining_seconds; ?> * 1000 - (performance.now() - t0);
         
         if(diff <= 0){
             countdownEl.textContent = "00:00";
@@ -367,6 +382,8 @@ function startCountdown() {
 }
 
 startCountdown();
+// Coming back with the Back button can show a cached copy with an old timer: load a fresh one.
+window.addEventListener('pageshow', function (e) { if (e.persisted) window.location.reload(); });
 </script>
 
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">

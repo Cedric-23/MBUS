@@ -284,6 +284,8 @@ $user_email_data = $user_email_query === false ? false : mbus_db_fetch_assoc($us
 $user_email = $user_email_data['email'] ?? '';
 $route_info = "$route_data[origin] → $route_data[destination]";
 $departure_formatted = date('F d, Y g:i A', strtotime($route_data['departure_time']));
+ob_start(); // email/log trouble must never change the plain "ok" the page waits for
+try {
 foreach($created_reservations as $created){
     $seat=$created['seat'];
     $ticket_code=$created['ticket_code'];
@@ -294,6 +296,8 @@ foreach($created_reservations as $created){
         send_email_notification($user_email, $email_subject, $email_message);
     }
 }
+} catch(Throwable $notify_error){ error_log('Reservation notification failed: ' . $notify_error->getMessage()); }
+ob_end_clean();
 echo "ok";
 exit();
 }

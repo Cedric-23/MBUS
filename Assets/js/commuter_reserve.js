@@ -384,16 +384,30 @@ async function reserveSeats() {
     formData.append("types", JSON.stringify(types));
     formData.append("ids", JSON.stringify(ids));
 
-    const response = await fetch(
-        "reserve.php?schedule_id=" + scheduleId,
-        {
-            method: "POST",
-            body: formData
-        }
-    );
+    try {
+        const response = await fetch(
+            "reserve.php?schedule_id=" + scheduleId,
+            {
+                method: "POST",
+                body: formData,
+                credentials: "same-origin"
+            }
+        );
+        const text = (await response.text()).trim();
+        if (response.ok && text === "ok") return { ok: true };
 
-    const result = await response.text();
-    return result.trim() == "ok";
+        let message = text;
+        if (response.redirected || /<html|<!doctype/i.test(text)) {
+            message = "Your session expired. Please log in again, then reserve your seats.";
+        } else if (response.status === 403) {
+            message = "Your page is out of date. Reload the page and try again.";
+        } else if (message === "") {
+            message = "Unable to reserve seats. Please try again.";
+        }
+        return { ok: false, status: response.status, message: message };
+    } catch (err) {
+        return { ok: false, message: "No connection. Check your internet and try again." };
+    }
 
 }
 
@@ -436,9 +450,9 @@ document.getElementById("reserveBtn")
 
     const btn = document.getElementById("reserveBtn");
     setBusy(btn, true, "Reserving");
-    const success = await reserveSeats();
+    const result = await reserveSeats();
 
-    if (success) {
+    if (result.ok) {
 
         window.location =
             "payment.php?schedule_id=" + scheduleId +
@@ -448,7 +462,7 @@ document.getElementById("reserveBtn")
     } else {
 
         setBusy(btn, false);
-        showError("Unable to reserve seats.");
+        showError(result.message || "Unable to reserve seats.");
 
     }
 
@@ -479,10 +493,12 @@ function showError(message) {
 
     box.style.display = "block";
     box.innerText = message;
+    box.scrollIntoView({ behavior: "smooth", block: "center" });
 
-    setTimeout(() => {
+    clearTimeout(box._hideTimer);
+    box._hideTimer = setTimeout(() => {
         box.style.display = "none";
-    }, 3000);
+    }, 8000);
 
 }
 
