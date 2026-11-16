@@ -10,6 +10,7 @@ require 'PHPMailer/src/PHPMailer.php';
 require 'PHPMailer/src/SMTP.php';
 
 $status = "Sending...";
+$status_detail = '';
 $reset_email = (string)($_SESSION['reset_email'] ?? '');
 $reset_code = (string)($_SESSION['reset_code'] ?? '');
 if ($reset_email === '' || !preg_match('/^\d{6}$/', $reset_code)) {
@@ -18,17 +19,24 @@ if ($reset_email === '' || !preg_match('/^\d{6}$/', $reset_code)) {
 }
 
 try{
+    $smtp_username = trim((string)getenv('SMTP_USERNAME'));
+    $smtp_password = trim((string)getenv('SMTP_PASSWORD'));
+    $smtp_from = trim((string)(getenv('SMTP_FROM') ?: $smtp_username));
+    if ($smtp_username === '' || $smtp_password === '' || $smtp_from === '') {
+        throw new RuntimeException('SMTP credentials are not configured in Render.');
+    }
+
     $mail = new PHPMailer(true);
 
     $mail->isSMTP();
     $mail->Host = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
     $mail->SMTPAuth = true;
-    $mail->Username = getenv('SMTP_USERNAME') ?: 'YOUR_EMAIL@gmail.com';
-    $mail->Password = getenv('SMTP_PASSWORD') ?: 'APP_PASSWORD';
+    $mail->Username = $smtp_username;
+    $mail->Password = $smtp_password;
     $mail->SMTPSecure = getenv('SMTP_SECURE') ?: 'ssl';
     $mail->Port = getenv('SMTP_PORT') ?: 465;
 
-    $mail->setFrom('YOUR_EMAIL@gmail.com', 'MBUS System');
+    $mail->setFrom($smtp_from, 'MBUS System');
     $mail->addAddress($reset_email);
 
     $mail->Subject = 'MBUS Password Reset Code';
@@ -40,6 +48,8 @@ try{
 
 }catch(Exception $e){
     $status = "Failed to send email";
+    $status_detail = 'Check the Render SMTP_USERNAME, SMTP_PASSWORD, and SMTP_FROM values, then try again.';
+    error_log('Password reset email failed: ' . $e->getMessage());
 }
 ?>
 
@@ -78,6 +88,10 @@ try{
         color:var(--color-primary);
         font-weight:500;
     }
+    .status-error{color:#b42318}
+    .status-detail,.status-back{text-align:center;font-size:.9rem;line-height:1.5}
+    .status-detail{color:#667085;margin:12px 0 6px}
+    .status-back{margin:0}.status-back a{color:var(--color-primary);font-weight:600}
     </style>
 </head>
 
@@ -99,9 +113,13 @@ try{
 
         <div class="loader"></div>
 
-        <div class="status">
+        <div class="status <?php echo $status === 'Failed to send email' ? 'status-error' : ''; ?>">
             <?php echo htmlspecialchars($status); ?>
         </div>
+        <?php if ($status_detail): ?>
+            <p class="status-detail"><?php echo htmlspecialchars($status_detail); ?></p>
+            <p class="status-back"><a href="forgot_password.php">Return to forgot password</a></p>
+        <?php endif; ?>
 
     </div>
 
