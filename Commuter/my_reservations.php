@@ -8,7 +8,7 @@ mbus_db_prepare($conn, "
     UPDATE reservation
     SET status='Cancelled'
     WHERE status='Pending'
-    AND created_at <= NOW() - INTERVAL '10 minutes'
+    AND expires_at <= NOW()
 ", []);
 
 /* AUTH */
@@ -29,6 +29,7 @@ $sql = mbus_db_prepare($conn, "
         reservation.destination,
         reservation.status,
         reservation.created_at,
+        reservation.expires_at,
         schedule.departure_time,
         schedule.arrival_time,
         routes.origin,
@@ -48,6 +49,7 @@ $sql = mbus_db_prepare($conn, "
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES, 'UTF-8'); ?>">
     <title>My Reservations</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -96,18 +98,12 @@ $sql = mbus_db_prepare($conn, "
     $remaining = 0;
 
     if($row['status'] === "Pending"){
-        $created = strtotime($row['created_at']);
-        $expire = $created + (5 * 60);
-        $remaining = $expire - time();
+        $expire = strtotime((string)$row['expires_at']);
+        $remaining = max(0, $expire - time());
         $aw = $conn->pdo->prepare("SELECT 1 FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? AND status = 'Submitted' LIMIT 1");
         $aw->execute([$_SESSION['user_id'], $row['schedule_id']]);
         $awaiting = (bool)$aw->fetchColumn();
 
-        if($remaining < 0){
-            mbus_db_prepare($conn, "UPDATE reservation SET status='Cancelled' WHERE reservation_id=?", [$row['reservation_id']]);
-            $row['status'] = "Cancelled";
-            $statusClass = "cancelled";
-        }
     }
     ?>
 
@@ -135,8 +131,11 @@ $sql = mbus_db_prepare($conn, "
     </ul>
 
     <?php if($row['status'] === "Pending" && !empty($awaiting)){ ?>
-    <div class="reservation-actions">
+    <div class="reservation-actions btn-group">
         <a class="btn btn-outline" href="payment_return.php?schedule_id=<?php echo (int)$row['schedule_id']; ?>"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting for GCash payment</a>
+        <button type="button" class="btn btn-outline cancel-btn" onclick="cancelReservation(<?php echo (int)$row['reservation_id']; ?>, this)" aria-label="Cancel reservation for seat <?php echo htmlspecialchars($row['seat_number']); ?>">
+            <i class="fa fa-times" aria-hidden="true"></i> Cancel
+        </button>
     </div>
     <?php } elseif($row['status'] === "Pending"){ ?>
 
@@ -158,7 +157,7 @@ $sql = mbus_db_prepare($conn, "
 
     <?php if($row['status'] === "Paid"){ ?>
     <div class="reservation-actions btn-group">
-        <a class="btn btn-success" href="ticket.php?schedule_id=<?php echo $row['schedule_id']; ?>">
+        <a class="btn btn-success" href="ticket.php?reservation_id=<?php echo (int)$row['reservation_id']; ?>">
             <i class="fa fa-ticket" aria-hidden="true"></i> View Ticket
         </a>
     </div>
@@ -276,11 +275,9 @@ function cancelReservation(reservationId, btn) {
     .then(r => r.text())
     .then(resp => {
         if (resp.trim() === 'ok') {
-            // Show success feedback
-            btn.closest('.reservation-card').querySelector('.status-badge').textContent = 'Cancelled';
-            btn.closest('.reservation-card').querySelector('.status-badge').className = 'status-badge status-cancelled';
-            btn.closest('.reservation-actions').innerHTML = '<div class="status-badge status-cancelled">Reservation Cancelled</div>';
             showToast('Reservation cancelled');
+            // A group checkout may cancel several seats at once; reload all rows.
+            setTimeout(() => location.reload(), 500);
         } else {
             alert('Failed: ' + resp);
             btn.disabled = false;

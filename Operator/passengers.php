@@ -53,7 +53,7 @@ function riders_estimate(array $trip, $lat, $lng, string $dest_in): array
     return ['pickup' => $order[$pi], 'dest' => $order[$di], 'fare' => $fare];
 }
 
-mbus_db_prepare($conn, "UPDATE reservation SET status='Cancelled' WHERE status='Pending' AND created_at <= NOW() - INTERVAL '10 minutes'", []);
+mbus_db_prepare($conn, "UPDATE reservation SET status='Cancelled' WHERE status='Pending' AND expires_at <= NOW()", []);
 // Confirm boarding from a rider card (reservations only)
 if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_boarded'])){
     $back_schedule = (int)($_POST['schedule_id'] ?? 0);
@@ -94,7 +94,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_walkin'])){
         $seat = (int)($_POST['seat'] ?? 0);
         if($seat < 1 || $seat > (int)$sc['capacity']){ $msg = 'Pick a valid seat.'; break; }
         $taken = mbus_db_prepare($conn, "SELECT 1 FROM reservation WHERE schedule_id = ? AND seat_number = ?
-            AND (status IN ('Paid','Confirmed','Boarded') OR (status = 'Pending' AND created_at > NOW() - INTERVAL '10 minutes'))", [$back_schedule, (string)$seat]);
+            AND (status IN ('Paid','Confirmed','Boarded') OR (status = 'Pending' AND expires_at > NOW()))", [$back_schedule, (string)$seat]);
         if($taken !== false && mbus_db_num_rows($taken) > 0){ $msg = "Seat $seat is already taken."; break; }
 
         $fares = mbus_stop_positions();
@@ -205,7 +205,7 @@ if($selected){
         LEFT JOIN users u ON u.user_id = r.user_id
         WHERE r.schedule_id = ?
         AND (r.status IN ('Paid', 'Confirmed', 'Boarded')
-             OR (r.status = 'Pending' AND r.created_at > NOW() - INTERVAL '10 minutes'))
+             OR (r.status = 'Pending' AND r.expires_at > NOW()))
     ", [(int)$selected['schedule_id']]);
     while($rq !== false && ($r = mbus_db_fetch_assoc($rq))){
         $walk = ($r['source'] ?? 'Online') !== 'Online';

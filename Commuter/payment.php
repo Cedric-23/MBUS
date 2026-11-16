@@ -61,8 +61,7 @@ while($row = mbus_db_fetch_assoc($res_query)){
 }
 
 // The hold ends when the EARLIEST pending seat expires (reserve.php cancels each seat on its own clock).
-$created_at = min(array_map(function($r){ return strtotime($r['created_at']); }, $reservations));
-$expiry = $created_at + (10 * 60); // 10 minutes matching reserve.php
+$expiry = min(array_map(function($r){ return strtotime((string)$r['expires_at']); }, $reservations)); // The server-stored hold deadline shared by every page.
 $remaining_seconds = max(0, $expiry - time()); // counted down in the browser without trusting the phone's clock
 
 $acct_type = mbus_passenger_type($conn, (int)$user_id);
@@ -75,7 +74,7 @@ foreach($reservations as $i => $r){
 // Total is always computed on the server; nothing from the URL or form is trusted.
 $quote = mbus_quote_lines($reservations, $default_types);
 $total = $quote['total'];
-$expired = time() > $expiry;
+$expired = time() >= $expiry;
 
 $error = "";
 
@@ -118,7 +117,7 @@ if(isset($_POST['pay_gcash']) && paymongo_enabled()){
                     $conn->pdo->prepare("INSERT INTO paymongo_checkout (session_id, user_id, schedule_id, reservation_ids, lines, amount, checkout_url) VALUES (?,?,?,?,?,?,?)")
                         ->execute([$co['id'], $user_id, $schedule_id, $idsJson, $linesJson, $q2['total'], $co['checkout_url']]);
                     // Restart the 10-minute hold so the payer has time to finish in GCash.
-                    $conn->pdo->prepare("UPDATE reservation SET created_at = NOW() WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'")->execute([$user_id, $schedule_id]);
+                    $conn->pdo->prepare("UPDATE reservation SET expires_at = NOW() + INTERVAL '10 minutes' WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'")->execute([$user_id, $schedule_id]);
                     $url = $co['checkout_url'];
                 }
                 header("Location: " . $url);
@@ -154,7 +153,7 @@ if(isset($_POST['start_gcash']) && !paymongo_enabled()){
                 if($sid === null){ $conn->pdo->rollBack(); $error = "Payments are busy right now. Please try again in a moment."; }
                 else {
                     // Hold the seats 15 minutes in total while the GCash payment shows up.
-                    $conn->pdo->prepare("UPDATE reservation SET created_at = NOW() + INTERVAL '5 minutes' WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'")->execute([$user_id, $schedule_id]);
+                    $conn->pdo->prepare("UPDATE reservation SET expires_at = NOW() + INTERVAL '15 minutes' WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'")->execute([$user_id, $schedule_id]);
                     $conn->pdo->commit();
                     header("Location: payment_return.php?schedule_id=" . (int)$schedule_id);
                     exit();

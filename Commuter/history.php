@@ -111,7 +111,7 @@ $sql = mbus_db_prepare($conn, "
 </ul>
 
 <div class="reservation-actions btn-group">
-    <a class="btn btn-secondary" href="ticket.php?schedule_id=<?php echo $row['schedule_id']; ?>">
+    <a class="btn btn-secondary" href="ticket.php?reservation_id=<?php echo (int)$row['reservation_id']; ?>">
         <i class="fa fa-ticket" aria-hidden="true"></i> View Ticket
     </a>
     <button type="button" class="btn btn-outline clear-btn" onclick="clearHistory(<?php echo $row['reservation_id']; ?>, this)" aria-label="Clear this trip from history">

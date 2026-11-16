@@ -430,7 +430,7 @@ document.getElementById("reserveBtn")
         return;
     }
 
-    if (!destination.value) {
+    if (reservationMode === "solo" && !destination.value) {
         showError("Select destination.");
         return;
     }

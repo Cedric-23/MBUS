@@ -79,8 +79,8 @@ For waiting riders and live bus tracking, apply additive migrations `supabase/10
 php scripts/setup_supabase.php
 ```
 
-Or run SQL files in Supabase SQL Editor: `00_reset.sql` → `01_schema.sql` → `02_data.sql` → `07_add_operator_application.sql` → `15_password_reset.sql` → `16_registration_verification.sql`.
-The last migrations add password-reset fields and email verification for new commuter registrations.
+Or run SQL files in Supabase SQL Editor: `00_reset.sql` → `01_schema.sql` → `02_data.sql` → `07_add_operator_application.sql` → `15_password_reset.sql` → `16_registration_verification.sql` → `17_reservation_expiry.sql`.
+The migrations add password-reset fields, email verification for new commuter registrations, and a persisted reservation hold-expiry timestamp shared by booking, payment, cancellation and seat-availability views.
 
 ---
 
@@ -105,6 +105,8 @@ node tests/operator_navigation_test.cjs
 node tests/commuter_live_tracking_test.cjs
 node tests/minimal_profile_and_route_path_test.cjs
 node tests/route_accuracy_test.cjs
+node tests/reservation_qa_regression_test.cjs
+php tests/ticket_qr_pdf_test.php
 ```
 
 ## Road routes and destination estimates

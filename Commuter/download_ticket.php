@@ -4,6 +4,7 @@ include "../config/db_connect.php";
 require_once __DIR__ . "/fpdf/fpdf.php";
 require_once __DIR__ . "/../Includes/ticket_qr.php";
 require_once __DIR__ . "/../Includes/qr_pdf.php";
+require_once __DIR__ . "/../Includes/ticket_checkout_data.php";
 
 if(!isset($_SESSION['user_id'])){
     header("Location: ../login.php");
@@ -12,103 +13,32 @@ if(!isset($_SESSION['user_id'])){
 
 $user_id = $_SESSION['user_id'];
 
-if(!isset($_GET['schedule_id']) || !is_scalar($_GET['schedule_id'])){
-    die("Schedule not found.");
-}
+$requestedSchedule = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+$reservationId = filter_var($_GET['reservation_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+if (!$requestedSchedule && !$reservationId) { die("Ticket not found."); }
 
-$schedule_id = (int)$_GET['schedule_id'];
-if($schedule_id <= 0){ die("Schedule not found."); }
-
-/* =========================
-   USER
-========================= */
-$user_query = mbus_db_prepare($conn,"
-SELECT full_name
-FROM users
-WHERE user_id=?
-", [$user_id]);
-
-if($user_query === false){ die("Ticket data unavailable."); }
+$user_id = (int)$_SESSION['user_id'];
+$user_query = mbus_db_prepare($conn, "SELECT full_name FROM users WHERE user_id = ?", [$user_id]);
+if ($user_query === false) { die("Ticket data unavailable."); }
 $user = mbus_db_fetch_assoc($user_query);
-if(!$user){ die("User data unavailable."); }
+if (!$user) { die("User data unavailable."); }
 
-/* =========================
-   RESERVATIONS (PAID)
-========================= */
-$res_query = mbus_db_prepare($conn,"
-SELECT *
-FROM reservation
-WHERE user_id=?
-AND schedule_id=?
-AND status IN ('Paid', 'Boarded')
-ORDER BY reservation_id DESC
-", [$user_id, $schedule_id]);
-
-if($res_query === false){ die("Ticket data unavailable."); }
-if(mbus_db_num_rows($res_query) <= 0){
-    die("No paid reservation found.");
-}
-
-/* =========================
-   PAYMENT (FIXED)
-========================= */
-$payment_query = mbus_db_prepare($conn,"
-SELECT p.*
-FROM payment p
-JOIN reservation r ON p.reservation_id = r.reservation_id
-WHERE r.user_id=?
-AND r.schedule_id=?
-AND r.status IN ('Paid', 'Boarded')
-AND p.payment_status = 'Paid'
-ORDER BY p.payment_id DESC
-LIMIT 1
-", [$user_id, $schedule_id]);
-
-if($payment_query === false){ die("Payment data unavailable."); }
-$payment = mbus_db_fetch_assoc($payment_query);
-if(!$payment){ die("Payment data unavailable."); }
-
-/* SAFE VARIABLES */
-$payment_method   = isset($payment['payment_method']) ? $payment['payment_method'] : '';
-$payment_reference= isset($payment['payment_reference']) ? $payment['payment_reference'] : '';
-$payment_date     = isset($payment['payment_date']) ? $payment['payment_date'] : '';
-$ticket_code      = isset($payment['ticket_code']) ? $payment['ticket_code'] : '';
-$amount           = isset($payment['amount']) ? $payment['amount'] : '';
-
-/* =========================
-   RESERVATION DATA
-========================= */
-$seats = [];
-$pickup = "";
-$destination = "";
-
-while($row = mbus_db_fetch_assoc($res_query)){
-
-    if(!empty($row['seat_number'])){
-        $seats[] = $row['seat_number'];
-    }
-
-    if(empty($pickup)){
-        $pickup = $row['pickup_location'];
-    }
-
-    if(empty($destination)){
-        $destination = $row['destination'];
-    }
-}
-
+$ticketData = mbus_ticket_checkout_data($conn, $user_id, $requestedSchedule ?: null, $reservationId ?: null);
+if (!$ticketData) { die("No paid reservation found."); }
+$schedule_id = (int)$ticketData['schedule_id'];
+$reservations = $ticketData['reservations'];
+$payment = $ticketData['payment'];
+$fareLines = $ticketData['lines'];
+$seats = array_map(static fn($row) => (string)$row['seat_number'], $reservations);
 $seat_list = implode(", ", $seats);
+$payment_method = (string)($payment['payment_method'] ?? '');
+$payment_reference = (string)($payment['payment_reference'] ?? '');
+$payment_date = (string)($payment['payment_date'] ?? '');
+$ticket_code = (string)($payment['ticket_code'] ?? '');
+$amount = $payment['amount'] ?? null;
 
-/* =========================
-   BUS + SCHEDULE
-========================= */
-$schedule_query = mbus_db_prepare($conn,"
-SELECT buses.bus_number, schedule.departure_time
-FROM schedule
-JOIN buses ON schedule.bus_id = buses.bus_id
-WHERE schedule.schedule_id=?
-", [$schedule_id]);
-
+$schedule_query = mbus_db_prepare($conn,"SELECT buses.bus_number, schedule.departure_time
+    FROM schedule JOIN buses ON schedule.bus_id = buses.bus_id WHERE schedule.schedule_id=?", [$schedule_id]);
 if($schedule_query === false){ die("Schedule data unavailable."); }
 $data = mbus_db_fetch_assoc($schedule_query);
 if(!$data){ die("Schedule not found."); }
@@ -160,16 +90,13 @@ $pdf->MultiCell(0,5,$user['full_name']);
 
 $pdf->Ln(2);
 
-/* ===== ROUTE ===== */
-$pdf->SetFont('Arial','B',12);
-$pdf->MultiCell(0,6,strtoupper($pickup),0,'C');
-
-$pdf->SetFont('Arial','',9);
-$pdf->Cell(0,4,'TO',0,1,'C');
-
-$pdf->SetFont('Arial','B',12);
-$pdf->MultiCell(0,6,strtoupper($destination),0,'C');
-
+/* ===== ROUTES BY SEAT ===== */
+$pdf->SetFont('Arial','B',9);
+$pdf->Cell(0,5,'Pickup and destination by seat',0,1);
+$pdf->SetFont('Arial','',8);
+foreach ($reservations as $reservation) {
+    $pdf->MultiCell(0,4,'Seat ' . $reservation['seat_number'] . ': ' . $reservation['pickup_location'] . ' to ' . $reservation['destination']);
+}
 $pdf->Ln(3);
 
 /* ===== BUS ===== */
@@ -190,13 +117,17 @@ $pdf->MultiCell(0,5,date("F d, Y - h:i A",strtotime($data['departure_time'])));
 
 $pdf->Ln(2);
 
-/* ===== SEATS ===== */
+/* ===== SEATS + PER-SEAT FARES ===== */
 $pdf->SetFont('Arial','B',9);
-$pdf->Cell(0,5,'Seat Number',0,1);
-
+$pdf->Cell(0,5,'Seat Number(s)',0,1);
 $pdf->SetFont('Arial','',9);
 $pdf->MultiCell(0,5,$seat_list);
-
+foreach ($reservations as $reservation) {
+    $line = $fareLines[(int)$reservation['reservation_id']] ?? null;
+    if ($line) {
+        $pdf->MultiCell(0,4,'Seat ' . $reservation['seat_number'] . ' fare: PHP ' . number_format((float)$line['base'],2) . ' - PHP ' . number_format((float)$line['discount'],2) . ' discount + PHP ' . number_format((float)$line['fee'],2) . ' fee');
+    }
+}
 $pdf->Ln(3);
 
 /* ===== LINE ===== */

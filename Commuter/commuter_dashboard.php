@@ -30,7 +30,7 @@ $q = mbus_db_prepare($conn, "
     JOIN buses b ON b.bus_id = s.bus_id
     JOIN routes rt ON rt.route_id = s.route_id
     WHERE r.user_id = ?
-      AND (r.status IN ('Paid','Confirmed','Boarded') OR (r.status = 'Pending' AND r.created_at > NOW() - INTERVAL '10 minutes'))
+      AND (r.status IN ('Paid','Confirmed','Boarded') OR (r.status = 'Pending' AND r.expires_at > NOW()))
       AND s.schedule_status = 'Active'
       AND s.trip_status IN ('Scheduled','Boarding','Departed')
       AND COALESCE(s.arrival_time, s.departure_time + INTERVAL '4 hours') >= ?
@@ -57,7 +57,7 @@ $q = mbus_db_prepare($conn, "
 while($q !== false && ($r = mbus_db_fetch_assoc($q))){
     $c = mbus_db_prepare($conn, "SELECT COUNT(*) AS n FROM reservation WHERE schedule_id = ?
         AND status IN ('Pending','Paid','Confirmed','Boarded')
-        AND (status <> 'Pending' OR created_at > NOW() - INTERVAL '10 minutes')", [(int)$r['schedule_id']]);
+        AND (status <> 'Pending' OR expires_at > NOW())", [(int)$r['schedule_id']]);
     $cr = $c === false ? false : mbus_db_fetch_assoc($c);
     $r['available'] = max(0, (int)$r['capacity'] - (int)($cr['n'] ?? 0));
     $r['action'] = mbus_schedule_action($r, $r['available']);

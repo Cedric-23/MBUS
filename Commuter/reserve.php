@@ -22,7 +22,7 @@ $expiry_result = mbus_db_prepare($conn,"
 UPDATE reservation
 SET status='Cancelled'
 WHERE status='Pending'
-AND created_at<=NOW()-INTERVAL '10 minutes'
+AND expires_at<=NOW()
 ", []);
 if($expiry_result === false){
     die("Reservation service is temporarily unavailable. Please try again.");
@@ -99,7 +99,7 @@ array_pop($pickup_stops);
 /* RESERVED */
 $seat_sql="SELECT seat_number FROM reservation
 WHERE schedule_id=?
-AND(status='Paid' OR status='Confirmed' OR status='Boarded' OR(status='Pending' AND created_at>NOW()-INTERVAL '10 minutes'))
+AND(status='Paid' OR status='Confirmed' OR status='Boarded' OR(status='Pending' AND expires_at>NOW()))
 ";
 $reserved_query=mbus_db_prepare($conn,$seat_sql,[$schedule_id]);
 if($reserved_query === false){
@@ -216,7 +216,7 @@ FOR UPDATE OF schedule, buses
     $locked_count_result = mbus_db_prepare($conn,"
 SELECT COUNT(*) AS reserved FROM reservation
 WHERE schedule_id=?
-AND(status IN ('Paid','Confirmed','Boarded') OR(status='Pending' AND created_at>NOW()-INTERVAL '10 minutes'))
+AND(status IN ('Paid','Confirmed','Boarded') OR(status='Pending' AND expires_at>NOW()))
 ", [$schedule_id]);
     if($locked_count_result === false){
         throw new RuntimeException("Seat availability check failed");
@@ -236,7 +236,7 @@ AND(status IN ('Paid','Confirmed','Boarded') OR(status='Pending' AND created_at>
 SELECT reservation_id FROM reservation
 WHERE schedule_id = ?
 AND seat_number = ?
-AND(status='Paid' OR status='Confirmed' OR status='Boarded' OR(status='Pending' AND created_at>NOW()-INTERVAL '10 minutes'))
+AND(status='Paid' OR status='Confirmed' OR status='Boarded' OR(status='Pending' AND expires_at>NOW()))
 FOR UPDATE
 ", [$schedule_id, $seat]);
         if($check === false){
@@ -258,8 +258,8 @@ FOR UPDATE
             throw new DomainException($locked_action);
         }
         $inserted = mbus_db_prepare($conn,"
-INSERT INTO reservation(ticket_code,user_id,schedule_id,seat_number,pickup_location,destination,reservation_date,created_at,status,passenger_type,discount_status,id_image_b64,id_image_mime)
-VALUES(?, ?, ?, ?, ?, ?, NOW(), NOW(), 'Pending', ?, ?, ?, ?)
+INSERT INTO reservation(ticket_code,user_id,schedule_id,seat_number,pickup_location,destination,reservation_date,created_at,expires_at,status,passenger_type,discount_status,id_image_b64,id_image_mime)
+VALUES(?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW() + INTERVAL '10 minutes', 'Pending', ?, ?, ?, ?)
         ", [$ticket_code, $user_id, $schedule_id, $seat, $pickup, $destination_by_seat[$seat], $seat_info[$seat]['type'], $seat_info[$seat]['status'], $seat_info[$seat]['b64'], $seat_info[$seat]['mime']]);
         if($inserted === false){
             throw new RuntimeException("Reservation insert failed");

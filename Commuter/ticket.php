@@ -2,6 +2,7 @@
 session_start();
 include "../config/db_connect.php";
 require_once "../Includes/ticket_qr.php";
+require_once "../Includes/ticket_checkout_data.php";
 
 if(!isset($_SESSION['user_id'])){
     header("Location: ../login.php");
@@ -10,83 +11,43 @@ if(!isset($_SESSION['user_id'])){
 
 $user_id = $_SESSION['user_id'];
 
-if(!isset($_GET['schedule_id'])){
-    die("Schedule not found.");
+$requestedSchedule = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+$reservationId = filter_var($_GET['reservation_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+if (!$requestedSchedule && !$reservationId) {
+    die("Ticket not found.");
 }
 
-$schedule_id = mbus_db_escape($conn, $_GET['schedule_id']);
+$user_id = (int)$_SESSION['user_id'];
+$user_query = mbus_db_prepare($conn, "SELECT full_name FROM users WHERE user_id = ?", [$user_id]);
+$user = $user_query === false ? false : mbus_db_fetch_assoc($user_query);
+if (!$user) {
+    die("User data unavailable.");
+}
 
-/* USER */
-$user_query = mbus_db_prepare($conn, "
-    SELECT full_name
-    FROM users
-    WHERE user_id=?
-", [$user_id]);
-$user = mbus_db_fetch_assoc($user_query);
-
-/* RESERVATIONS (PAID) */
-$res_query = mbus_db_prepare($conn, "
-    SELECT *
-    FROM reservation
-    WHERE user_id=?
-    AND schedule_id=?
-    AND status='Paid'
-    ORDER BY reservation_id DESC
-", [$user_id, $schedule_id]);
-
-if(mbus_db_num_rows($res_query) <= 0){
+$ticketData = mbus_ticket_checkout_data($conn, $user_id, $requestedSchedule ?: null, $reservationId ?: null);
+if (!$ticketData) {
     die("No paid reservation found.");
 }
-
-/* PAYMENT */
-$payment_query = mbus_db_prepare($conn, "
-    SELECT p.*
-    FROM payment p
-    JOIN reservation r ON p.reservation_id = r.reservation_id
-    WHERE r.user_id=?
-    AND r.schedule_id=?
-    ORDER BY p.payment_id DESC
-    LIMIT 1
-", [$user_id, $schedule_id]);
-
-$payment = mbus_db_fetch_assoc($payment_query);
-
-/* SAFE VARIABLES */
-$payment_method    = isset($payment['payment_method']) ? $payment['payment_method'] : '';
-$payment_reference = isset($payment['payment_reference']) ? $payment['payment_reference'] : '';
-$payment_date      = isset($payment['payment_date']) ? $payment['payment_date'] : '';
-$ticket_code       = isset($payment['ticket_code']) ? $payment['ticket_code'] : '';
-$amount            = isset($payment['amount']) ? $payment['amount'] : '';
-
-/* RESERVATION DATA */
-$seats = [];
-$pickup = "";
-$destination = "";
-
-while($row = mbus_db_fetch_assoc($res_query)){
-    if(!empty($row['seat_number'])){
-        $seats[] = $row['seat_number'];
-    }
-    if(empty($pickup)){
-        $pickup = $row['pickup_location'];
-    }
-    if(empty($destination)){
-        $destination = $row['destination'];
-    }
-}
-
+$schedule_id = (int)$ticketData['schedule_id'];
+$reservations = $ticketData['reservations'];
+$payment = $ticketData['payment'];
+$fareLines = $ticketData['lines'];
+$seats = array_map(static fn($row) => (string)$row['seat_number'], $reservations);
 $seat_list = implode(", ", $seats);
-$qr_token = mbus_ticket_token((int)$schedule_id, (int)$user_id);
+$qr_token = mbus_ticket_token($schedule_id, $user_id);
 
-/* SCHEDULE INFO */
-$schedule_query = mbus_db_prepare($conn, "
-    SELECT buses.bus_number, schedule.departure_time
-    FROM schedule
-    JOIN buses ON schedule.bus_id = buses.bus_id
-    WHERE schedule.schedule_id=?
-", [$schedule_id]);
+$payment_method = (string)($payment['payment_method'] ?? '');
+$payment_reference = (string)($payment['payment_reference'] ?? '');
+$payment_date = (string)($payment['payment_date'] ?? '');
+$ticket_code = (string)($payment['ticket_code'] ?? '');
+$amount = $payment['amount'] ?? null;
 
-$data = mbus_db_fetch_assoc($schedule_query);
+$schedule_query = mbus_db_prepare($conn, "SELECT buses.bus_number, schedule.departure_time
+    FROM schedule JOIN buses ON schedule.bus_id = buses.bus_id WHERE schedule.schedule_id = ?", [$schedule_id]);
+$data = $schedule_query === false ? false : mbus_db_fetch_assoc($schedule_query);
+if (!$data) {
+    die("Schedule not found.");
+}
 ?>
 
 <!DOCTYPE html>
@@ -149,19 +110,15 @@ $data = mbus_db_fetch_assoc($schedule_query);
             <div class="ticket-value"><?php echo htmlspecialchars($user['full_name']); ?></div>
         </div>
 
-        <!-- ROUTE -->
-        <div class="ticket-route">
-            <div class="ticket-place">
-                <i class="fa fa-map-marker-alt" aria-hidden="true"></i>
-                <span><?php echo strtoupper(htmlspecialchars($pickup)); ?></span>
-            </div>
-            <div class="ticket-arrow">
-                <i class="fa fa-arrow-right" aria-hidden="true"></i>
-            </div>
-            <div class="ticket-place">
-                <i class="fa fa-map-marker-alt" aria-hidden="true"></i>
-                <span><?php echo strtoupper(htmlspecialchars($destination)); ?></span>
-            </div>
+        <!-- EACH SEAT KEEPS ITS OWN PICKUP AND DESTINATION -->
+        <div class="ticket-section ticket-seat-routes">
+            <div class="ticket-label">Pickup and destination by seat</div>
+            <?php foreach ($reservations as $reservation): ?>
+                <div class="ticket-value">Seat <?php echo htmlspecialchars((string)$reservation['seat_number']); ?>:
+                    <?php echo htmlspecialchars((string)$reservation['pickup_location']); ?> →
+                    <?php echo htmlspecialchars((string)$reservation['destination']); ?>
+                </div>
+            <?php endforeach; ?>
         </div>
 
         <hr class="ticket-divider">
@@ -191,6 +148,12 @@ $data = mbus_db_fetch_assoc($schedule_query);
             <h3 class="payment-title"><i class="fa fa-receipt" aria-hidden="true"></i> Payment Details</h3>
             
             <div class="payment-grid">
+                <?php foreach ($reservations as $reservation): $line = $fareLines[(int)$reservation['reservation_id']] ?? null; if ($line): ?>
+                <div class="payment-item">
+                    <div class="ticket-label">Seat <?php echo htmlspecialchars((string)$reservation['seat_number']); ?> fare</div>
+                    <div class="ticket-value">₱<?php echo number_format((float)$line['base'], 2); ?> − ₱<?php echo number_format((float)$line['discount'], 2); ?> discount + ₱<?php echo number_format((float)$line['fee'], 2); ?> fee</div>
+                </div>
+                <?php endif; endforeach; ?>
                 <div class="payment-item">
                     <div class="ticket-label">Amount Paid</div>
                     <div class="ticket-value"><?php echo !empty($amount) ? "₱".number_format($amount,2) : "N/A"; ?></div>
@@ -212,7 +175,7 @@ $data = mbus_db_fetch_assoc($schedule_query);
 
         <!-- ACTIONS -->
         <div class="ticket-actions">
-            <a href="download_ticket.php?schedule_id=<?php echo $schedule_id; ?>" class="btn btn-primary btn-block">
+            <a href="download_ticket.php?reservation_id=<?php echo (int)$reservations[0]['reservation_id']; ?>" class="btn btn-primary btn-block">
                 <i class="fa fa-download" aria-hidden="true"></i> Download PDF Ticket
             </a>
             <a href="my_reservations.php" class="btn btn-outline btn-block">

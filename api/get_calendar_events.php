@@ -45,7 +45,7 @@ $sql = "SELECT schedule.schedule_id, buses.bus_number, buses.capacity, routes.or
         (SELECT COUNT(*) FROM reservation
          WHERE reservation.schedule_id = schedule.schedule_id
          AND (reservation.status = 'Paid' OR reservation.status = 'Confirmed' OR reservation.status = 'Boarded'
-              OR (reservation.status = 'Pending' AND reservation.created_at > NOW() - INTERVAL '10 minutes'))) as reserved
+              OR (reservation.status = 'Pending' AND reservation.expires_at > NOW()))) as reserved
         FROM schedule
         JOIN buses ON schedule.bus_id = buses.bus_id
         JOIN routes ON schedule.route_id = routes.route_id

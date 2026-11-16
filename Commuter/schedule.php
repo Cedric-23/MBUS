@@ -221,7 +221,7 @@ $schedule_id=$row['schedule_id'];
 $seat_sql="SELECT COUNT(*) AS total_reserved FROM reservation
 WHERE schedule_id=?
 AND status IN ('Pending', 'Paid', 'Confirmed', 'Boarded')
-AND (status <> 'Pending' OR created_at > NOW()-INTERVAL '10 minutes')";
+AND (status <> 'Pending' OR expires_at > NOW())";
 $seat_result=mbus_db_prepare($conn,$seat_sql,[$schedule_id]);
 $seat_data=$seat_result === false ? false : mbus_db_fetch_assoc($seat_result);
 $reserved=(int)($seat_data['total_reserved'] ?? 0);

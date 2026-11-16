@@ -51,11 +51,15 @@ try {
             "discount_amount NUMERIC(10,2)",
             "discount_reviewed_by INT",
             "discount_reviewed_at TIMESTAMP",
+            "expires_at TIMESTAMPTZ",
         ] as $col) {
             $pdo->exec('ALTER TABLE reservation ADD COLUMN IF NOT EXISTS ' . $col);
         }
+        $pdo->exec("UPDATE reservation SET expires_at = created_at + INTERVAL '10 minutes' WHERE expires_at IS NULL");
+        $pdo->exec("ALTER TABLE reservation ALTER COLUMN expires_at SET DEFAULT (NOW() + INTERVAL '10 minutes')");
+        $pdo->exec("CREATE INDEX IF NOT EXISTS reservation_pending_expiry_idx ON reservation (schedule_id, expires_at) WHERE status = 'Pending'");
     } catch (PDOException $schema_error) {
-        error_log('Reservation discount schema check failed: ' . $schema_error->getMessage());
+        error_log('Reservation schema check failed: ' . $schema_error->getMessage());
     }
     // PayMongo GCash checkout sessions: one row per redirect, finalized by the webhook or the return page.
     try {
@@ -68,7 +72,7 @@ try {
         error_log('PayMongo schema check failed: ' . $schema_error->getMessage());
     }
     try {
-        foreach (["reference_number VARCHAR(40)", "receipt_b64 TEXT", "receipt_mime VARCHAR(30)", "reject_reason TEXT", "reviewed_by INT", "reviewed_at TIMESTAMP", "submitted_at TIMESTAMP"] as $col) {
+        foreach (["reference_number VARCHAR(40)", "receipt_b64 TEXT", "receipt_mime VARCHAR(30)", "reject_reason TEXT", "reviewed_by INT", "reviewed_at TIMESTAMP", "submitted_at TIMESTAMP", "paid_at TIMESTAMP"] as $col) {
             $pdo->exec('ALTER TABLE paymongo_checkout ADD COLUMN IF NOT EXISTS ' . $col);
         }
         $pdo->exec("CREATE TABLE IF NOT EXISTS incoming_payments (

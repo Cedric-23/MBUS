@@ -22,34 +22,47 @@ function mbus_db_prepare($conn, string $sql, array $params)
 {
     qr_test_check((bool)preg_match('/^\s*SELECT\b/i', $sql), 'Fixture must not perform DB writes.');
     $case = $GLOBALS['qr_test_case'];
-    qr_test_check($params[0] === 42 || strpos($sql, 'FROM schedule') !== false, 'Query must scope to the session user.');
     if (strpos($sql, 'FROM users') !== false) {
+        qr_test_check($params === [42], 'User query must scope to the session user.');
         if ($case === 'user-query-failure') { return false; }
         $rows = $case === 'missing-user' ? [] : [['full_name' => $case === 'long' ? str_repeat('Long Passenger Name ', 10) : 'Test Passenger']];
-    } elseif (strpos($sql, 'FROM reservation') !== false) {
-        qr_test_check(strpos($sql, "status IN ('Paid', 'Boarded')") !== false, 'Paid/Boarded reservation check must remain.');
-        qr_test_check($params === [42, (int)$_GET['schedule_id']], 'Reservation must scope to user and requested schedule.');
-        if ($case === 'reservation-query-failure') { return false; }
-        $rows = in_array($case, ['unpaid', 'other-user', 'other-schedule'], true) ? [] : [[
-            'seat_number' => 'A1', 'pickup_location' => 'Central Terminal',
-            'destination' => 'North Station', 'status' => $case === 'boarded' ? 'Boarded' : 'Paid',
-        ]];
-        if ($case === 'long') {
-            $rows = [];
-            for ($i = 1; $i <= 60; $i++) {
-                $rows[] = ['seat_number' => 'A' . $i, 'pickup_location' => str_repeat('Long Pickup Location ', 6), 'destination' => str_repeat('Long Destination ', 6), 'status' => 'Paid'];
-            }
-        }
     } elseif (strpos($sql, 'FROM payment') !== false) {
         qr_test_check(strpos($sql, "r.status IN ('Paid', 'Boarded')") !== false, 'Paid/Boarded payment reservation check must remain.');
         qr_test_check(strpos($sql, "p.payment_status = 'Paid'") !== false, 'Paid payment check must remain.');
         qr_test_check($params === [42, (int)$_GET['schedule_id']], 'Payment must scope to session user and requested schedule.');
         if ($case === 'payment-query-failure') { return false; }
-        $rows = $case === 'missing-payment' ? [] : [[
-            'payment_method' => 'GCash', 'payment_reference' => $case === 'long' ? str_repeat('1234567890', 20) : 'REF-TEST-123',
+        $rows = in_array($case, ['missing-payment', 'unpaid', 'other-user', 'other-schedule'], true) ? [] : [[
+            'payment_id' => 1, 'reservation_id' => 1, 'payment_method' => 'GCash',
+            'payment_reference' => $case === 'long' ? str_repeat('1234567890', 20) : 'REF-TEST-123',
             'payment_date' => '2026-11-08 08:15:00', 'ticket_code' => $case === 'missing-ticket-code' ? '' : 'MB-1234',
             'amount' => 150, 'payment_status' => 'Paid',
         ]];
+    } elseif (strpos($sql, 'FROM paymongo_checkout') !== false) {
+        qr_test_check($params === ['MB-1234', 42, (int)$_GET['schedule_id']], 'Checkout must be selected by paid ticket and owner.');
+        $ids = $case === 'long' ? range(1, 60) : ($case === 'group' ? [1, 2] : [1]);
+        $lines = [];
+        foreach ($ids as $id) { $lines[] = ['reservation_id' => $id, 'seat' => 'A' . $id, 'base' => 70, 'discount' => 0, 'fee' => 10, 'final' => 80]; }
+        $rows = [['reservation_ids' => json_encode($ids), 'lines' => json_encode($lines), 'amount' => count($ids) * 80,
+            'payment_ref' => 'REF-TEST-123', 'paid_at' => '2026-11-08 08:15:00', 'ticket_code' => 'MB-1234']];
+    } elseif (strpos($sql, 'FROM reservation') !== false) {
+        qr_test_check(strpos($sql, "status IN ('Paid', 'Boarded')") !== false, 'Paid/Boarded reservation check must remain.');
+        qr_test_check($params[0] === 42 && $params[1] === (int)$_GET['schedule_id'], 'Reservations must scope to user and requested schedule.');
+        if ($case === 'reservation-query-failure') { return false; }
+        if (in_array($case, ['unpaid', 'other-user', 'other-schedule'], true)) { $rows = []; }
+        else {
+            $ids = $case === 'long' ? range(1, 60) : ($case === 'group' ? [1, 2] : [1]);
+            $rows = [];
+            foreach ($ids as $id) {
+                $rows[] = ['reservation_id' => $id, 'schedule_id' => (int)$_GET['schedule_id'], 'seat_number' => 'A' . $id,
+                    'pickup_location' => $id === 1 ? 'Central Terminal' : 'Market Street',
+                    'destination' => $id === 1 ? 'North Station' : 'Harbor Point',
+                    'status' => $case === 'boarded' ? 'Boarded' : 'Paid'];
+            }
+            if ($case === 'long') {
+                foreach ($rows as &$row) { $row['pickup_location'] = str_repeat('Long Pickup Location ', 6); $row['destination'] = str_repeat('Long Destination ', 6); }
+                unset($row);
+            }
+        }
     } elseif (strpos($sql, 'FROM schedule') !== false) {
         qr_test_check($params === [(int)$_GET['schedule_id']], 'Schedule query must scope to requested schedule.');
         if ($case === 'schedule-query-failure') { return false; }
@@ -173,7 +186,7 @@ try {
     symlink($repo . '/Includes', $root . '/Includes');
     file_put_contents($root . '/config/db_connect.php', '<?php $conn = new stdClass(); if ($GLOBALS["qr_test_case"] !== "anonymous") { $_SESSION["user_id"] = 42; }');
 
-    foreach (['paid', 'boarded', 'long', 'missing-ticket-code'] as $case) {
+    foreach (['paid', 'boarded', 'group', 'long', 'missing-ticket-code'] as $case) {
         $bytes = qr_test_run([PHP_BINARY, __FILE__, '--endpoint', $root, $case]);
         qr_test_check(strncmp($bytes, '%PDF-', 5) === 0, $case . ' endpoint must generate a PDF.');
         qr_test_check(strpos($bytes, '/Subtype /Image') === false, $case . ' endpoint must use vector QR.');
@@ -185,12 +198,12 @@ try {
         $cases[$file] = mbus_ticket_token(123, 42);
     }
     $denials = [
-        'anonymous' => '', 'invalid-zero' => 'Schedule not found.', 'invalid-negative' => 'Schedule not found.',
-        'invalid-array' => 'Schedule not found.', 'missing-id' => 'Schedule not found.',
+        'anonymous' => '', 'invalid-zero' => 'Ticket not found.', 'invalid-negative' => 'Ticket not found.',
+        'invalid-array' => 'Ticket not found.', 'missing-id' => 'Ticket not found.',
         'missing-user' => 'User data unavailable.', 'user-query-failure' => 'Ticket data unavailable.',
         'unpaid' => 'No paid reservation found.', 'other-user' => 'No paid reservation found.',
-        'other-schedule' => 'No paid reservation found.', 'reservation-query-failure' => 'Ticket data unavailable.',
-        'missing-payment' => 'Payment data unavailable.', 'payment-query-failure' => 'Payment data unavailable.',
+        'other-schedule' => 'No paid reservation found.', 'reservation-query-failure' => 'No paid reservation found.',
+        'missing-payment' => 'No paid reservation found.', 'payment-query-failure' => 'No paid reservation found.',
         'missing-schedule' => 'Schedule not found.', 'schedule-query-failure' => 'Schedule data unavailable.',
     ];
     foreach ($denials as $case => $expected) {
@@ -230,6 +243,11 @@ JS;
                 qr_test_check(strpos($text, 'Show this QR to the operator when you board.') !== false, 'PDF must include the boarding hint.');
                 qr_test_check(strpos($text, basename($file) === 'ticket-missing-ticket-code.pdf' ? 'N/A' : 'MB-1234') !== false, 'Readable ticket code must remain in PDF.');
                 qr_test_check(strpos($text, 'Please present this ticket before boarding.') !== false, 'Footer must not be clipped off the PDF.');
+                if (basename($file) === 'ticket-group.pdf') {
+                    qr_test_check(strpos($text, 'Seat A1: Central Terminal to North Station') !== false, 'Group ticket must retain the first seat route.');
+                    qr_test_check(strpos($text, 'Seat A2: Market Street to Harbor Point') !== false, 'Group ticket must retain the second seat route.');
+                    qr_test_check(strpos($text, 'Seat A2 fare: PHP 70.00') !== false, 'Group ticket must include each seat fare line.');
+                }
             }
         }
         echo 'PASS: exact QR decode through operator jsQR for ' . count($cases) . " vector PDFs.\n";

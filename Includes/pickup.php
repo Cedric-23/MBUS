@@ -124,7 +124,7 @@ function mbus_pickup_schedule_sql(): string
         to_jsonb(r)->>'destination_lat' AS destination_lat, to_jsonb(r)->>'destination_lng' AS destination_lng,
         (SELECT COUNT(*) FROM public.reservation rv WHERE rv.schedule_id = s.schedule_id
             AND (rv.status IN ('Paid', 'Confirmed', 'Boarded')
-                OR (rv.status = 'Pending' AND rv.created_at > NOW() - INTERVAL '10 minutes'))) AS reserved_count
+                OR (rv.status = 'Pending' AND rv.expires_at > NOW()))) AS reserved_count
         FROM public.schedule s JOIN public.buses b ON b.bus_id = s.bus_id
         JOIN public.routes r ON r.route_id = s.route_id";
 }
