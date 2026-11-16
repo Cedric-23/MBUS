@@ -27,13 +27,13 @@ $profileSuccess = '';
 $formValues = [
     'full_name' => (string)$profile['full_name'],
     'email' => (string)$profile['email'],
-    'phone_number' => (string)($profile['phone_number'] ?? ''),
+    'phone_number' => preg_replace('/^0/', '', (string)($profile['phone_number'] ?? '')),
 ];
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['update_profile'])) {
     $formValues = [
         'full_name' => trim((string)($_POST['full_name'] ?? '')),
-        'email' => trim((string)($_POST['email'] ?? '')),
+        'email' => strtolower(trim((string)($_POST['email'] ?? ''))),
         'phone_number' => trim((string)($_POST['phone_number'] ?? '')),
     ];
 
@@ -43,9 +43,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['update_pro
         $nameError = mbus_check_full_name($formValues['full_name']);
         if ($nameError !== '') $profileErrors['full_name'] = $nameError;
 
-        $emailError = mbus_check_email($formValues['email']);
-        if ($emailError === '' && strlen($formValues['email']) > 100) $emailError = 'Email must be 100 characters or less.';
-        if ($emailError !== '') $profileErrors['email'] = $emailError;
+        if ($formValues['email'] === '') {
+            $profileErrors['email'] = 'Email address is required.';
+        } elseif (strlen($formValues['email']) > 100) {
+            $profileErrors['email'] = 'Email address must be 100 characters or fewer.';
+        } elseif (filter_var($formValues['email'], FILTER_VALIDATE_EMAIL) === false) {
+            $profileErrors['email'] = 'Enter a valid email address.';
+        }
 
         $phoneError = mbus_check_phone($formValues['phone_number']);
         if ($phoneError !== '') $profileErrors['phone_number'] = $phoneError;
@@ -76,7 +80,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['update_pro
                     $formValues = [
                         'full_name' => (string)$profile['full_name'],
                         'email' => (string)$profile['email'],
-                        'phone_number' => (string)($profile['phone_number'] ?? ''),
+                    'phone_number' => preg_replace('/^0/', '', (string)($profile['phone_number'] ?? '')),
                     ];
                 }
             }
@@ -95,6 +99,7 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
     <link rel="stylesheet" href="../Assets/css/responsive.css"><link rel="stylesheet" href="../Assets/css/bottom-nav.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css"><link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
+    <link rel="stylesheet" href="../Assets/css/operator_profile.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/operator_profile.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
 </head>
@@ -130,14 +135,14 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
             </div>
             <div class="pf-field">
                 <label for="operatorEmail">Email address</label>
-                <input class="form-control" type="email" id="operatorEmail" name="email" value="<?php echo htmlspecialchars($formValues['email']); ?>" maxlength="100" autocomplete="email" required aria-describedby="operatorEmailHint<?php echo isset($profileErrors['email']) ? ' email-error' : ''; ?>">
+                <input class="form-control" type="email" id="operatorEmail" name="email" value="<?php echo htmlspecialchars($formValues['email']); ?>" maxlength="100" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" required aria-describedby="operatorEmailHint<?php echo isset($profileErrors['email']) ? ' email-error' : ''; ?>">
                 <small class="form-hint" id="operatorEmailHint">This email will be used the next time you sign in.</small>
                 <?php echo mbus_field_error($profileErrors, 'email'); ?>
             </div>
             <div class="pf-field">
                 <label for="operatorPhone">Phone number</label>
-                <input class="form-control" type="tel" id="operatorPhone" name="phone_number" value="<?php echo htmlspecialchars($formValues['phone_number']); ?>" maxlength="20" inputmode="tel" autocomplete="tel" required aria-describedby="operatorPhoneHint<?php echo isset($profileErrors['phone_number']) ? ' phone_number-error' : ''; ?>">
-                <small class="form-hint" id="operatorPhoneHint">Use a Philippine mobile number, e.g. 09123456789.</small>
+                <div class="operator-phone-input"><span class="operator-phone-prefix" aria-hidden="true">+63</span><input class="form-control" type="tel" id="operatorPhone" name="phone_number" value="<?php echo htmlspecialchars(preg_replace('/^0/', '', (string)$formValues['phone_number'])); ?>" maxlength="10" minlength="10" pattern="9[0-9]{9}" inputmode="numeric" autocomplete="tel-national" placeholder="9XXXXXXXXX" required aria-describedby="operatorPhoneHint<?php echo isset($profileErrors['phone_number']) ? ' phone_number-error' : ''; ?>"></div>
+                <small class="form-hint" id="operatorPhoneHint">Use the same 10-digit mobile format as sign-up.</small>
                 <?php echo mbus_field_error($profileErrors, 'phone_number'); ?>
             </div>
             <button type="submit" class="btn btn-primary">Save changes</button>

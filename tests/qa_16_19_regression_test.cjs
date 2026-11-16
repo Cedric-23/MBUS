@@ -30,10 +30,16 @@ assert.match(commuterProfile, /data-fallback=/, 'commuter profile header must re
 assert.match(operatorProfile, /strtolower\(\$_SESSION\['user_type'\] \?\? ''\) !== 'operator'/, 'operator profile must stay role-protected');
 assert.match(operatorProfile, /csrf_validate_token\(\)/, 'operator profile updates must validate CSRF');
 assert.match(operatorProfile, /mbus_check_full_name\(/);
-assert.match(operatorProfile, /mbus_check_email\(/);
 assert.match(operatorProfile, /mbus_check_phone\(/);
+assert.match(operatorProfile, /filter_var\(\$formValues\['email'\], FILTER_VALIDATE_EMAIL\)/, 'operator email changes should use the same basic format check as sign-in');
 assert.match(operatorProfile, /LOWER\(email\) = LOWER\(\?\)/, 'operator email must be checked for case-insensitive duplicates');
 for (const field of ['full_name', 'email', 'phone_number']) assert.match(operatorProfile, new RegExp(`name="${field}"`), `operator profile must edit ${field}`);
+const operatorEmailInput = operatorProfile.match(/<input[^>]*id="operatorEmail"[^>]*>/)?.[0] ?? '';
+assert.ok(operatorEmailInput, 'operator profile email field must be present');
+assert.doesNotMatch(operatorEmailInput, /\b(?:readonly|disabled)\b/, 'operator profile email field must remain editable');
+assert.match(operatorProfile, /operator-phone-prefix[^>]*>\+63<\/span>/, 'operator phone input must use the same +63 prefix as sign-up');
+assert.match(operatorProfile, /maxlength="10" minlength="10" pattern="9\[0-9\]\{9\}"/, 'operator phone input must accept the same ten-digit national number as sign-up');
+assert.ok(operatorProfile.includes("preg_replace('/^0/', '', (string)$formValues['phone_number'])"), 'stored 09-format phone numbers must display as ten digits after the +63 prefix');
 assert.match(operatorProfile, /\$_SESSION\['full_name'\] =/);
 assert.match(operatorProfile, /\$_SESSION\['email'\] =/);
 
