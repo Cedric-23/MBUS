@@ -24,4 +24,6 @@ function out(o){ return ContentService.createTextOutput(JSON.stringify(o)).setMi
 ## Option B: Brevo (300 emails/day)
 Create a Brevo account, verify your sender email, make an API key. In Render add `BREVO_API_KEY` and `MAIL_FROM_EMAIL` (the verified sender).
 
+If both are set, MBUS tries Brevo first and falls back to the Apps Script relay (Brevo ~300/day + relay ~100/day).
+
 If neither is set, MBUS falls back to SMTP (`SMTP_*`), which only works on a paid Render instance or locally.

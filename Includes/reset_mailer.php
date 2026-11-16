@@ -27,45 +27,53 @@ function mbus_send_http_message(string $email, string $subject, string $html_bod
     if ($brevo === '' && $relay === '') return false;
     if (!function_exists('curl_init')) { error_log('MBUS mail: php curl extension missing'); return 'Email delivery is not available on this server.'; }
 
-    if ($brevo !== '') {
-        $from = trim((string)(getenv('MAIL_FROM_EMAIL') ?: getenv('SMTP_FROM') ?: getenv('SMTP_USERNAME')));
-        $url = 'https://api.brevo.com/v3/smtp/email';
-        $headers = ['accept: application/json', 'content-type: application/json', 'api-key: ' . $brevo];
-        $payload = json_encode([
-            'sender' => ['name' => 'MBUS System', 'email' => $from],
-            'to' => [['email' => $email, 'name' => $recipient_name !== '' ? $recipient_name : $email]],
-            'subject' => $subject, 'htmlContent' => $html_body, 'textContent' => $text_body,
-        ]);
-        if ($from === '') { error_log('MBUS mail: MAIL_FROM_EMAIL is required with BREVO_API_KEY'); return 'Email delivery is not configured yet. Please contact the administrator.'; }
-    } else {
-        $url = $relay;
-        $headers = ['content-type: application/json'];
-        $payload = json_encode([
-            'secret' => (string)getenv('MAIL_RELAY_SECRET'), 'to' => $email, 'name' => $recipient_name,
-            'subject' => $subject, 'html' => $html_body, 'text' => $text_body,
-        ]);
-    }
+    // Try Brevo first, then the Apps Script relay if Brevo fails or hits its daily limit.
+    $providers = [];
+    if ($brevo !== '') $providers[] = 'brevo';
+    if ($relay !== '') $providers[] = 'relay';
+    $lastError = 'We could not send the email right now. Please try again in a few moments or contact the administrator.';
 
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_POST => true, CURLOPT_POSTFIELDS => $payload, CURLOPT_HTTPHEADER => $headers,
-        CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 4,
-        CURLOPT_CONNECTTIMEOUT => 6, CURLOPT_TIMEOUT => 15,
-    ]);
-    $body = curl_exec($ch);
-    $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $err = curl_error($ch);
-    curl_close($ch);
+    foreach ($providers as $provider) {
+        if ($provider === 'brevo') {
+            $from = trim((string)(getenv('MAIL_FROM_EMAIL') ?: getenv('SMTP_FROM') ?: getenv('SMTP_USERNAME')));
+            if ($from === '') { error_log('MBUS mail: MAIL_FROM_EMAIL is required with BREVO_API_KEY'); $lastError = 'Email delivery is not configured yet. Please contact the administrator.'; continue; }
+            $url = 'https://api.brevo.com/v3/smtp/email';
+            $headers = ['accept: application/json', 'content-type: application/json', 'api-key: ' . $brevo];
+            $payload = json_encode([
+                'sender' => ['name' => 'MBUS System', 'email' => $from],
+                'to' => [['email' => $email, 'name' => $recipient_name !== '' ? $recipient_name : $email]],
+                'subject' => $subject, 'htmlContent' => $html_body, 'textContent' => $text_body,
+            ]);
+        } else {
+            $url = $relay;
+            $headers = ['content-type: application/json'];
+            $payload = json_encode([
+                'secret' => (string)getenv('MAIL_RELAY_SECRET'), 'to' => $email, 'name' => $recipient_name,
+                'subject' => $subject, 'html' => $html_body, 'text' => $text_body,
+            ]);
+        }
 
-    if ($body === false) { error_log('MBUS HTTP mail failed: ' . $err); return 'We could not send the email right now. Please try again in a few moments.'; }
-    if ($brevo !== '') {
-        if ($code >= 200 && $code < 300) return null;
-    } else {
-        $j = json_decode((string)$body, true);
-        if ($code >= 200 && $code < 300 && is_array($j) && !empty($j['ok'])) return null;
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true, CURLOPT_POSTFIELDS => $payload, CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 4,
+            CURLOPT_CONNECTTIMEOUT => 6, CURLOPT_TIMEOUT => 15,
+        ]);
+        $body = curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        if ($body === false) { error_log('MBUS HTTP mail (' . $provider . ') failed: ' . $err); continue; }
+        if ($provider === 'brevo') {
+            if ($code >= 200 && $code < 300) return null;
+        } else {
+            $j = json_decode((string)$body, true);
+            if ($code >= 200 && $code < 300 && is_array($j) && !empty($j['ok'])) return null;
+        }
+        error_log('MBUS HTTP mail (' . $provider . ') rejected (' . $code . '): ' . substr((string)$body, 0, 300));
     }
-    error_log('MBUS HTTP mail rejected (' . $code . '): ' . substr((string)$body, 0, 300));
-    return 'We could not send the email right now. Please try again in a few moments or contact the administrator.';
+    return $lastError;
 }
 
 /** Send one SMTP message. Returns null on success, otherwise a user-safe error. */
