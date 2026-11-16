@@ -28,6 +28,10 @@ services:
         value: https://xeczvnheaixpfattbwsk.supabase.co
       - key: SUPABASE_ANON_KEY
         sync: false
+      - key: MAIL_RELAY_URL
+        sync: false
+      - key: MAIL_RELAY_SECRET
+        sync: false
       - key: PAYMONGO_SECRET_KEY
         sync: false
       - key: PAYMONGO_WEBHOOK_SECRET
