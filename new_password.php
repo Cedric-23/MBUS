@@ -1,145 +1,60 @@
 <?php
-include "config/db_connect.php";
 session_start();
-include "Includes/csrf.php";
-require_once __DIR__ . "/Includes/auth_validation.php";
+require_once __DIR__ . '/config/db_connect.php';
+require_once __DIR__ . '/Includes/csrf.php';
+require_once __DIR__ . '/Includes/auth_validation.php';
 
-if(!isset($_SESSION['verified'])){
-    header("Location: forgot_password.php");
-    exit();
+$email = strtolower(trim((string)($_SESSION['reset_email'] ?? '')));
+$verified_at = (int)($_SESSION['reset_verified_at'] ?? 0);
+if ($email === '' || $verified_at < 1 || time() - $verified_at > 10 * 60) {
+    unset($_SESSION['reset_verified_at']);
+    header('Location: forgot_password.php'); exit();
 }
-
 $error = '';
-$success = '';
+$password_error = null;
+$confirm_error = null;
+$password = '';
+$confirm = '';
 
-if(isset($_POST['reset'])){
-    if(!csrf_validate_token()){
-        $error = 'Security validation failed. Please try again.';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!csrf_validate_token()) {
+        $error = 'Security validation failed. Please reload the page and try again.';
     } else {
-        $password = $_POST['password'];
-        $confirm = $_POST['confirm_password'];
-
-        if($password != $confirm){
-            $error = 'Passwords do not match';
-        } elseif(($password_error = mbus_validate_password($password)) !== null){
-            $error = $password_error;
+        $password = (string)($_POST['password'] ?? '');
+        $confirm = (string)($_POST['confirm_password'] ?? '');
+        $password_error = mbus_validate_password($password);
+        if ($confirm === '') $confirm_error = 'Confirm your new password.';
+        elseif (!hash_equals($password, $confirm)) $confirm_error = 'Passwords do not match.';
+        if ($password_error !== null || $confirm_error !== null) {
+            $error = 'Please fix the highlighted fields.';
         } else {
             $hashed = password_hash($password, PASSWORD_DEFAULT);
-            $email = $_SESSION['reset_email'];
-
-            // Use prepared statement
-            $updated = mbus_db_prepare($conn, "
-                UPDATE users
-                SET password = ?,
-                reset_code = NULL,
-                reset_expiry = NULL
-                WHERE LOWER(email) = LOWER(?)", [$hashed, $email]);
-
-            if($updated === false){
-                $error = 'Unable to update your password. Please start the reset process again.';
+            $updated = mbus_db_prepare($conn, 'UPDATE users SET password = ?, reset_code = NULL, reset_expiry = NULL WHERE LOWER(email) = LOWER(?)', [$hashed, $email]);
+            if ($updated === false) {
+                $error = 'Unable to update your password right now. Please try again.';
             } else {
-                session_destroy();
-                header("Location: login.php?reset=success", true, 303);
-                exit();
+                unset($_SESSION['reset_email'], $_SESSION['reset_sent_at'], $_SESSION['reset_expires_at'], $_SESSION['reset_attempts'], $_SESSION['reset_verified_at']);
+                header('Location: login.php?reset=success', true, 303); exit();
             }
         }
     }
 }
+function new_password_e(mixed $value): string { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
 ?>
-
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Password</title>
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="Assets/css/responsive.css">
-    <link rel="stylesheet" href="login.css">
-    <link rel="stylesheet" href="Assets/css/auth.css">
-</head>
-
-<body class="login-page">
-<div class="login-container">
-    
-    <div class="login-brand">
-        <img src="Assets/images/mbus_icon.png" alt="MBUS Logo" class="login-logo">
-        <div class="login-brand-text">
-            <h2>Morong - SBMA Bus Reservation</h2>
-            <p>Fast. Reliable. Connected.</p>
-        </div>
-    </div>
-
-    <div class="login-card">
-        <div class="login-header">
-            <h3>New Password</h3>
-            <p>Enter your new password</p>
-        </div>
-
-        <?php if($error): ?>
-            <div class="login-alert login-alert-error">
-                <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
-                <span><?php echo htmlspecialchars($error); ?></span>
-            </div>
-        <?php endif; ?>
-
-        <?php if($success): ?>
-            <div class="login-alert login-alert-success">
-                <i class="fa fa-check-circle" aria-hidden="true"></i>
-                <span><?php echo htmlspecialchars($success); ?></span>
-            </div>
-        <?php endif; ?>
-
-        <form method="POST" class="login-form" novalidate>
-            <?php csrf_field(); ?>
-
-            <div class="form-field">
-                <label for="password">New Password</label>
-                <input 
-                    type="password" 
-                    id="password" 
-                    name="password" 
-                    placeholder="New Password (min 8 chars)"
-                    required
-                    autocomplete="new-password"
-                    minlength="8"
-                    aria-describedby="password-hint"
-                >
-                <i class="fa-solid fa-lock form-field-icon" aria-hidden="true"></i>
-            </div>
-
-            <div class="form-field">
-                <label for="confirm_password">Confirm Password</label>
-                <input 
-                    type="password" 
-                    id="confirm_password" 
-                    name="confirm_password" 
-                    placeholder="Confirm Password"
-                    required
-                    autocomplete="new-password"
-                    aria-describedby="confirm-hint"
-                >
-                <i class="fa-solid fa-lock form-field-icon" aria-hidden="true"></i>
-            </div>
-
-            <button 
-                type="submit" 
-                name="reset" 
-                class="btn btn-primary btn-block login-submit"
-            >
-                <i class="fa-solid fa-key" aria-hidden="true"></i>
-                Update Password
-            </button>
-        </form>
-
-        <div class="login-footer">
-            <p><a href="login.php"><i class="fa fa-arrow-left" aria-hidden="true"></i> Back to Login</a></p>
-        </div>
-    </div>
-
-</div>
-<script src="Assets/js/password-toggle.js"></script>
-</body>
-</html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create a new password | MBUS</title>
+<link rel="stylesheet" href="Assets/css/global/font.css"><link rel="stylesheet" href="Assets/css/main/register.css?v=<?= @filemtime(__DIR__ . '/Assets/css/main/register.css') ?>"><link rel="stylesheet" href="Assets/css/auth.css?v=<?= @filemtime(__DIR__ . '/Assets/css/auth.css') ?>"><link rel="stylesheet" href="Assets/css/reset.css?v=<?= @filemtime(__DIR__ . '/Assets/css/reset.css') ?>"><script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+</head><body>
+<div class="left-container"><div class="left-container-child-1"><div class="logo-wordmark"><img src="Assets/images/mbus_logo.png" alt="MBUS"></div></div><div class="left-container-child-2"><div class="lc-heading"><h1>Travel smarter.</h1><h1>Travel on time.</h1></div><div class="lc-sub-heading"><p>Your dependable way to reserve seats, manage trips, and travel with confidence.</p></div></div><div class="lc-circle-1"></div><div class="lc-circle-2"></div></div>
+<main class="right-container"><div class="form-container"><header class="form-header"><div class="form-header-text"><h1>Create a new password</h1><p>Choose a strong password you haven’t used before.</p></div></header>
+<?php if($error): ?><div class="form-alert error" role="alert"><?= new_password_e($error) ?></div><?php endif; ?>
+<form method="post" class="form-body reset-form" novalidate><?php csrf_field(); ?>
+<div class="form-field password-input<?= $password_error ? ' is-invalid' : '' ?>"><label for="password">New password</label><div class="password-control"><input id="password" name="password" type="password" placeholder="Enter your new password" autocomplete="new-password" maxlength="128" autofocus <?= $password_error ? 'aria-invalid="true" aria-describedby="password-error"' : '' ?>><i class="input-icon" data-lucide="lock-keyhole" aria-hidden="true"></i><button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false"></button></div><?php if($password_error): ?><span class="field-error" id="password-error"><?= new_password_e($password_error) ?></span><?php endif; ?><ul class="password-requirements" id="password-requirements"><li data-rule="length">At least 8 characters</li><li data-rule="upper">One uppercase letter</li><li data-rule="lower">One lowercase letter</li><li data-rule="number">One number</li><li data-rule="symbol">One symbol</li></ul></div>
+<div class="form-field confirm-password-input<?= $confirm_error ? ' is-invalid' : '' ?>"><label for="confirm_password">Confirm new password</label><div class="password-control"><input id="confirm_password" name="confirm_password" type="password" placeholder="Re-enter your new password" autocomplete="new-password" maxlength="128" <?= $confirm_error ? 'aria-invalid="true" aria-describedby="confirm-error"' : '' ?>><i class="input-icon" data-lucide="lock-keyhole" aria-hidden="true"></i><button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false"></button></div><?php if($confirm_error): ?><span class="field-error" id="confirm-error"><?= new_password_e($confirm_error) ?></span><?php endif; ?></div>
+<button class="submit-button" type="submit" name="reset">Update password</button>
+</form><footer class="reset-footer"><p><a href="login.php">Back to sign in</a></p></footer>
+</div></main>
+<script src="Assets/js/password-toggle.js"></script><script>if(window.lucide)lucide.createIcons();const p=document.getElementById('password');const rules={length:v=>v.length>=8,upper:v=>/[A-Z]/.test(v),lower:v=>/[a-z]/.test(v),number:v=>/\d/.test(v),symbol:v=>/[^A-Za-z0-9]/.test(v)};function updateRules(){Object.entries(rules).forEach(([k,fn])=>document.querySelector('[data-rule="'+k+'"]').classList.toggle('met',fn(p.value)));}p.addEventListener('input',updateRules);updateRules();</script>
+</body></html>

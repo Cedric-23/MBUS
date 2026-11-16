@@ -1,129 +1,89 @@
 <?php
-include "config/db_connect.php";
 session_start();
-include "Includes/csrf.php";
+require_once __DIR__ . '/config/db_connect.php';
+require_once __DIR__ . '/Includes/csrf.php';
+require_once __DIR__ . '/Includes/auth_validation.php';
+require_once __DIR__ . '/Includes/reset_mailer.php';
 
 $error = '';
 $success = '';
+$email_value = strtolower(trim((string)($_POST['email'] ?? '')));
+$field_error = null;
 
-if(isset($_POST['send_code'])){
-    if(!csrf_validate_token()){
-        $error = 'Security validation failed. Please try again.';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!csrf_validate_token()) {
+        $error = 'Security validation failed. Please reload the page and try again.';
     } else {
-        $email = strtolower(trim((string)($_POST['email'] ?? '')));
-        unset($_SESSION['reset_email'], $_SESSION['reset_code'], $_SESSION['verified']);
-
-        // Validate email format
-        if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
-            $error = 'Invalid email format';
+        $email_error = mbus_validate_email($email_value);
+        if ($email_error !== null) {
+            $field_error = $email_error;
+            $error = 'Please fix the highlighted field.';
         } else {
-            // Use prepared statement
-            $result = mbus_db_prepare($conn, "SELECT * FROM users WHERE LOWER(email) = LOWER(?)", [$email]);
+            unset($_SESSION['reset_email'], $_SESSION['reset_verified_at'], $_SESSION['reset_attempts']);
+            $result = mbus_db_prepare($conn, 'SELECT user_id, email FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1', [$email_value]);
+            $user = $result === false ? null : mbus_db_fetch_assoc($result);
 
-            if(mbus_db_num_rows($result) > 0){
-                $code = (string)random_int(100000,999999);
-                $expiry = date("Y-m-d H:i:s", strtotime("+15 minutes"));
+            if ($result === false) {
+                $error = 'Password reset is temporarily unavailable. Please try again in a moment.';
+            } elseif (!$user) {
+                // Do not reveal whether an email is registered.
+                $success = 'If an MBUS account matches that email, we will send a 6-digit verification code. Check your inbox and spam folder.';
+            } else {
+                $code = (string)random_int(100000, 999999);
+                $expiry = date('Y-m-d H:i:s', time() + 15 * 60);
+                $updated = mbus_db_prepare($conn, 'UPDATE users SET reset_code = ?, reset_expiry = ? WHERE user_id = ?', [$code, $expiry, $user['user_id']]);
+                $mail_error = $updated === false ? 'Password reset is temporarily unavailable. Please try again in a moment.' : mbus_send_reset_code($email_value, $code);
 
-                // Use prepared statement for update
-                $updated = mbus_db_prepare($conn, "UPDATE users
-                SET reset_code = ?, reset_expiry = ?
-                WHERE LOWER(email) = LOWER(?)", [$code, $expiry, $email]);
-
-                if ($updated === false) {
-                    $error = 'Password reset is temporarily unavailable. Please try again later.';
-                    unset($_SESSION['reset_email'], $_SESSION['reset_code']);
+                if ($mail_error !== null) {
+                    if ($updated !== false) mbus_db_prepare($conn, 'UPDATE users SET reset_code = NULL, reset_expiry = NULL WHERE user_id = ?', [$user['user_id']]);
+                    $error = $mail_error;
                 } else {
-                    $_SESSION['reset_email'] = $email;
-                    $_SESSION['reset_code'] = $code;
-                    header("Location: send_reset_code.php");
+                    $_SESSION['reset_email'] = $email_value;
+                    $_SESSION['reset_sent_at'] = time();
+                    $_SESSION['reset_expires_at'] = time() + 15 * 60;
+                    $_SESSION['reset_attempts'] = 0;
+                    header('Location: verify_code.php', true, 303);
                     exit();
                 }
-            }else{
-                $error = 'Email not found';
             }
         }
     }
 }
+function reset_page_e(mixed $value): string { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forgot Password</title>
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="Assets/css/responsive.css">
-    <link rel="stylesheet" href="login.css">
-    <link rel="stylesheet" href="Assets/css/auth.css">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset your password | MBUS</title>
+    <link rel="stylesheet" href="Assets/css/global/font.css">
+    <link rel="stylesheet" href="Assets/css/main/register.css?v=<?= @filemtime(__DIR__ . '/Assets/css/main/register.css') ?>">
+    <link rel="stylesheet" href="Assets/css/auth.css?v=<?= @filemtime(__DIR__ . '/Assets/css/auth.css') ?>">
+    <link rel="stylesheet" href="Assets/css/reset.css?v=<?= @filemtime(__DIR__ . '/Assets/css/reset.css') ?>">
+    <script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
 </head>
-
-<body class="login-page">
-<div class="login-container">
-    
-    <div class="login-brand">
-        <img src="Assets/images/mbus_icon.png" alt="MBUS Logo" class="login-logo">
-        <div class="login-brand-text">
-            <h2>Morong - SBMA Bus Reservation</h2>
-            <p>Fast. Reliable. Connected.</p>
-        </div>
+<body>
+    <div class="left-container">
+        <div class="left-container-child-1"><div class="logo-wordmark"><img src="Assets/images/mbus_logo.png" alt="MBUS"></div></div>
+        <div class="left-container-child-2"><div class="lc-heading"><h1>Travel smarter.</h1><h1>Travel on time.</h1></div><div class="lc-sub-heading"><p>Your dependable way to reserve seats, manage trips, and travel with confidence.</p></div></div>
+        <div class="lc-circle-1"></div><div class="lc-circle-2"></div>
     </div>
-
-    <div class="login-card">
-        <div class="login-header">
-            <h3>Forgot Password</h3>
-            <p>Enter your email to receive a reset code</p>
-        </div>
-
-        <?php if($error): ?>
-            <div class="login-alert login-alert-error">
-                <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
-                <span><?php echo htmlspecialchars($error); ?></span>
-            </div>
-        <?php endif; ?>
-
-        <?php if($success): ?>
-            <div class="login-alert login-alert-success">
-                <i class="fa fa-check-circle" aria-hidden="true"></i>
-                <span><?php echo htmlspecialchars($success); ?></span>
-            </div>
-        <?php endif; ?>
-
-        <form method="POST" class="login-form" novalidate>
+    <main class="right-container"><div class="form-container">
+        <header class="form-header"><div class="form-header-text"><h1>Reset your password</h1><p>We’ll send a 6-digit verification code to your MBUS email.</p></div></header>
+        <?php if ($error): ?><div class="form-alert error" role="alert"><?= reset_page_e($error) ?></div><?php endif; ?>
+        <?php if ($success): ?><div class="form-alert success" role="status"><?= reset_page_e($success) ?></div><?php endif; ?>
+        <form method="post" class="form-body reset-form" novalidate>
             <?php csrf_field(); ?>
-
-            <div class="form-field">
-                <label for="email">Email Address</label>
-                <input 
-                    type="email" 
-                    autocapitalize="none" autocorrect="off" spellcheck="false"
-                    id="email" 
-                    name="email" 
-                    placeholder="Enter your email"
-                    required
-                    autocomplete="email"
-                    aria-describedby="email-hint"
-                >
-                <i class="fa-solid fa-envelope form-field-icon" aria-hidden="true"></i>
+            <div class="form-field<?= $field_error ? ' is-invalid' : '' ?>">
+                <label for="email">Email address</label>
+                <input id="email" name="email" type="email" value="<?= reset_page_e($email_value) ?>" placeholder="juan@example.com" maxlength="100" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" autofocus <?= $field_error ? 'aria-invalid="true" aria-describedby="email-error"' : '' ?>>
+                <i class="input-icon" data-lucide="mail" aria-hidden="true"></i>
+                <?php if ($field_error): ?><span class="field-error" id="email-error"><?= reset_page_e($field_error) ?></span><?php endif; ?>
             </div>
-
-            <button 
-                type="submit" 
-                name="send_code" 
-                class="btn btn-primary btn-block login-submit"
-            >
-                <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
-                Send Reset Code
-            </button>
+            <button class="submit-button" type="submit" name="send_code">Send verification code</button>
         </form>
-
-        <div class="login-footer">
-            <p><a href="login.php"><i class="fa fa-arrow-left" aria-hidden="true"></i> Back to Login</a></p>
-        </div>
-    </div>
-
-</div>
+        <footer class="reset-footer"><p>Remembered your password? <a href="login.php">Sign in</a></p></footer>
+    </div></main>
+<script>if(window.lucide) lucide.createIcons();</script>
 </body>
 </html>
