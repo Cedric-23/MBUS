@@ -5,6 +5,7 @@ include "config/db_connect.php";
 include_once "Includes/validation.php";
 include "Includes/activity_log.php";
 require_once "Includes/csrf.php";
+require_once __DIR__ . '/Includes/reset_mailer.php';
 
 /*
  * Conductor accounts:
@@ -120,28 +121,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         [$full_name, $email, $phone, $hash, $registration_code, $registration_expiry]);
                     if ($ok === false) { $error = 'Could not create your account. Please try again.'; }
                     else {
-                        $mail_sent = false;
-                        try {
-                            require_once __DIR__ . '/PHPMailer/src/Exception.php';
-                            require_once __DIR__ . '/PHPMailer/src/PHPMailer.php';
-                            require_once __DIR__ . '/PHPMailer/src/SMTP.php';
-                            $mailer = new \PHPMailer\PHPMailer\PHPMailer(true);
-                            $mailer->isSMTP();
-                            $mailer->Host = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
-                            $mailer->SMTPAuth = true;
-                            $mailer->Username = getenv('SMTP_USERNAME') ?: '';
-                            $mailer->Password = getenv('SMTP_PASSWORD') ?: '';
-                            $mailer->SMTPSecure = getenv('SMTP_SECURE') ?: 'ssl';
-                            $mailer->Port = (int)(getenv('SMTP_PORT') ?: 465);
-                            $mailer->setFrom(getenv('SMTP_FROM') ?: $mailer->Username, 'MBUS System');
-                            $mailer->addAddress($email, $full_name);
-                            $mailer->Subject = 'Verify your MBUS account';
-                            $mailer->Body = "Your MBUS verification code is {$registration_code}. It expires in 15 minutes.";
-                            $mailer->send();
-                            $mail_sent = true;
-                        } catch (Throwable $mail_error) {
-                            error_log('Registration verification email failed: ' . $mail_error->getMessage());
-                        }
+                        $mail_sent = mbus_send_registration_code($email, $registration_code, $full_name) === null;
                         $_SESSION['registration_email'] = $email;
                         $_SESSION['registration_mail_sent'] = $mail_sent;
                         header('Location: verify_registration.php'); exit();

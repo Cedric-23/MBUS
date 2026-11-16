@@ -2,6 +2,7 @@
 include 'config/db_connect.php';
 session_start();
 include 'Includes/csrf.php';
+require_once __DIR__ . '/Includes/reset_mailer.php';
 
 $email = strtolower(trim((string)($_SESSION['registration_email'] ?? '')));
 $error = '';
@@ -23,17 +24,10 @@ if (isset($_POST['resend'])) {
         if ($updated === false) {
             $error = 'Unable to create a new verification code right now.';
         } else {
-            require_once __DIR__ . '/PHPMailer/src/Exception.php';
-            require_once __DIR__ . '/PHPMailer/src/PHPMailer.php';
-            require_once __DIR__ . '/PHPMailer/src/SMTP.php';
             try {
-                $mailer = new \PHPMailer\PHPMailer\PHPMailer(true);
-                $mailer->isSMTP(); $mailer->Host = getenv('SMTP_HOST') ?: 'smtp.gmail.com'; $mailer->SMTPAuth = true;
-                $mailer->Username = getenv('SMTP_USERNAME') ?: ''; $mailer->Password = getenv('SMTP_PASSWORD') ?: '';
-                $mailer->SMTPSecure = getenv('SMTP_SECURE') ?: 'ssl'; $mailer->Port = (int)(getenv('SMTP_PORT') ?: 465);
-                $mailer->setFrom(getenv('SMTP_FROM') ?: $mailer->Username, 'MBUS System'); $mailer->addAddress($email);
-                $mailer->Subject = 'Your new MBUS verification code'; $mailer->Body = "Your new MBUS verification code is {$new_code}. It expires in 15 minutes.";
-                $mailer->send(); $_SESSION['registration_mail_sent'] = true; $mail_sent = true; $success = 'A new verification code was sent.';
+                $mail_error_message = mbus_send_registration_code($email, $new_code);
+                if ($mail_error_message !== null) throw new RuntimeException($mail_error_message);
+                $_SESSION['registration_mail_sent'] = true; $mail_sent = true; $success = 'A new verification code was sent.';
             } catch (Throwable $mail_error) { error_log('Registration verification resend failed: ' . $mail_error->getMessage()); $error = 'The verification email could not be sent. Check the SMTP configuration.'; }
         }
     }
