@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['add_admin'])) {
         $name = trim((string)($_POST['full_name'] ?? '')); $email = strtolower(trim((string)($_POST['email'] ?? '')));
         $phone = trim((string)($_POST['phone_number'] ?? '')); $pw = (string)($_POST['password'] ?? '');
-        if ($e = mbus_check_name($name)) $error = $e;
+        if ($e = mbus_check_full_name($name)) $error = $e;
         elseif ($e = mbus_check_email($email)) $error = $e;
         elseif ($e = mbus_check_phone($phone)) $error = $e;
         elseif (strlen($pw) < 10) $error = 'Admin passwords need at least 10 characters.';

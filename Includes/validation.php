@@ -86,3 +86,11 @@ function mbus_check_plate(string &$v): string {
 function mbus_field_error(array $errors, string $key): string {
     return isset($errors[$key]) ? '<small class="field-error" id="' . htmlspecialchars($key) . '-error" role="alert">' . htmlspecialchars($errors[$key]) . '</small>' : '';
 }
+
+/** Full name must be at least two words (first and last name). Returns '' when OK. */
+function mbus_check_full_name(string &$name): string {
+    $e = mbus_check_name($name);
+    if ($e !== '') return $e;
+    if (count(array_filter(explode(' ', $name), fn($w) => preg_match('/\p{L}/u', $w))) < 2) return 'Enter your first and last name (for example: Juan Dela Cruz).';
+    return '';
+}

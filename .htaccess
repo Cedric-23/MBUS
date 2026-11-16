@@ -16,3 +16,11 @@
     Header set X-Frame-Options "SAMEORIGIN"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
+
+# Same session settings on every page (see Includes/session_boot.php)
+<IfModule mod_php.c>
+    php_value auto_prepend_file "/var/www/html/Includes/session_boot.php"
+</IfModule>
+<IfModule mod_php8.c>
+    php_value auto_prepend_file "/var/www/html/Includes/session_boot.php"
+</IfModule>

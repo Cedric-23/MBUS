@@ -101,7 +101,7 @@ function mbus_send_smtp_message(string $email, string $subject, string $html_bod
             $mail->Password = $password;
             $mail->SMTPSecure = $secure;
             $mail->Port = $port;
-            $mail->Timeout = 8;
+            $mail->Timeout = 4;
             $mail->SMTPKeepAlive = false;
             $mail->CharSet = 'UTF-8';
             $mail->setFrom($from, 'MBUS System');

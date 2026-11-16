@@ -144,7 +144,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $vehicle_type   = trim((string)($_POST['vehicle-type'] ?? ''));
         $plate          = (string)($_POST['vehicle-plate'] ?? '');
 
-        if ($e = mbus_check_name($full_name)) $errors['full-name'] = $e;
+        if ($e = mbus_check_full_name($full_name)) $errors['full-name'] = $e;
         if ($e = mbus_check_email($email)) $errors['email-address'] = $e;
         if ($e = mbus_check_phone($phone_number)) $errors['phone-number'] = $e;
         if (mb_strlen($address) < 8) $errors['home-address'] = 'Enter your complete address (at least 8 characters).';

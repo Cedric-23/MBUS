@@ -14,11 +14,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_validate_token()) {
         $error = 'Security validation failed. Please reload the page and try again.';
     } else {
+        $wait = 30 - (time() - (int)($_SESSION['reset_last_request'] ?? 0));
         $email_error = mbus_validate_email($email_value);
-        if ($email_error !== null) {
+        if ($wait > 0) {
+            // Stops rapid repeat requests from tying up the server with mail attempts
+            $error = 'Please wait ' . $wait . ' seconds before requesting another code.';
+        } elseif ($email_error !== null) {
             $field_error = $email_error;
             $error = 'Please fix the highlighted field.';
         } else {
+            $_SESSION['reset_last_request'] = time();
             unset($_SESSION['reset_email'], $_SESSION['reset_verified_at'], $_SESSION['reset_attempts']);
             $result = mbus_db_prepare($conn, 'SELECT user_id, email FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1', [$email_value]);
             $user = $result === false ? null : mbus_db_fetch_assoc($result);
