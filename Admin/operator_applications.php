@@ -284,6 +284,7 @@ document.addEventListener('keydown', function(e) {
         <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
 </nav>
+<script src="../Assets/js/password-toggle.js"></script>
 <script src="../Assets/js/app-header.js"></script>
 </body>
 </html>

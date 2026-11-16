@@ -1,7 +1,7 @@
 :root{--navy:#0a2540;--blue:#086FCF;--blue-d:#0660b3;--err:#d92d20;--ok:#1a7f37;--muted:#667085;--line:#d0d5dd;--bg:#f5f7fa}
 body{display:flex;min-height:100vh;background:#fff}
 /* brand panel */
-.left-container{position:relative;overflow:hidden;flex:0 0 42%;display:flex;flex-direction:column;justify-content:space-between;padding:40px 56px;background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff}
+.left-container{position:relative;overflow:hidden;flex:0 0 38%;display:flex;flex-direction:column;justify-content:space-between;padding:40px 56px;background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff}
 .left-container-child-1,.left-container-child-2{position:relative;z-index:1}
 .logo-wordmark img{height:44px;width:auto;display:block}
 .lc-heading h1{margin:0;font-size:2.6rem;line-height:1.15;font-weight:700}
@@ -11,7 +11,7 @@ body{display:flex;min-height:100vh;background:#fff}
 .lc-circle-2{width:300px;height:300px;bottom:-100px;left:-80px}
 /* form panel */
 .right-container{flex:1;display:flex;justify-content:center;align-items:flex-start;padding:40px 28px;overflow-y:auto}
-.form-container{width:100%;max-width:560px;margin:auto 0}
+.form-container{width:100%;max-width:600px;margin:auto}
 .form-header-text h1{margin:0 0 6px;font-size:1.75rem;color:var(--navy)}
 .form-header-text p{margin:0;color:var(--muted);font-size:.95rem}
 .form-header{margin-bottom:22px}
@@ -105,10 +105,11 @@ body{display:flex;min-height:100vh;background:#fff}
 .step-button-next.active,.step-button-submit.active{display:block}
 @media(max-width:900px){
  body{flex-direction:column}
- .left-container{flex:none;padding:22px 20px}
+ .left-container{flex:none;padding:16px 20px;gap:10px}
+ .form-container{margin:0 auto}
  .lc-heading h1{font-size:1.5rem}.lc-sub-heading{display:none}.logo-wordmark img{height:34px}
  .lc-circle-1{width:220px;height:220px}.lc-circle-2{display:none}
- .right-container{padding:22px 16px 40px}
+ .right-container{flex:none;padding:20px 16px 32px}
  .form-name-input,.form-contact-input,.form-password-input,.input-group{grid-template-columns:1fr}
  .right-container{min-width:0}.form-container{max-width:100%;min-width:0}.phone-input{min-width:0}.phone-prefix{flex-basis:54px;min-width:54px}
 }
@@ -118,3 +119,8 @@ body{display:flex;min-height:100vh;background:#fff}
 @media(max-width:480px){
  .right-container{padding:18px 12px 32px}.form-header-text h1{font-size:1.5rem}.picker-container a{font-size:.82rem;padding-left:2px;padding-right:2px}.picker-container-text{line-height:1.4}.upload-document-group{align-items:flex-start;flex-wrap:wrap}.document-desc{flex-basis:calc(100% - 52px);padding-top:2px}.document-input-button{margin-left:50px}
 }
+/* password strength checklist (same look as the reset password page) */
+.password-requirements{margin:7px 2px 0;padding:0;list-style:none;display:grid;gap:3px;color:var(--muted);font-size:.78rem}
+.password-requirements li::before{content:'•';display:inline-block;width:16px;color:#98a2b3}
+.password-requirements li.met{color:var(--ok)}
+.password-requirements li.met::before{content:'✓';font-weight:700;color:var(--ok)}

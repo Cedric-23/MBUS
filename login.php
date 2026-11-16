@@ -35,7 +35,7 @@ $login_success = '';
 if (isset($_GET['registered'])) {
     $login_success = 'Account verified successfully. You can now sign in.';
 } elseif (isset($_GET['reset'])) {
-    $login_success = 'Your password was updated successfully. You can now sign in.';
+    $login_success = 'Password changed! Your password was updated successfully. Sign in with your new password.';
 }
 
 $field_errors = [];
@@ -135,7 +135,8 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
         <style>
             .form-alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
             .form-alert.error   { background: #fdecea; color: #b42318; border: 1px solid #f5c2be; }
-            .form-alert.success { background: #e7f6ec; color: #1a7f37; border: 1px solid #b7e4c7; }
+            .form-alert.success { background: #e7f6ec; color: #1a7f37; border: 1px solid #b7e4c7; display:flex; gap:10px; align-items:flex-start; font-weight:600; line-height:1.4; }
+            .form-alert.success::before { content:"\2713"; flex:0 0 22px; height:22px; border-radius:50%; background:#1a7f37; color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; margin-top:1px; }
 
             /* Login has single-column fields, so stack them full width */
             .login-form .form-contact-input,
