@@ -27,6 +27,10 @@ function mbus_send_reset_code(string $email, string $code): ?string
         $mail->isSMTP();
         $mail->Host = (string)(getenv('SMTP_HOST') ?: 'smtp.gmail.com');
         $mail->SMTPAuth = true;
+        // Never allow an SMTP outage or blocked Render egress to pin the PHP worker.
+        $mail->Timeout = 10;
+        $mail->Timelimit = 15;
+        $mail->SMTPKeepAlive = false;
         $mail->Username = $username;
         $mail->Password = $password;
         $mail->SMTPSecure = (string)(getenv('SMTP_SECURE') ?: 'ssl');
