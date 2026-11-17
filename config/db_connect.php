@@ -17,6 +17,84 @@ if ($password === '') {
     );
 }
 
+function mbus_run_schema_upgrades(PDO $pdo): void {
+  // Keep profile uploads compatible with deployments where the optional migration
+  // has not yet been run manually. IF NOT EXISTS makes this safe on every request.
+  try {
+      $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(255)');
+      $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_b64 TEXT');
+      $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_mime VARCHAR(50)');
+      $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code VARCHAR(6)');
+      $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_expiry TIMESTAMP NULL');
+      $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP NULL');
+      $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_code VARCHAR(6)');
+      $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_code_expiry TIMESTAMP NULL');
+      $pdo->exec("UPDATE users SET email_verified_at = NOW() WHERE email_verified_at IS NULL AND LOWER(user_type) = 'commuter' AND registration_code IS NULL");
+  } catch (PDOException $schema_error) {
+      error_log('Profile picture schema check failed: ' . $schema_error->getMessage());
+  }
+  // Per-ticket passenger type and discount ID (group bookings: student/senior/PWD seats).
+  try {
+      foreach ([
+          "passenger_type VARCHAR(20) DEFAULT 'Regular'",
+          "discount_status VARCHAR(20) DEFAULT 'None'",
+          "id_image_b64 TEXT",
+          "id_image_mime VARCHAR(50)",
+          "fare_amount NUMERIC(10,2)",
+          "discount_amount NUMERIC(10,2)",
+          "discount_reviewed_by INT",
+          "discount_reviewed_at TIMESTAMP",
+          "expires_at TIMESTAMPTZ",
+      ] as $col) {
+          $pdo->exec('ALTER TABLE reservation ADD COLUMN IF NOT EXISTS ' . $col);
+      }
+      $pdo->exec("UPDATE reservation SET expires_at = created_at + INTERVAL '10 minutes' WHERE expires_at IS NULL");
+      $pdo->exec("ALTER TABLE reservation ALTER COLUMN expires_at SET DEFAULT (NOW() + INTERVAL '10 minutes')");
+      $pdo->exec("CREATE INDEX IF NOT EXISTS reservation_pending_expiry_idx ON reservation (schedule_id, expires_at) WHERE status = 'Pending'");
+  } catch (PDOException $schema_error) {
+      error_log('Reservation schema check failed: ' . $schema_error->getMessage());
+  }
+  // PayMongo GCash checkout sessions: one row per redirect, finalized by the webhook or the return page.
+  try {
+      $pdo->exec("CREATE TABLE IF NOT EXISTS paymongo_checkout (
+          session_id TEXT PRIMARY KEY, user_id INT NOT NULL, schedule_id INT NOT NULL,
+          reservation_ids TEXT NOT NULL, lines TEXT NOT NULL, amount NUMERIC(10,2) NOT NULL,
+          checkout_url TEXT, status TEXT NOT NULL DEFAULT 'Created', payment_ref TEXT, ticket_code TEXT,
+          created_at TIMESTAMP DEFAULT NOW(), paid_at TIMESTAMP)");
+  } catch (PDOException $schema_error) {
+      error_log('PayMongo schema check failed: ' . $schema_error->getMessage());
+  }
+  try {
+      foreach (["reference_number VARCHAR(40)", "receipt_b64 TEXT", "receipt_mime VARCHAR(30)", "reject_reason TEXT", "reviewed_by INT", "reviewed_at TIMESTAMP", "submitted_at TIMESTAMP", "paid_at TIMESTAMP"] as $col) {
+          $pdo->exec('ALTER TABLE paymongo_checkout ADD COLUMN IF NOT EXISTS ' . $col);
+      }
+      $pdo->exec("CREATE TABLE IF NOT EXISTS incoming_payments (
+          id SERIAL PRIMARY KEY, reference_number VARCHAR(40) UNIQUE NOT NULL, amount NUMERIC(10,2) NOT NULL,
+          sender TEXT, raw_message TEXT, received_at TIMESTAMP DEFAULT NOW(), used_by TEXT)");
+      // Each open GCash payment gets its own centavo amount, so the incoming SMS identifies the booking.
+      $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS uq_manual_open_amount ON paymongo_checkout (amount) WHERE status = 'Submitted' AND session_id LIKE 'manual\\_%'");
+      $pdo->exec("CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')");
+  } catch (PDOException $schema_error) {
+      error_log('Manual payment schema check failed: ' . $schema_error->getMessage());
+  }
+  // Operator application documents live in the database (the web host's disk is temporary).
+  try {
+      foreach (["license_document_b64 TEXT", "license_document_mime VARCHAR(50)", "vehicle_document_b64 TEXT", "vehicle_document_mime VARCHAR(50)", "password_hash TEXT"] as $col) {
+          $pdo->exec('ALTER TABLE operator_application ADD COLUMN IF NOT EXISTS ' . $col);
+      }
+  } catch (PDOException $schema_error) {
+      error_log('Operator application schema check failed: ' . $schema_error->getMessage());
+  }
+  try {
+      $pdo->exec("CREATE TABLE IF NOT EXISTS conductor_application (
+          application_id SERIAL PRIMARY KEY, full_name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL,
+          phone_number VARCHAR(20) NOT NULL, password_hash TEXT NOT NULL, application_status TEXT NOT NULL DEFAULT 'Pending',
+          submitted_at TIMESTAMP DEFAULT NOW(), reviewed_at TIMESTAMP, reviewed_by INT, rejection_reason TEXT, user_id INT)");
+  } catch (PDOException $schema_error) {
+      error_log('Conductor application schema check failed: ' . $schema_error->getMessage());
+  }
+}
+
 $dsn = "pgsql:host=$host;port=$port;dbname=$database;sslmode=require";
 
 try {
@@ -25,80 +103,22 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     ]);
     $pdo->exec("SET TIME ZONE '" . str_replace("'", "''", mbus_timezone()) . "'");
-    // Keep profile uploads compatible with deployments where the optional migration
-    // has not yet been run manually. IF NOT EXISTS makes this safe on every request.
-    try {
-        $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(255)');
-        $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_b64 TEXT');
-        $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_mime VARCHAR(50)');
-        $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code VARCHAR(6)');
-        $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_expiry TIMESTAMP NULL');
-        $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP NULL');
-        $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_code VARCHAR(6)');
-        $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_code_expiry TIMESTAMP NULL');
-        $pdo->exec("UPDATE users SET email_verified_at = NOW() WHERE email_verified_at IS NULL AND LOWER(user_type) = 'commuter' AND registration_code IS NULL");
-    } catch (PDOException $schema_error) {
-        error_log('Profile picture schema check failed: ' . $schema_error->getMessage());
-    }
-    // Per-ticket passenger type and discount ID (group bookings: student/senior/PWD seats).
-    try {
-        foreach ([
-            "passenger_type VARCHAR(20) DEFAULT 'Regular'",
-            "discount_status VARCHAR(20) DEFAULT 'None'",
-            "id_image_b64 TEXT",
-            "id_image_mime VARCHAR(50)",
-            "fare_amount NUMERIC(10,2)",
-            "discount_amount NUMERIC(10,2)",
-            "discount_reviewed_by INT",
-            "discount_reviewed_at TIMESTAMP",
-            "expires_at TIMESTAMPTZ",
-        ] as $col) {
-            $pdo->exec('ALTER TABLE reservation ADD COLUMN IF NOT EXISTS ' . $col);
+    // Schema upgrades are ~35 extra round trips to the database. Run them once per version, not on every page.
+    $schemaVersion = '2026-11-17a';
+    $schemaFlag = sys_get_temp_dir() . '/mbus_schema_' . md5($host . $database . $schemaVersion) . '.ok';
+    if (!is_file($schemaFlag)) {
+        $done = false;
+        try {
+            $chk = $pdo->query("SELECT value FROM app_settings WHERE key = 'schema_version'");
+            $done = $chk && $chk->fetchColumn() === $schemaVersion;
+        } catch (PDOException $e) { $done = false; }
+        if (!$done) {
+            mbus_run_schema_upgrades($pdo);
+            try {
+                $pdo->prepare("INSERT INTO app_settings (key, value) VALUES ('schema_version', ?) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value")->execute([$schemaVersion]);
+            } catch (PDOException $e) { error_log('Schema version save failed: ' . $e->getMessage()); }
         }
-        $pdo->exec("UPDATE reservation SET expires_at = created_at + INTERVAL '10 minutes' WHERE expires_at IS NULL");
-        $pdo->exec("ALTER TABLE reservation ALTER COLUMN expires_at SET DEFAULT (NOW() + INTERVAL '10 minutes')");
-        $pdo->exec("CREATE INDEX IF NOT EXISTS reservation_pending_expiry_idx ON reservation (schedule_id, expires_at) WHERE status = 'Pending'");
-    } catch (PDOException $schema_error) {
-        error_log('Reservation schema check failed: ' . $schema_error->getMessage());
-    }
-    // PayMongo GCash checkout sessions: one row per redirect, finalized by the webhook or the return page.
-    try {
-        $pdo->exec("CREATE TABLE IF NOT EXISTS paymongo_checkout (
-            session_id TEXT PRIMARY KEY, user_id INT NOT NULL, schedule_id INT NOT NULL,
-            reservation_ids TEXT NOT NULL, lines TEXT NOT NULL, amount NUMERIC(10,2) NOT NULL,
-            checkout_url TEXT, status TEXT NOT NULL DEFAULT 'Created', payment_ref TEXT, ticket_code TEXT,
-            created_at TIMESTAMP DEFAULT NOW(), paid_at TIMESTAMP)");
-    } catch (PDOException $schema_error) {
-        error_log('PayMongo schema check failed: ' . $schema_error->getMessage());
-    }
-    try {
-        foreach (["reference_number VARCHAR(40)", "receipt_b64 TEXT", "receipt_mime VARCHAR(30)", "reject_reason TEXT", "reviewed_by INT", "reviewed_at TIMESTAMP", "submitted_at TIMESTAMP", "paid_at TIMESTAMP"] as $col) {
-            $pdo->exec('ALTER TABLE paymongo_checkout ADD COLUMN IF NOT EXISTS ' . $col);
-        }
-        $pdo->exec("CREATE TABLE IF NOT EXISTS incoming_payments (
-            id SERIAL PRIMARY KEY, reference_number VARCHAR(40) UNIQUE NOT NULL, amount NUMERIC(10,2) NOT NULL,
-            sender TEXT, raw_message TEXT, received_at TIMESTAMP DEFAULT NOW(), used_by TEXT)");
-        // Each open GCash payment gets its own centavo amount, so the incoming SMS identifies the booking.
-        $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS uq_manual_open_amount ON paymongo_checkout (amount) WHERE status = 'Submitted' AND session_id LIKE 'manual\\_%'");
-        $pdo->exec("CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')");
-    } catch (PDOException $schema_error) {
-        error_log('Manual payment schema check failed: ' . $schema_error->getMessage());
-    }
-    // Operator application documents live in the database (the web host's disk is temporary).
-    try {
-        foreach (["license_document_b64 TEXT", "license_document_mime VARCHAR(50)", "vehicle_document_b64 TEXT", "vehicle_document_mime VARCHAR(50)", "password_hash TEXT"] as $col) {
-            $pdo->exec('ALTER TABLE operator_application ADD COLUMN IF NOT EXISTS ' . $col);
-        }
-    } catch (PDOException $schema_error) {
-        error_log('Operator application schema check failed: ' . $schema_error->getMessage());
-    }
-    try {
-        $pdo->exec("CREATE TABLE IF NOT EXISTS conductor_application (
-            application_id SERIAL PRIMARY KEY, full_name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL,
-            phone_number VARCHAR(20) NOT NULL, password_hash TEXT NOT NULL, application_status TEXT NOT NULL DEFAULT 'Pending',
-            submitted_at TIMESTAMP DEFAULT NOW(), reviewed_at TIMESTAMP, reviewed_by INT, rejection_reason TEXT, user_id INT)");
-    } catch (PDOException $schema_error) {
-        error_log('Conductor application schema check failed: ' . $schema_error->getMessage());
+        @file_put_contents($schemaFlag, $schemaVersion);
     }
     $conn = new MbusConnection($pdo);
 } catch (PDOException $e) {

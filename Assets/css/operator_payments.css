@@ -45,6 +45,18 @@
 
 .pay-badge{display:inline-block;margin-left:8px;padding:2px 10px;border-radius:999px;background:#fff4d6;color:#8a5a00;font-size:.75rem;font-weight:600;vertical-align:middle}
 .pay-badge.ok{background:#dcf5e4;color:#176b3a}
-.gc-card{padding:16px;margin-bottom:12px}
-.gc-card h2{font-size:1rem;margin:0 0 8px}
-.gc-card p{margin:0 0 8px}
+.gc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;max-width:820px}
+.gc-card{background:#fff;border:1px solid var(--color-border-light,#e4e9f0);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.gc-pending{border-color:#f0d58a}
+.gc-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.gc-top h2{font-size:1rem;margin:0}
+.gc-top .pay-badge{margin:0}
+.gc-body{display:flex;align-items:center;gap:14px}
+.gc-qr{width:96px;height:96px;object-fit:contain;border-radius:10px;border:1px solid var(--color-border-light,#e4e9f0);flex:none}
+.gc-name{margin:0;font-weight:600;font-size:1.05rem}
+.gc-num{margin:2px 0 0;font-size:1.05rem;letter-spacing:.02em}
+.gc-meta{margin:8px 0 0;font-size:.82rem;color:var(--color-text-muted,#6b7a8c)}
+.gc-empty{margin:0;color:var(--color-text-muted,#6b7a8c)}
+.gc-actions{display:flex;gap:10px;margin-top:auto}
+.gc-btn{flex:1;min-height:44px;border-radius:12px;border:1.5px solid var(--color-border,#d5dce6);background:#fff;font:inherit;font-weight:600;cursor:pointer}
+.gc-btn.primary{background:#14304f;border-color:#14304f;color:#fff}

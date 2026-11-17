@@ -113,29 +113,33 @@ $cName = mbus_setting($conn, 'gcash_name'); $cNum = mbus_setting($conn, 'gcash_n
 <?php if($success !== ''): ?><div class="alert alert-success" role="status"><?php echo htmlspecialchars($success); ?></div><?php endif; ?>
 <?php if($error !== ''): ?><div class="alert alert-error" role="alert"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
 
-<section class="pay-panel gc-card">
-    <h2>Current account <span class="pay-badge ok">Live</span></h2>
-    <?php if($cNum === ''): ?><p class="pay-note">No account set yet.</p><?php else: ?>
-    <p><strong><?php echo htmlspecialchars($cName); ?></strong> &middot; <?php echo htmlspecialchars($cNum); ?></p>
-    <?php if($cQr !== ''): ?><img class="pay-qr" src="<?php echo htmlspecialchars($cQr, ENT_QUOTES); ?>" alt="Current GCash QR"><?php endif; ?>
+<div class="gc-grid">
+<section class="gc-card" aria-labelledby="gcCur">
+    <div class="gc-top"><h2 id="gcCur">Current account</h2><span class="pay-badge ok">Live</span></div>
+    <?php if($cNum === ''): ?><p class="gc-empty">Nothing set yet.</p><?php else: ?>
+    <div class="gc-body">
+        <?php if($cQr !== ''): ?><img class="gc-qr" src="<?php echo htmlspecialchars($cQr, ENT_QUOTES); ?>" alt="Current GCash QR"><?php endif; ?>
+        <div><p class="gc-name"><?php echo htmlspecialchars($cName); ?></p><p class="gc-num"><?php echo htmlspecialchars($cNum); ?></p></div>
+    </div>
     <?php endif; ?>
 </section>
 
-<?php if($pending): ?>
-<section class="pay-panel gc-card">
-    <h2>Requested change <span class="pay-badge">Pending</span></h2>
-    <p class="pay-note">From <?php echo htmlspecialchars($pending['by_name'] ?? 'an operator'); ?> &middot; <?php echo htmlspecialchars(date('M j, g:i A', strtotime($pending['at'] ?? 'now'))); ?></p>
-    <p><strong><?php echo htmlspecialchars($pending['name']); ?></strong> &middot; <?php echo htmlspecialchars($pending['number']); ?></p>
-    <?php if(!empty($pending['qr'])): ?><img class="pay-qr" src="<?php echo htmlspecialchars($pending['qr'], ENT_QUOTES); ?>" alt="Requested GCash QR"><?php endif; ?>
-    <form method="POST" class="pay-actions">
+<section class="gc-card <?php echo $pending ? 'gc-pending' : ''; ?>" aria-labelledby="gcReq">
+    <div class="gc-top"><h2 id="gcReq">Requested change</h2><?php if($pending): ?><span class="pay-badge">Pending</span><?php endif; ?></div>
+    <?php if($pending): ?>
+    <div class="gc-body">
+        <?php if(!empty($pending['qr'])): ?><img class="gc-qr" src="<?php echo htmlspecialchars($pending['qr'], ENT_QUOTES); ?>" alt="Requested GCash QR"><?php endif; ?>
+        <div><p class="gc-name"><?php echo htmlspecialchars($pending['name']); ?></p><p class="gc-num"><?php echo htmlspecialchars($pending['number']); ?></p>
+        <p class="gc-meta">From <?php echo htmlspecialchars($pending['by_name'] ?? 'an operator'); ?>, <?php echo htmlspecialchars(date('M j, g:i A', strtotime($pending['at'] ?? 'now'))); ?></p></div>
+    </div>
+    <form method="POST" class="gc-actions">
         <?php csrf_field(); ?>
-        <button type="submit" name="approve" value="1" class="pay-btn primary">Approve</button>
-        <button type="submit" name="reject" value="1" class="pay-btn" onclick="return confirm('Reject this change?');">Reject</button>
+        <button type="submit" name="reject" value="1" class="gc-btn" onclick="return confirm('Reject this change?');">Reject</button>
+        <button type="submit" name="approve" value="1" class="gc-btn primary">Approve</button>
     </form>
+    <?php else: ?><p class="gc-empty">No changes waiting.</p><?php endif; ?>
 </section>
-<?php else: ?>
-<p class="pay-note">No changes waiting for approval.</p>
-<?php endif; ?>
+</div>
 
 </main>
 
