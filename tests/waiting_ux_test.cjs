@@ -56,9 +56,14 @@ assert.match(waitingBoardCss, /\.cwb-map\s*\{[^}]*inset:\s*0 0 calc\(var\(--cwb-
     'the Waiting map must stop at the top of the floating nav, not continue behind it');
 assert.match(waitingBoardCss, /body\.commuter-waiting-board \.bottom-nav\s*\{[^}]*background:\s*#fff;[^}]*backdrop-filter:\s*none/s,
     'the Waiting nav should use the same solid white background as the bus sheet');
-assert.match(waitingBoardCss, /\.cwb-map \.leaflet-top\.leaflet-right\s*\{[^}]*top:\s*calc\(126px \+ env\(safe-area-inset-top\)\)/s);
-assert.match(waitingBoardCss, /\.commuter-waiting-board \.leaflet-control-attribution\s*\{[^}]*background:\s*rgba\(255,255,255,\.96\)/s,
-    'map credits should remain legible in a compact chip away from the dock');
+assert.match(waitingBoardCss, /\.cwb-map-credit\s*\{[^}]*border-top:\s*1px solid #edf0f4/,
+    'map credits should sit in a quiet footer inside the Waiting sheet');
+assert.match(waitingBoardCss, /\.cwb-list\s*\{[^}]*flex:\s*0 1 auto;[^}]*min-height:\s*0;[^}]*overflow-y:\s*auto/s,
+    'the rider list should scroll above the footer instead of pushing map credits out of view');
+assert.match(commuterWaiting, /class="cwb-map-credit"[^>]*>[\s\S]*OpenStreetMap[\s\S]*Routes by[\s\S]*OSRM/,
+    'the Waiting sheet must keep visible map-source and routing credits');
+assert.match(commuterWaiting, /href="https:\/\/www\.openstreetmap\.org\/copyright"/,
+    'the OpenStreetMap credit should link to its licence information');
 assert.match(waitingBoardCss, /@media \(min-width: 769px\) \{\s*\.cwb-map\s*\{\s*inset:\s*0;/s,
     'desktop map should still use the full available viewport when the mobile dock is hidden');
 assert.match(waitingBoardCss, /\.cwb-sheet\s*\{[^}]*bottom:\s*calc\(var\(--cwb-nav-h\) \+ 10px \+ env\(safe-area-inset-bottom\)\)/s,
@@ -82,9 +87,9 @@ assert.match(waitingBoardJs, /function toggleTracking\(\)/);
 assert.match(waitingBoardJs, /select\.addEventListener\('click', toggleTracking\)/);
 assert.match(waitingBoardJs, /busMarker\.on\('click', toggleTracking\)/);
 assert.match(waitingBoardJs, /attributionControl\.setPrefix\(false\)/);
-assert.match(waitingBoardJs, /attributionControl\.setPosition\('topright'\)/);
+assert.match(waitingBoardJs, /attributionControl\.remove\(\)/);
 assert.match(waitingBoardJs, /OpenStreetMap[\s\S]*routing by OSRM/,
-    'repositioning the watermark must retain the required map-source credits');
+    'removing the floating control must retain the map-layer attribution source');
 assert.match(waitingBoardJs, /Tracking paused/);
 assert.match(waitingBoardJs, /function fitFullRoute\(trip\)/);
 assert.match(waitingBoardJs, /window\.addEventListener\('resize',[\s\S]*?if \(!trackSelected\) return;[\s\S]*?routeViewMode === 'route' && routeData[\s\S]*?fitFullRoute\(trip\)/);

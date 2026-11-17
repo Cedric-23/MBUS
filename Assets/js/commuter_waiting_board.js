@@ -89,7 +89,7 @@
         try {
             map = L.map('cwbMap', { zoomControl: false }).setView([14.6798552, 120.2728757], 13);
             if (map.attributionControl && map.attributionControl.setPrefix) map.attributionControl.setPrefix(false);
-            if (map.attributionControl && map.attributionControl.setPosition) map.attributionControl.setPosition('topright');
+            if (map.attributionControl && map.attributionControl.remove) map.attributionControl.remove();
             L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · routing by OSRM'

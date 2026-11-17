@@ -83,6 +83,7 @@ $profileImage = $hasDbPic ? '../avatar.php?v=' . rawurlencode((string)$pr['pic_v
             <button type="button" id="cwbRouteView" class="cwb-route-view" disabled>Full route</button>
         </div>
         <ul id="cwbList" class="cwb-list" aria-live="polite"></ul>
+        <p class="cwb-map-credit">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> · Routes by <a href="https://project-osrm.org/" target="_blank" rel="noopener noreferrer">OSRM</a></p>
     </section>
 </main>
 
