@@ -26,8 +26,12 @@ assert.doesNotMatch(html, /Waiting for a bus|Pick up|lvPickBtn|commuter_live_pic
     'Live stays focused on bus tracking with no pickup or waiting action');
 assert.equal((html.match(/class="bottom-nav-item/g) || []).length, 5, 'expected five tabs');
 assert.match(html, /class="profile-trigger"/);
+assert.match(html, /class="lv-brand"/);
+assert.match(html, /class="lv-visually-hidden">Live buses<\/h1>/);
+assert.doesNotMatch(html, /<h1>Live buses<\/h1>/, 'do not show the redundant Live buses title at the top');
 assert.match(html, /class="lv-map"/);
 assert.match(html, /class="lv-bus-panel"/);
+assert.ok(html.indexOf('id="busCount"') > html.indexOf('class="lv-bus-panel"'), 'live count belongs in the Active buses card, away from the avatar');
 assert.match(html, /class="lv-legend"/);
 
 // live script: polls, selects a bus that is actually sharing, no sharing controls
@@ -38,6 +42,8 @@ assert.match(html, /id="busList"/);
 assert.match(source, /board-bus-marker/);
 assert.match(source, /L\.divIcon/);
 assert.match(source, /map\.flyTo\(focus, 16/);
+assert.match(source, /zoomControl: false/);
+assert.doesNotMatch(source, /L\.control\.zoom/, 'do not add visible zoom buttons');
 assert.match(source, /routeViewMode = 'route'/);
 assert.match(source, /defaultTrip = trips\.find/);
 assert.match(source, /manualChoice = true/);
@@ -54,6 +60,9 @@ assert.doesNotMatch(css, /\.lv-header \{[^}]*position:\s*fixed/s);
 assert.match(css, /grid-template-areas: "buses" "map"/);
 assert.match(css, /height: clamp\(205px, 29dvh, 255px\)/);
 assert.match(css, /\.lv-header \.profile-avatar img \{[^}]*max-width: 100%/s);
+assert.match(css, /\.commuter-live-page \.lv-header \.profile-menu-wrap \{[^}]*position: relative !important;[^}]*right: auto !important;/s,
+    'override the shared fixed profile position on Live so the avatar stays in the header flow');
+assert.doesNotMatch(css, /leaflet-control-zoom/);
 assert.match(css, /calc\(var\(--bottom-nav-height\) \+ 24px \+ env\(safe-area-inset-bottom\)\)/);
 assert.match(css, /\.bus-row-route \{[^}]*text-overflow: ellipsis/s);
 assert.match(css, /\.commuter-live-page \.leaflet-control-attribution/);
