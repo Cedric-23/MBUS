@@ -62,7 +62,8 @@ function reset_page_e(mixed $value): string { return htmlspecialchars((string)$v
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reset your password | MBUS</title>
     <link rel="stylesheet" href="Assets/css/global/font.css">
-    <link rel="stylesheet" href="Assets/css/main/register.css?v=<?= @filemtime(__DIR__ . '/Assets/css/main/register.css') ?>">
+    <link rel="stylesheet" href="Assets/css/main/register.css?v=<?= @filemtime(__DIR__ . '/Assets/css/main/register.css') ?>"/>
+        <link rel="stylesheet" href="Assets/css/main/auth_modern.css?v=<?= @filemtime(__DIR__ . '/Assets/css/main/auth_modern.css') ?>"/>
     <link rel="stylesheet" href="Assets/css/auth.css?v=<?= @filemtime(__DIR__ . '/Assets/css/auth.css') ?>">
     <link rel="stylesheet" href="Assets/css/reset.css?v=<?= @filemtime(__DIR__ . '/Assets/css/reset.css') ?>">
     <script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
@@ -71,7 +72,7 @@ function reset_page_e(mixed $value): string { return htmlspecialchars((string)$v
     <div class="left-container">
         <div class="left-container-child-1"><div class="logo-wordmark"><img src="Assets/images/mbus_logo.png" alt="MBUS"></div></div>
         <div class="left-container-child-2"><div class="lc-heading"><h1>Travel smarter.</h1><h1>Travel on time.</h1></div><div class="lc-sub-heading"><p>Your dependable way to reserve seats, manage trips, and travel with confidence.</p></div></div>
-        <div class="lc-circle-1"></div><div class="lc-circle-2"></div>
+        <img class="auth-art" src="Assets/images/auth_bus.svg" alt="" aria-hidden="true"><div class="lc-circle-1"></div><div class="lc-circle-2"></div>
     </div>
     <main class="right-container"><div class="form-container">
         <header class="form-header"><div class="form-header-text"><h1>Reset your password</h1><p>We’ll send a 6-digit verification code to your MBUS email.</p></div></header>
