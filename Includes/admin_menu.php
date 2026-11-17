@@ -9,6 +9,10 @@ function mbus_admin_approvals_link($conn): string {
     $orow = $oq === false ? false : mbus_db_fetch_assoc($oq);
     $on = $orow ? (int)$orow['c'] : 0;
     $obadge = $on > 0 ? ' <span class="menu-badge">' . $on . '</span>' : '';
+    require_once dirname(__DIR__) . '/Includes/gcash_manual.php';
+    $gn = mbus_gcash_pending($conn) ? 1 : 0;
+    $gbadge = $gn ? ' <span class="menu-badge">1</span>' : '';
     return '<a href="verifications.php" role="menuitem"><i class="fa fa-id-card" aria-hidden="true"></i> ID approvals' . $badge . '</a>'
-        . '<a href="operator_applications.php" role="menuitem"><i class="fa fa-user-check" aria-hidden="true"></i> Operator applications' . $obadge . '</a>';
+        . '<a href="operator_applications.php" role="menuitem"><i class="fa fa-user-check" aria-hidden="true"></i> Operator applications' . $obadge . '</a>'
+        . '<a href="gcash_approval.php" role="menuitem"><i class="fa fa-mobile-screen" aria-hidden="true"></i> GCash account' . $gbadge . '</a>';
 }

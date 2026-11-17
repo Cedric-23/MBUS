@@ -10,6 +10,13 @@ function mbus_set_setting($conn, string $key, string $value): void {
     $conn->pdo->prepare("INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value")->execute([$key, $value]);
 }
 
+/** Operator-submitted GCash account change waiting for admin approval (or null). */
+function mbus_gcash_pending($conn): ?array {
+    $j = mbus_setting($conn, 'gcash_pending');
+    $d = $j === '' ? null : json_decode($j, true);
+    return is_array($d) && !empty($d['number']) ? $d : null;
+}
+
 /** Server-side checkout payload (ids, per-seat price lines, total) shared by the PayMongo and receipt flows. */
 function mbus_checkout_payload(array $reservations, array $defaultTypes): array {
     $types = []; $covered = [];

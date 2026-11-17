@@ -26,13 +26,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($name === '' || strlen($name) > 80 || !preg_match('/^09\d{9}$/', $num)) {
             $error = 'Enter the account name and an 11-digit number starting with 09.';
         } else {
-            mbus_set_setting($conn, 'gcash_name', $name);
-            mbus_set_setting($conn, 'gcash_number', $num);
+            $prev = mbus_gcash_pending($conn);
+            $qr = $prev['qr'] ?? '';
             if (isset($_FILES['gcash_qr']) && $_FILES['gcash_qr']['error'] !== UPLOAD_ERR_NO_FILE) {
                 $up = mbus_receipt_upload('gcash_qr', $error);
-                if ($up) mbus_set_setting($conn, 'gcash_qr', 'data:' . $up['mime'] . ';base64,' . $up['b64']);
+                if ($up) $qr = 'data:' . $up['mime'] . ';base64,' . $up['b64'];
             }
-            if ($error === '') { $_SESSION['op_pay_flash'] = 'GCash account saved.'; header('Location: payments.php'); exit(); }
+            if ($error === '') {
+                mbus_set_setting($conn, 'gcash_pending', json_encode([
+                    'name' => $name, 'number' => $num, 'qr' => $qr,
+                    'by' => $operator_id, 'by_name' => (string)($_SESSION['full_name'] ?? 'Operator'), 'at' => date('c'),
+                ]));
+                include_once "../Includes/activity_log.php";
+                log_activity($conn, $operator_id, 'GCash account change submitted', 'Awaiting admin approval');
+            }
+            if ($error === '') { $_SESSION['op_pay_flash'] = 'Sent to admin for approval. Commuters keep seeing the current account until it is approved.'; header('Location: payments.php'); exit(); }
         }
     } elseif (isset($_POST['approve']) || isset($_POST['reject'])) {
         $sid = (string)($_POST['session_id'] ?? '');
@@ -91,6 +99,7 @@ while ($q !== false && ($r = mbus_db_fetch_assoc($q))) $rows[] = $r;
 $gName = mbus_setting($conn, 'gcash_name');
 $gNum = mbus_setting($conn, 'gcash_number');
 $gQr = mbus_setting($conn, 'gcash_qr');
+$gPending = mbus_gcash_pending($conn);
 
 $smsToken = mbus_sms_token($conn);
 $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
@@ -213,8 +222,9 @@ $phoneOk = $lastSecs !== null && $lastSecs < 86400 * 2;
 <?php endforeach; ?>
 </div>
 
-<details class="pay-panel" <?php echo $gNum === '' ? 'open' : ''; ?>>
-    <summary><i class="fa fa-mobile-screen" aria-hidden="true"></i> GCash account</summary>
+<details class="pay-panel" <?php echo ($gNum === '' && !$gPending) ? 'open' : ''; ?>>
+    <summary><i class="fa fa-mobile-screen" aria-hidden="true"></i> GCash account<?php if ($gPending): ?> <span class="pay-badge">Pending approval</span><?php endif; ?></summary>
+    <?php if ($gPending): ?><p class="pay-note">Waiting for admin: <strong><?php echo htmlspecialchars($gPending['name']); ?></strong> &middot; <?php echo htmlspecialchars($gPending['number']); ?>. Saving again replaces this request.</p><?php endif; ?>
     <form method="POST" enctype="multipart/form-data" class="pay-form">
         <?php csrf_field(); ?>
         <label>Account name<input type="text" name="gcash_name" value="<?php echo htmlspecialchars($gName); ?>" required maxlength="80" autocomplete="off"></label>
