@@ -32,3 +32,18 @@
 .m-board:active { background: var(--color-primary-dark); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (max-width: 768px) { .trip-cards { grid-template-columns: 1fr; } }
+
+/* One row per account; tap to see each seat */
+.manifest-list li.rider-group{display:block;padding:0}
+.rider-group details>summary{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:52px;padding:6px 0;cursor:pointer;list-style:none}
+.rider-group details>summary::-webkit-details-marker{display:none}
+.rider-group summary .m-seat{background:var(--color-primary);color:#fff}
+.rg-chev{font-size:.75rem;color:var(--color-text-muted);transition:transform .15s}
+.rider-group details[open] .rg-chev{transform:rotate(180deg)}
+.rg-seats{list-style:none;margin:0 0 8px;padding:0 0 0 12px;border-left:2px solid var(--color-border-light)}
+.rg-seats li{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:52px;padding:6px 0}
+.rg-seats li+li{border-top:1px solid var(--color-border-light)}
+.m-actions{display:flex;gap:6px;align-items:center}
+.m-cancel{min-height:36px;padding:0 12px;border:1.5px solid #f1b7b2;border-radius:10px;background:#fff;color:#b42318;font:inherit;font-weight:600;font-size:.875rem;cursor:pointer}
+.m-cancel:active{background:#fdecec}
+@media(max-width:380px){.m-actions{flex-direction:column;align-items:stretch}}
