@@ -73,9 +73,9 @@
     function busIcon(busNo, stale, picked) {
         return L.divIcon({
             className: 'board-bus-marker',
-            html: '<span class="board-bus-pin' + (stale ? ' is-stale' : '') + (picked ? ' is-picked' : '') + '"><i class="fa fa-bus" aria-hidden="true"></i>' + escapeHtml(busNo || 'Bus') + '</span>',
-            iconSize: [74, 28],
-            iconAnchor: [37, 14]
+            html: '<span class="board-bus-pin' + (stale ? ' is-stale' : '') + (picked ? ' is-picked' : '') + '"><i class="fa fa-bus" aria-hidden="true"></i> ' + escapeHtml(busNo || 'Bus') + '</span>',
+            iconSize: [114, 34],
+            iconAnchor: [57, 17]
         });
     }
 

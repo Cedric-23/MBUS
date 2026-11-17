@@ -58,6 +58,11 @@ body.commuter-live-page main.lv-shell { width: min(100%, 1240px); margin: 0 auto
 .lv-route-icon { flex: none; display: grid; place-items: center; width: 27px; height: 27px; border-radius: 8px; background: #e9f1ff; color: #2f7cf6; font-size: .74rem; }
 .lv-route-card p { min-width: 0; margin: 0; color: #4c6179; font-size: .73rem; line-height: 1.35; }
 
+/* Keep Live bus pins identical to the Waiting board's bus pill. */
+.commuter-live-page .board-bus-pin { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 86px; height: 32px; padding: 0 10px; border: 2px solid #fff; border-radius: 999px; background: #1f6fb2; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.3); font: 700 .75rem/1 Inter, system-ui, sans-serif; white-space: nowrap; }
+.commuter-live-page .board-bus-pin.is-stale { background: #8d9bad; }
+.commuter-live-page .board-bus-pin i { font-size: .75rem; }
+
 /* Keep required map credits visible in a quiet chip. */
 .commuter-live-page .leaflet-control-attribution { max-width: calc(100% - 16px); margin: 0 7px 7px 0; padding: 3px 7px; border: 1px solid rgba(15, 27, 45, .08); border-radius: 999px; background: rgba(255, 255, 255, .92); color: #627186; box-shadow: 0 2px 8px rgba(15, 27, 45, .08); font-size: 8px; line-height: 1.35; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 .commuter-live-page .leaflet-control-attribution a { color: #315f94; text-decoration: none; }

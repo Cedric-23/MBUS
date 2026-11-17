@@ -46,8 +46,8 @@
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
     }
     const busIcon = stale => L.divIcon({
-        className: '', iconSize: [84, 28], iconAnchor: [42, 14],
-        html: '<span class="pk-bus' + (stale ? ' is-stale' : '') + '"><i class="fa fa-bus" aria-hidden="true"></i>' + esc(cfg.bus) + '</span>'
+        className: '', iconSize: [114, 34], iconAnchor: [57, 17],
+        html: '<span class="pk-bus' + (stale ? ' is-stale' : '') + '"><i class="fa fa-bus" aria-hidden="true"></i> ' + esc(cfg.bus) + '</span>'
     });
     const youIcon = () => L.divIcon({ className: '', iconSize: [42, 42], iconAnchor: [21, 21], html: '<span class="pk-you' + (waiting ? ' is-waiting' : '') + '"><img src="' + esc(cfg.profileImage || FALLBACK_AVATAR) + '" alt=""></span>' });
 
