@@ -106,29 +106,6 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_boarded'])){
     }
 }
 
-// Handle cancelling one rider's seat (only on this operator's own buses, before departure)
-if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_rider'])){
-    if(!csrf_validate_token()){
-        $error = "Invalid CSRF token";
-    } else {
-        $reservation_id = is_scalar($_POST['reservation_id'] ?? null) ? (int)$_POST['reservation_id'] : 0;
-        $stmt = mbus_db_prepare($conn, "UPDATE reservation r SET status='Cancelled'
-            WHERE r.reservation_id = ?
-              AND r.status = 'Paid'
-              AND r.schedule_id IN (
-                  SELECT s.schedule_id FROM schedule s
-                  JOIN operator_bus_assignments oba ON oba.bus_id = s.bus_id
-                  WHERE oba.operator_id = ? AND s.trip_status IN ('Scheduled', 'Boarding')
-              )", [$reservation_id, $operator_id]);
-        if($stmt !== false && $conn->affectedRows > 0){
-            log_activity($conn, $operator_id, 'Reservation cancelled by operator', 'Reservation #' . $reservation_id);
-            $success = "Seat cancelled. Refund the passenger in GCash if they already paid.";
-        } else {
-            $error = "This seat can no longer be cancelled.";
-        }
-    }
-}
-
 // Filters
 $allowed_filters = ['upcoming','active','today','tomorrow','this_week','next_week','history','all'];
 $filter = isset($_GET['filter']) && is_scalar($_GET['filter']) ? (string)$_GET['filter'] : 'upcoming';
@@ -289,7 +266,7 @@ while($tr = mbus_db_fetch_assoc($query)) $trip_rows[] = $tr;
 <div class="trip-cards" data-dir-list>
 <?php foreach($trip_rows as $row){
     $sid = (int)$row['schedule_id'];
-    $pq = mbus_db_prepare($conn, "SELECT reservation.reservation_id, reservation.user_id, reservation.seat_number, reservation.pickup_location, reservation.destination, reservation.status, users.full_name
+    $pq = mbus_db_prepare($conn, "SELECT reservation.reservation_id, reservation.seat_number, reservation.pickup_location, reservation.destination, reservation.status, users.full_name
         FROM reservation JOIN users ON reservation.user_id = users.user_id
         WHERE reservation.schedule_id = ? AND reservation.status IN ('Paid','Boarded')
         ORDER BY NULLIF(regexp_replace(reservation.seat_number,'\\D','','g'),'')::int", [$sid]);
@@ -336,43 +313,21 @@ while($tr = mbus_db_fetch_assoc($query)) $trip_rows[] = $tr;
         <?php if(!$riders){ ?>
             <p class="manifest-empty">No paid riders yet.</p>
         <?php } else { ?>
-        <?php
-        $groups = [];
-        foreach($riders as $r){ $groups[(int)$r['user_id']][] = $r; }
-        $can_edit = in_array($row['trip_status'], ['Scheduled','Boarding'], true);
-        $seat_row = function($r) use ($sid, $can_edit){ ?>
+        <ul class="manifest-list">
+            <?php foreach($riders as $r){ ?>
             <li class="<?php echo $r['status'] === 'Boarded' ? 'is-boarded' : ''; ?>">
                 <span class="m-seat"><?php echo htmlspecialchars($r['seat_number']); ?></span>
                 <span class="m-info"><strong><?php echo htmlspecialchars($r['full_name']); ?></strong><small><?php echo htmlspecialchars($r['pickup_location'] . ' to ' . $r['destination']); ?></small></span>
                 <?php if($r['status'] === 'Boarded'){ ?>
                     <span class="m-done">Boarded</span>
                 <?php } else { ?>
-                <form method="POST" class="action-form m-actions">
+                <form method="POST" class="action-form">
                     <?php csrf_field(); ?>
                     <input type="hidden" name="reservation_id" value="<?php echo (int)$r['reservation_id']; ?>">
                     <input type="hidden" name="open_schedule" value="<?php echo $sid; ?>">
                     <button type="submit" name="mark_boarded" class="m-board">Board</button>
-                    <?php if($can_edit){ ?><button type="submit" name="cancel_rider" value="1" class="m-cancel" onclick="return confirm('Cancel seat <?php echo htmlspecialchars($r['seat_number'], ENT_QUOTES); ?> for <?php echo htmlspecialchars(addslashes($r['full_name']), ENT_QUOTES); ?>? Refund them in GCash if they already paid.');">Cancel</button><?php } ?>
                 </form>
                 <?php } ?>
-            </li>
-        <?php }; ?>
-        <ul class="manifest-list">
-            <?php foreach($groups as $seats){
-                if(count($seats) === 1){ $seat_row($seats[0]); continue; }
-                $nb = count(array_filter($seats, fn($x) => $x['status'] === 'Boarded'));
-                $nums = implode(', ', array_map(fn($x) => $x['seat_number'], $seats)); ?>
-            <li class="rider-group">
-                <details>
-                    <summary>
-                        <span class="m-seat"><?php echo count($seats); ?></span>
-                        <span class="m-info"><strong><?php echo htmlspecialchars($seats[0]['full_name']); ?></strong><small>Seats <?php echo htmlspecialchars($nums); ?><?php echo $nb ? ' &middot; ' . $nb . ' boarded' : ''; ?></small></span>
-                        <i class="fa fa-chevron-down rg-chev" aria-hidden="true"></i>
-                    </summary>
-                    <ul class="rg-seats">
-                        <?php foreach($seats as $seat){ $seat_row($seat); } ?>
-                    </ul>
-                </details>
             </li>
             <?php } ?>
         </ul>
