@@ -108,3 +108,17 @@
 /* Payment and GCash return */
 .cm.payment-page .card,.cm.payment-page section{border-radius:var(--cm-r)}
 .cm.payment-page .trip-details li{background:#f4f8ff;border:0;border-radius:14px;margin-bottom:6px}
+
+/* Waiting map: sheet floats clear of the bottom nav, colors match the skin */
+.cm.commuter-waiting-board{--cwb-nav-h:84px}
+.cm .cwb-sheet{left:14px;right:14px;max-width:none;bottom:calc(98px + env(safe-area-inset-bottom));border-radius:26px;box-shadow:0 14px 36px rgba(47,111,228,.22);padding:12px 14px}
+.cm .cwb-sheet-head h2{color:#14213d;font-size:1rem}
+.cm .cwb-details-toggle{color:#2f6fe4}
+.cm .cwb-cancel{background:#fdecec!important;color:#b42318!important;border-radius:999px;min-height:40px}
+.cm .cwb-route-view{background:#2f6fe4;color:#fff;border-radius:999px;border:0}
+.cm .cwb-header .cwb-title{display:inline-block;background:rgba(255,255,255,.92);border-radius:18px;padding:8px 14px;box-shadow:var(--cm-shadow-sm)}
+.cm .cwb-icon-button{background:#fff;color:#2f6fe4;box-shadow:var(--cm-shadow-sm)}
+.cm .cwb-location-pill{border-radius:999px;box-shadow:var(--cm-shadow-sm)}
+.cm .cwb-map-credit{font-size:.7rem}
+@media(min-width:769px){.cm .cwb-sheet{left:16px;right:auto;width:390px;bottom:16px}}
+.cm .cwb-map{inset:0}
