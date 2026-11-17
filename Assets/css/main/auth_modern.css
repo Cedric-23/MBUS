@@ -1,0 +1,59 @@
+/* Auth pages: blue hero with art, rounded form sheet, icon inputs, pill button.
+   Loaded after register.css; matches the commuter skin colours. */
+:root{--blue:#2f6fe4;--blue-d:#2358c0;--navy:#14213d;--muted:#7a8aa6;--line:#dde7f8;--bg:#f3f7ff}
+body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--navy)}
+
+/* hero */
+.left-container{background:linear-gradient(160deg,#2f6fe4 0,#4f8cf5 60%,#7aaaf8 100%);color:#fff}
+.left-container::after{content:"";position:absolute;inset:0;background:radial-gradient(rgba(255,255,255,.22) 1.4px,transparent 1.6px) 0 0/16px 16px;-webkit-mask-image:linear-gradient(180deg,#000 0,transparent 75%);mask-image:linear-gradient(180deg,#000 0,transparent 75%);pointer-events:none}
+.lc-circle-1,.lc-circle-2{background:rgba(255,255,255,.10)}
+.auth-art{position:relative;z-index:1;display:block;width:min(420px,80%);height:auto;margin:0 auto}
+
+/* sheet */
+.right-container{background:#f3f7ff}
+.form-container{background:#fff;border-radius:32px;padding:34px 30px;box-shadow:0 14px 40px rgba(47,111,228,.12)}
+.form-header{text-align:center;margin-bottom:22px}
+.form-header-text h1{font-size:1.6rem;font-weight:700;color:var(--navy);letter-spacing:-.01em}
+.form-header-text p{color:var(--muted)}
+.picker-container{background:#eaf1fd;border-radius:999px;padding:4px}
+.picker-container .active a{color:var(--blue)}
+.option-bar{border-radius:999px;box-shadow:0 4px 12px rgba(47,111,228,.18)}
+.picker-container-text{text-align:center}
+
+/* fields */
+.form-body label,.input-label{font-weight:600;color:var(--navy);font-size:.85rem}
+.form-body input[type=text],.form-body input[type=email],.form-body input[type=tel],.form-body input[type=password],.form-body input[type=date],.form-body select{height:52px;border:1.5px solid transparent;border-radius:16px;background:#f1f5fd;font-size:.95rem}
+.form-body input::placeholder{color:#9aa8c2}
+.form-body input:focus,.form-body select:focus{background:#fff;border-color:var(--blue);box-shadow:0 0 0 4px rgba(47,111,228,.14)}
+.input-icon{color:#7a8aa6;top:38px}
+.login-form .password-control>.input-icon{top:50%}
+.phone-input .phone-prefix{border-radius:16px 0 0 16px;background:#e6eefc}
+.phone-input input{border-radius:0 16px 16px 0!important}
+.password-toggle:hover,.pw-eye:hover{background:#e6eefc}
+
+/* actions */
+.submit-button{height:52px;border-radius:999px;background:var(--blue);box-shadow:0 10px 22px rgba(47,111,228,.32);font-size:1rem}
+.submit-button:hover{background:var(--blue-d)}
+.step-button-back{height:52px;border-radius:999px;border-color:#cfe0fb;color:var(--blue)}
+.login-options a,.footer a,.redirect-footer a{color:var(--blue)!important;font-weight:600}
+.footer,.redirect-footer{color:var(--muted)}
+.step-progress-bar.active,.group-count{background:var(--blue)}
+.form-alert{border-radius:16px}
+
+@media(max-width:900px){
+  body{background:#f3f7ff}
+  .left-container{position:relative;flex:none;min-height:290px;padding:20px 22px 62px;justify-content:flex-start;gap:0}
+  .left-container-child-2{display:none}
+  .left-container-child-1{position:relative;z-index:2}
+  .logo-wordmark img{height:34px}
+  .auth-art{position:absolute;left:50%;bottom:40px;transform:translateX(-50%);width:min(300px,72%);margin:0}
+  body{min-height:100vh;min-height:100dvh}
+  .right-container{flex:1;padding:0;margin-top:-34px;position:relative;z-index:3;align-items:stretch;overflow:visible}
+  .form-container{max-width:100%;margin:0;border-radius:32px 32px 0 0;box-shadow:0 -8px 30px rgba(47,111,228,.14);padding:30px 22px 34px;margin:0}
+}
+@media(min-width:901px){
+  .left-container{flex:0 0 44%;padding:40px 56px 48px}
+  .left-container-child-2{margin-top:auto}
+  .auth-art{margin:auto}
+  .right-container{align-items:center}
+}

@@ -98,16 +98,16 @@ $until = $co['submitted_at'] ? date('g:i A', strtotime($co['submitted_at']) + 15
 <?php if($state === 'waiting'): ?><meta http-equiv="refresh" content="4"><?php endif; ?>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-body{margin:0;min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr);place-items:center;padding:24px 0;box-sizing:border-box;background:#f4f6fa;font-family:Inter,system-ui,sans-serif;color:#172b4d}
-.box{box-sizing:border-box;width:min(380px,calc(100vw - 32px));min-width:0;padding:28px 20px;border-radius:20px;background:#fff;box-shadow:0 8px 30px rgba(23,43,77,.12);text-align:center}
-.spin{width:38px;height:38px;margin:0 auto 16px;border:4px solid #dbe5f1;border-top-color:#1e3a5f;border-radius:50%;animation:s 1s linear infinite}
+body{margin:0;min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr);place-items:center;padding:24px 0;box-sizing:border-box;background:linear-gradient(180deg,#e6efff,#f5f8ff);font-family:Inter,system-ui,sans-serif;color:#172b4d}
+.box{box-sizing:border-box;width:min(380px,calc(100vw - 32px));min-width:0;padding:28px 20px;border-radius:28px;background:#fff;box-shadow:0 14px 36px rgba(47,111,228,.14);text-align:center}
+.spin{width:38px;height:38px;margin:0 auto 16px;border:4px solid #dbe5f1;border-top-color:#2f6fe4;border-radius:50%;animation:s 1s linear infinite}
 @keyframes s{to{transform:rotate(360deg)}}
 h1{margin:0 0 8px;font-size:1.15rem}p{margin:0;color:#5b6b7e;font-size:.92rem;line-height:1.5}
-a{display:inline-flex;align-items:center;justify-content:center;min-height:46px;margin-top:18px;padding:0 20px;border-radius:13px;background:#1e3a5f;color:#fff;font-weight:700;text-decoration:none}
-p.lbl{margin:0;font-size:.82rem}.amt{margin:2px 0 6px;font-size:2.1rem;font-weight:700;color:#1e3a5f;letter-spacing:-.5px}
+a{display:inline-flex;align-items:center;justify-content:center;min-height:46px;margin-top:18px;padding:0 20px;border-radius:999px;background:#2f6fe4;color:#fff;font-weight:700;text-decoration:none}
+p.lbl{margin:0;font-size:.82rem}.amt{margin:2px 0 6px;font-size:2.1rem;font-weight:700;color:#2f6fe4;letter-spacing:-.5px}
 .hint{font-size:.8rem;margin-top:8px}.qr{display:block;width:min(220px,70%);margin:14px auto 6px;border-radius:12px;border:1px solid #e1e7ef}
 .acct{margin:10px 0;display:grid;gap:2px}.acct strong{font-size:.98rem}.acct span{font-size:1.05rem;letter-spacing:.5px}
-.row{display:flex;gap:8px;margin-top:6px}.cp{flex:1;min-height:44px;border:1.5px solid #1e3a5f;border-radius:12px;background:#fff;color:#1e3a5f;font:700 .9rem Inter,system-ui,sans-serif;cursor:pointer}
+.row{display:flex;gap:8px;margin-top:6px}.cp{flex:1;min-height:44px;border:1.5px solid #cfe0fb;border-radius:999px;background:#fff;color:#2f6fe4;font:700 .9rem Inter,system-ui,sans-serif;cursor:pointer}
 .wait{display:flex;align-items:center;gap:10px;margin-top:16px;padding:12px;border-radius:12px;background:#f1f5fa;text-align:left;font-size:.85rem;color:#33445c}.spin.sm{width:20px;height:20px;margin:0;border-width:3px;flex:none}
 a.alt{background:none;color:#5b6b7e;font-weight:600;min-height:40px;margin-top:6px}
 details.ref{margin-top:12px;text-align:left;border:1px solid #e1e7ef;border-radius:12px;padding:0 12px}

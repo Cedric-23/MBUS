@@ -96,9 +96,10 @@ elseif($filter=="nextweek"){
     <link rel="stylesheet" href="../Assets/css/commuter_mobile.css">
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
+    <link rel="stylesheet" href="../Assets/css/commuter_modern.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/commuter_modern.css'); ?>">
 </head>
 
-<body class="has-bottom-nav schedule-page">
+<body class="has-bottom-nav schedule-page cm">
 
 <main class="main" role="main">
 
@@ -262,21 +263,18 @@ if($row['trip_status'] !== 'Departed'){
         <?php } ?>
     </div>
 
-    <div class="timetable">
-        <div class="stop">
-            <span class="stop-time"><?php echo date('g:i',$dep_ts); ?><small><?php echo date('A',$dep_ts); ?></small></span>
-            <span class="stop-dot" aria-hidden="true"></span>
-            <span class="stop-name"><?php echo htmlspecialchars($row['origin_label']); ?></span>
+    <div class="trip-line">
+        <div class="tl-end">
+            <span class="tl-time"><?php echo date('g:i A',$dep_ts); ?></span>
+            <span class="tl-place"><?php echo htmlspecialchars($row['origin_label']); ?></span>
         </div>
-        <div class="leg">
-            <span class="leg-note"><?php echo $duration ? htmlspecialchars($duration) : ''; ?></span>
-            <span class="leg-line" aria-hidden="true"></span>
-            <span></span>
+        <div class="tl-mid" aria-hidden="true">
+            <span class="tl-bus"><i class="fa fa-bus"></i></span>
+            <span class="tl-dur"><?php echo $duration ? htmlspecialchars($duration) : ''; ?></span>
         </div>
-        <div class="stop">
-            <span class="stop-time"><?php echo $arr_ts ? date('g:i',$arr_ts) : '--'; ?><small><?php echo $arr_ts ? date('A',$arr_ts) : ''; ?></small></span>
-            <span class="stop-dot end" aria-hidden="true"></span>
-            <span class="stop-name"><?php echo htmlspecialchars($row['destination_label']); ?></span>
+        <div class="tl-end tl-right">
+            <span class="tl-time"><?php echo $arr_ts ? date('g:i A',$arr_ts) : '--'; ?></span>
+            <span class="tl-place"><?php echo htmlspecialchars($row['destination_label']); ?></span>
         </div>
     </div>
 

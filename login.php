@@ -131,6 +131,7 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
         <title>MBUS - Sign In</title>
         <link rel="stylesheet" href="Assets/css/global/font.css"/>
         <link rel="stylesheet" href="Assets/css/main/register.css?v=<?= @filemtime(__DIR__ . '/Assets/css/main/register.css') ?>"/>
+        <link rel="stylesheet" href="Assets/css/main/auth_modern.css?v=<?= @filemtime(__DIR__ . '/Assets/css/main/auth_modern.css') ?>"/>
         <script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
         <style>
             .form-alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
@@ -165,6 +166,7 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
                     <p>Your dependable way to reserve seats, manage trips, and travel with confidence.</p>
                 </div>
             </div>
+            <img class="auth-art" src="Assets/images/auth_bus.svg" alt="" aria-hidden="true">
             <div class="lc-circle-1"></div>
             <div class="lc-circle-2"></div>
         </div>

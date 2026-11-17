@@ -28,8 +28,9 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
     <link rel="stylesheet" href="../Assets/css/commuter_live.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_live.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
+    <link rel="stylesheet" href="../Assets/css/commuter_modern.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/commuter_modern.css'); ?>">
 </head>
-<body class="has-bottom-nav commuter-live-page">
+<body class="has-bottom-nav commuter-live-page cm">
 <main class="main lv-shell" role="main">
     <h1 class="lv-visually-hidden">Live buses</h1>
     <p id="liveMessage" class="lv-notice" role="status" aria-live="polite" hidden></p>
