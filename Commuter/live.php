@@ -31,27 +31,7 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
 </head>
 <body class="has-bottom-nav commuter-live-page">
 <main class="main lv-shell" role="main">
-    <header class="lv-header">
-        <a class="lv-brand" href="commuter_dashboard.php" aria-label="MBUS home">
-            <img src="../Assets/images/mbus_icon.png" alt="" width="28" height="28">
-            <span>MBUS</span>
-        </a>
-        <h1 class="lv-visually-hidden">Live buses</h1>
-        <div class="profile-menu-wrap">
-            <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
-                <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span>
-            </button>
-            <div class="profile-menu" id="profileMenu" role="menu">
-                <div class="profile-menu-header">
-                    <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
-                    <span class="profile-menu-role">Commuter account</span>
-                </div>
-                <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
-                <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
-            </div>
-        </div>
-    </header>
-
+    <h1 class="lv-visually-hidden">Live buses</h1>
     <p id="liveMessage" class="lv-notice" role="status" aria-live="polite" hidden></p>
 
     <div class="lv-content">
@@ -97,6 +77,19 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
                         <span class="lv-live-count-text"><strong id="busCount">0</strong><span id="busLabel">live</span></span>
                     </span>
                     <span class="lv-trip-count"><strong id="trackingStatus">0</strong><span>trips</span></span>
+                    <div class="profile-menu-wrap">
+                        <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
+                            <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span>
+                        </button>
+                        <div class="profile-menu" id="profileMenu" role="menu">
+                            <div class="profile-menu-header">
+                                <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
+                                <span class="profile-menu-role">Commuter account</span>
+                            </div>
+                            <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                            <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
+                        </div>
+                    </div>
                 </div>
             </div>
             <p id="busEmpty" class="lv-empty">Finding active buses…</p>

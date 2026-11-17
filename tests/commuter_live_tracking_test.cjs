@@ -26,12 +26,13 @@ assert.doesNotMatch(html, /Waiting for a bus|Pick up|lvPickBtn|commuter_live_pic
     'Live stays focused on bus tracking with no pickup or waiting action');
 assert.equal((html.match(/class="bottom-nav-item/g) || []).length, 5, 'expected five tabs');
 assert.match(html, /class="profile-trigger"/);
-assert.match(html, /class="lv-brand"/);
 assert.match(html, /class="lv-visually-hidden">Live buses<\/h1>/);
 assert.doesNotMatch(html, /<h1>Live buses<\/h1>/, 'do not show the redundant Live buses title at the top');
+assert.doesNotMatch(html, /lv-brand|MBUS home/, 'do not render an extra MBUS brand row above the content');
 assert.match(html, /class="lv-map"/);
 assert.match(html, /class="lv-bus-panel"/);
 assert.ok(html.indexOf('id="busCount"') > html.indexOf('class="lv-bus-panel"'), 'live count belongs in the Active buses card, away from the avatar');
+assert.ok(html.indexOf('class="profile-trigger"') > html.indexOf('class="lv-bus-panel"'), 'keep the account menu in the Active buses card after removing the top row');
 assert.match(html, /class="lv-legend"/);
 
 // live script: polls, selects a bus that is actually sharing, no sharing controls
@@ -58,10 +59,10 @@ assert.doesNotMatch(css, /\.lv-sheet/);
 assert.doesNotMatch(css, /\.commuter-live-page \{[^}]*overflow:\s*hidden/s);
 assert.doesNotMatch(css, /\.lv-header \{[^}]*position:\s*fixed/s);
 assert.match(css, /grid-template-areas: "buses" "map"/);
-assert.match(css, /height: clamp\(205px, 29dvh, 255px\)/);
-assert.match(css, /\.lv-header \.profile-avatar img \{[^}]*max-width: 100%/s);
-assert.match(css, /\.commuter-live-page \.lv-header \.profile-menu-wrap \{[^}]*position: relative !important;[^}]*right: auto !important;/s,
-    'override the shared fixed profile position on Live so the avatar stays in the header flow');
+assert.match(css, /height: clamp\(225px, 34dvh, 295px\)/);
+assert.match(css, /\.lv-bus-panel-head \.profile-avatar img \{[^}]*max-width: 100%/s);
+assert.match(css, /\.commuter-live-page \.lv-bus-panel-head \.profile-menu-wrap \{[^}]*position: relative !important;[^}]*right: auto !important;/s,
+    'override the shared fixed profile position on Live so the avatar stays beside Active buses');
 assert.doesNotMatch(css, /leaflet-control-zoom/);
 assert.match(css, /calc\(var\(--bottom-nav-height\) \+ 24px \+ env\(safe-area-inset-bottom\)\)/);
 assert.match(css, /\.bus-row-route \{[^}]*text-overflow: ellipsis/s);
