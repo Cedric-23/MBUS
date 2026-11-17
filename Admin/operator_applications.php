@@ -4,7 +4,6 @@ if (strtolower((string)($_SESSION['user_type'] ?? '')) !== 'admin') { header('Lo
 include "../config/db_connect.php";
 include "../Includes/csrf.php";
 include_once "../Includes/email_helper.php";
-include_once "../Includes/validation.php";
 
 $success = $_SESSION['oa_flash'] ?? ''; $error = ''; unset($_SESSION['oa_flash']);
 $admin_id = (int)$_SESSION['user_id'];
@@ -57,21 +56,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = $e instanceof RuntimeException ? $e->getMessage() : 'Could not save the review. Please try again.';
             if (!($e instanceof RuntimeException)) error_log('Operator application review: ' . $e->getMessage());
         }
-    } elseif (isset($_POST['add_admin'])) {
-        $name = trim((string)($_POST['full_name'] ?? '')); $email = strtolower(trim((string)($_POST['email'] ?? '')));
-        $phone = trim((string)($_POST['phone_number'] ?? '')); $pw = (string)($_POST['password'] ?? '');
-        if ($e = mbus_check_full_name($name)) $error = $e;
-        elseif ($e = mbus_check_email($email)) $error = $e;
-        elseif ($e = mbus_check_phone($phone)) $error = $e;
-        elseif (strlen($pw) < 10) $error = 'Admin passwords need at least 10 characters.';
-        else {
-            $dup = mbus_db_prepare($conn, "SELECT 1 FROM users WHERE LOWER(email) = ?", [$email]);
-            if ($dup !== false && mbus_db_num_rows($dup) > 0) $error = 'Email already exists.';
-            else {
-                mbus_db_prepare($conn, "INSERT INTO users (full_name, email, phone_number, password, user_type) VALUES (?, ?, ?, ?, 'admin')", [$name, $email, $phone, password_hash($pw, PASSWORD_DEFAULT)]);
-                $success = 'Admin account created for ' . $name . '.';
-            }
-        }
     }
 }
 
@@ -84,7 +68,10 @@ $where = $f === 'all' ? '' : "WHERE LOWER(application_status::text) = '" . $f . 
 $rows = [];
 $q = mbus_db_prepare($conn, "SELECT application_id, full_name, email, phone_number, address, license_number, license_expiry, vehicle_type, vehicle_plate_number,
     (license_document_b64 IS NOT NULL AND license_document_b64 <> '') AS has_lic, (vehicle_document_b64 IS NOT NULL AND vehicle_document_b64 <> '') AS has_veh,
-    application_status::text AS status, submitted_at, rejection_reason FROM operator_application $where ORDER BY (application_status::text = 'Pending') DESC, submitted_at DESC LIMIT 100", []);
+    (bus_photo_b64 IS NOT NULL AND bus_photo_b64 <> '') AS has_bus_photo,
+    (interior_photo_b64 IS NOT NULL AND interior_photo_b64 <> '') AS has_interior_photo,
+    seat_layout, application_status::text AS status, submitted_at, rejection_reason
+    FROM operator_application $where ORDER BY (application_status::text = 'Pending') DESC, submitted_at DESC LIMIT 100", []);
 while ($q !== false && ($r = mbus_db_fetch_assoc($q))) $rows[] = $r;
 $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
 ?>
@@ -100,6 +87,7 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/admin/manage_operators.css">
+    <link rel="stylesheet" href="../Assets/css/admin/operator_application_bus_review.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/admin/operator_application_bus_review.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/app-header.css'); ?>">
@@ -178,7 +166,7 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
 <?php endif; ?>
 
 <div class="oa-list">
-<?php foreach($rows as $a): $st = strtolower($a['status']); $expired = $a['license_expiry'] && strtotime($a['license_expiry']) < strtotime('today'); ?>
+<?php foreach($rows as $a): $st = strtolower($a['status']); $expired = $a['license_expiry'] && strtotime($a['license_expiry']) < strtotime('today'); $layout = json_decode((string)($a['seat_layout'] ?? ''), true); ?>
     <article class="oa-card">
         <div class="oa-head">
             <div><h2><?php echo htmlspecialchars($a['full_name']); ?></h2>
@@ -194,7 +182,22 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
         <div class="oa-docs">
             <?php if($yes($a['has_lic'])): ?><a class="ad-btn sm" target="_blank" rel="noopener" href="application_file.php?id=<?php echo (int)$a['application_id']; ?>&doc=license"><i class="fa fa-id-card" aria-hidden="true"></i> License</a><?php else: ?><span class="oa-miss">No license file</span><?php endif; ?>
             <?php if($yes($a['has_veh'])): ?><a class="ad-btn sm" target="_blank" rel="noopener" href="application_file.php?id=<?php echo (int)$a['application_id']; ?>&doc=vehicle"><i class="fa fa-bus" aria-hidden="true"></i> Vehicle registration</a><?php else: ?><span class="oa-miss">No vehicle file</span><?php endif; ?>
+            <?php if($yes($a['has_bus_photo'])): ?><a class="ad-btn sm" target="_blank" rel="noopener" href="application_file.php?id=<?php echo (int)$a['application_id']; ?>&doc=bus"><i class="fa fa-camera" aria-hidden="true"></i> Bus exterior</a><?php else: ?><span class="oa-miss">No bus exterior photo</span><?php endif; ?>
+            <?php if($yes($a['has_interior_photo'])): ?><a class="ad-btn sm" target="_blank" rel="noopener" href="application_file.php?id=<?php echo (int)$a['application_id']; ?>&doc=interior"><i class="fa fa-camera" aria-hidden="true"></i> Bus interior</a><?php else: ?><span class="oa-miss">No bus interior photo</span><?php endif; ?>
         </div>
+        <?php if(is_array($layout)): $seatTotal = 0; foreach($layout as $seatRow) if(is_array($seatRow)) foreach($seatRow as $seat) if($seat === true) $seatTotal++; ?>
+        <section class="oa-seat-review" aria-label="Submitted bus seat layout">
+            <strong>Submitted seat layout · <?php echo $seatTotal; ?> seats</strong>
+            <div class="oa-seat-rows">
+            <?php $seatNumber = 1; foreach($layout as $seatRow): if(!is_array($seatRow) || count($seatRow) !== 4) continue; ?>
+                <div class="oa-seat-row" aria-label="Seat row">
+                    <?php foreach($seatRow as $i => $seatRowValue): if($i === 2): ?><span class="oa-seat-aisle" aria-hidden="true">Aisle</span><?php endif; ?>
+                    <?php if($seatRowValue === true): ?><span class="oa-seat-chip"><?php echo $seatNumber++; ?></span><?php else: ?><span class="oa-seat-empty" aria-hidden="true">—</span><?php endif; endforeach; ?>
+                </div>
+            <?php endforeach; ?>
+            </div>
+        </section>
+        <?php endif; ?>
         <?php if($st === 'rejected' && $a['rejection_reason']): ?><p class="oa-reason">Reason: <?php echo htmlspecialchars($a['rejection_reason']); ?></p><?php endif; ?>
         <?php if($st === 'pending'): ?>
         <form method="POST" class="oa-actions">
@@ -210,19 +213,6 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
     </article>
 <?php endforeach; ?>
 </div>
-
-<details class="oa-admin">
-    <summary>Create an admin account</summary>
-    <p>Admins can’t sign up on their own. Only a current admin can add another one.</p>
-    <form method="POST" class="oa-admin-form" autocomplete="off">
-        <?php csrf_field(); ?>
-        <input type="text" name="full_name" placeholder="Full name" required>
-        <input type="email" name="email" placeholder="Email" required>
-        <input type="tel" name="phone_number" placeholder="09XXXXXXXXX" pattern="09\d{9}" maxlength="11" required>
-        <input type="password" name="password" placeholder="Password (10+ characters)" minlength="10" required autocomplete="new-password">
-        <button type="submit" name="add_admin" value="1" class="ad-btn primary">Create admin</button>
-    </form>
-</details>
 
 </main>
 

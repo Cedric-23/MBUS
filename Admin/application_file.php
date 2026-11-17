@@ -4,8 +4,10 @@ session_start();
 if (strtolower((string)($_SESSION['user_type'] ?? '')) !== 'admin') { http_response_code(403); exit; }
 include "../config/db_connect.php";
 $id = (int)($_GET['id'] ?? 0);
-$doc = ($_GET['doc'] ?? '') === 'vehicle' ? 'vehicle' : 'license';
-$q = mbus_db_prepare($conn, "SELECT {$doc}_document_b64 AS b64, {$doc}_document_mime AS mime FROM operator_application WHERE application_id = ?", [$id]);
+$docMap = ['license' => 'license_document', 'vehicle' => 'vehicle_document', 'bus' => 'bus_photo', 'interior' => 'interior_photo'];
+$docKey = (string)($_GET['doc'] ?? 'license');
+$doc = $docMap[$docKey] ?? 'license_document';
+$q = mbus_db_prepare($conn, "SELECT {$doc}_b64 AS b64, {$doc}_mime AS mime FROM operator_application WHERE application_id = ?", [$id]);
 $r = $q === false ? false : mbus_db_fetch_assoc($q);
 $bin = $r && !empty($r['b64']) ? base64_decode($r['b64'], true) : false;
 if ($bin === false || $bin === '') { http_response_code(404); echo 'No document on file.'; exit; }

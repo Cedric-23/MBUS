@@ -22,4 +22,8 @@ for (const { file, tag } of cssLinks) {
         `${file} should version the stylesheet so cached CSS updates reach the live Admin UI`);
 }
 
-console.log('PASS Admin account-menu labels align and pages bust the shared CSS cache');
+const applications = fs.readFileSync(path.join(root, 'Admin/operator_applications.php'), 'utf8');
+assert.doesNotMatch(applications, /Create an admin account|add_admin|name="add_admin"/i,
+    'Operator Applications must not expose an extra Admin account-creation path');
+
+console.log('PASS Admin account-menu labels align, shared CSS is cache-busted, and extra Admin creation is removed');

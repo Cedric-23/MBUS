@@ -1,0 +1,122 @@
+.bus-photo-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.seat-builder {
+    margin-top: 20px;
+    padding: 18px;
+    border: 1px solid #dce5ef;
+    border-radius: 16px;
+    background: #f8fbff;
+}
+
+.seat-builder-head,
+.seat-builder-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.seat-builder-head p {
+    margin: 5px 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.seat-builder-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.seat-layout-button {
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid #cbd8e7;
+    border-radius: 10px;
+    background: #fff;
+    color: #174a7e;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.seat-layout-button:hover { background: #eff6ff; }
+.seat-layout-button:focus-visible,
+.seat-cell:focus-visible { outline: 3px solid #60a5fa; outline-offset: 2px; }
+
+.seat-builder-meta {
+    margin: 14px 0 9px;
+    color: #53657b;
+    font-size: 13px;
+}
+
+.seat-builder-meta [data-seat-count] {
+    color: #123c67;
+    font-weight: 700;
+}
+
+.seat-layout-preview {
+    display: grid;
+    justify-content: center;
+    gap: 8px;
+    max-height: 230px;
+    overflow: auto;
+    padding: 14px;
+    border: 1px solid #e2eaf3;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.seat-row {
+    display: grid;
+    grid-template-columns: repeat(2, 42px) 28px repeat(2, 42px);
+    align-items: center;
+    gap: 8px;
+}
+
+.seat-cell {
+    min-width: 42px;
+    min-height: 38px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #f1f5f9;
+    color: #6b7280;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.seat-cell.is-open {
+    border-color: #1d75c9;
+    background: #e7f3ff;
+    color: #14538d;
+}
+
+.seat-cell.is-removed {
+    border-style: dashed;
+    background: #fff;
+    color: #94a3b8;
+}
+
+.seat-aisle {
+    display: grid;
+    place-items: center;
+    color: #94a3b8;
+    font-size: 10px;
+    letter-spacing: .08em;
+    writing-mode: vertical-rl;
+}
+
+@media (max-width: 640px) {
+    .bus-photo-grid { grid-template-columns: minmax(0, 1fr); }
+    .seat-builder { padding: 14px; }
+    .seat-builder-head { align-items: flex-start; flex-direction: column; }
+    .seat-row { grid-template-columns: repeat(2, 38px) 22px repeat(2, 38px); gap: 6px; }
+    .seat-cell { min-width: 38px; }
+}

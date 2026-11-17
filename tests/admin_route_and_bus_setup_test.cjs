@@ -1,0 +1,60 @@
+/* Regression coverage for live route creation and operator bus setup submissions. */
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.resolve(__dirname, '..');
+const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+
+const route = read('Admin/manage_routes.php');
+assert.match(route, /origin_lat DECIMAL|origin_lat/);
+assert.match(route, /\$inserted\s*=\s*mbus_db_prepare/,
+    'custom route creation must inspect the insert result');
+assert.match(route, /\$inserted\s*===\s*false\s*\|\|\s*\$conn->affectedRows\s*<\s*1/,
+    'a failed route insert must not be reported as success');
+assert.match(route, /Route insert failed:/, 'route insert errors should be logged for diagnosis');
+assert.match(route, /Check the database schema and try again/,
+    'the Admin should receive visible feedback when a route cannot be saved');
+assert.match(route, /manage_routes\.php\?added=1/,
+    'successful route adds should show a post-redirect success state');
+
+const db = read('config/db_connect.php');
+for (const column of ['origin_lat DECIMAL(10, 8)', 'origin_lng DECIMAL(11, 8)', 'destination_lat DECIMAL(10, 8)', 'destination_lng DECIMAL(11, 8)']) {
+    assert.ok(db.includes(column), `runtime schema upgrade must add ${column}`);
+}
+assert.match(db, /schemaVersion\s*=\s*'2026-11-18b'/,
+    'the runtime schema version must advance so existing deployments run the new upgrades');
+
+const registration = read('register.php');
+for (const field of ['name="bus_photo"', 'name="interior_photo"', 'name="seat-layout"']) {
+    assert.ok(registration.includes(field), `driver application should include ${field}`);
+}
+assert.match(registration, /mbus_application_photo\('bus_photo'/);
+assert.match(registration, /mbus_application_photo\('interior_photo'/);
+assert.match(registration, /seat_layout, bus_photo_b64, bus_photo_mime, interior_photo_b64, interior_photo_mime/,
+    'photos and the submitted seat layout must be stored on the application');
+assert.match(registration, /array_fill\(0, 10, \[true, true, true, true\]\)/,
+    'the driver should see a usable default 2+2 seating plan');
+
+const setupJs = read('Assets/js/driver_bus_setup.js');
+assert.match(setupJs, /data-seat-add-row/);
+assert.match(setupJs, /data-seat-reset/);
+assert.match(setupJs, /JSON\.stringify\(layout\)/,
+    'seat-map changes must be serialized into the application form');
+assert.match(setupJs, /total > 100/,
+    'the client must enforce the maximum seating capacity');
+
+const applications = read('Admin/operator_applications.php');
+for (const field of ['has_bus_photo', 'has_interior_photo', 'seat_layout', 'doc=bus', 'doc=interior']) {
+    assert.ok(applications.includes(field), `Admin review should expose ${field}`);
+}
+assert.match(applications, /Submitted seat layout/);
+assert.doesNotMatch(applications, /Create an admin account|add_admin/i,
+    'Operator Applications must not retain the extra Admin creation path');
+
+const fileEndpoint = read('Admin/application_file.php');
+assert.match(fileEndpoint, /'bus'\s*=>\s*'bus_photo'/);
+assert.match(fileEndpoint, /'interior'\s*=>\s*'interior_photo'/);
+assert.match(fileEndpoint, /\$_SESSION\['user_type'\].*admin/,
+    'application photo access must remain Admin-only');
+
+console.log('PASS route-insert error handling, runtime route schema, bus photo submissions, custom seat layouts, and Admin review');

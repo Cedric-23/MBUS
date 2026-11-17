@@ -85,6 +85,34 @@ function mbus_run_schema_upgrades(PDO $pdo): void {
   } catch (PDOException $schema_error) {
       error_log('Operator application schema check failed: ' . $schema_error->getMessage());
   }
+  // Route creation persists map pins; installs that skipped the manual coordinate
+  // migration must receive the columns before the Admin form attempts an insert.
+  try {
+      foreach ([
+          "origin_lat DECIMAL(10, 8)",
+          "origin_lng DECIMAL(11, 8)",
+          "destination_lat DECIMAL(10, 8)",
+          "destination_lng DECIMAL(11, 8)",
+      ] as $col) {
+          $pdo->exec('ALTER TABLE routes ADD COLUMN IF NOT EXISTS ' . $col);
+      }
+  } catch (PDOException $schema_error) {
+      error_log('Route coordinate schema check failed: ' . $schema_error->getMessage());
+  }
+  // Driver applications can include reviewable vehicle photos and seat layout.
+  try {
+      foreach ([
+          "bus_photo_b64 TEXT",
+          "bus_photo_mime VARCHAR(50)",
+          "interior_photo_b64 TEXT",
+          "interior_photo_mime VARCHAR(50)",
+          "seat_layout TEXT",
+      ] as $col) {
+          $pdo->exec('ALTER TABLE operator_application ADD COLUMN IF NOT EXISTS ' . $col);
+      }
+  } catch (PDOException $schema_error) {
+      error_log('Operator bus setup schema check failed: ' . $schema_error->getMessage());
+  }
   try {
       $pdo->exec("CREATE TABLE IF NOT EXISTS conductor_application (
           application_id SERIAL PRIMARY KEY, full_name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL,
@@ -104,7 +132,7 @@ try {
     ]);
     $pdo->exec("SET TIME ZONE '" . str_replace("'", "''", mbus_timezone()) . "'");
     // Schema upgrades are ~35 extra round trips to the database. Run them once per version, not on every page.
-    $schemaVersion = '2026-11-17a';
+    $schemaVersion = '2026-11-18b';
     $schemaFlag = sys_get_temp_dir() . '/mbus_schema_' . md5($host . $database . $schemaVersion) . '.ok';
     if (!is_file($schemaFlag)) {
         $done = false;

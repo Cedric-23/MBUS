@@ -21,6 +21,7 @@ $places = [
     "Morong Terminal" => "Morong Terminal",
     "SBMA" => "Harbor Point"
 ];
+$success = isset($_GET['added']) ? 'Route added successfully.' : '';
 
 /* ADD ROUTE */
 if(isset($_POST['add_route'])){
@@ -74,14 +75,17 @@ WHERE origin = ? AND destination = ?
             if(mbus_db_num_rows($check) > 0){
                 $error = "Route already exists";
             } else {
-                mbus_db_prepare($conn, "
+                $inserted = mbus_db_prepare($conn, "
 INSERT INTO routes(origin, destination, fare, origin_lat, origin_lng, destination_lat, destination_lng)
 VALUES (?, ?, ?, ?, ?, ?, ?)
 ", [$origin, $destination, $fare, $origin_lat, $origin_lng, $destination_lat, $destination_lng]);
-
-                $success = "Route added successfully";
-                header("Location: manage_routes.php");
-                exit();
+                if ($inserted === false || $conn->affectedRows < 1) {
+                    error_log('Route insert failed: ' . mbus_db_error($conn));
+                    $error = "The route could not be saved. Check the database schema and try again.";
+                } else {
+                    header("Location: manage_routes.php?added=1");
+                    exit();
+                }
             }
         }
     }

@@ -13,7 +13,6 @@ const stepBars = driverForm.querySelectorAll(".step-progress-bar");
 const stepBack = document.getElementById("step-back");
 const stepNext = document.getElementById("step-next");
 const stepSubmit = document.getElementById("step-submit");
-const maxFileSize = 3 * 1024 * 1024;
 const lastStep = driverSteps.length - 1;
 let currentStep = 0;
 
@@ -118,6 +117,7 @@ document.querySelectorAll(".upload-group").forEach(function (group) {
     const preview = group.querySelector(".document-preview");
     const image = group.querySelector(".document-preview-image");
     const frame = group.querySelector(".document-preview-frame");
+    const maxFileSize = Number(input.dataset.maxBytes || 3 * 1024 * 1024);
     const defaultName = name.textContent;
     let objectUrl = null;
 
@@ -148,7 +148,9 @@ document.querySelectorAll(".upload-group").forEach(function (group) {
         if (file.size > maxFileSize) {
             input.value = "";
             name.textContent = defaultName;
-            input.setCustomValidity("File must be 3 MB or less.");
+            input.setCustomValidity(maxFileSize < 1024 * 1024
+                ? `File must be ${Math.round(maxFileSize / 1024)} KB or less.`
+                : `File must be ${Math.round(maxFileSize / (1024 * 1024))} MB or less.`);
             input.reportValidity();
             return;
         }
