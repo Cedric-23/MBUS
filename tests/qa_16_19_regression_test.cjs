@@ -38,7 +38,7 @@ const operatorEmailInput = operatorProfile.match(/<input[^>]*id="operatorEmail"[
 assert.ok(operatorEmailInput, 'operator profile email field must be present');
 assert.doesNotMatch(operatorEmailInput, /\b(?:readonly|disabled)\b/, 'operator profile email field must remain editable');
 assert.match(operatorProfile, /operator-phone-prefix[^>]*>\+63<\/span>/, 'operator phone input must use the same +63 prefix as sign-up');
-assert.match(operatorProfile, /maxlength="10" minlength="10" pattern="9\[0-9\]\{9\}"/, 'operator phone input must accept the same ten-digit national number as sign-up');
+assert.match(operatorProfile, /maxlength="14" minlength="10" pattern="9\[0-9\]\{9\}"/, 'operator phone input must accept the same ten-digit national number as sign-up (extra length lets a pasted 09... number be trimmed by script)');
 assert.ok(operatorProfile.includes("preg_replace('/^0/', '', (string)$formValues['phone_number'])"), 'stored 09-format phone numbers must display as ten digits after the +63 prefix');
 assert.match(operatorProfile, /\$_SESSION\['full_name'\] =/);
 assert.match(operatorProfile, /\$_SESSION\['email'\] =/);
