@@ -83,8 +83,9 @@ $can_submit = !$latest || $status === 'Rejected' || ($status === 'Approved' && $
     <link rel="stylesheet" href="../Assets/css/commuter_mobile.css">
     <link rel="stylesheet" href="../Assets/css/commuter_verification.css">
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/commuter_modern.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/commuter_modern.css'); ?>">
 </head>
-<body class="verify-page has-bottom-nav">
+<body class="verify-page has-bottom-nav cm">
 <main class="main" role="main">
 
 <header class="page-header">

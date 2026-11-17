@@ -34,8 +34,9 @@ $profileImage = $hasDbPic ? '../avatar.php?v=' . rawurlencode((string)$pr['pic_v
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="../Assets/css/commuter_waiting_board.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_waiting_board.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/commuter_modern.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/commuter_modern.css'); ?>">
 </head>
-<body class="commuter-waiting-board has-bottom-nav">
+<body class="commuter-waiting-board has-bottom-nav cm">
 <main id="commuterWaitingBoard" class="cwb-main" data-endpoint="../api/live_tracking.php">
     <header class="cwb-header">
         <div class="cwb-title">

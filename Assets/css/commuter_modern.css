@@ -81,3 +81,30 @@
 .cm .reservation-card,.cm .res-group{margin:0 0 14px;padding:16px 18px}
 .cm .direction-tabs,.cm .dir-tabs,.cm [class*="direction"]{background:#e3edff;border-radius:999px}
 .cm [class*="direction"] .active,.cm [class*="direction"] [aria-selected="true"]{background:#fff;color:#2f6fe4;border-radius:999px;box-shadow:var(--cm-shadow-sm)}
+
+/* Seat map (prefixed with .reserve-page to beat the page rules) */
+.cm .seat-map-card{border-radius:var(--cm-r)}
+.cm.reserve-page .seat-btn,.cm .seat-btn{border-radius:14px;border:1.5px solid #bfe8cf!important;background:#e8f7ee!important;color:#17703f!important;font-weight:700;box-shadow:none}
+.cm.reserve-page .seat-btn:hover:not(.reserved):not(.selected):not([disabled]){background:#d6f1e1!important;border-color:#8fd5ad!important}
+.cm.reserve-page .seat-btn.selected,.cm .seat-btn.selected{background:#2f6fe4!important;border-color:#2f6fe4!important;color:#fff!important;box-shadow:0 8px 18px rgba(47,111,228,.35)}
+.cm.reserve-page .seat-btn[disabled]:not(.reserved){opacity:.55}
+.cm.reserve-page .seat-btn.reserved,.cm .seat-btn.reserved{background:#eef1f7!important;border-color:#e1e6f0!important;color:#a3aec3!important}
+.cm .legend-available{background:#e8f7ee!important;border-color:#bfe8cf!important}
+.cm .legend-selected{background:#2f6fe4!important;border-color:#2f6fe4!important}
+.cm .legend-reserved{background:#eef1f7!important;border-color:#e1e6f0!important}
+.cm .seat-map{background:#f6f9ff;border-color:#dde7f8;border-radius:28px}
+
+/* Waiting / pickup / live */
+.cm .cwb-header{background:transparent!important;box-shadow:none!important;border:0!important}
+.cm .cwb-empty-action,.cm .pickup-bus-badge{background:#2f6fe4!important;color:#fff!important;border-radius:999px}
+.cm .cwb-empty-action{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 24px;font-weight:600;text-decoration:none;box-shadow:0 8px 18px rgba(47,111,228,.28)}
+.cm button[type=submit]:not(.btn-outline):not(.m-cancel){border-radius:999px}
+.cm .sheet,.cm .pickup-sheet,.cm [class*="sheet"]{border-radius:28px 28px 0 0}
+
+/* Ticket */
+.cm .ticket.card{border-radius:28px;box-shadow:var(--cm-shadow)}
+.cm .ticket .info-item,.cm .ticket [class*="info"]{border-radius:18px}
+
+/* Payment and GCash return */
+.cm.payment-page .card,.cm.payment-page section{border-radius:var(--cm-r)}
+.cm.payment-page .trip-details li{background:#f4f8ff;border:0;border-radius:14px;margin-bottom:6px}
