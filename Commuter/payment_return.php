@@ -6,15 +6,55 @@ include "../config/db_connect.php";
 include "../Includes/paymongo.php";
 include "../Includes/payment_finalize.php";
 include_once "../Includes/gcash_manual.php";
+include_once "../Includes/csrf.php";
 
 if(!isset($_SESSION['user_id'])){ header("Location: ../login.php"); exit(); }
 $user_id = (int)$_SESSION['user_id'];
 $schedule_id = (int)($_GET['schedule_id'] ?? 0);
 
-$st = $conn->pdo->prepare("SELECT session_id, status, reject_reason, amount, submitted_at FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? ORDER BY created_at DESC LIMIT 1");
+$st = $conn->pdo->prepare("SELECT session_id, status, reject_reason, amount, submitted_at, reference_number FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? ORDER BY created_at DESC LIMIT 1");
 $st->execute([$user_id, $schedule_id]);
 $co = $st->fetch(PDO::FETCH_ASSOC);
 if(!$co){ header("Location: my_reservations.php"); exit(); }
+
+$refError = '';
+$refSent = false;
+if($co['status'] === 'Submitted' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_ref'])){
+    $ref = preg_replace('/\D/', '', (string)($_POST['ref'] ?? ''));
+    if(!csrf_validate_token()){
+        $refError = 'Security check failed. Please try again.';
+    } elseif(strlen($ref) < 10 || strlen($ref) > 16){
+        $refError = 'Enter the 13-digit reference number from your GCash receipt.';
+    } else {
+        $dup = $conn->pdo->prepare("SELECT 1 FROM paymongo_checkout WHERE reference_number = ? AND session_id <> ? AND status IN ('Paid','Submitted') LIMIT 1");
+        $dup->execute([$ref, $co['session_id']]);
+        if($dup->fetchColumn()){
+            $refError = 'That reference number was already used.';
+        } else {
+            $shot = null;
+            if(isset($_FILES['shot']) && $_FILES['shot']['error'] !== UPLOAD_ERR_NO_FILE){
+                $shotErr = '';
+                $shot = mbus_receipt_upload('shot', $shotErr);
+                if(!$shot) $refError = $shotErr;
+            }
+            if($refError === ''){
+                // If the SMS from the operator's phone already recorded this payment, it is confirmed right now.
+                $claim = $conn->pdo->prepare("UPDATE incoming_payments SET used_by = ? WHERE id = (
+                        SELECT id FROM incoming_payments WHERE used_by IS NULL AND REPLACE(reference_number, ' ', '') = ? AND ABS(amount - ?) < 0.005
+                        LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id");
+                $claim->execute([$co['session_id'], $ref, $co['amount']]);
+                $conn->pdo->prepare("UPDATE paymongo_checkout SET reference_number = ?" . ($shot ? ", receipt_b64 = ?, receipt_mime = ?" : "") . " WHERE session_id = ?")
+                    ->execute($shot ? [$ref, $shot['b64'], $shot['mime'], $co['session_id']] : [$ref, $co['session_id']]);
+                if($claim->fetchColumn()){
+                    $res = mbus_finalize_payment($conn, $co['session_id'], $ref);
+                    if(!empty($res['ok'])){ header("Location: ticket.php?schedule_id=" . $schedule_id); exit(); }
+                    $conn->pdo->prepare("UPDATE incoming_payments SET used_by = NULL WHERE used_by = ?")->execute([$co['session_id']]);
+                }
+                header("Location: payment_return.php?schedule_id=" . $schedule_id); exit();
+            }
+        }
+    }
+}
 
 $message = '';
 $state = 'waiting';
@@ -70,6 +110,11 @@ p.lbl{margin:0;font-size:.82rem}.amt{margin:2px 0 6px;font-size:2.1rem;font-weig
 .row{display:flex;gap:8px;margin-top:6px}.cp{flex:1;min-height:44px;border:1.5px solid #1e3a5f;border-radius:12px;background:#fff;color:#1e3a5f;font:700 .9rem Inter,system-ui,sans-serif;cursor:pointer}
 .wait{display:flex;align-items:center;gap:10px;margin-top:16px;padding:12px;border-radius:12px;background:#f1f5fa;text-align:left;font-size:.85rem;color:#33445c}.spin.sm{width:20px;height:20px;margin:0;border-width:3px;flex:none}
 a.alt{background:none;color:#5b6b7e;font-weight:600;min-height:40px;margin-top:6px}
+details.ref{margin-top:12px;text-align:left;border:1px solid #e1e7ef;border-radius:12px;padding:0 12px}
+details.ref summary{min-height:44px;display:flex;align-items:center;font-weight:600;font-size:.86rem;color:#33445c;cursor:pointer}
+.refform{display:grid;gap:8px;padding-bottom:12px}.refform input[type=text]{min-height:44px;padding:0 12px;border:1.5px solid #cfd8e6;border-radius:12px;font:inherit;font-size:.95rem}
+.refform .shot{font-size:.82rem;color:#5b6b7e;display:grid;gap:4px}.refform .shot i{display:none}.refform input[type=file]{font-size:.8rem}
+.refform .cp{flex:none}details.ref .sent{margin:0 0 8px;font-size:.84rem;color:#1a7f37}details.ref .err{margin:0 0 8px;font-size:.84rem;color:#b42318}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
 </style>
 </head>
@@ -86,11 +131,22 @@ a.alt{background:none;color:#5b6b7e;font-weight:600;min-height:40px;margin-top:6
         <button type="button" class="cp" data-copy="<?php echo number_format((float)$co['amount'], 2, '.', ''); ?>">Copy amount</button>
     </div>
     <div class="wait"><div class="spin sm" aria-hidden="true"></div><span id="waitMsg">Waiting for your payment. Your ticket appears here automatically.</span></div>
+    <details class="ref"<?php echo ($refError !== '') ? ' open' : ''; ?>>
+        <summary>Paid already? Enter reference no.</summary>
+        <?php if(!empty($co['reference_number'])): ?><p class="sent"><strong>Sent.</strong> An operator will confirm reference <?php echo htmlspecialchars($co['reference_number']); ?> shortly.</p><?php endif; ?>
+        <?php if($refError !== ''): ?><p class="err" role="alert"><?php echo htmlspecialchars($refError); ?></p><?php endif; ?>
+        <form method="POST" enctype="multipart/form-data" class="refform">
+            <?php csrf_field(); ?>
+            <input type="text" name="ref" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="13-digit reference no." value="<?php echo htmlspecialchars((string)($co['reference_number'] ?? '')); ?>" aria-label="GCash reference number" required>
+            <label class="shot"><i></i>Add screenshot (optional)<input type="file" name="shot" accept="image/jpeg,image/png"></label>
+            <button type="submit" name="send_ref" value="1" class="cp">Submit</button>
+        </form>
+    </details>
     <p class="hint">Seats held until <?php echo htmlspecialchars($until); ?>.</p>
     <a href="my_reservations.php" class="alt">Back to my trips</a>
 <?php elseif($state === 'expired'): ?>
     <h1>Payment window ended</h1>
-    <p>We didn&rsquo;t receive a matching payment in time. If you already paid, contact the admin with your GCash receipt. Otherwise, start again.</p>
+    <p>We didn&rsquo;t receive a matching payment in time. If you already paid, show your GCash receipt to an operator. Otherwise, start again.</p>
     <a href="payment.php?schedule_id=<?php echo $schedule_id; ?>">Try again</a>
 <?php elseif($state === 'rejected'): ?>
     <h1>Payment not accepted</h1>

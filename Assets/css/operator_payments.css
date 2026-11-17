@@ -1,0 +1,44 @@
+/* Operator: payments (GCash checks + account setup) */
+.pay-page .pay-wrap{width:100%;max-width:620px;margin:0 auto;display:grid;gap:12px;padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+@media(min-width:769px){.pay-page .pay-wrap{padding-bottom:var(--space-8,32px)}}
+.pay-alert{padding:10px 14px;border-radius:12px;font-weight:600;font-size:.92rem;display:flex;gap:8px;align-items:center}
+.pay-alert.ok{background:#e7f6ec;color:#1a7f37}.pay-alert.bad{background:#fdecec;color:#b42318}.pay-alert.warn{background:#fff6e0;color:#8a5a00}
+.pay-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.pay-tabs::-webkit-scrollbar{display:none}
+.pay-tabs a{flex:1 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 14px;border:1px solid var(--color-border,#dfe5ee);border-radius:999px;background:var(--color-surface,#fff);color:var(--color-text-secondary,#5b6b7e);font-weight:600;font-size:.9rem;text-decoration:none;white-space:nowrap}
+.pay-tabs a span{min-width:20px;padding:1px 6px;border-radius:999px;background:var(--color-bg-secondary,#eef2f7);font-size:.78rem;text-align:center}
+.pay-tabs a.on{background:var(--color-primary,#1e3a5f);border-color:var(--color-primary,#1e3a5f);color:#fff}
+.pay-tabs a.on span{background:rgba(255,255,255,.22);color:#fff}
+.pay-empty{display:flex;align-items:center;justify-content:center;gap:8px;margin:18px 0;color:var(--color-text-secondary,#5b6b7e);font-weight:600}
+.pay-list{display:grid;gap:10px}
+.pay-card{padding:14px 16px;border:1px solid var(--color-border,#dfe5ee);border-radius:16px;background:var(--color-surface,#fff)}
+.pay-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.pay-top strong{display:block;font-size:1rem}.pay-top small{display:block;margin-top:2px;color:var(--color-text-secondary,#5b6b7e);font-size:.82rem}
+.pay-amt{flex:none;font-size:1.25rem;font-weight:700;color:var(--color-primary,#1e3a5f);letter-spacing:-.3px}
+.pay-meta{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:.84rem;color:var(--color-text-secondary,#5b6b7e)}
+.pay-meta i{margin-right:4px;opacity:.7}.pay-meta a{color:var(--color-primary,#1e3a5f);font-weight:600;text-decoration:none}
+.pay-flag{color:#b42318;font-weight:600}
+.pay-reason{margin:10px 0 0;font-size:.86rem;color:var(--color-text-secondary,#5b6b7e)}
+.pay-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:flex-start}
+.pay-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:0 16px;border:1.5px solid var(--color-border,#dfe5ee);border-radius:12px;background:var(--color-surface,#fff);color:var(--color-text,#172b4d);font:600 .9rem Inter,system-ui,sans-serif;cursor:pointer;list-style:none}
+.pay-btn::-webkit-details-marker{display:none}
+.pay-btn.primary{background:var(--color-primary,#1e3a5f);border-color:var(--color-primary,#1e3a5f);color:#fff}
+.pay-btn.danger{border-color:#b42318;color:#b42318}
+.pay-btn:focus-visible,.pay-tabs a:focus-visible{outline:3px solid var(--color-accent,#3b82f6);outline-offset:2px}
+.pay-reject{flex:1 1 220px}.pay-reject[open]{flex-basis:100%}
+.pay-reject textarea{width:100%;margin:8px 0;padding:10px;border:1.5px solid var(--color-border,#dfe5ee);border-radius:12px;font:inherit;resize:vertical}
+.pay-panel{border:1px solid var(--color-border,#dfe5ee);border-radius:16px;background:var(--color-surface,#fff)}
+.pay-panel>summary{display:flex;align-items:center;gap:10px;padding:14px 16px;font-weight:700;cursor:pointer;list-style:none}
+.pay-panel>summary::-webkit-details-marker{display:none}
+.pay-panel>summary::after{content:'\f078';font:900 .7rem 'Font Awesome 6 Free';margin-left:auto;opacity:.5}
+.pay-panel[open]>summary::after{content:'\f077'}
+.pay-panel>*:not(summary){margin:0 16px 16px}
+.pay-form{display:grid;gap:12px}.pay-form label{display:grid;gap:4px;font-size:.86rem;font-weight:600}.pay-form small{font-weight:400;color:var(--color-text-secondary,#5b6b7e)}
+.pay-form input{min-height:44px;padding:0 12px;border:1.5px solid var(--color-border,#dfe5ee);border-radius:12px;font:inherit;font-weight:400}
+.pay-form input[type=file]{padding:9px 12px;height:auto}
+.pay-qr{width:140px;border-radius:12px;border:1px solid var(--color-border,#dfe5ee)}
+.pay-steps{padding-left:20px;font-size:.9rem;display:grid;gap:4px}
+.pay-copy{display:flex;gap:8px;align-items:stretch}.pay-copy code{flex:1;min-width:0;padding:10px 12px;border-radius:12px;background:var(--color-bg-secondary,#eef2f7);font-size:.78rem;word-break:break-all}
+.pay-note{font-size:.84rem;color:var(--color-text-secondary,#5b6b7e)}
+.pay-dot{margin-left:6px;padding:2px 10px;border-radius:999px;font-size:.76rem;font-weight:600}
+.pay-dot.on{background:#e7f6ec;color:#1a7f37}.pay-dot.off{background:#fff6e0;color:#8a5a00}

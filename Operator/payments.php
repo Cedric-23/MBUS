@@ -1,0 +1,259 @@
+<?php
+session_start();
+require_once "../config/db_connect.php";
+require_once "../config/mysqli_compat.php";
+require_once "../Includes/csrf.php";
+require_once "../Includes/fare.php";
+require_once "../Includes/payment_finalize.php";
+require_once "../Includes/gcash_manual.php";
+
+if (!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'operator') {
+    header("Location: ../login.php");
+    exit();
+}
+
+$operator_id = (int)$_SESSION['user_id'];
+$success = $_SESSION['op_pay_flash'] ?? '';
+$error = '';
+unset($_SESSION['op_pay_flash']);
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!csrf_validate_token()) {
+        $error = 'Security check failed. Please try again.';
+    } elseif (isset($_POST['save_settings'])) {
+        $name = trim((string)($_POST['gcash_name'] ?? ''));
+        $num = preg_replace('/\s+/', '', (string)($_POST['gcash_number'] ?? ''));
+        if ($name === '' || strlen($name) > 80 || !preg_match('/^09\d{9}$/', $num)) {
+            $error = 'Enter the account name and an 11-digit number starting with 09.';
+        } else {
+            mbus_set_setting($conn, 'gcash_name', $name);
+            mbus_set_setting($conn, 'gcash_number', $num);
+            if (isset($_FILES['gcash_qr']) && $_FILES['gcash_qr']['error'] !== UPLOAD_ERR_NO_FILE) {
+                $up = mbus_receipt_upload('gcash_qr', $error);
+                if ($up) mbus_set_setting($conn, 'gcash_qr', 'data:' . $up['mime'] . ';base64,' . $up['b64']);
+            }
+            if ($error === '') { $_SESSION['op_pay_flash'] = 'GCash account saved.'; header('Location: payments.php'); exit(); }
+        }
+    } elseif (isset($_POST['approve']) || isset($_POST['reject'])) {
+        $sid = (string)($_POST['session_id'] ?? '');
+        $st = $conn->pdo->prepare("SELECT * FROM paymongo_checkout WHERE session_id = ? AND status = 'Submitted' AND session_id LIKE 'manual\\_%'");
+        $st->execute([$sid]);
+        $co = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$co) {
+            $error = 'That payment was already handled.';
+        } elseif (isset($_POST['approve'])) {
+            $res = mbus_finalize_payment($conn, $sid, (string)($co['reference_number'] ?: 'OP-' . substr($sid, 7, 8)));
+            if (!empty($res['ok'])) {
+                $conn->pdo->prepare("UPDATE paymongo_checkout SET reviewed_by = ?, reviewed_at = NOW() WHERE session_id = ?")->execute([$operator_id, $sid]);
+                $_SESSION['op_pay_flash'] = 'Approved. Ticket ' . ($res['ticket'] ?? '') . ' issued.';
+                header('Location: payments.php'); exit();
+            }
+            $error = $res['message'] ?? 'Could not approve this payment.';
+        } else {
+            $reason = trim((string)($_POST['reject_reason'] ?? ''));
+            if ($reason === '' || strlen($reason) > 300) {
+                $error = 'Add a short reason (up to 300 characters).';
+            } else {
+                $ids = json_decode((string)$co['reservation_ids'], true) ?: [];
+                $conn->pdo->beginTransaction();
+                $conn->pdo->prepare("UPDATE paymongo_checkout SET status = 'Rejected', reject_reason = ?, reviewed_by = ?, reviewed_at = NOW() WHERE session_id = ?")->execute([$reason, $operator_id, $sid]);
+                if ($ids) {
+                    $in = implode(',', array_fill(0, count($ids), '?'));
+                    $conn->pdo->prepare("UPDATE reservation SET status = 'Cancelled' WHERE status = 'Pending' AND user_id = ? AND reservation_id IN ($in)")->execute(array_merge([(int)$co['user_id']], $ids));
+                }
+                $conn->pdo->commit();
+                $_SESSION['op_pay_flash'] = 'Rejected. Seats released.';
+                header('Location: payments.php?status=rejected'); exit();
+            }
+        }
+    }
+}
+
+mbus_sweep_open_payments($conn);
+
+$opts = ['submitted' => 'To check', 'paid' => 'Approved', 'rejected' => 'Rejected'];
+$f = $_GET['status'] ?? 'submitted';
+if (!isset($opts[$f])) $f = 'submitted';
+
+$counts = array_fill_keys(array_keys($opts), 0);
+$cq = mbus_db_prepare($conn, "SELECT LOWER(status) AS s, COUNT(*) AS c FROM paymongo_checkout WHERE session_id LIKE 'manual\\_%' GROUP BY 1", []);
+while ($cq !== false && ($r = mbus_db_fetch_assoc($cq))) if (isset($counts[$r['s']])) $counts[$r['s']] = (int)$r['c'];
+
+$rows = [];
+$q = mbus_db_prepare($conn, "SELECT (c.receipt_b64 IS NOT NULL AND c.receipt_b64 <> '') AS has_receipt, c.session_id, c.amount, c.reference_number, c.submitted_at, c.status, c.reject_reason, c.lines, u.full_name,
+    (SELECT COUNT(*) FROM paymongo_checkout d WHERE d.reference_number = c.reference_number AND d.session_id <> c.session_id) AS dups,
+    (SELECT r.origin || ' → ' || r.destination FROM schedule s JOIN routes r ON r.route_id = s.route_id WHERE s.schedule_id = c.schedule_id) AS route,
+    (SELECT s.departure_time FROM schedule s WHERE s.schedule_id = c.schedule_id) AS departure
+    FROM paymongo_checkout c JOIN users u ON u.user_id = c.user_id
+    WHERE c.session_id LIKE 'manual\\_%' AND LOWER(c.status) = ? ORDER BY c.submitted_at DESC LIMIT 100", [$f]);
+while ($q !== false && ($r = mbus_db_fetch_assoc($q))) $rows[] = $r;
+
+$gName = mbus_setting($conn, 'gcash_name');
+$gNum = mbus_setting($conn, 'gcash_number');
+$gQr = mbus_setting($conn, 'gcash_qr');
+
+$smsToken = mbus_sms_token($conn);
+$https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+$smsUrl = ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/Operator/payments.php')), '/') . '/api/gcash_sms_webhook.php?token=' . $smsToken;
+$lastQ = mbus_db_prepare($conn, "SELECT EXTRACT(EPOCH FROM (NOW() - MAX(received_at))) AS secs FROM incoming_payments", []);
+$lastRow = $lastQ === false ? false : mbus_db_fetch_assoc($lastQ);
+$lastSecs = ($lastRow && $lastRow['secs'] !== null) ? (int)$lastRow['secs'] : null;
+$phoneOk = $lastSecs !== null && $lastSecs < 86400 * 2;
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
+    <title>Payments</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../Assets/css/responsive.css">
+    <link rel="stylesheet" href="../Assets/css/operator/operator_sidebar.css">
+    <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
+    <link rel="stylesheet" href="../Assets/css/app-header.css">
+    <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
+    <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
+    <link rel="stylesheet" href="../Assets/css/operator_payments.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/operator_payments.css'); ?>">
+    <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
+    <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
+</head>
+<body class="has-sidebar has-bottom-nav pay-page">
+
+<aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="logo-container"><img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo"></div>
+    <h2>Operator</h2>
+    <nav class="menu-top" aria-label="Operator menu">
+        <a href="operator_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+        <a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
+        <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
+        <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Riders</a>
+        <a href="payments.php" aria-current="page"><i class="fa fa-wallet" aria-hidden="true"></i> Payments</a>
+        <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
+    </nav>
+    <div class="menu-bottom">
+        <a href="../logout.php" class="logout-btn btn btn-outline btn-block"><i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
+    </div>
+</aside>
+
+<main class="main" role="main">
+<header class="page-header">
+    <h1>Payments</h1>
+    <div class="page-header-right">
+        <div class="profile-menu-wrap">
+            <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
+                <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span>
+            </button>
+            <div class="profile-menu" id="profileMenu" role="menu">
+                <div class="profile-menu-header">
+                    <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
+                    <span class="profile-menu-role">Operator account</span>
+                </div>
+                <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="pay-wrap">
+
+<?php if ($success !== ''): ?><div class="pay-alert ok" role="status"><?php echo htmlspecialchars($success); ?></div><?php endif; ?>
+<?php if ($error !== ''): ?><div class="pay-alert bad" role="alert"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
+
+<?php if ($gNum === ''): ?>
+<div class="pay-alert warn" role="status"><i class="fa fa-triangle-exclamation" aria-hidden="true"></i> Add your GCash account below so commuters can pay.</div>
+<?php endif; ?>
+
+<nav class="pay-tabs" aria-label="Payment status">
+    <?php foreach ($opts as $k => $label): ?>
+    <a href="?status=<?php echo $k; ?>" class="<?php echo $f === $k ? 'on' : ''; ?>"><?php echo $label; ?><span><?php echo $counts[$k]; ?></span></a>
+    <?php endforeach; ?>
+</nav>
+
+<?php if (!$rows): ?>
+<p class="pay-empty"><i class="fa fa-circle-check" aria-hidden="true"></i><?php echo $f === 'submitted' ? 'Nothing to check.' : 'Nothing here.'; ?></p>
+<?php endif; ?>
+
+<div class="pay-list">
+<?php foreach ($rows as $c):
+    $seats = array_map(fn($l) => $l['seat'], json_decode((string)$c['lines'], true) ?: []);
+    $isOpen = strtolower($c['status']) === 'submitted';
+?>
+    <article class="pay-card">
+        <div class="pay-top">
+            <div>
+                <strong><?php echo htmlspecialchars($c['full_name']); ?></strong>
+                <small><?php echo htmlspecialchars((string)$c['route']); ?><?php echo $c['departure'] ? ' · ' . date('M j, g:i A', strtotime($c['departure'])) : ''; ?></small>
+            </div>
+            <span class="pay-amt">&#8369;<?php echo number_format((float)$c['amount'], 2); ?></span>
+        </div>
+        <div class="pay-meta">
+            <span><i class="fa fa-chair" aria-hidden="true"></i> <?php echo htmlspecialchars(implode(', ', $seats)); ?></span>
+            <span><i class="fa fa-hashtag" aria-hidden="true"></i> <?php echo $c['reference_number'] ? htmlspecialchars((string)$c['reference_number']) : 'No reference yet'; ?></span>
+            <?php if ((int)$c['dups'] > 0): ?><span class="pay-flag"><i class="fa fa-triangle-exclamation" aria-hidden="true"></i> Reference used before</span><?php endif; ?>
+            <?php if (!empty($c['has_receipt'])): ?><a href="payment_receipt.php?id=<?php echo urlencode($c['session_id']); ?>" target="_blank" rel="noopener"><i class="fa fa-image" aria-hidden="true"></i> Screenshot</a><?php endif; ?>
+        </div>
+        <?php if (strtolower($c['status']) === 'rejected' && $c['reject_reason']): ?><p class="pay-reason"><?php echo htmlspecialchars($c['reject_reason']); ?></p><?php endif; ?>
+        <?php if ($isOpen): ?>
+        <form method="POST" class="pay-actions">
+            <?php csrf_field(); ?>
+            <input type="hidden" name="session_id" value="<?php echo htmlspecialchars($c['session_id']); ?>">
+            <button type="submit" name="approve" value="1" class="pay-btn primary" onclick="return confirm('Did &#8369;<?php echo number_format((float)$c['amount'], 2); ?> arrive in your GCash?');"><i class="fa fa-check" aria-hidden="true"></i> Approve</button>
+            <details class="pay-reject">
+                <summary class="pay-btn">Reject</summary>
+                <textarea name="reject_reason" rows="2" maxlength="300" placeholder="Reason for the commuter"></textarea>
+                <button type="submit" name="reject" value="1" class="pay-btn danger">Reject and release seats</button>
+            </details>
+        </form>
+        <?php endif; ?>
+    </article>
+<?php endforeach; ?>
+</div>
+
+<details class="pay-panel" <?php echo $gNum === '' ? 'open' : ''; ?>>
+    <summary><i class="fa fa-mobile-screen" aria-hidden="true"></i> GCash account</summary>
+    <form method="POST" enctype="multipart/form-data" class="pay-form">
+        <?php csrf_field(); ?>
+        <label>Account name<input type="text" name="gcash_name" value="<?php echo htmlspecialchars($gName); ?>" required maxlength="80" autocomplete="off"></label>
+        <label>GCash number<input type="tel" name="gcash_number" value="<?php echo htmlspecialchars($gNum); ?>" placeholder="09XXXXXXXXX" pattern="09\d{9}" maxlength="11" inputmode="numeric" required></label>
+        <label>QR code <small>(optional)</small><input type="file" name="gcash_qr" accept="image/jpeg,image/png"></label>
+        <?php if ($gQr !== ''): ?><img class="pay-qr" src="<?php echo htmlspecialchars($gQr, ENT_QUOTES); ?>" alt="Current GCash QR"><?php endif; ?>
+        <button type="submit" name="save_settings" value="1" class="pay-btn primary">Save</button>
+    </form>
+</details>
+
+<details class="pay-panel">
+    <summary><i class="fa fa-bolt" aria-hidden="true"></i> Auto-confirm <span class="pay-dot <?php echo $phoneOk ? 'on' : 'off'; ?>"><?php echo $phoneOk ? 'Phone connected' : ($lastSecs === null ? 'Not set up' : 'Phone quiet'); ?></span></summary>
+    <ol class="pay-steps">
+        <li>On the phone with the GCash SIM, install an SMS forwarder app.</li>
+        <li>Forward GCash &ldquo;received&rdquo; messages to this address:</li>
+    </ol>
+    <div class="pay-copy"><code id="smsUrl"><?php echo htmlspecialchars($smsUrl); ?></code><button type="button" class="pay-btn" id="copyUrl">Copy</button></div>
+    <p class="pay-note"><?php echo $lastSecs === null ? 'No message received yet. Send a small amount to test.' : 'Last message ' . ($lastSecs < 3600 ? max(1, (int)round($lastSecs / 60)) . ' min' : ($lastSecs < 86400 ? (int)round($lastSecs / 3600) . ' h' : (int)round($lastSecs / 86400) . ' d')) . ' ago.'; ?></p>
+</details>
+
+</div>
+</main>
+
+<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
+    <a href="operator_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
+    <a href="manage_trips.php" class="bottom-nav-item"><i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span></a>
+    <a href="scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
+    <a href="passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
+    <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
+</nav>
+<script>
+document.getElementById('copyUrl')?.addEventListener('click', function () {
+    var b = this, t = document.getElementById('smsUrl').textContent, l = b.textContent;
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).catch(function () {
+        var i = document.createElement('input'); i.value = t; document.body.appendChild(i); i.select(); document.execCommand('copy'); i.remove();
+    });
+    b.textContent = 'Copied'; setTimeout(function () { b.textContent = l; }, 1500);
+});
+</script>
+<script src="../Assets/js/app-header.js"></script>
+</body>
+</html>

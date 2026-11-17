@@ -327,7 +327,7 @@ if(isset($_POST['cancel_reservation'])){
         <span class="gcash-mark" aria-hidden="true"><i class="fa fa-mobile-alt"></i></span>
         <span class="gcash-text"><strong>Pay with GCash</strong><small>You&rsquo;ll get the exact amount to send. Your ticket appears by itself once it arrives.</small></span>
     </div>
-    <?php if($gNum === ''): ?><p class="gcash-acct">GCash details have not been set up yet. Please ask the admin.</p><?php endif; ?>
+    <?php if($gNum === ''): ?><p class="gcash-acct">GCash details have not been set up yet. Please ask an operator.</p><?php endif; ?>
     <button type="submit" name="start_gcash" value="1" class="btn btn-primary btn-block"<?php echo ($expired || $gNum === '') ? ' disabled' : ''; ?>>
         Pay &#8369;<span id="btnAmt"><?php echo number_format($total, 2); ?></span> with GCash
     </button>
