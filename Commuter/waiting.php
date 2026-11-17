@@ -47,7 +47,7 @@ $profileImage = $hasDbPic ? '../avatar.php?v=' . rawurlencode((string)$pr['pic_v
         </button>
         <div class="profile-menu-wrap">
             <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
-                <span class="profile-avatar" aria-hidden="true"><img src="<?php echo htmlspecialchars($profileImage, ENT_QUOTES); ?>" alt=""></span>
+                <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span>
             </button>
             <div class="profile-menu" id="profileMenu" role="menu">
                 <div class="profile-menu-header">

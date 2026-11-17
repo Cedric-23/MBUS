@@ -108,7 +108,7 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
     <header class="page-header" role="banner">
         <div class="page-header-left"><h1>My Profile</h1></div>
         <div class="page-header-right"><div class="profile-menu-wrap">
-            <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><img src="<?php $avatar = basename((string)($_SESSION['profile_picture'] ?? '')); echo htmlspecialchars(($avatar !== '' && $avatar !== 'default.png') ? '../Assets/profile_pictures/' . rawurlencode($avatar) : '../Assets/images/mbus_icon.png'); ?>" alt=""></span></button>
+            <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span></button>
             <div class="profile-menu" id="profileMenu" role="menu">
                 <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $name; ?></span><span class="profile-menu-role">Operator account</span></div>
                 <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
@@ -141,7 +141,7 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
             </div>
             <div class="pf-field">
                 <label for="operatorPhone">Phone number</label>
-                <div class="operator-phone-input"><span class="operator-phone-prefix" aria-hidden="true">+63</span><input class="form-control" type="tel" id="operatorPhone" name="phone_number" value="<?php echo htmlspecialchars(preg_replace('/^0/', '', (string)$formValues['phone_number'])); ?>" maxlength="10" minlength="10" pattern="9[0-9]{9}" inputmode="numeric" autocomplete="tel-national" placeholder="9XXXXXXXXX" required aria-describedby="operatorPhoneHint<?php echo isset($profileErrors['phone_number']) ? ' phone_number-error' : ''; ?>"></div>
+                <div class="operator-phone-input"><span class="operator-phone-prefix" aria-hidden="true">+63</span><input class="form-control" type="tel" id="operatorPhone" name="phone_number" value="<?php echo htmlspecialchars(preg_replace('/^0/', '', (string)$formValues['phone_number'])); ?>" maxlength="14" minlength="10" pattern="9[0-9]{9}" inputmode="numeric" autocomplete="tel-national" placeholder="9XXXXXXXXX" required aria-describedby="operatorPhoneHint<?php echo isset($profileErrors['phone_number']) ? ' phone_number-error' : ''; ?>"></div>
                 <small class="form-hint" id="operatorPhoneHint">Use the same 10-digit mobile format as sign-up.</small>
                 <?php echo mbus_field_error($profileErrors, 'phone_number'); ?>
             </div>
@@ -158,4 +158,5 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
 </nav>
 <script src="../Assets/js/app-header.js"></script>
 <script src="../Assets/js/operator_tracker.js"></script>
+<script>(function(){var el=document.getElementById('operatorPhone');if(!el)return;function fix(){var d=el.value.replace(/\D/g,'');if(/^63/.test(d)&&d.length>10)d=d.slice(2);else if(/^0/.test(d))d=d.slice(1);el.value=d.slice(0,10);}el.addEventListener('input',fix);fix();})();</script>
 </body></html>

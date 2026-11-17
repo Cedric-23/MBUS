@@ -9,6 +9,7 @@ function mbus_photo_handle($conn, int $uid): array {
     $raw = (string)$_POST['avatar_data'];
     if ($raw === 'remove') {
         $ok = mbus_db_prepare($conn, "UPDATE users SET profile_picture_b64 = NULL, profile_picture_mime = NULL WHERE user_id = ?", [$uid]);
+        unset($_SESSION['avatar_cache']);
         return $ok === false ? [null, "Couldn't remove the photo."] : ['Photo removed', null];
     }
     if (preg_match('#^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$#', $raw, $m) && strlen($m[2]) <= 800000) {
@@ -16,6 +17,7 @@ function mbus_photo_handle($conn, int $uid): array {
         $info = $bin === false ? false : @getimagesizefromstring($bin);
         if ($info && in_array($info['mime'], ['image/jpeg', 'image/png', 'image/webp'], true) && $info[0] <= 1024 && $info[1] <= 1024) {
             $ok = mbus_db_prepare($conn, "UPDATE users SET profile_picture_b64 = ?, profile_picture_mime = ? WHERE user_id = ?", [base64_encode($bin), $info['mime'], $uid]);
+            unset($_SESSION['avatar_cache']);
             return $ok === false ? [null, "Couldn't save the photo."] : ['Photo updated', null];
         }
     }

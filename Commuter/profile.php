@@ -46,6 +46,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
             $success = "Changes saved";
         }
     } elseif(isset($_POST['avatar_data'])){
+        unset($_SESSION['avatar_cache']);
         $raw = (string)$_POST['avatar_data'];
         if($raw === 'remove'){
             $ok = mbus_db_prepare($conn,"UPDATE users SET profile_picture_b64 = NULL, profile_picture_mime = NULL WHERE user_id = ?", [$user_id]);
