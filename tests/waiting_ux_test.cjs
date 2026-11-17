@@ -8,6 +8,8 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
 const commuterWaiting = read('Commuter/waiting.php');
 const waitingBoardJs = read('Assets/js/commuter_waiting_board.js');
+const waitingBoardCss = read('Assets/css/commuter_waiting_board.css');
+const bottomNavCss = read('Assets/css/bottom-nav.css');
 const pickupPage = read('Commuter/pickup.php');
 const pickupJs = read('Assets/js/commuter_pickup.js');
 const pickupCss = read('Assets/css/commuter_pickup.css');
@@ -48,6 +50,12 @@ assert.match(commuterWaiting, /aria-current="page"/);
 assert.equal((commuterWaiting.match(/<nav class="bottom-nav"/g) || []).length, 1, 'commuter Waiting page must render one bottom navigation');
 assert.equal((commuterWaiting.match(/class="profile-menu-wrap"/g) || []).length, 1, 'commuter Waiting page must render one account control');
 assert.doesNotMatch(commuterWaiting, /pickupMap|Mark me as waiting|Update my spot/);
+assert.match(bottomNavCss, /--bottom-nav-height:\s*58px/);
+assert.match(bottomNavCss, /bottom:\s*calc\(10px \+ env\(safe-area-inset-bottom\)\)/);
+assert.match(waitingBoardCss, /\.cwb-sheet\s*\{[^}]*bottom:\s*calc\(var\(--cwb-nav-h\) \+ 18px \+ env\(safe-area-inset-bottom\)\)/s,
+    'the Waiting sheet must sit above the complete floating dock, including its bottom inset and a visual gap');
+assert.match(waitingBoardCss, /@media \(min-width: 769px\) \{\s*\.cwb-sheet\s*\{[^}]*bottom:\s*16px/s,
+    'desktop Waiting sheet should use a simple edge margin when the mobile dock is hidden');
 assert.match(waitingBoardJs, /myRequest\.status !== 'Waiting'/);
 assert.match(waitingBoardJs, /showEmpty\(\)/);
 assert.match(waitingBoardJs, /personIcon/);
