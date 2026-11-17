@@ -52,8 +52,10 @@ assert.equal((commuterWaiting.match(/class="profile-menu-wrap"/g) || []).length,
 assert.doesNotMatch(commuterWaiting, /pickupMap|Mark me as waiting|Update my spot/);
 assert.match(bottomNavCss, /--bottom-nav-height:\s*58px/);
 assert.match(bottomNavCss, /bottom:\s*calc\(10px \+ env\(safe-area-inset-bottom\)\)/);
-assert.match(waitingBoardCss, /\.cwb-sheet\s*\{[^}]*bottom:\s*calc\(var\(--cwb-nav-h\) \+ 18px \+ env\(safe-area-inset-bottom\)\)/s,
-    'the Waiting sheet must sit above the complete floating dock, including its bottom inset and a visual gap');
+assert.match(waitingBoardCss, /\.cwb-sheet\s*\{[^}]*bottom:\s*calc\(var\(--cwb-nav-h\) \+ 10px \+ env\(safe-area-inset-bottom\)\)/s,
+    'the Waiting sheet must meet the top edge of the floating dock after its 10px bottom inset and safe-area offset');
+assert.match(waitingBoardCss, /\.cwb-sheet\s*\{[^}]*padding:\s*9px 14px 8px/s,
+    'the sheet should not add redundant safe-area padding inside the dock-connected edge');
 assert.match(waitingBoardCss, /@media \(min-width: 769px\) \{\s*\.cwb-sheet\s*\{[^}]*bottom:\s*16px/s,
     'desktop Waiting sheet should use a simple edge margin when the mobile dock is hidden');
 assert.match(waitingBoardJs, /myRequest\.status !== 'Waiting'/);
