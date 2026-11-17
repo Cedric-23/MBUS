@@ -1,8 +1,12 @@
 /* Phone-first commuter Waiting board, adapted from the operator map/sheet pattern. */
 .commuter-waiting-board { margin: 0; height: 100vh; height: 100dvh; overflow: hidden; background: #e8edf3; color: #172b4d; font-family: Inter, system-ui, sans-serif; --cwb-nav-h: var(--bottom-nav-height, 60px); }
 .cwb-main { position: static; width: 100%; max-width: none; margin: 0; padding: 0; }
-.cwb-map { position: fixed; z-index: 0; inset: 0 0 var(--cwb-nav-h); background: #e8edf3; }
+.cwb-map { position: fixed; z-index: 0; inset: 0 0 calc(var(--cwb-nav-h) + 10px + env(safe-area-inset-bottom)); background: #e8edf3; }
 .cwb-map[hidden], .cwb-sheet[hidden], .cwb-empty[hidden], .cwb-location-pill[hidden] { display: none; }
+body.commuter-waiting-board .bottom-nav { border-color: #edf0f4; background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 8px 24px rgba(15,27,45,.12); }
+.cwb-map .leaflet-top.leaflet-right { top: calc(126px + env(safe-area-inset-top)); right: 12px; }
+.commuter-waiting-board .leaflet-control-attribution { max-width: calc(100vw - 24px); margin: 0; padding: 4px 8px; border: 1px solid rgba(15,27,45,.08); border-radius: 999px; background: rgba(255,255,255,.96); color: #627186; box-shadow: 0 2px 8px rgba(15,27,45,.08); font-size: 8px; line-height: 1.35; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.commuter-waiting-board .leaflet-control-attribution a { color: #315f94; text-decoration: none; }
 .cwb-header { position: fixed; z-index: 650; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 10px; min-height: 68px; padding: calc(8px + env(safe-area-inset-top)) 14px 8px; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.11); }
 .cwb-title { flex: 1; min-width: 0; }
 .cwb-title h1 { margin: 0; color: #111b2e; font-size: 1.25rem; line-height: 1.2; }
@@ -57,6 +61,7 @@
 .cwb-main .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 @media (min-width: 769px) {
+  .cwb-map { inset: 0; }
   .cwb-sheet { left: 16px; right: auto; margin: 0; width: 390px; bottom: 16px; border-radius: 22px; max-height: 58vh; }
   .cwb-empty { top: 54%; }
 }

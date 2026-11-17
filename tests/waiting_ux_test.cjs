@@ -52,11 +52,20 @@ assert.equal((commuterWaiting.match(/class="profile-menu-wrap"/g) || []).length,
 assert.doesNotMatch(commuterWaiting, /pickupMap|Mark me as waiting|Update my spot/);
 assert.match(bottomNavCss, /--bottom-nav-height:\s*58px/);
 assert.match(bottomNavCss, /bottom:\s*calc\(10px \+ env\(safe-area-inset-bottom\)\)/);
+assert.match(waitingBoardCss, /\.cwb-map\s*\{[^}]*inset:\s*0 0 calc\(var\(--cwb-nav-h\) \+ 10px \+ env\(safe-area-inset-bottom\)\)/s,
+    'the Waiting map must stop at the top of the floating nav, not continue behind it');
+assert.match(waitingBoardCss, /body\.commuter-waiting-board \.bottom-nav\s*\{[^}]*background:\s*#fff;[^}]*backdrop-filter:\s*none/s,
+    'the Waiting nav should use the same solid white background as the bus sheet');
+assert.match(waitingBoardCss, /\.cwb-map \.leaflet-top\.leaflet-right\s*\{[^}]*top:\s*calc\(126px \+ env\(safe-area-inset-top\)\)/s);
+assert.match(waitingBoardCss, /\.commuter-waiting-board \.leaflet-control-attribution\s*\{[^}]*background:\s*rgba\(255,255,255,\.96\)/s,
+    'map credits should remain legible in a compact chip away from the dock');
+assert.match(waitingBoardCss, /@media \(min-width: 769px\) \{\s*\.cwb-map\s*\{\s*inset:\s*0;/s,
+    'desktop map should still use the full available viewport when the mobile dock is hidden');
 assert.match(waitingBoardCss, /\.cwb-sheet\s*\{[^}]*bottom:\s*calc\(var\(--cwb-nav-h\) \+ 10px \+ env\(safe-area-inset-bottom\)\)/s,
     'the Waiting sheet must meet the top edge of the floating dock after its 10px bottom inset and safe-area offset');
 assert.match(waitingBoardCss, /\.cwb-sheet\s*\{[^}]*padding:\s*9px 14px 8px/s,
     'the sheet should not add redundant safe-area padding inside the dock-connected edge');
-assert.match(waitingBoardCss, /@media \(min-width: 769px\) \{\s*\.cwb-sheet\s*\{[^}]*bottom:\s*16px/s,
+assert.match(waitingBoardCss, /@media \(min-width: 769px\) \{[\s\S]*?\.cwb-sheet\s*\{[^}]*bottom:\s*16px/s,
     'desktop Waiting sheet should use a simple edge margin when the mobile dock is hidden');
 assert.match(waitingBoardJs, /myRequest\.status !== 'Waiting'/);
 assert.match(waitingBoardJs, /showEmpty\(\)/);
@@ -72,6 +81,10 @@ assert.match(waitingBoardJs, /selectedBusLocation && selectedBusLocation\.fresh/
 assert.match(waitingBoardJs, /function toggleTracking\(\)/);
 assert.match(waitingBoardJs, /select\.addEventListener\('click', toggleTracking\)/);
 assert.match(waitingBoardJs, /busMarker\.on\('click', toggleTracking\)/);
+assert.match(waitingBoardJs, /attributionControl\.setPrefix\(false\)/);
+assert.match(waitingBoardJs, /attributionControl\.setPosition\('topright'\)/);
+assert.match(waitingBoardJs, /OpenStreetMap[\s\S]*routing by OSRM/,
+    'repositioning the watermark must retain the required map-source credits');
 assert.match(waitingBoardJs, /Tracking paused/);
 assert.match(waitingBoardJs, /function fitFullRoute\(trip\)/);
 assert.match(waitingBoardJs, /window\.addEventListener\('resize',[\s\S]*?if \(!trackSelected\) return;[\s\S]*?routeViewMode === 'route' && routeData[\s\S]*?fitFullRoute\(trip\)/);
