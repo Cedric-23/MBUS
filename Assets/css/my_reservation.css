@@ -127,3 +127,14 @@
     align-items: flex-start;
   }
 }
+/* Several seats on one trip collapse into one card */
+.res-group>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none}
+.res-group>summary::-webkit-details-marker{display:none}
+.rg-main{display:flex;flex-direction:column;gap:4px;min-width:0}
+.rg-main small{color:var(--color-text-muted,#6b7a8c)}
+.rg-chev{transition:transform .15s}
+.res-group[open] .rg-chev{transform:rotate(180deg)}
+.rg-seats{margin-top:12px;border-top:1px solid var(--color-border-light,#e4e9f0)}
+.rg-seat{padding:12px 0}
+.rg-seat+.rg-seat{border-top:1px solid var(--color-border-light,#e4e9f0)}
+.rg-main .badge{align-self:flex-start}
