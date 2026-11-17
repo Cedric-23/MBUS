@@ -16,6 +16,10 @@ assert.match(registration, /registration_code_attempts\) VALUES \(\?, \?, \?, \?
     'new commuter codes must start with a persistent zero-attempt counter');
 assert.match(registration, /mbus_send_registration_code\(\$email, \$registration_code, \$full_name\)/,
     'a commuter must receive a code before the account can be used');
+assert.match(registration, /aria-describedby="email-verification-hint"/,
+    'the email input must expose the verification guidance to assistive technology');
+assert.match(registration, /6-digit code to this address[\s\S]*code expires in 15 minutes/,
+    'the signup form must explain the verification code and expiry before submission');
 assert.match(registration, /mbus_registration_allow_application\(\$conn, \$email\)/,
     'admin-reviewed applications also need a server-side submission throttle');
 assert.ok(registration.indexOf('mbus_registration_allow_application($conn, $email)') < registration.indexOf("mbus_application_file('license_document'"),

@@ -366,9 +366,11 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                         <div class="form-contact-input">
                             <div class="form-email-input">
                                 <label>Email Address</label>
-                                <input name="emailAddress" type="email" placeholder="juan@example.com" maxlength="254" autocapitalize="none" spellcheck="false" autocomplete="email" value="<?= reg_old('emailAddress') ?>" required/>
+                                <input name="emailAddress" type="email" placeholder="juan@example.com" maxlength="254" autocapitalize="none" spellcheck="false" autocomplete="email" aria-describedby="email-verification-hint" value="<?= reg_old('emailAddress') ?>" required/>
                                 <i class="input-icon" data-lucide="mail"></i>
-                            <?= mbus_field_error($errors, 'emailAddress') ?></div>
+                            <?= mbus_field_error($errors, 'emailAddress') ?>
+                                <small class="field-hint" id="email-verification-hint">We’ll send a 6-digit code to this address. Your account becomes active after verification; the code expires in 15 minutes.</small>
+                            </div>
                             <div class="form-phone-input">
                                 <label>Mobile Number</label>
                                 <div class="phone-input"><span class="phone-prefix" aria-hidden="true">+63</span><input name="mobileNumber" type="text" placeholder="9XXXXXXXXX" maxlength="10" minlength="10" inputmode="numeric" pattern="9[0-9]{9}" autocomplete="tel" value="<?= preg_replace('/^0/', '', reg_old('mobileNumber')) ?>" required/></div>
