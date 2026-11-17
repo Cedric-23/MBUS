@@ -46,6 +46,12 @@ Public bus reservation system — PHP + Supabase PostgreSQL.
 | `SMTP_USERNAME` | *(Gmail address or SMTP account)* |
 | `SMTP_PASSWORD` | *(Gmail app password or SMTP password)* |
 | `SMTP_FROM` | *(optional; defaults to SMTP_USERNAME)* |
+| `BREVO_API_KEY` | *(optional HTTPS mail provider; use with MAIL_FROM_EMAIL)* |
+| `MAIL_FROM_EMAIL` | *(verified sender address for Brevo)* |
+| `MAIL_RELAY_URL` | *(optional HTTPS mail relay endpoint; use with MAIL_RELAY_SECRET)* |
+| `MAIL_RELAY_SECRET` | *(shared secret for the HTTPS mail relay)* |
+
+Commuter accounts require a six-digit email code before sign-in. Codes expire after 15 minutes, lock after five incorrect attempts, and can be resent no more than once per minute. Sliding-hour limits cap accepted delivery requests at five per email and 120 across the service; a request still counts if account creation or the mail provider later fails. Driver and conductor applications remain admin-reviewed; field-validated submission attempts are capped at three per email and 30 across the service per sliding hour, counted before file processing or persistence.
 
 ### After go-live checklist
 
@@ -75,12 +81,14 @@ Already applied if you ran setup before. To re-run:
 
 For waiting riders and live bus tracking, apply additive migrations `supabase/10_live_pickup.sql` and `supabase/11_bus_live_tracking.sql` in order. Apply `supabase/13_route_terminal_coordinates.sql` to persist the canonical Morong and Harbor Point terminal pins. Runtime route feeds also use those pins for known terminal names if the migration has not been applied. See [Waiting riders, live bus location and the location gate](LIVE_PICKUP.md) for the role flow, API payloads and local checks. A Git push does not apply database migrations.
 
+**Warning:** `scripts/setup_supabase.php` starts by running `00_reset.sql`, which drops application tables. Use it only for an empty/disposable database. For an existing database, deploy the versioned additive runtime upgrade or apply only the reviewed additive SQL migration in Supabase SQL Editor.
+
 ```bash
 php scripts/setup_supabase.php
 ```
 
-Or run SQL files in Supabase SQL Editor: `00_reset.sql` → `01_schema.sql` → `02_data.sql` → `07_add_operator_application.sql` → `15_password_reset.sql` → `16_registration_verification.sql` → `17_reservation_expiry.sql`.
-The migrations add password-reset fields, email verification for new commuter registrations, and a persisted reservation hold-expiry timestamp shared by booking, payment, cancellation and seat-availability views.
+Or run the reset/setup sequence only for a new database. The SQL file order is: `00_reset.sql` → `01_schema.sql` → `02_data.sql` → `07_add_operator_application.sql` → `15_password_reset.sql` → `16_registration_verification.sql` → `17_reservation_expiry.sql` → `18_registration_security.sql`.
+The migrations add password-reset fields, commuter email verification, persistent signup rate limits, and a persisted reservation hold-expiry timestamp shared by booking, payment, cancellation and seat-availability views.
 
 ---
 

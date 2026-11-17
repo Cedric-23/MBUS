@@ -29,7 +29,7 @@ try {
 }
 
 $base = dirname(__DIR__) . '/supabase';
-$files = ['00_reset.sql', '01_schema.sql', '02_data.sql', '07_add_operator_application.sql', '15_password_reset.sql', '16_registration_verification.sql', '17_reservation_expiry.sql'];
+$files = ['00_reset.sql', '01_schema.sql', '02_data.sql', '07_add_operator_application.sql', '15_password_reset.sql', '16_registration_verification.sql', '17_reservation_expiry.sql', '18_registration_security.sql'];
 
 foreach ($files as $file) {
     $path = "$base/$file";

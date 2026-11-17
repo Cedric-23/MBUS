@@ -33,6 +33,15 @@ function mbus_run_schema_upgrades(PDO $pdo): void {
   } catch (PDOException $schema_error) {
       error_log('Profile picture schema check failed: ' . $schema_error->getMessage());
   }
+  // Rate-limit schema is required for signup safety; let failures abort this versioned
+  // upgrade so the marker is not saved and the next request can retry it.
+  $pdo->exec('ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_code_attempts SMALLINT NOT NULL DEFAULT 0');
+  $pdo->exec('ALTER TABLE users ALTER COLUMN email TYPE VARCHAR(254)');
+  $pdo->exec("CREATE TABLE IF NOT EXISTS registration_rate_limit_events (
+      event_id BIGSERIAL PRIMARY KEY, bucket_hash CHAR(64) NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp())");
+  $pdo->exec('CREATE INDEX IF NOT EXISTS registration_rate_limit_events_bucket_idx ON registration_rate_limit_events (bucket_hash, created_at)');
+  $pdo->exec('CREATE INDEX IF NOT EXISTS registration_rate_limit_events_created_idx ON registration_rate_limit_events (created_at)');
   // Per-ticket passenger type and discount ID (group bookings: student/senior/PWD seats).
   try {
       foreach ([
@@ -132,7 +141,7 @@ try {
     ]);
     $pdo->exec("SET TIME ZONE '" . str_replace("'", "''", mbus_timezone()) . "'");
     // Schema upgrades are ~35 extra round trips to the database. Run them once per version, not on every page.
-    $schemaVersion = '2026-11-18b';
+    $schemaVersion = '2026-11-18c';
     $schemaFlag = sys_get_temp_dir() . '/mbus_schema_' . md5($host . $database . $schemaVersion) . '.ok';
     if (!is_file($schemaFlag)) {
         $done = false;

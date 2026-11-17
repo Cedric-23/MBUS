@@ -9,7 +9,7 @@ CREATE TYPE schedule_status AS ENUM ('Active', 'Cancelled', 'Completed');
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
+    email VARCHAR(254) NOT NULL UNIQUE,
     phone_number VARCHAR(20),
     password VARCHAR(255) NOT NULL,
     user_type VARCHAR(50) NOT NULL,
@@ -17,7 +17,8 @@ CREATE TABLE users (
     reset_expiry TIMESTAMP NULL,
     email_verified_at TIMESTAMP NULL,
     registration_code VARCHAR(6),
-    registration_code_expiry TIMESTAMP NULL
+    registration_code_expiry TIMESTAMP NULL,
+    registration_code_attempts SMALLINT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE buses (

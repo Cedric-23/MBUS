@@ -12,6 +12,23 @@ function mbus_reset_escape(mixed $value): string
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
 
+/** Allow only same-host HTTPS redirects, plus Google's Apps Script response host. */
+function mbus_mail_redirect_is_allowed(string $sourceUrl, string $targetUrl, string $provider): bool
+{
+    $source = parse_url($sourceUrl);
+    $target = parse_url($targetUrl);
+    if (!is_array($source) || !is_array($target)
+        || strtolower((string)($target['scheme'] ?? '')) !== 'https'
+        || empty($target['host']) || isset($target['user']) || isset($target['pass'])) {
+        return false;
+    }
+    $sourceHost = strtolower((string)($source['host'] ?? ''));
+    $targetHost = strtolower((string)$target['host']);
+    if ($sourceHost !== '' && $sourceHost === $targetHost) return true;
+    return $provider === 'relay'
+        && $sourceHost === 'script.google.com'
+        && $targetHost === 'script.googleusercontent.com';
+}
 
 /**
  * Send over HTTPS instead of SMTP. Render's free plan blocks outbound SMTP ports (25/465/587),
@@ -29,14 +46,20 @@ function mbus_send_http_message(string $email, string $subject, string $html_bod
 
     // Try Brevo first, then the Apps Script relay if Brevo fails or hits its daily limit.
     $providers = [];
-    if ($brevo !== '') $providers[] = 'brevo';
-    if ($relay !== '') $providers[] = 'relay';
+    $from = trim((string)(getenv('MAIL_FROM_EMAIL') ?: getenv('SMTP_FROM') ?: getenv('SMTP_USERNAME')));
+    if ($brevo !== '' && $from !== '') $providers[] = 'brevo';
+    elseif ($brevo !== '') error_log('MBUS mail: MAIL_FROM_EMAIL is required with BREVO_API_KEY');
+    $relayParts = $relay !== '' ? parse_url($relay) : false;
+    $relayReady = $relay !== '' && trim((string)getenv('MAIL_RELAY_SECRET')) !== ''
+        && filter_var($relay, FILTER_VALIDATE_URL) !== false && is_array($relayParts)
+        && strtolower((string)($relayParts['scheme'] ?? '')) === 'https' && !empty($relayParts['host']);
+    if ($relayReady) $providers[] = 'relay';
+    elseif ($relay !== '') error_log('MBUS mail: MAIL_RELAY_URL must be HTTPS and configured with MAIL_RELAY_SECRET');
     $lastError = 'We could not send the email right now. Please try again in a few moments or contact the administrator.';
+    if (!$providers) return $lastError;
 
     foreach ($providers as $provider) {
         if ($provider === 'brevo') {
-            $from = trim((string)(getenv('MAIL_FROM_EMAIL') ?: getenv('SMTP_FROM') ?: getenv('SMTP_USERNAME')));
-            if ($from === '') { error_log('MBUS mail: MAIL_FROM_EMAIL is required with BREVO_API_KEY'); $lastError = 'Email delivery is not configured yet. Please contact the administrator.'; continue; }
             $url = 'https://api.brevo.com/v3/smtp/email';
             $headers = ['accept: application/json', 'content-type: application/json', 'api-key: ' . $brevo];
             $payload = json_encode([
@@ -53,16 +76,39 @@ function mbus_send_http_message(string $email, string $subject, string $html_bod
             ]);
         }
 
+        $location = '';
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_POST => true, CURLOPT_POSTFIELDS => $payload, CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 4,
+            CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_CONNECTTIMEOUT => 6, CURLOPT_TIMEOUT => 15,
+            CURLOPT_HEADERFUNCTION => static function ($handle, string $headerLine) use (&$location): int {
+                if (stripos($headerLine, 'Location:') === 0) $location = trim(substr($headerLine, 9));
+                return strlen($headerLine);
+            },
         ]);
         $body = curl_exec($ch);
         $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $err = curl_error($ch);
         curl_close($ch);
+
+        // Apps Script may redirect its JSON response to this fixed Google host. Follow
+        // only a safe HTTPS target, with a fresh GET so the relay secret is never forwarded.
+        if ($provider === 'relay' && in_array($code, [301, 302, 303], true) && $location !== '') {
+            if (!mbus_mail_redirect_is_allowed($url, $location, $provider)) {
+                error_log('MBUS HTTP mail (relay) refused an unsafe redirect target.');
+                continue;
+            }
+            $redirect = curl_init($location);
+            curl_setopt_array($redirect, [
+                CURLOPT_HTTPGET => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false,
+                CURLOPT_CONNECTTIMEOUT => 6, CURLOPT_TIMEOUT => 15,
+            ]);
+            $body = curl_exec($redirect);
+            $code = (int)curl_getinfo($redirect, CURLINFO_HTTP_CODE);
+            $err = curl_error($redirect);
+            curl_close($redirect);
+        }
 
         if ($body === false) { error_log('MBUS HTTP mail (' . $provider . ') failed: ' . $err); continue; }
         if ($provider === 'brevo') {
@@ -80,14 +126,16 @@ function mbus_send_http_message(string $email, string $subject, string $html_bod
 function mbus_send_smtp_message(string $email, string $subject, string $html_body, string $text_body, string $recipient_name = ''): ?string
 {
     $http = mbus_send_http_message($email, $subject, $html_body, $text_body, $recipient_name);
-    if ($http !== false) return $http;   // HTTPS provider is configured: use it, skip SMTP
+    if ($http === null) return null;
+    $httpError = $http === false ? null : (string)$http;
+    if ($httpError !== null) error_log('MBUS HTTPS email transport failed; trying SMTP fallback.');
 
     $username = trim((string)getenv('SMTP_USERNAME'));
     $password = trim((string)getenv('SMTP_PASSWORD'));
     $from = trim((string)(getenv('SMTP_FROM') ?: $username));
     if ($username === '' || $password === '' || $from === '') {
         error_log('MBUS SMTP is not configured: SMTP_USERNAME, SMTP_PASSWORD, and SMTP_FROM are required.');
-        return 'Email delivery is not configured yet. Please contact the administrator.';
+        return $httpError ?? 'Email delivery is not configured yet. Please contact the administrator.';
     }
 
     $configured_host = trim((string)(getenv('SMTP_HOST') ?: 'smtp.gmail.com'));

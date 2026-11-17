@@ -6,6 +6,7 @@ include_once "Includes/validation.php";
 include "Includes/activity_log.php";
 require_once "Includes/csrf.php";
 require_once __DIR__ . '/Includes/reset_mailer.php';
+require_once __DIR__ . '/Includes/registration_security.php';
 
 /*
  * Conductor accounts:
@@ -99,11 +100,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         elseif ($password !== $confirm) $errors['confirmationPassword'] = 'Passwords do not match.';
         $_POST['emailAddress'] = $email; $_POST['mobileNumber'] = $phone;
 
-        if (!$errors) {
-            $smtp_ready = trim((string)getenv('SMTP_USERNAME')) !== '' && trim((string)getenv('SMTP_PASSWORD')) !== '';
-            if (!$is_conductor_application && !$smtp_ready) {
-                $error = 'Email verification is not configured yet. Please ask the administrator to add SMTP_USERNAME and SMTP_PASSWORD in the Render environment, then try again.';
-            }
+        if (!$errors && !$is_conductor_application && !mbus_registration_mail_is_configured()) {
+            $error = 'Email verification is temporarily unavailable. Please try again later.';
         }
 
         if (!$errors && $error === '') {
@@ -117,26 +115,36 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             } elseif (mbus_db_num_rows($dup) > 0) {
                 $errors['emailAddress'] = 'This email already has an account or a pending application. Log in, or wait for the admin to review it.';
             } else {
-                $hash = password_hash($password, PASSWORD_DEFAULT);
-                if ($is_conductor_application) {
-                    $ok = mbus_db_prepare($conn, "INSERT INTO conductor_application (full_name, email, phone_number, password_hash, application_status) VALUES (?, ?, ?, ?, 'Pending')",
-                        [$full_name, $email, $phone, $hash]);
-                    if ($ok === false) { $error = 'We could not save your application. Please try again.'; }
-                    else {
-                        $_SESSION['register_flash'] = 'Application submitted. An admin will review it. Once approved, log in with ' . $email . ' and the password you chose.';
-                        header('Location: register.php?type=conductor'); exit();
-                    }
+                $limit_reason = $is_conductor_application
+                    ? mbus_registration_allow_application($conn, $email)
+                    : mbus_registration_allow_code_send($conn, $email);
+                if ($limit_reason !== null) {
+                    $error = mbus_registration_limit_message($limit_reason, !$is_conductor_application);
                 } else {
-                    $registration_code = (string)random_int(100000, 999999);
-                    $registration_expiry = date('Y-m-d H:i:s', strtotime('+15 minutes'));
-                    $ok = mbus_db_prepare($conn, "INSERT INTO users (full_name, email, phone_number, password, user_type, registration_code, registration_code_expiry) VALUES (?, ?, ?, ?, 'Commuter', ?, ?)",
-                        [$full_name, $email, $phone, $hash, $registration_code, $registration_expiry]);
-                    if ($ok === false) { $error = 'Could not create your account. Please try again.'; }
-                    else {
-                        $mail_sent = mbus_send_registration_code($email, $registration_code, $full_name) === null;
-                        $_SESSION['registration_email'] = $email;
-                        $_SESSION['registration_mail_sent'] = $mail_sent;
-                        header('Location: verify_registration.php'); exit();
+                    $hash = password_hash($password, PASSWORD_DEFAULT);
+                    if ($is_conductor_application) {
+                        $ok = mbus_db_prepare($conn, "INSERT INTO conductor_application (full_name, email, phone_number, password_hash, application_status) VALUES (?, ?, ?, ?, 'Pending')",
+                            [$full_name, $email, $phone, $hash]);
+                        if ($ok === false) { $error = 'We could not save your application. Please try again.'; }
+                        else {
+                            $_SESSION['register_flash'] = 'Application submitted. An admin will review it. Once approved, log in with ' . $email . ' and the password you chose.';
+                            header('Location: register.php?type=conductor'); exit();
+                        }
+                    } else {
+                        $registration_code = (string)random_int(100000, 999999);
+                        $registration_expiry = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+                        $ok = mbus_db_prepare($conn, "INSERT INTO users (full_name, email, phone_number, password, user_type, registration_code, registration_code_expiry, registration_code_attempts) VALUES (?, ?, ?, ?, 'Commuter', ?, ?, 0)",
+                            [$full_name, $email, $phone, $hash, $registration_code, $registration_expiry]);
+                        if ($ok === false) { $error = 'Could not create your account. Please try again.'; }
+                        else {
+                            $mail_error = mbus_send_registration_code($email, $registration_code, $full_name);
+                            $mail_sent = $mail_error === null;
+                            if (!$mail_sent) error_log('Initial registration email failed: ' . (string)$mail_error);
+                            $_SESSION['registration_email'] = $email;
+                            $_SESSION['registration_mail_sent'] = $mail_sent;
+                            $_SESSION['registration_sent_at'] = time();
+                            header('Location: verify_registration.php'); exit();
+                        }
                     }
                 }
             }
@@ -196,8 +204,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 [$email, $email, $email]);
             if ($dup !== false && mbus_db_num_rows($dup) > 0) $errors['email-address'] = 'This email already has an account or a pending application. Log in, or wait for the admin to review it.';
         }
+        if (!$errors && $error === '') {
+            $application_limit = mbus_registration_allow_application($conn, $email);
+            if ($application_limit !== null) $error = mbus_registration_limit_message($application_limit);
+        }
         $lic = $veh = $busPhoto = $interiorPhoto = null;
-        if (!$errors) {
+        if (!$errors && $error === '') {
             $fe = ''; $lic = mbus_application_file('license_document', $fe);
             if (!$lic) $errors['license_document'] = 'License file: ' . $fe;
             $fe = ''; $veh = mbus_application_file('vehicle_document', $fe);
@@ -207,7 +219,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $fe = ''; $interiorPhoto = mbus_application_photo('interior_photo', $fe);
             if (!$interiorPhoto) $errors['interior_photo'] = 'Bus interior photo: ' . $fe;
         }
-        if (!$errors) {
+        if (!$errors && $error === '') {
             $ok = mbus_db_prepare($conn,
                 "INSERT INTO operator_application
                     (full_name, email, phone_number, address, license_number, license_expiry, vehicle_type, vehicle_plate_number,
