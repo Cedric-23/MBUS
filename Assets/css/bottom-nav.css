@@ -1,5 +1,5 @@
 :root {
-  --bottom-nav-height: 64px;
+  --bottom-nav-height: 58px;
 }
 
 .bottom-nav {
@@ -16,16 +16,16 @@
     display: flex;
     align-items: stretch;
     justify-content: space-around;
-    gap: var(--space-1);
+    gap: 4px;
     width: auto;
     min-height: var(--bottom-nav-height);
-    padding: 6px;
-    border: 1px solid rgba(15, 27, 45, 0.06);
-    border-radius: 22px;
-    background: rgba(255, 255, 255, 0.92);
-    -webkit-backdrop-filter: saturate(180%) blur(14px);
-    backdrop-filter: saturate(180%) blur(14px);
-    box-shadow: 0 12px 32px rgba(15, 27, 45, 0.16);
+    padding: 4px;
+    border: 1px solid rgba(15, 27, 45, 0.07);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.96);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+    backdrop-filter: saturate(180%) blur(12px);
+    box-shadow: 0 8px 24px rgba(15, 27, 45, 0.13);
   }
 
   .bottom-nav-item {
@@ -35,27 +35,29 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 2px;
     min-width: 0;
-    min-height: 48px;
-    padding: var(--space-1) var(--space-2);
+    min-height: 46px;
+    padding: 4px 3px;
     overflow: hidden;
     border: 0;
-    border-radius: 16px;
+    border-radius: 15px;
     background: transparent;
     color: #6b7a90;
-    font-size: clamp(0.62rem, 2.3vw, 0.75rem);
+    font-size: clamp(0.59rem, 2.15vw, 0.69rem);
     font-weight: 600;
-    line-height: 1.1;
+    line-height: 1.05;
     text-align: center;
     text-decoration: none;
     white-space: nowrap;
+    transition: color .16s ease, background .16s ease;
   }
 
-  .bottom-nav-item i { font-size: 1.15rem; line-height: 1; }
+  .bottom-nav-item i { font-size: 1.04rem; line-height: 1; }
   .bottom-nav-item span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .bottom-nav-item:hover,
   .bottom-nav-item.active { color: var(--color-accent); background: #e9f1ff; }
+  .bottom-nav-item.active { font-weight: 750; }
   .bottom-nav-item.active::after { display: none; }
 
   body.has-bottom-nav .main,

@@ -51,7 +51,10 @@ assert.doesNotMatch(css, /\.lv-map \{[^}]*position: fixed/s);
 assert.doesNotMatch(css, /\.lv-sheet/);
 assert.doesNotMatch(css, /\.commuter-live-page \{[^}]*overflow:\s*hidden/s);
 assert.doesNotMatch(css, /\.lv-header \{[^}]*position:\s*fixed/s);
-assert.match(css, /calc\(112px \+ env\(safe-area-inset-bottom\)\)/);
+assert.match(css, /grid-template-areas: "buses" "map"/);
+assert.match(css, /height: clamp\(205px, 29dvh, 255px\)/);
+assert.match(css, /\.lv-header \.profile-avatar img \{[^}]*max-width: 100%/s);
+assert.match(css, /calc\(var\(--bottom-nav-height\) \+ 24px \+ env\(safe-area-inset-bottom\)\)/);
 assert.match(css, /\.bus-row-route \{[^}]*text-overflow: ellipsis/s);
 assert.match(css, /\.commuter-live-page \.leaflet-control-attribution/);
 assert.doesNotMatch(css, /leaflet-control-attribution[^}]*display:\s*none/,

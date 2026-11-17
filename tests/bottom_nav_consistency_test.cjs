@@ -26,8 +26,9 @@ for (const page of navPages) {
 const sharedCss = read('Assets/css/bottom-nav.css');
 assert.match(sharedCss, /left:\s*12px;[\s\S]*right:\s*12px;[\s\S]*bottom:\s*calc\(10px \+ env\(safe-area-inset-bottom\)\)/,
     'shared mobile navigation should use the same floating placement as Home');
-assert.match(sharedCss, /border-radius:\s*22px;[\s\S]*backdrop-filter:\s*saturate\(180%\) blur\(14px\)/,
-    'shared mobile navigation should keep the Home glass treatment');
+assert.match(sharedCss, /--bottom-nav-height:\s*58px/);
+assert.match(sharedCss, /border-radius:\s*20px;[\s\S]*backdrop-filter:\s*saturate\(180%\) blur\(12px\)/,
+    'shared mobile navigation should keep a compact glass treatment');
 assert.match(sharedCss, /\.bottom-nav-item\.active::after\s*\{\s*display:\s*none;/,
     'shared active state should match the Home navigation');
 assert.doesNotMatch(read('Assets/css/ui2026.css'), /Floating bottom navigation/,
