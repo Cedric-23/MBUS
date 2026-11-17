@@ -60,7 +60,7 @@
             map = L.map('trackingMap', { zoomControl: false }).setView([14.6798552, 120.2728757], 13);
             L.control.zoom({ position: 'topleft' }).addTo(map);
             if (map.attributionControl && map.attributionControl.setPrefix) map.attributionControl.setPrefix(false);
-            if (map.attributionControl && map.attributionControl.setPosition) map.attributionControl.setPosition('topright');
+            if (map.attributionControl && map.attributionControl.setPosition) map.attributionControl.setPosition('bottomright');
             const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · <a href="https://project-osrm.org/" target="_blank" rel="noopener">OSRM</a>' }).addTo(map);
             tiles.on('tileerror', () => { el('mapMessage').hidden = false; el('mapMessage').textContent = 'Map tiles could not load. Bus status below is still current.'; });
             markerLayer = L.layerGroup().addTo(map);

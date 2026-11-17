@@ -30,13 +30,12 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
     <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
 </head>
 <body class="has-bottom-nav commuter-live-page">
-<main class="lv-main" role="main">
-    <div id="trackingMap" class="lv-map" role="region" aria-label="Map of live buses"></div>
-
+<main class="main lv-shell" role="main">
     <header class="lv-header">
         <div class="lv-title">
             <p class="lv-eyebrow"><span class="lv-live-dot" aria-hidden="true"></span> LIVE TRACKING</p>
             <h1>Live buses</h1>
+            <p class="lv-subtitle">Follow buses along their road route.</p>
         </div>
         <div class="lv-header-actions">
             <div class="lv-live-count" role="status" aria-live="polite">
@@ -61,37 +60,50 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
 
     <p id="liveMessage" class="lv-notice" role="status" aria-live="polite" hidden></p>
 
-    <section class="lv-sheet" aria-label="Live bus routes">
-        <div class="lv-sheet-handle" aria-hidden="true"></div>
-        <div class="lv-sheet-head">
-            <div class="lv-sheet-title">
-                <h2 id="busListHeading">Buses in service</h2>
-                <p><strong id="trackingStatus">0</strong> active trips · tap a bus to focus</p>
+    <div class="lv-content">
+        <section class="lv-map-panel" aria-labelledby="mapHeading">
+            <div class="lv-panel-head">
+                <div>
+                    <p class="lv-section-label">LIVE MAP</p>
+                    <h2 id="mapHeading">Bus locations</h2>
+                </div>
+                <button type="button" id="routeViewButton" class="route-view-btn" disabled aria-pressed="false">Focus bus</button>
             </div>
-            <label class="lv-filter">
-                <span class="sr-only">Choose a bus</span>
-                <select id="liveSchedule" name="schedule_id" aria-label="Choose a bus" disabled>
-                    <option value="">All buses</option>
-                </select>
-            </label>
-        </div>
+            <div class="lv-map-toolbar">
+                <label class="lv-filter">
+                    <span class="lv-filter-label">Trip</span>
+                    <select id="liveSchedule" name="schedule_id" aria-label="Choose a bus" disabled>
+                        <option value="">All buses</option>
+                    </select>
+                </label>
+                <div class="lv-legend" aria-label="Map legend">
+                    <span><i class="dot-bus" aria-hidden="true"></i>Live</span>
+                    <span><i class="route-line-key" aria-hidden="true"></i>Route</span>
+                    <span><i class="dot-stale" aria-hidden="true"></i>Last pin</span>
+                </div>
+            </div>
+            <div id="trackingMap" class="lv-map" role="region" aria-label="Map of live buses"></div>
+            <p id="mapMessage" class="lv-map-error" role="status" aria-live="polite" hidden></p>
+            <div class="lv-route-card">
+                <span class="lv-route-icon" aria-hidden="true"><i class="fa fa-route"></i></span>
+                <p id="routeEstimate" role="status" aria-live="polite">Select a bus to see its road route and destination estimate.</p>
+            </div>
+        </section>
 
-        <div class="lv-route-controls">
-            <p id="routeEstimate" class="lv-route-estimate" role="status" aria-live="polite">Select a bus to see its road route and destination estimate.</p>
-            <button type="button" id="routeViewButton" class="route-view-btn" disabled aria-pressed="false">Focus bus</button>
-        </div>
-
-        <div class="lv-legend" aria-label="Map legend">
-            <span><i class="dot-bus" aria-hidden="true"></i>Live bus</span>
-            <span><i class="route-line-key" aria-hidden="true"></i>Road route</span>
-            <span><i class="dot-stale" aria-hidden="true"></i>Last pin</span>
-        </div>
-
-        <p id="mapMessage" class="lv-map-error" role="status" aria-live="polite" hidden></p>
-        <p id="busEmpty" class="lv-empty">Finding active buses…</p>
-        <div id="busList" class="lv-bus-list" aria-live="polite"></div>
-        <p class="lv-refresh-note"><i class="fa fa-rotate" aria-hidden="true"></i> Auto-refreshes while open</p>
-    </section>
+        <section class="lv-bus-panel" aria-labelledby="busListHeading">
+            <div class="lv-bus-panel-head">
+                <div>
+                    <p class="lv-section-label">IN SERVICE</p>
+                    <h2 id="busListHeading">Active buses</h2>
+                    <p class="lv-bus-hint">Tap a bus to focus its map pin.</p>
+                </div>
+                <span class="lv-trip-count"><strong id="trackingStatus">0</strong><span>trips</span></span>
+            </div>
+            <p id="busEmpty" class="lv-empty">Finding active buses…</p>
+            <div id="busList" class="lv-bus-list" aria-live="polite"></div>
+            <p class="lv-refresh-note"><i class="fa fa-rotate" aria-hidden="true"></i> Auto-refreshes while this page is open</p>
+        </section>
+    </div>
 </main>
 
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">

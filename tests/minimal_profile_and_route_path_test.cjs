@@ -41,7 +41,7 @@ assert.ok(livePage.indexOf('live_schedule_selection.js') < livePage.indexOf('com
 assert.match(livePage, /route-line-key/);
 assert.match(livePage, /Focus bus/);
 assert.doesNotMatch(livePage, /dot-commuter|Pickup distance|profileImage/);
-assert.match(liveCss, /\.lv-sheet/);
+assert.match(liveCss, /\.lv-bus-panel/);
 assert.match(liveCss, /\.bus-row-route \{[^}]*text-overflow: ellipsis/s);
 assert.match(waitingPage, /id="cwbMap"[^>]*hidden/);
 assert.match(waitingPage, /id="cwbEmpty"/);
