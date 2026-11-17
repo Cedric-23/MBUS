@@ -77,7 +77,7 @@
         if (points.length === 1) map.setView(points[0], 16, { animate: !!animate });
         else map.fitBounds(L.latLngBounds(points).pad(.3), {
             paddingTopLeft: [24, 100],
-            paddingBottomRight: [24, Math.max(220, (el('cwbSheet').offsetHeight || 190) + 36)],
+            paddingBottomRight: [24, Math.max(120, (el('cwbSheet').offsetHeight || 120) + 24)],
             maxZoom: 16,
             animate: !!animate
         });
@@ -147,7 +147,7 @@
         focusedPoints(trip).forEach(point => bounds.extend(point));
         map.fitBounds(bounds.pad(.06), {
             paddingTopLeft: [24, 100],
-            paddingBottomRight: [24, Math.max(220, (el('cwbSheet').offsetHeight || 190) + 36)],
+            paddingBottomRight: [24, Math.max(120, (el('cwbSheet').offsetHeight || 120) + 24)],
             maxZoom: 12,
             animate: false
         });
@@ -377,7 +377,23 @@
         clearTimeout(timer);
         if (!document.hidden) timer = setTimeout(async () => { if (!busy) await load(); scheduleNext(); }, 10000);
     }
+    function toggleDetails() {
+        const details = el('cwbRouteControls');
+        const expanded = details.hidden;
+        details.hidden = !expanded;
+        el('cwbDetailsToggle').setAttribute('aria-expanded', String(expanded));
+        el('cwbDetailsToggle').setAttribute('aria-label', expanded ? 'Hide route details' : 'Show route details');
+        el('cwbDetailsLabel').textContent = expanded ? 'Less' : 'Details';
+        requestAnimationFrame(() => {
+            if (!map || !trackSelected) return;
+            const trip = requestTrip();
+            if (!trip) return;
+            if (routeViewMode === 'route' && routeData) fitFullRoute(trip);
+            else fit(focusedPoints(trip), false);
+        });
+    }
     el('cwbRefresh').addEventListener('click', load);
+    el('cwbDetailsToggle').addEventListener('click', toggleDetails);
     el('cwbRouteView').addEventListener('click', routeAction);
     window.addEventListener('resize', () => {
         if (!map) return;

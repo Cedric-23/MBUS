@@ -40,7 +40,7 @@ $profileImage = $hasDbPic ? '../avatar.php?v=' . rawurlencode((string)$pr['pic_v
     <header class="cwb-header">
         <div class="cwb-title">
             <h1>Waiting</h1>
-            <p id="cwbUpdated">Checking your waiting status…</p>
+            <p id="cwbUpdated">Checking status…</p>
         </div>
         <button type="button" id="cwbRefresh" class="cwb-icon-button" aria-label="Refresh waiting status">
             <i class="fa fa-rotate" aria-hidden="true"></i>
@@ -73,16 +73,21 @@ $profileImage = $hasDbPic ? '../avatar.php?v=' . rawurlencode((string)$pr['pic_v
     <p id="cwbNotice" class="cwb-notice" role="status" aria-live="polite" hidden></p>
 
     <section id="cwbSheet" class="cwb-sheet" aria-label="Your waiting bus" hidden>
-        <div class="cwb-sheet-handle" aria-hidden="true"></div>
         <div class="cwb-sheet-head">
-            <h2><span id="cwbCount">1</span> waiting</h2>
-            <span id="cwbBusLiveCount" class="cwb-sheet-sub"></span>
+            <div class="cwb-sheet-heading">
+                <h2><span id="cwbCount">1</span> waiting</h2>
+                <span id="cwbBusLiveCount" class="cwb-sheet-sub"></span>
+            </div>
+            <button type="button" id="cwbDetailsToggle" class="cwb-details-toggle" aria-expanded="false" aria-controls="cwbRouteControls" aria-label="Show route details">
+                <span id="cwbDetailsLabel">Details</span>
+                <i class="fa fa-chevron-up" aria-hidden="true"></i>
+            </button>
         </div>
-        <div class="cwb-route-controls">
+        <ul id="cwbList" class="cwb-list" aria-live="polite"></ul>
+        <div id="cwbRouteControls" class="cwb-route-controls" hidden>
             <p id="cwbRouteEstimate" class="cwb-route-estimate" role="status" aria-live="polite">Loading your bus route…</p>
             <button type="button" id="cwbRouteView" class="cwb-route-view" disabled>Full route</button>
         </div>
-        <ul id="cwbList" class="cwb-list" aria-live="polite"></ul>
         <p class="cwb-map-credit">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> · Routes by <a href="https://project-osrm.org/" target="_blank" rel="noopener noreferrer">OSRM</a></p>
     </section>
 </main>

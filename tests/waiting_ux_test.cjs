@@ -58,8 +58,8 @@ assert.match(waitingBoardCss, /body\.commuter-waiting-board \.bottom-nav\s*\{[^}
     'the Waiting nav should use the same solid white background as the bus sheet');
 assert.match(waitingBoardCss, /\.cwb-map-credit\s*\{[^}]*border-top:\s*1px solid #edf0f4/,
     'map credits should sit in a quiet footer inside the Waiting sheet');
-assert.match(waitingBoardCss, /\.cwb-list\s*\{[^}]*flex:\s*0 1 auto;[^}]*min-height:\s*0;[^}]*overflow-y:\s*auto/s,
-    'the rider list should scroll above the footer instead of pushing map credits out of view');
+assert.match(waitingBoardCss, /\.cwb-list\s*\{[^}]*flex:\s*0 0 auto;[^}]*max-height:\s*60px;[^}]*overflow-y:\s*auto/s,
+    'the bus row should stay usable while the sheet preserves space for its credits');
 assert.match(commuterWaiting, /class="cwb-map-credit"[^>]*>[\s\S]*OpenStreetMap[\s\S]*Routes by[\s\S]*OSRM/,
     'the Waiting sheet must keep visible map-source and routing credits');
 assert.match(commuterWaiting, /href="https:\/\/www\.openstreetmap\.org\/copyright"/,
@@ -72,6 +72,24 @@ assert.match(waitingBoardCss, /\.cwb-sheet\s*\{[^}]*padding:\s*9px 14px 8px/s,
     'the sheet should not add redundant safe-area padding inside the dock-connected edge');
 assert.match(waitingBoardCss, /@media \(min-width: 769px\) \{[\s\S]*?\.cwb-sheet\s*\{[^}]*bottom:\s*16px/s,
     'desktop Waiting sheet should use a simple edge margin when the mobile dock is hidden');
+assert.match(commuterWaiting, /id="cwbDetailsToggle"[^>]*aria-expanded="false"[^>]*aria-controls="cwbRouteControls"/,
+    'route details must start collapsed and have an accessible toggle');
+assert.match(commuterWaiting, /id="cwbRouteControls"[^>]*hidden/,
+    'route details should not cover the map until requested');
+assert.match(waitingBoardCss, /\.cwb-route-controls\[hidden\]\s*\{\s*display:\s*none/,
+    'the collapsed details must actually be hidden despite their flex layout');
+assert.match(waitingBoardCss, /\.cwb-route-controls\s*\{[^}]*min-height:\s*0;[^}]*overflow-y:\s*auto/s,
+    'long route messages must scroll without covering the bus row');
+assert.match(waitingBoardCss, /\.cwb-details-toggle\s*\{[^}]*min-height:\s*44px/s,
+    'the details toggle should remain easy to tap');
+assert.match(waitingBoardCss, /\.cwb-cancel\s*\{[^}]*min-height:\s*44px/s,
+    'the separate cancel action should remain easy to tap');
+assert.match(waitingBoardJs, /function toggleDetails\(\)[\s\S]*?details\.hidden = !expanded;[\s\S]*?setAttribute\('aria-expanded', String\(expanded\)\)/,
+    'the toggle must reveal details and update its expanded state');
+assert.match(waitingBoardJs, /expanded \? 'Hide route details' : 'Show route details'/);
+assert.match(waitingBoardJs, /el\('cwbDetailsToggle'\)\.addEventListener\('click', toggleDetails\)/);
+assert.match(waitingBoardJs, /Math\.max\(120, \(el\('cwbSheet'\)\.offsetHeight \|\| 120\) \+ 24\)/,
+    'map fitting should use the current compact or expanded sheet height');
 assert.match(waitingBoardJs, /myRequest\.status !== 'Waiting'/);
 assert.match(waitingBoardJs, /showEmpty\(\)/);
 assert.match(waitingBoardJs, /personIcon/);
