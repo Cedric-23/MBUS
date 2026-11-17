@@ -122,7 +122,7 @@ $phoneOk = $lastSecs !== null && $lastSecs < 86400 * 2;
     <link rel="stylesheet" href="../Assets/css/operator/operator_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
-    <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
+    <link rel="stylesheet" href="../Assets/css/bottom-nav.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/bottom-nav.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/operator_payments.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/operator_payments.css'); ?>">
     <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">

@@ -157,7 +157,7 @@ $query = mbus_db_prepare($conn, "
     <link rel="shortcut icon" href="../Assets/images/mbus_icon.png">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
-    <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
+    <link rel="stylesheet" href="../Assets/css/bottom-nav.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/bottom-nav.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/gps_status.css">
     <link rel="stylesheet" href="../Assets/css/operator/operator_trip_cards.css">

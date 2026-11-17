@@ -86,19 +86,8 @@ h1,h2,h3{letter-spacing:-.02em;color:var(--color-text-primary)}
 }
 .sidebar .logout-btn:hover{background:rgba(255,255,255,.08);color:#fff}
 
-/* ---------- Floating bottom navigation ---------- */
+/* ---------- Bottom navigation page spacing ---------- */
 @media (max-width:768px){
-  .bottom-nav{
-    left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));
-    width:auto;border:1px solid rgba(15,27,45,.06);border-radius:22px;
-    background:rgba(255,255,255,.92);
-    -webkit-backdrop-filter:saturate(180%) blur(14px);backdrop-filter:saturate(180%) blur(14px);
-    box-shadow:0 12px 32px rgba(15,27,45,.16);
-    padding:6px;
-  }
-  .bottom-nav-item{border-radius:16px;color:#6b7a90;font-weight:600}
-  .bottom-nav-item:hover,.bottom-nav-item.active{background:#e9f1ff;color:var(--color-accent)}
-  .bottom-nav-item.active::after{display:none}
   body.has-bottom-nav .main{padding-bottom:calc(var(--bottom-nav-height) + 2.5rem + env(safe-area-inset-bottom))}
 }
 

@@ -79,7 +79,7 @@ elseif($filter=="nextweek"){
 <link rel="stylesheet" href="../Assets/css/commuter_schedule.css">
 <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
 <link rel="stylesheet" href="../Assets/css/professional-filters.css">
-<link rel="stylesheet" href="../Assets/css/bottom-nav.css">
+<link rel="stylesheet" href="../Assets/css/bottom-nav.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/bottom-nav.css'); ?>">
 
 <!-- FullCalendar CSS -->
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet'>

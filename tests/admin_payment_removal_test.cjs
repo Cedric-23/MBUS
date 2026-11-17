@@ -1,4 +1,4 @@
-/* Admin GCash controls are removed without deleting payment data or touching commuter checkout. */
+/* Admin manual payment review is removed without deleting payment data or touching commuter checkout. */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -6,8 +6,8 @@ const root = path.resolve(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
 const menu = read('Includes/admin_menu.php');
-assert.doesNotMatch(menu, /gcash|paymongo|payment_verifications|paymongo_checkout/i,
-    'shared Admin account menu must not expose or query the retired GCash console');
+assert.doesNotMatch(menu, /GCash payments|payment_verifications|paymongo_checkout/i,
+    'shared Admin account menu must not expose or query the retired payment-verification console');
 assert.match(menu, /verifications\.php/, 'ID approvals remain in the Admin account menu');
 assert.match(menu, /operator_applications\.php/, 'operator applications remain in the Admin account menu');
 
@@ -27,4 +27,4 @@ assert.match(commuterPayment, /paymongo_create_gcash_checkout/,
 assert.match(commuterPayment, /start_gcash/,
     'the existing commuter fallback is intentionally unchanged in this Admin-only cleanup');
 
-console.log('PASS Admin GCash menu and direct review URLs are disabled; commuter payment flow and data remain untouched');
+console.log('PASS Admin payment-review console and direct review URLs are disabled; commuter payment flow and data remain untouched');

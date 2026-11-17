@@ -94,7 +94,7 @@ if(isset($_POST['add_schedule'])){
     <link rel="stylesheet" href="../Assets/css/admin/manage_schedules.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
-    <link rel="stylesheet" href="../Assets/css/bottom-nav.css">
+    <link rel="stylesheet" href="../Assets/css/bottom-nav.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/bottom-nav.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
