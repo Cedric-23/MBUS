@@ -60,7 +60,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
 
     <title>Operator Dashboard</title>
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
-    <link rel="stylesheet" href="../Assets/css/app-header.css">
+    <link rel="stylesheet" href="../Assets/css/app-header.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/app-header.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/bottom-nav.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/commuter_home.css">
