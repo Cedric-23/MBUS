@@ -450,7 +450,9 @@ document.getElementById("reserveBtn")
 
     const btn = document.getElementById("reserveBtn");
     setBusy(btn, true, "Reserving");
+    window.__mbusReserving = true;
     const result = await reserveSeats();
+    if (!result.ok) window.__mbusReserving = false;
 
     if (result.ok) {
 
@@ -555,7 +557,8 @@ function showTopError(message) {
         document.querySelectorAll(".seat-btn").forEach(btn => {
             const seat = btn.dataset.seat;
             const isTaken = taken.has(seat);
-            if (isTaken && btn.classList.contains("selected")) {
+            // Your own just-made hold counts as taken on the server; that is not "someone else".
+            if (isTaken && !mine[seat] && btn.classList.contains("selected")) {
                 btn.classList.remove("selected");
                 selectedSeats = selectedSeats.filter(s => s != seat);
                 lost.push(seat);
@@ -576,7 +579,7 @@ function showTopError(message) {
     }
 
     async function poll() {
-        if (document.hidden) return;
+        if (document.hidden || window.__mbusReserving) return;
         try {
             const r = await fetch("../api/get_seat_availability.php?schedule_id=" + scheduleId, { cache: "no-store" });
             if (r.ok) apply(await r.json());

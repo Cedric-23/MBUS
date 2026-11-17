@@ -1,5 +1,5 @@
 /* Operator: payments (GCash checks + account setup) */
-.pay-page .pay-wrap{width:100%;max-width:620px;margin:0 auto;display:grid;gap:12px;padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+.pay-page .pay-wrap{width:100%;max-width:720px;margin:0;display:grid;gap:12px;padding-bottom:calc(88px + env(safe-area-inset-bottom))}
 @media(min-width:769px){.pay-page .pay-wrap{padding-bottom:var(--space-8,32px)}}
 .pay-alert{padding:10px 14px;border-radius:12px;font-weight:600;font-size:.92rem;display:flex;gap:8px;align-items:center}
 .pay-alert.ok{background:#e7f6ec;color:#1a7f37}.pay-alert.bad{background:#fdecec;color:#b42318}.pay-alert.warn{background:#fff6e0;color:#8a5a00}
@@ -60,3 +60,6 @@
 .gc-actions{display:flex;gap:10px;margin-top:auto}
 .gc-btn{flex:1;min-height:44px;border-radius:12px;border:1.5px solid var(--color-border,#d5dce6);background:#fff;font:inherit;font-weight:600;cursor:pointer}
 .gc-btn.primary{background:#14304f;border-color:#14304f;color:#fff}
+
+/* Title sits on the same line as the profile avatar on phones */
+@media(max-width:768px){.pay-page .page-header{margin-top:12px!important}}

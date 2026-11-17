@@ -98,8 +98,8 @@ $until = $co['submitted_at'] ? date('g:i A', strtotime($co['submitted_at']) + 15
 <?php if($state === 'waiting'): ?><meta http-equiv="refresh" content="4"><?php endif; ?>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f6fa;font-family:Inter,system-ui,sans-serif;color:#172b4d}
-.box{width:min(380px,calc(100vw - 32px));padding:28px 24px;border-radius:20px;background:#fff;box-shadow:0 8px 30px rgba(23,43,77,.12);text-align:center}
+body{margin:0;min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr);place-items:center;padding:24px 0;box-sizing:border-box;background:#f4f6fa;font-family:Inter,system-ui,sans-serif;color:#172b4d}
+.box{box-sizing:border-box;width:min(380px,calc(100vw - 32px));min-width:0;padding:28px 20px;border-radius:20px;background:#fff;box-shadow:0 8px 30px rgba(23,43,77,.12);text-align:center}
 .spin{width:38px;height:38px;margin:0 auto 16px;border:4px solid #dbe5f1;border-top-color:#1e3a5f;border-radius:50%;animation:s 1s linear infinite}
 @keyframes s{to{transform:rotate(360deg)}}
 h1{margin:0 0 8px;font-size:1.15rem}p{margin:0;color:#5b6b7e;font-size:.92rem;line-height:1.5}
@@ -112,7 +112,7 @@ p.lbl{margin:0;font-size:.82rem}.amt{margin:2px 0 6px;font-size:2.1rem;font-weig
 a.alt{background:none;color:#5b6b7e;font-weight:600;min-height:40px;margin-top:6px}
 details.ref{margin-top:12px;text-align:left;border:1px solid #e1e7ef;border-radius:12px;padding:0 12px}
 details.ref summary{min-height:44px;display:flex;align-items:center;font-weight:600;font-size:.86rem;color:#33445c;cursor:pointer}
-.refform{display:grid;gap:8px;padding-bottom:12px}.refform input[type=text]{min-height:44px;padding:0 12px;border:1.5px solid #cfd8e6;border-radius:12px;font:inherit;font-size:.95rem}
+.refform{display:grid;gap:8px;padding-bottom:12px;min-width:0}.refform input{box-sizing:border-box;width:100%;min-width:0}.row .cp{min-width:0;padding:0 8px}.refform input[type=text]{min-height:44px;padding:0 12px;border:1.5px solid #cfd8e6;border-radius:12px;font:inherit;font-size:.95rem}
 .refform .shot{font-size:.82rem;color:#5b6b7e;display:grid;gap:4px}.refform .shot i{display:none}.refform input[type=file]{font-size:.8rem}
 .refform .cp{flex:none}details.ref .sent{margin:0 0 8px;font-size:.84rem;color:#1a7f37}details.ref .err{margin:0 0 8px;font-size:.84rem;color:#b42318}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}

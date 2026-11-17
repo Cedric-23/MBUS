@@ -280,3 +280,7 @@
     font-size: var(--fs-base);
   }
 }
+
+/* The avatar scrolls away with the header here, so it never covers the ticket text */
+.ticket-page{position:relative}
+.ticket-page .profile-menu-wrap{position:absolute!important}

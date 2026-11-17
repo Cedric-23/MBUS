@@ -921,3 +921,15 @@
 
 /* Your own paid seat shows green */
 .reserve-page .seat-btn.reserved.mine{background:#16a34a;color:#fff;text-decoration:none}
+
+/* Payment trip summary: label left, value right, long stop lists wrap inside their own column */
+.payment-page .trip-details{display:block;margin:12px 0}
+.payment-page .trip-details li{display:grid;grid-template-columns:92px minmax(0,1fr);gap:4px 12px;align-items:baseline;padding:8px 0;border-top:1px solid var(--color-border-light,#e9edf3)}
+.payment-page .trip-details li:first-child{border-top:0}
+.payment-page .trip-details li>span{text-align:right;overflow-wrap:anywhere}
+.payment-page .trip-details .payment-seat-stop{display:block;text-align:right;font-size:.875rem}
+.payment-page .trip-details .payment-seat-stop+.payment-seat-stop{margin-top:4px}
+.payment-page .trip-details .trip-total{padding-top:12px}
+.payment-page .seats-section{display:block}
+.payment-page .seats-section>strong{display:block;margin-bottom:8px;color:var(--color-text-muted);font-weight:500}
+.payment-page .pay-seat{margin:0 0 8px}
