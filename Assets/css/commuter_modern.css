@@ -1,0 +1,83 @@
+/* Commuter skin: soft blue canvas, airy white cards, pill controls, floating nav.
+   Loaded last; everything is scoped to body.cm so other roles are untouched. */
+.cm{
+  --color-primary:#2f6fe4;--color-primary-light:#4a86f0;--color-primary-dark:#2358c0;
+  --color-accent:#2f6fe4;--color-accent-hover:#4a86f0;
+  --color-bg:#edf3fe;--color-text-primary:#14213d;--color-text-secondary:#4a5b78;--color-text-muted:#7a8aa6;
+  --color-border:#dde7f8;--color-border-light:#e8effb;
+  --cm-card:#fff;--cm-shadow:0 12px 32px rgba(47,111,228,.10);--cm-shadow-sm:0 4px 14px rgba(47,111,228,.08);
+  --cm-r:24px;
+  background:linear-gradient(180deg,#e6efff 0,#f3f7ff 55%,#f7f9ff 100%) fixed!important;
+  color:var(--color-text-primary);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+.cm h1,.cm h2,.cm h3{letter-spacing:-.01em;color:#14213d}
+
+/* Cards */
+.cm .card,.cm .bus-card,.cm .next-trip,.cm .reservation-card,.cm .res-group,.cm .home-perk{
+  background:var(--cm-card);border:1px solid rgba(255,255,255,.9);border-radius:var(--cm-r);box-shadow:var(--cm-shadow-sm)}
+.cm .bus-card{padding:18px 18px 16px;box-shadow:var(--cm-shadow)}
+
+/* Hero card on Home */
+.cm .next-trip{background:linear-gradient(135deg,#2f6fe4 0,#4f8cf5 100%);color:#fff;border:0;box-shadow:0 14px 34px rgba(47,111,228,.32)}
+.cm .next-trip *{color:inherit}
+.cm .next-trip a.next-cta{background:#fff!important;color:#2f6fe4!important;box-shadow:none}
+.cm .next-trip.is-empty{background:var(--cm-card);color:var(--color-text-primary);border:1px solid rgba(255,255,255,.9);box-shadow:var(--cm-shadow-sm)}
+
+/* Trip rows (Home "Leaving soon") */
+.cm .soon-list a{background:#fff;border:1px solid rgba(255,255,255,.9);border-radius:22px;box-shadow:var(--cm-shadow-sm);padding:14px 16px}
+.cm .soon-time{color:#2f6fe4;font-weight:700}
+
+/* Schedule trip card: time  -  bus  -  time */
+.cm .bus-card-top{margin-bottom:14px}
+.cm .bus-name{display:inline-flex;align-items:center;gap:8px;font-weight:600;color:#14213d}
+.cm .bus-name i{display:none}
+.cm .trip-line{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px;padding-bottom:16px;border-bottom:1px dashed #d6e2f7}
+.cm .tl-end{display:flex;flex-direction:column;gap:4px;min-width:0}
+.cm .tl-right{text-align:right;align-items:flex-end}
+.cm .tl-time{font-size:1.2rem;font-weight:700;letter-spacing:-.01em;color:#14213d}
+.cm .tl-place{font-size:.8rem;color:var(--color-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.cm .tl-mid{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:64px;position:relative}
+.cm .tl-bus{width:36px;height:36px;border-radius:50%;background:#e3edff;color:#2f6fe4;display:grid;place-items:center;font-size:.9rem;position:relative;z-index:1}
+.cm .tl-mid::before{content:"";position:absolute;left:-14px;right:-14px;top:18px;border-top:2px dotted #c3d5f5}
+.cm .tl-dur{font-size:.72rem;color:var(--color-text-muted);white-space:nowrap;background:var(--cm-card);padding:0 4px;position:relative;z-index:1}
+.cm .bus-actions{margin-top:14px}
+.cm .bus-card.is-full{opacity:.8}
+
+/* Buttons */
+.cm .btn-reserve,.cm .btn-primary,.cm .next-cta,.cm .btn.btn-primary{border-radius:999px!important;background:#2f6fe4!important;color:#fff!important;font-weight:600;min-height:50px;border:0;box-shadow:0 8px 18px rgba(47,111,228,.28)}
+.cm .btn-reserve.is-disabled,.cm .btn-reserve[aria-disabled="true"]{background:#c9d6ee!important;box-shadow:none;color:#fff!important}
+.cm .btn-outline,.cm .btn.btn-outline{border-radius:999px;border:1.5px solid #cfe0fb;color:#2f6fe4;background:#fff}
+.cm .btn-success{border-radius:999px}
+
+/* Chips and pills */
+.cm .seat-chip,.cm .status-badge,.cm .badge{border-radius:999px;font-weight:600}
+.cm .seat-chip.ok{background:#e4f6ec;color:#1b7a46}.cm .seat-chip.low{background:#fff1d9;color:#9a5b00}.cm .seat-chip.full{background:#fde8e8;color:#b42318}
+.cm .filter-chip,.cm .chip,.cm .pill,.cm [class*="filter"] button,.cm [class*="filter"] a{border-radius:999px}
+.cm .filter-chip.active,.cm .chip.active,.cm [class*="filter"] .active{background:#2f6fe4!important;border-color:#2f6fe4!important;color:#fff!important;box-shadow:0 6px 16px rgba(47,111,228,.28)}
+
+/* Header */
+.cm .page-header h1,.cm .home-hello strong{font-weight:700}
+.cm .profile-trigger{background:#fff;border-radius:50%;box-shadow:var(--cm-shadow-sm)}
+
+/* Floating bottom nav */
+@media(max-width:768px){
+  .cm .bottom-nav{left:14px;right:14px;bottom:calc(12px + env(safe-area-inset-bottom));padding:8px;min-height:68px;border:0;border-radius:30px;background:rgba(255,255,255,.96);box-shadow:0 14px 36px rgba(47,111,228,.22);backdrop-filter:blur(10px)}
+  .cm .bottom-nav-item{border-radius:22px;color:#7a8aa6}
+  .cm .bottom-nav-item.active,.cm .bottom-nav-item:hover{background:#2f6fe4;color:#fff;box-shadow:0 8px 18px rgba(47,111,228,.35)}
+  .cm .bottom-nav-item.active::after{display:none}
+}
+.cm.has-bottom-nav .main{padding-bottom:calc(110px + env(safe-area-inset-bottom))}
+
+/* Inputs */
+.cm input[type=text],.cm input[type=email],.cm input[type=tel],.cm input[type=password],.cm input[type=number],.cm select,.cm textarea{border-radius:16px;border:1.5px solid #dde7f8;background:#fff}
+.cm input:focus,.cm select:focus,.cm textarea:focus{border-color:#2f6fe4;box-shadow:0 0 0 4px rgba(47,111,228,.14);outline:0}
+.cm .home-perk{background:#fff}
+
+.cm .bus-actions{border-top:0!important;padding-top:0!important}
+.cm .date-filter-container,.cm .date-filters{background:transparent!important;border:0!important;box-shadow:none!important}
+.cm .date-filter-btn{border-radius:999px;background:#fff;border:1px solid #dde7f8;color:#4a5b78}
+.cm .date-filter-btn.active{background:#2f6fe4;border-color:#2f6fe4;color:#fff;box-shadow:0 6px 16px rgba(47,111,228,.28)}
+.cm .reservation-card,.cm .res-group{margin:0 0 14px;padding:16px 18px}
+.cm .direction-tabs,.cm .dir-tabs,.cm [class*="direction"]{background:#e3edff;border-radius:999px}
+.cm [class*="direction"] .active,.cm [class*="direction"] [aria-selected="true"]{background:#fff;color:#2f6fe4;border-radius:999px;box-shadow:var(--cm-shadow-sm)}

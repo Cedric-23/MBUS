@@ -8,6 +8,7 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const menu = read('Includes/admin_menu.php');
 assert.doesNotMatch(menu, /GCash payments|payment_verifications|paymongo_checkout/i,
     'shared Admin account menu must not expose or query the retired payment-verification console');
+assert.match(menu, /gcash_approval\.php/, 'Admin menu links the GCash account approval page');
 assert.match(menu, /verifications\.php/, 'ID approvals remain in the Admin account menu');
 assert.match(menu, /operator_applications\.php/, 'operator applications remain in the Admin account menu');
 
