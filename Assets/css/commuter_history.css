@@ -106,3 +106,27 @@
     align-items: flex-start;
   }
 }
+
+.trip-completion-confirmation {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 var(--space-3);
+  padding: 12px 14px;
+  border: 1px solid #a8ddbd;
+  border-radius: 12px;
+  background: #effaf3;
+  color: #17663a;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+
+.trip-completion-confirmation i {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: #16834a;
+}
+
+.trip-completion-confirmation[hidden] {
+  display: none !important;
+}

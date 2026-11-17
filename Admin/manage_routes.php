@@ -1,172 +1,105 @@
 <?php
-
 session_start();
 
 /* CHECK ADMIN */
-if(
-    !isset($_SESSION['user_type'])
-    ||
-    strtolower($_SESSION['user_type']) != "admin"
-){
-    header("Location: ../login.php");
+if (!isset($_SESSION['user_type']) || strtolower((string)$_SESSION['user_type']) !== 'admin') {
+    header('Location: ../login.php');
     exit();
 }
 
-include "../config/db_connect.php";
-include "../Includes/csrf.php";
+include '../config/db_connect.php';
+include '../Includes/csrf.php';
 require_once __DIR__ . '/../Includes/route_locations.php';
 
-/* ROUTE OPTIONS */
-$places = [
-    "Morong Terminal" => "Morong Terminal",
-    "SBMA" => "Harbor Point"
-];
-$success = isset($_GET['added']) ? 'Route added successfully.' : '';
-
-/* ADD ROUTE */
-if(isset($_POST['add_route'])){
-    // Validate CSRF token
-    if(!csrf_validate_token()){
-        $error = "Security validation failed. Please try again.";
-    } else {
-        $origin = isset($_POST['origin']) && is_scalar($_POST['origin']) ? trim((string)$_POST['origin']) : '';
-        $destination = isset($_POST['destination']) && is_scalar($_POST['destination']) ? trim((string)$_POST['destination']) : '';
-
-        if($origin == "custom"){
-            $origin = isset($_POST['custom_origin']) && is_scalar($_POST['custom_origin']) ? trim((string)$_POST['custom_origin']) : '';
-        }
-
-        if($destination == "custom"){
-            $destination = isset($_POST['custom_destination']) && is_scalar($_POST['custom_destination']) ? trim((string)$_POST['custom_destination']) : '';
-        }
-
-        $fare = isset($_POST['fare']) && is_scalar($_POST['fare']) ? trim((string)$_POST['fare']) : '';
-        $origin_lat = isset($_POST['origin_lat']) && is_scalar($_POST['origin_lat']) ? trim((string)$_POST['origin_lat']) : '';
-        $origin_lng = isset($_POST['origin_lng']) && is_scalar($_POST['origin_lng']) ? trim((string)$_POST['origin_lng']) : '';
-        $destination_lat = isset($_POST['destination_lat']) && is_scalar($_POST['destination_lat']) ? trim((string)$_POST['destination_lat']) : '';
-        $destination_lng = isset($_POST['destination_lng']) && is_scalar($_POST['destination_lng']) ? trim((string)$_POST['destination_lng']) : '';
-
-        $knownOrigin = mbus_route_known_terminal($origin);
-        $knownDestination = mbus_route_known_terminal($destination);
-        if ($knownOrigin) {
-            $origin_lat = (string)$knownOrigin['latitude'];
-            $origin_lng = (string)$knownOrigin['longitude'];
-        }
-        if ($knownDestination) {
-            $destination_lat = (string)$knownDestination['latitude'];
-            $destination_lng = (string)$knownDestination['longitude'];
-        }
-        $coordinatesValid = is_numeric($origin_lat) && is_numeric($origin_lng) && is_numeric($destination_lat) && is_numeric($destination_lng)
-            && is_finite((float)$origin_lat) && is_finite((float)$origin_lng) && is_finite((float)$destination_lat) && is_finite((float)$destination_lng)
-            && abs((float)$origin_lat) <= 90 && abs((float)$destination_lat) <= 90
-            && abs((float)$origin_lng) <= 180 && abs((float)$destination_lng) <= 180;
-
-        if(!$coordinatesValid){
-            $error = "Choose both route points on the map before adding this route.";
-        } elseif($origin == $destination){
-            $error = "Origin and destination cannot be the same";
-        } else {
-            // Use prepared statement to check
-            $check = mbus_db_prepare($conn, "
-SELECT * FROM routes
-WHERE origin = ? AND destination = ?
-", [$origin, $destination]);
-
-            if(mbus_db_num_rows($check) > 0){
-                $error = "Route already exists";
-            } else {
-                $inserted = mbus_db_prepare($conn, "
-INSERT INTO routes(origin, destination, fare, origin_lat, origin_lng, destination_lat, destination_lng)
-VALUES (?, ?, ?, ?, ?, ?, ?)
-", [$origin, $destination, $fare, $origin_lat, $origin_lng, $destination_lat, $destination_lng]);
-                if ($inserted === false || $conn->affectedRows < 1) {
-                    error_log('Route insert failed: ' . mbus_db_error($conn));
-                    $error = "The route could not be saved. Check the database schema and try again.";
-                } else {
-                    header("Location: manage_routes.php?added=1");
-                    exit();
-                }
-            }
-        }
-    }
+$success = '';
+$error = '';
+if (isset($_GET['fare_updated'])) {
+    $success = 'Fare updated successfully.';
+} elseif (isset($_GET['fare_unchanged'])) {
+    $success = 'The fare is already set to that amount.';
 }
 
-/* DELETE ROUTE */
-if(isset($_POST['delete_route'])){
-    if(!csrf_validate_token()){
-        $error = "Security validation failed. Please try again.";
+/* Routes are intentionally fixed here; only the fare may be changed. */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_fare'])) {
+    if (!csrf_validate_token()) {
+        $error = 'Security validation failed. Please refresh and try again.';
     } else {
         $route_id = filter_var($_POST['route_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: 0;
-        if($route_id < 1){
-            $error = "The route to delete was not identified. Please refresh the page and try again.";
+        $fare_raw = isset($_POST['fare']) && is_scalar($_POST['fare']) ? trim((string)$_POST['fare']) : '';
+
+        if ($route_id < 1) {
+            $error = 'The route was not identified. Please refresh and try again.';
+        } elseif (!preg_match('/^\d+(?:\.\d{1,2})?$/', $fare_raw) || !is_finite((float)$fare_raw) || (float)$fare_raw < 0.01 || (float)$fare_raw > 100000) {
+            $error = 'Enter a fare from ₱0.01 to ₱100,000.00, with up to two decimal places.';
         } else {
-            // schedule.route_id intentionally has no cascade: deleting a route must not
-            // silently remove schedules, reservations, tickets, or payment history.
-            $usage = mbus_db_prepare($conn, "SELECT COUNT(*) AS n FROM schedule WHERE route_id = ?", [$route_id]);
-            if($usage === false){
-                error_log('Route usage check failed: ' . mbus_db_error($conn));
-                $error = "The route could not be checked before deletion. Please try again.";
+            $fare = number_format((float)$fare_raw, 2, '.', '');
+            $existing = mbus_db_prepare($conn, 'SELECT route_id, fare FROM routes WHERE route_id = ?', [$route_id]);
+            if ($existing === false) {
+                error_log('Route fare lookup failed: ' . mbus_db_error($conn));
+                $error = 'The route could not be loaded. Please try again.';
             } else {
-                $usage_row = mbus_db_fetch_assoc($usage);
-                $schedule_count = (int)($usage_row['n'] ?? 0);
-                if($schedule_count > 0){
-                    $error = "This route cannot be deleted because it is used by {$schedule_count} schedule" . ($schedule_count === 1 ? '' : 's') . ". Delete or move those schedules first.";
+                $route = mbus_db_fetch_assoc($existing);
+                if (!$route) {
+                    $error = 'That route no longer exists. Refresh the page and try again.';
+                } elseif ((int)round((float)$route['fare'] * 100) === (int)round((float)$fare * 100)) {
+                    header('Location: manage_routes.php?fare_unchanged=1');
+                    exit();
                 } else {
-                    $deleted = mbus_db_prepare($conn, "DELETE FROM routes WHERE route_id = ?", [$route_id]);
-                    if($deleted === false){
-                        error_log('Route delete failed: ' . mbus_db_error($conn));
-                        $error = "The route could not be deleted. Please try again.";
-                    } elseif($conn->affectedRows < 1){
-                        $error = "That route no longer exists. Refresh the page and try again.";
+                    $updated = mbus_db_prepare($conn, 'UPDATE routes SET fare = ? WHERE route_id = ?', [$fare, $route_id]);
+                    if ($updated === false) {
+                        error_log('Route fare update failed: ' . mbus_db_error($conn));
+                        $error = 'The fare could not be saved. Please try again.';
+                    } elseif ($conn->affectedRows > 0) {
+                        header('Location: manage_routes.php?fare_updated=1');
+                        exit();
                     } else {
-                        $success = "Route deleted successfully.";
+                        $error = 'The fare was not changed. Refresh the page and try again.';
                     }
                 }
             }
         }
     }
 }
-?>
 
+$routes = [];
+$routes_query = mbus_db_query($conn, 'SELECT * FROM routes ORDER BY route_id ASC');
+if ($routes_query === false) {
+    error_log('Route list query failed: ' . mbus_db_error($conn));
+    $error = $error ?: 'Routes could not be loaded. Please refresh the page.';
+} else {
+    while ($row = mbus_db_fetch_assoc($routes_query)) {
+        $routes[] = mbus_route_apply_terminal_defaults($row);
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Routes</title>
-
+    <title>Manage Routes &amp; Fares</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
-    <link rel="stylesheet" href="../Assets/css/admin/manage_routes.css">
+    <link rel="stylesheet" href="../Assets/css/admin/manage_routes.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/admin/manage_routes.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/app-header.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/bottom-nav.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
-    <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
 </head>
-
 <body class="has-sidebar">
-
-<!-- Mobile Sidebar Toggle -->
 <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
     <i class="fa fa-bars" aria-hidden="true"></i>
 </button>
-
-<!-- Sidebar Overlay -->
 <div class="sidebar-overlay" onclick="toggleSidebar()" aria-hidden="true"></div>
 
 <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
-    <div class="logo-container">
-        <img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo">
-    </div>
-
+    <div class="logo-container"><img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo"></div>
     <h2>Admin</h2>
-
     <nav class="menu-top" aria-label="Admin menu">
         <a href="admin_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
         <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
@@ -174,378 +107,127 @@ if(isset($_POST['delete_route'])){
         <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
         <a href="manage_routes.php" aria-current="page"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
     </nav>
-
     <div class="menu-bottom">
-<a href="../logout.php" class="logout-btn btn btn-outline btn-block">
-            <i class="fa fa-sign-out" aria-hidden="true"></i> Logout
-        </a>
+        <a href="../logout.php" class="logout-btn btn btn-outline btn-block"><i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
     </div>
 </aside>
 
 <main class="main" role="main">
-
-<header class="page-header">
-    <h1>Manage Routes</h1>
-
-            <div class="page-header-right">
-                <div class="profile-menu-wrap">
-                    <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
-                        <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span>
-                    </button>
-                    <div class="profile-menu" id="profileMenu" role="menu">
-                        <div class="profile-menu-header">
-                            <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
-                            <span class="profile-menu-role">Admin account</span>
-                        </div>
-                        <?php include_once "../Includes/admin_menu.php"; echo mbus_admin_approvals_link($conn); ?>
-                        <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
+    <header class="page-header">
+        <div>
+            <p class="routes-eyebrow">NETWORK SETTINGS</p>
+            <h1>Routes &amp; fares</h1>
+            <p class="routes-intro">Manage the fares for your existing routes. Route stops and route setup stay fixed.</p>
+        </div>
+        <div class="page-header-right">
+            <div class="profile-menu-wrap">
+                <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
+                    <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span>
+                </button>
+                <div class="profile-menu" id="profileMenu" role="menu">
+                    <div class="profile-menu-header">
+                        <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account', ENT_QUOTES, 'UTF-8'); ?></span>
+                        <span class="profile-menu-role">Admin account</span>
                     </div>
+                    <?php include_once '../Includes/admin_menu.php'; echo mbus_admin_approvals_link($conn); ?>
+                    <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                 </div>
             </div>
-</header>
+        </div>
+    </header>
 
-<?php if(isset($success)): ?>
-<div class="alert alert-success" role="alert"><?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?></div>
-<?php endif; ?>
-<?php if(isset($error)): ?>
-<div class="alert alert-error" role="alert"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
-<?php endif; ?>
+    <?php if ($success !== ''): ?>
+        <div class="alert alert-success" role="status"><i class="fa fa-circle-check" aria-hidden="true"></i><?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?></div>
+    <?php endif; ?>
+    <?php if ($error !== ''): ?>
+        <div class="alert alert-error" role="alert"><i class="fa fa-triangle-exclamation" aria-hidden="true"></i><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
+    <?php endif; ?>
 
-<!-- ADD ROUTE -->
-<section class="card" style="margin-bottom: var(--space-6);">
-    <h2>Add Route</h2>
-    <form method="POST" class="form-section">
-        <?php csrf_field(); ?>
-        
-        <div class="form-grid">
-            <!-- ORIGIN -->
-            <div class="form-group">
-                <label for="origin">Origin</label>
-                <select name="origin" id="origin" class="form-control" required>
-                    <option value="">Select Origin</option>
-                    <?php foreach($places as $value => $label){ ?>
-                    <option value="<?php echo htmlspecialchars($value, ENT_QUOTES); ?>">
-                        <?php echo htmlspecialchars($label); ?>
-                    </option>
-                    <?php } ?>
-                    <option value="custom">Custom Route</option>
-                </select>
-                <input type="text" name="custom_origin" id="custom_origin" class="form-control custom-input" placeholder="Enter Custom Origin" style="display: none;">
+    <section class="routes-panel" aria-labelledby="existing-routes-title">
+        <div class="routes-panel-heading">
+            <div>
+                <h2 id="existing-routes-title">Existing routes</h2>
+                <p><?php echo count($routes); ?> <?php echo count($routes) === 1 ? 'route' : 'routes'; ?> · fare editing only</p>
             </div>
-
-            <!-- DESTINATION -->
-            <div class="form-group">
-                <label for="destination">Destination</label>
-                <select name="destination" id="destination" class="form-control" required>
-                    <option value="">Select Destination</option>
-                    <?php foreach($places as $value => $label){ ?>
-                    <option value="<?php echo htmlspecialchars($value, ENT_QUOTES); ?>">
-                        <?php echo htmlspecialchars($label); ?>
-                    </option>
-                    <?php } ?>
-                    <option value="custom">Custom Route</option>
-                </select>
-                <input type="text" name="custom_destination" id="custom_destination" class="form-control custom-input" placeholder="Enter Custom Destination" style="display: none;">
-            </div>
-
-            <!-- FARE -->
-            <div class="form-group">
-                <label for="fare">Fare</label>
-                <input type="number" step="0.01" name="fare" id="fare" class="form-control" placeholder="Enter Fare" required>
-            </div>
-
-            <!-- Coordinates are set automatically from the map (hidden) -->
-            <input type="hidden" name="origin_lat" id="origin_lat">
-            <input type="hidden" name="origin_lng" id="origin_lng">
-            <input type="hidden" name="destination_lat" id="destination_lat">
-            <input type="hidden" name="destination_lng" id="destination_lng">
-
-            <!-- MAP -->
-            <div class="form-group" style="grid-column: 1 / -1;">
-                <label>Route map</label>
-                <div id="routeMap" class="map-canvas" style="height: 280px;"></div>
-                <p class="form-hint">Terminals are placed automatically. For a custom route, tap the map to set the start, then the end.</p>
-                <p id="routeEstimate" class="route-estimate" role="status" aria-live="polite">Choose both stops to see a road distance and driving-time estimate.</p>
-            </div>
+            <span class="routes-lock"><i class="fa fa-lock" aria-hidden="true"></i> Route details fixed</span>
         </div>
 
-        <div class="form-actions">
-            <button type="submit" name="add_route" class="btn btn-primary">
-                <i class="fa fa-plus" aria-hidden="true"></i> Add Route
-            </button>
-        </div>
-    </form>
-</section>
-
-<!-- ROUTE LIST -->
-<section class="card">
-    <h2>Route List</h2>
-
-    <div class="table-responsive">
-        <table class="routes-table">
-            <thead>
-                <tr>
-                    <th scope="col">Route</th>
-                    <th scope="col">Fare</th>
-                    <th scope="col">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                $query = mbus_db_query($conn, "
-                    SELECT * FROM routes
-                    ORDER BY route_id DESC
-                ");
-
-                while($row = mbus_db_fetch_assoc($query)){
-                $routeDisplay = mbus_route_apply_terminal_defaults($row);
-                $deleteFormId = 'delete-route-' . (int)$row['route_id'];
+        <?php if ($routes): ?>
+            <div class="route-fare-list">
+                <?php foreach ($routes as $index => $route):
+                    $routeId = (int)$route['route_id'];
+                    $fareFormId = 'fare-form-' . $routeId;
                 ?>
-                <tr>
-                    <td data-label="Route">
-                        <span class="route-badge">
-                                <?php echo htmlspecialchars($routeDisplay['origin_label']); ?> → <?php echo htmlspecialchars($routeDisplay['destination_label']); ?>
-                            </span>
-                        </td>
-                        <td data-label="Fare">₱<?php echo number_format($row['fare'], 2); ?></td>
-                        <td data-label="Actions">
-                            <div class="action-buttons">
-                                <form method="POST" class="route-form" id="<?php echo htmlspecialchars($deleteFormId, ENT_QUOTES, 'UTF-8'); ?>">
-                                    <?php csrf_field(); ?>
-                                    <input type="hidden" name="route_id" value="<?php echo (int)$row['route_id']; ?>">
-                                    <button type="submit" name="delete_route" value="1" class="btn btn-sm btn-danger delete-btn"
-                                        onclick="return confirm('Delete this route?')">
-                                        <i class="fa fa-trash" aria-hidden="true"></i> Delete
-                                    </button>
-                                </form>
+                    <article class="route-fare-card">
+                        <div class="route-card-topline">
+                            <span class="route-number">ROUTE <?php echo str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT); ?></span>
+                            <span class="route-fixed"><i class="fa fa-lock" aria-hidden="true"></i> Fixed route</span>
+                        </div>
+                        <div class="route-journey" aria-label="<?php echo htmlspecialchars($route['origin_label'] . ' to ' . $route['destination_label'], ENT_QUOTES, 'UTF-8'); ?>">
+                            <div class="route-stop">
+                                <span class="route-stop-caption">FROM</span>
+                                <strong><?php echo htmlspecialchars($route['origin_label'], ENT_QUOTES, 'UTF-8'); ?></strong>
                             </div>
-                        </td>
-                </tr>
-                <?php } ?>
-            </tbody>
-        </table>
-    </div>
-</section>
-
+                            <span class="route-direction" aria-hidden="true"><i class="fa fa-arrow-right-long"></i></span>
+                            <div class="route-stop route-stop-destination">
+                                <span class="route-stop-caption">TO</span>
+                                <strong><?php echo htmlspecialchars($route['destination_label'], ENT_QUOTES, 'UTF-8'); ?></strong>
+                            </div>
+                        </div>
+                        <div class="route-fare-current">
+                            <span>Current fare</span>
+                            <strong>₱<?php echo number_format((float)$route['fare'], 2); ?></strong>
+                        </div>
+                        <form method="POST" class="fare-editor" id="<?php echo htmlspecialchars($fareFormId, ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php csrf_field(); ?>
+                            <input type="hidden" name="route_id" value="<?php echo $routeId; ?>">
+                            <label for="fare-<?php echo $routeId; ?>">Update fare (PHP)</label>
+                            <div class="fare-editor-controls">
+                                <div class="fare-input-wrap">
+                                    <span aria-hidden="true">₱</span>
+                                    <input type="number" id="fare-<?php echo $routeId; ?>" name="fare" min="0.01" max="100000" step="0.01" value="<?php echo htmlspecialchars(number_format((float)$route['fare'], 2, '.', ''), ENT_QUOTES, 'UTF-8'); ?>" required inputmode="decimal" aria-describedby="fare-help-<?php echo $routeId; ?>">
+                                </div>
+                                <button type="submit" name="update_fare" value="1" class="btn btn-primary"><i class="fa fa-floppy-disk" aria-hidden="true"></i> Save fare</button>
+                            </div>
+                            <small id="fare-help-<?php echo $routeId; ?>">Only this route’s fare can be changed.</small>
+                        </form>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="routes-empty" role="status">
+                <i class="fa fa-route" aria-hidden="true"></i>
+                <h3>No routes are available</h3>
+                <p>Route setup is fixed for this project. Contact the system maintainer if the existing routes are missing.</p>
+            </div>
+        <?php endif; ?>
+    </section>
 </main>
 
+<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
+    <a href="admin_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
+    <a href="manage_schedules.php" class="bottom-nav-item"><i class="fa fa-calendar" aria-hidden="true"></i><span>Schedules</span></a>
+    <a href="manage_buses.php" class="bottom-nav-item"><i class="fa fa-bus" aria-hidden="true"></i><span>Buses</span></a>
+    <a href="manage_operators.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Operators</span></a>
+    <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
+</nav>
 <script>
-const origin = document.getElementById("origin");
-const destination = document.getElementById("destination");
-const customOrigin = document.getElementById("custom_origin");
-const customDestination = document.getElementById("custom_destination");
-
-/* ORIGIN */
-origin.addEventListener("change", function(){
-    clickCount = 0;
-    applyEndpoint('origin');
-    updateDestination();
-    applyEndpoint('destination');
-    drawRoute();
-});
-
-/* DESTINATION */
-destination.addEventListener("change", function(){
-    clickCount = 0;
-    applyEndpoint('destination');
-    drawRoute();
-});
-
-/* DISABLE SAME */
-function updateDestination(){
-    let originValue = origin.value;
-    for(let option of destination.options){
-        option.disabled = false;
-        if(option.value == originValue && option.value != ""){
-            option.disabled = true;
-        }
-    }
-    if(destination.value == originValue){
-        destination.value = "";
-    }
-}
-
-updateDestination();
-
-// Toggle sidebar for mobile
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
     const toggle = document.querySelector('.sidebar-toggle');
-    
     const isOpen = sidebar.classList.toggle('open');
     overlay.classList.toggle('active');
-    
-    if (toggle) {
-        toggle.setAttribute('aria-expanded', isOpen);
-    }
-    
-    if (isOpen) {
-        document.body.style.overflow = 'hidden';
-        const firstLink = sidebar.querySelector('a, button');
-        if (firstLink) firstLink.focus();
-    } else {
-        document.body.style.overflow = '';
-    }
+    if (toggle) toggle.setAttribute('aria-expanded', isOpen);
+    document.body.style.overflow = isOpen ? 'hidden' : '';
 }
-
-// Close sidebar when clicking a nav link on mobile
-document.querySelectorAll('.menu-top a').forEach(link => {
-    link.addEventListener('click', () => {
-        if (window.innerWidth <= 768) {
-            toggleSidebar();
-        }
-    });
-});
-
-// Handle keyboard navigation for sidebar
-document.addEventListener('keydown', function(e) {
-    const sidebar = document.querySelector('.sidebar');
-    if (sidebar.classList.contains('open') && e.key === 'Escape') {
-        toggleSidebar();
-    }
+document.querySelectorAll('.menu-top a').forEach(link => link.addEventListener('click', () => {
+    if (window.innerWidth <= 768 && document.querySelector('.sidebar').classList.contains('open')) toggleSidebar();
+}));
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && document.querySelector('.sidebar').classList.contains('open')) toggleSidebar();
 });
 </script>
-
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="../Assets/js/route_utils.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/route_utils.js'); ?>"></script>
-<script>
-let map;
-let originMarker = null;
-let destinationMarker = null;
-let clickCount = 0;
-let routeLine = null;
-let routeRequest = 0;
-const terminalPins = {
-    'Morong Terminal': { lat: 14.6798552, lng: 120.2728757, label: 'Morong Terminal' },
-    'SBMA': { lat: 14.8243652, lng: 120.2801434, label: 'Harbor Point' }
-};
-
-function markerIcon(label) {
-    return L.divIcon({ className: 'route-endpoint-icon', html: '<span>' + label + '</span>', iconSize: [30, 36], iconAnchor: [15, 34] });
-}
-
-function setEndpoint(kind, lat, lng, label) {
-    const isOrigin = kind === 'origin';
-    document.getElementById(isOrigin ? 'origin_lat' : 'destination_lat').value = Number(lat).toFixed(7);
-    document.getElementById(isOrigin ? 'origin_lng' : 'destination_lng').value = Number(lng).toFixed(7);
-    if (!map || !window.L) return;
-    const position = [Number(lat), Number(lng)];
-    if (isOrigin) originMarker = originMarker ? originMarker.setLatLng(position) : L.marker(position, { icon: markerIcon('A'), title: 'Origin' }).addTo(map);
-    else destinationMarker = destinationMarker ? destinationMarker.setLatLng(position) : L.marker(position, { icon: markerIcon('B'), title: 'Destination' }).addTo(map);
-    (isOrigin ? originMarker : destinationMarker).bindTooltip(label || (isOrigin ? 'Origin' : 'Destination'));
-}
-
-function clearEndpoint(kind) {
-    const isOrigin = kind === 'origin';
-    document.getElementById(isOrigin ? 'origin_lat' : 'destination_lat').value = '';
-    document.getElementById(isOrigin ? 'origin_lng' : 'destination_lng').value = '';
-    if (isOrigin && originMarker) { map.removeLayer(originMarker); originMarker = null; }
-    if (!isOrigin && destinationMarker) { map.removeLayer(destinationMarker); destinationMarker = null; }
-}
-
-function applyEndpoint(kind) {
-    const select = document.getElementById(kind);
-    const custom = document.getElementById(kind === 'origin' ? 'custom_origin' : 'custom_destination');
-    const isCustom = select.value === 'custom';
-    custom.style.display = isCustom ? 'block' : 'none';
-    custom.required = isCustom;
-    if (isCustom) { clearEndpoint(kind); return; }
-    const pin = terminalPins[select.value];
-    if (pin) setEndpoint(kind, pin.lat, pin.lng, pin.label);
-    else clearEndpoint(kind);
-}
-
-function initMap() {
-    if (!window.L) {
-        document.getElementById('routeEstimate').textContent = 'The map library did not load. Try again or choose another connection.';
-        return;
-    }
-    const morong = [14.6798552, 120.2728757];
-    const harborPoint = [14.8243652, 120.2801434];
-    map = L.map('routeMap', { zoomControl: true }).fitBounds([morong, harborPoint], { padding: [24, 24] });
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · routing by OSRM'
-    }).addTo(map);
-    routeLine = L.layerGroup().addTo(map);
-    map.on('click', event => handleMapClick(event.latlng));
-}
-
-function handleMapClick(latLng) {
-    routeRequest++;
-    routeLine.clearLayers();
-    const kind = clickCount === 0 ? 'origin' : 'destination';
-    const select = document.getElementById(kind);
-    const custom = document.getElementById(kind === 'origin' ? 'custom_origin' : 'custom_destination');
-    if (select.value !== 'custom') select.value = 'custom';
-    custom.style.display = 'block';
-    custom.required = true;
-    if (!custom.value.trim()) custom.value = kind === 'origin' ? 'Custom origin' : 'Custom destination';
-    setEndpoint(kind, latLng.lat, latLng.lng, kind === 'origin' ? 'Custom origin' : 'Custom destination');
-    clickCount = kind === 'origin' ? 1 : 0;
-    if (clickCount === 0) drawRoute();
-    else document.getElementById('routeEstimate').textContent = 'Origin pinned. Click the destination on the map.';
-}
-
-async function drawRoute() {
-    const estimate = document.getElementById('routeEstimate');
-    const fields = ['origin_lat', 'origin_lng', 'destination_lat', 'destination_lng'].map(id => document.getElementById(id).value.trim());
-    if (fields.some(value => value === '')) {
-        routeRequest++;
-        estimate.textContent = 'Choose both stops to see a road distance and driving-time estimate.';
-        if (routeLine) routeLine.clearLayers();
-        return;
-    }
-    const originPoint = { lat: Number(fields[0]), lng: Number(fields[1]) };
-    const destinationPoint = { lat: Number(fields[2]), lng: Number(fields[3]) };
-    if (!Number.isFinite(originPoint.lat) || !Number.isFinite(originPoint.lng) || !Number.isFinite(destinationPoint.lat) || !Number.isFinite(destinationPoint.lng)) {
-        estimate.textContent = 'Choose both stops to see a road distance and driving-time estimate.';
-        if (routeLine) routeLine.clearLayers();
-        return;
-    }
-    if (!map || !routeLine || !window.MBUSRouting) {
-        estimate.textContent = 'The map or road-routing service is unavailable right now.';
-        return;
-    }
-    const requestId = ++routeRequest;
-    estimate.textContent = 'Loading the road route and estimate…';
-    routeLine.clearLayers();
-    try {
-        const route = await window.MBUSRouting.getDrivingRoute(originPoint, destinationPoint);
-        if (requestId !== routeRequest) return;
-        L.polyline(route.points, { color: '#1e90ff', weight: 5, opacity: 0.88 }).addTo(routeLine);
-        map.fitBounds(L.latLngBounds(route.points).pad(0.12), { maxZoom: 14 });
-        estimate.textContent = window.MBUSRouting.formatDistance(route.distanceMeters) + ' road route · ' + window.MBUSRouting.formatDuration(route.durationSeconds) + ' driving. Traffic, stops and detours may add time.';
-    } catch (error) {
-        if (requestId !== routeRequest) return;
-        estimate.textContent = error.message || 'Road directions are unavailable right now.';
-    }
-}
-
-initMap();
-applyEndpoint('origin');
-applyEndpoint('destination');
-drawRoute();
-</script>
-
-<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
-    <a href="admin_dashboard.php" class="bottom-nav-item">
-        <i class="fa fa-home" aria-hidden="true"></i><span>Home</span>
-    </a>
-    <a href="manage_schedules.php" class="bottom-nav-item">
-        <i class="fa fa-calendar" aria-hidden="true"></i><span>Schedules</span>
-    </a>
-    <a href="manage_buses.php" class="bottom-nav-item">
-        <i class="fa fa-bus" aria-hidden="true"></i><span>Buses</span>
-    </a>
-    <a href="manage_operators.php" class="bottom-nav-item">
-        <i class="fa fa-users" aria-hidden="true"></i><span>Operators</span>
-    </a>
-    <a href="waiting.php" class="bottom-nav-item">
-        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
-    </a>
-</nav>
 <script src="../Assets/js/app-header.js"></script>
 </body>
 </html>

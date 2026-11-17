@@ -6,16 +6,20 @@ const root = path.resolve(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
 const route = read('Admin/manage_routes.php');
-assert.match(route, /origin_lat DECIMAL|origin_lat/);
-assert.match(route, /\$inserted\s*=\s*mbus_db_prepare/,
-    'custom route creation must inspect the insert result');
-assert.match(route, /\$inserted\s*===\s*false\s*\|\|\s*\$conn->affectedRows\s*<\s*1/,
-    'a failed route insert must not be reported as success');
-assert.match(route, /Route insert failed:/, 'route insert errors should be logged for diagnosis');
-assert.match(route, /Check the database schema and try again/,
-    'the Admin should receive visible feedback when a route cannot be saved');
-assert.match(route, /manage_routes\.php\?added=1/,
-    'successful route adds should show a post-redirect success state');
+assert.match(route, /isset\(\$_POST\['update_fare'\]\)/,
+    'the route page should expose only the fare-update action');
+assert.match(route, /UPDATE routes SET fare = \? WHERE route_id = \?/,
+    'the update query must change only fare for the selected route');
+assert.match(route, /SELECT \* FROM routes ORDER BY route_id ASC/,
+    'the page should preserve and display the existing route records');
+assert.match(route, /name="fare"/,
+    'existing route fares should be editable');
+assert.doesNotMatch(route, /INSERT INTO routes|DELETE FROM routes|\$_POST\['add_route'\]|\$_POST\['delete_route'\]|<h2>Add Route<\/h2>/,
+    'route creation and deletion must not be available from this page');
+assert.doesNotMatch(route, /name="origin"|name="destination"|routeMap|routeEstimate/,
+    'route endpoints and map editing must be removed from the fare-only screen');
+assert.match(route, /Only this route’s fare can be changed/,
+    'the interface should explain the fare-only edit scope');
 
 const db = read('config/db_connect.php');
 for (const column of ['origin_lat DECIMAL(10, 8)', 'origin_lng DECIMAL(11, 8)', 'destination_lat DECIMAL(10, 8)', 'destination_lng DECIMAL(11, 8)']) {
@@ -57,4 +61,4 @@ assert.match(fileEndpoint, /'interior'\s*=>\s*'interior_photo'/);
 assert.match(fileEndpoint, /\$_SESSION\['user_type'\].*admin/,
     'application photo access must remain Admin-only');
 
-console.log('PASS route-insert error handling, runtime route schema, bus photo submissions, custom seat layouts, and Admin review');
+console.log('PASS fare-only fixed-route editing, runtime route schema, bus photo submissions, custom seat layouts, and Admin review');

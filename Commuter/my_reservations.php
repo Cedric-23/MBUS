@@ -32,6 +32,8 @@ $sql = mbus_db_prepare($conn, "
         reservation.expires_at,
         schedule.departure_time,
         schedule.arrival_time,
+        schedule.trip_status,
+        schedule.schedule_status,
         routes.origin,
         routes.destination AS route_destination,
         buses.bus_number
@@ -89,7 +91,6 @@ $sql = mbus_db_prepare($conn, "
                 </div>
             </div>
 </header>
-</header>
 
 <?php
 $all = [];
@@ -122,6 +123,8 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
 <?php if($groups){ ?>
     <?php foreach($groups as $sid => $rows){
         $first = $rows[0];
+        $tripIsCompleted = (in_array((string)($first['trip_status'] ?? ''), ['Arrived'], true) || (string)($first['schedule_status'] ?? '') === 'Completed')
+            && in_array('Boarded', array_column($rows, 'status'), true);
         $info = [];
         foreach($rows as $k => $row){
             $remaining = 0; $awaiting = false;
@@ -133,10 +136,14 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
             $info[$k] = [$remaining, $awaiting];
         }
         if(count($rows) === 1){ $row = $first; [$remaining, $awaiting] = $info[0]; ?>
-    <article class="card reservation-card" data-reservation-id="<?php echo $row['reservation_id']; ?>">
+    <article class="card reservation-card" data-reservation-id="<?php echo (int)$row['reservation_id']; ?>" data-schedule-id="<?php echo (int)$row['schedule_id']; ?>">
     <div class="reservation-header">
         <div class="bus-info"><span class="badge badge-primary">Bus <?php echo htmlspecialchars($row['bus_number']); ?></span></div>
         <div class="status-badge status-<?php echo strtolower($row['status']); ?>"><?php echo htmlspecialchars($row['status']); ?></div>
+    </div>
+    <div class="trip-completion-confirmation" data-trip-completion role="status" aria-live="polite"<?php echo $tripIsCompleted ? '' : ' hidden'; ?>>
+        <i class="fa fa-circle-check" aria-hidden="true"></i>
+        <span><strong>Trip completed.</strong> Thank you for riding with MBUS.</span>
     </div>
     <div class="reservation-route"><i class="fa fa-map-marker-alt" aria-hidden="true"></i> <span><?php echo htmlspecialchars($row['origin']); ?> &#8594; <?php echo htmlspecialchars($row['route_destination']); ?></span></div>
     <ul class="reservation-details">
@@ -152,6 +159,11 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
         $summary = [];
         foreach($counts as $st => $n) $summary[] = $n . ' ' . strtolower($st);
         $seatNums = array_column($rows, 'seat_number'); $seatList = count($seatNums) > 6 ? implode(', ', array_slice($seatNums, 0, 6)) . '…' : implode(', ', $seatNums); ?>
+    <div class="reservation-group" data-schedule-id="<?php echo (int)$sid; ?>">
+    <div class="trip-completion-confirmation" data-trip-completion role="status" aria-live="polite"<?php echo $tripIsCompleted ? '' : ' hidden'; ?>>
+        <i class="fa fa-circle-check" aria-hidden="true"></i>
+        <span><strong>Trip completed.</strong> Thank you for riding with MBUS.</span>
+    </div>
     <details class="card reservation-card res-group">
         <summary>
             <span class="rg-main">
@@ -177,6 +189,7 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
         <?php } ?>
         </div>
     </details>
+    </div>
     <?php } } ?>
 
 <?php }else{ ?>
@@ -322,6 +335,27 @@ function showToast(message) {
 
 // Init
 document.addEventListener('DOMContentLoaded', startCountdowns);
+
+// Keep the passenger's Trips page in sync with operator arrival updates.
+async function refreshTripCompletion() {
+    const cards = document.querySelectorAll('[data-schedule-id]');
+    if (!cards.length) return;
+    try {
+        const response = await fetch('../api/commuter_trip_status.php', { cache: 'no-store', credentials: 'same-origin' });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!data || data.ok !== true || !data.trips) return;
+        cards.forEach(card => {
+            const status = data.trips[String(card.dataset.scheduleId)];
+            const notice = card.querySelector('[data-trip-completion]');
+            if (notice && status === 'Completed') notice.hidden = false;
+        });
+    } catch (error) {
+        // A temporary status refresh failure should not interrupt reservation actions.
+    }
+}
+refreshTripCompletion();
+setInterval(refreshTripCompletion, 15000);
 </script>
 
 <style>

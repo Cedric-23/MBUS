@@ -21,9 +21,9 @@ async function main() {
 
     assert.doesNotMatch(schedule, /maps\.googleapis\.com|DirectionsService|DirectionsRenderer|YOUR_API_KEY/);
     assert.doesNotMatch(admin, /maps\.googleapis\.com|DirectionsService|DirectionsRenderer|YOUR_API_KEY/);
+    assert.doesNotMatch(admin, /id="routeMap"|routeEstimate|name="origin"|name="destination"/);
     assert.match(schedule, /mbus_route_apply_terminal_defaults\(\$row\)/);
     assert.match(schedule, /origin_lat.*destination_lat/s, 'schedule data should retain canonical endpoint coordinate fields for route actions');
-    assert.match(admin, /routeEstimate/);
     assert.match(livePage, /id="routeEstimate"/);
     assert.match(liveJs, /remainingOnRoute/);
     assert.match(livePage, /id="routeViewButton"/);

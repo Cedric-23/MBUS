@@ -23,6 +23,8 @@ $sql = mbus_db_prepare($conn, "
         reservation.created_at,
         schedule.departure_time,
         schedule.arrival_time,
+        schedule.trip_status,
+        schedule.schedule_status,
         routes.origin,
         routes.destination AS route_destination,
         buses.bus_number
@@ -102,6 +104,13 @@ $sql = mbus_db_prepare($conn, "
     <i class="fa fa-map-marker-alt" aria-hidden="true"></i>
     <span><?php echo htmlspecialchars($row['origin']); ?> &#8594; <?php echo htmlspecialchars($row['route_destination']); ?></span>
 </div>
+
+<?php if($row['status'] === 'Boarded' && (in_array((string)($row['trip_status'] ?? ''), ['Arrived'], true) || (string)($row['schedule_status'] ?? '') === 'Completed')): ?>
+<div class="trip-completion-confirmation" role="status">
+    <i class="fa fa-circle-check" aria-hidden="true"></i>
+    <span><strong>Trip completed.</strong> Thank you for riding with MBUS.</span>
+</div>
+<?php endif; ?>
 
 <ul class="reservation-details">
     <li><strong>Seat:</strong> <?php echo htmlspecialchars($row['seat_number']); ?></li>

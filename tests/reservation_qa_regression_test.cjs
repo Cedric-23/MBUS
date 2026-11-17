@@ -42,5 +42,16 @@ assert.match(ticketPage, /foreach \(\$reservations as \$reservation\)/, 'screen 
 assert.match(ticketPage, /\$fareLines\[\(int\)\$reservation\['reservation_id'\]\]/, 'screen ticket must use the matching checkout fare line');
 assert.match(ticketPdf, /foreach \(\$reservations as \$reservation\)/, 'PDF ticket must show each seat route');
 assert.match(read('Commuter/history.php'), /ticket\.php\?reservation_id=/, 'history tickets must identify the selected reservation');
+const history = read('Commuter/history.php');
+const tripReservations = read('Commuter/my_reservations.php');
+const tripStatusApi = read('api/commuter_trip_status.php');
+assert.match(tripReservations, /schedule\.trip_status/, 'the passenger Trips view must read current operator trip status');
+assert.match(tripReservations, /trip-completion-confirmation/, 'the Trips view must render a clear completion confirmation');
+assert.match(tripReservations, /refreshTripCompletion/, 'the Trips view should detect arrival without a manual refresh');
+assert.match(tripStatusApi, /\$_SESSION\['user_type'\].*commuter/s, 'only commuter sessions may poll passenger trip completion');
+assert.match(tripStatusApi, /reservation\.user_id = \?/, 'trip-status polling must be restricted to the signed-in passenger');
+assert.match(tripStatusApi, /reservation\.status = \\'Boarded\\'/, 'trip completion status should only be returned for boarded reservations');
+assert.match(tripStatusApi, /trip_status.*Arrived/s, 'Arrived should be reported as a completed trip');
+assert.match(history, /schedule\.trip_status/, 'trip history must retain the completion confirmation');
 
 console.log('PASS: group destinations, shared reservation expiry, safe cancellation, and transaction-scoped seat tickets');

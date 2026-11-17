@@ -10,3 +10,5 @@
 - [x] Let the commuter toggle tracking of their waiting bus by clicking its row or map pin, as operators toggle a selected rider: tracking on focuses the bus and pickup and shows its road path; clicking again pauses focus/path and leaves a muted, reselectable bus pin. Cancel remains a separate action.
 - [x] Restore operator bottom navigation to Home / Trips / Scan / Riders / Waiting, with Scan in the center and no Live tab. Redirect the old operator Live-map URL to Scan so Live no longer replaces the scanner.
 - [x] Make the commuter Waiting controls more compact so they cover less of the map, while keeping bus tracking, route details, cancellation, and map attribution accessible on mobile and desktop.
+- [x] When an operator marks a trip Arrived, the passenger Trips page shows an accessible completion confirmation, refreshes the status while open, and Trip History retains the confirmation; status lookup is limited to the signed-in passenger’s boarded reservations.
+- [x] Admin Manage Routes keeps the existing routes, removes route creation and deletion, and allows only fare edits with CSRF protection and server-side fare validation.
