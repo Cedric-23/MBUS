@@ -22,8 +22,12 @@ assert.match(html, /id="routeViewButton"[^>]*>Focus bus</);
 assert.match(html, /href="waiting\.php"/);
 assert.match(html, /<span>Waiting<\/span>/);
 assert.doesNotMatch(html, />Alerts</);
-assert.doesNotMatch(html, /Waiting for a bus/);
+assert.doesNotMatch(html, /Waiting for a bus|Pick up|lvPickBtn|commuter_live_pickup|mbus_quick_pickup/,
+    'Live stays focused on bus tracking with no pickup or waiting action');
 assert.equal((html.match(/class="bottom-nav-item/g) || []).length, 5, 'expected five tabs');
+assert.match(html, /class="lv-map"/);
+assert.match(html, /class="lv-sheet"/);
+assert.match(html, /class="lv-legend"/);
 
 // live script: polls, selects a bus that is actually sharing, no sharing controls
 assert.match(source, /No bus is boarding or on the road/);
@@ -32,7 +36,7 @@ assert.match(html, /id="busList"/);
 // same bus-number pins as the operator board, one per live bus
 assert.match(source, /board-bus-marker/);
 assert.match(source, /L\.divIcon/);
-assert.match(source, /map\.setView\(focus, 16/);
+assert.match(source, /map\.flyTo\(focus, 16/);
 assert.match(source, /routeViewMode = 'route'/);
 assert.match(source, /defaultTrip = trips\.find/);
 assert.match(source, /manualChoice = true/);
@@ -40,8 +44,16 @@ assert.match(source, /MBUSLiveSelection\.chooseSchedule/);
 assert.match(source, /data\.locations/);
 assert.doesNotMatch(source, /cancel_waiting|commuterLayer|Your waiting pickup|pickup\.php|Pick up|bus-row-pick|bus-pop-pick/);
 assert.doesNotMatch(html, /profileImage|dot-commuter|Pickup distance/);
-assert.match(css, /\.commuter-live-page \.board-list-card/);
+assert.match(css, /\.lv-map \{[^}]*position: fixed/s);
+assert.match(css, /\.lv-sheet \{[^}]*position: fixed/s);
 assert.match(css, /\.bus-row-route \{[^}]*text-overflow: ellipsis/s);
+assert.match(css, /\.commuter-live-page \.leaflet-control-attribution/);
+assert.doesNotMatch(css, /leaflet-control-attribution[^}]*display:\s*none/,
+    'keep map-source attribution visible while styling it discreetly');
+assert.match(source, /attributionControl\.setPrefix\(false\)/);
+assert.match(source, /attributionControl\.setPosition\('topright'\)/);
+assert.match(source, /OpenStreetMap[\s\S]*project-osrm\.org/);
+assert.match(source, /animate: !reducedMotion/);
 assert.doesNotMatch(source, /mark_waiting/);
 
 console.log('PASS commuter Live is bus-only: live bus and road path, no commuter Waiting controls or markers');

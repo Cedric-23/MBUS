@@ -26,90 +26,87 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="../Assets/css/waiting_board.css">
     <link rel="stylesheet" href="../Assets/css/commuter_live.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_live.css'); ?>">
-    <link rel="stylesheet" href="../Assets/css/commuter_pickup.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_pickup.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
 </head>
-<body class="has-bottom-nav waiting-board-page commuter-live-page live-page">
-<main class="main" role="main">
-    <header class="page-header">
-        <div class="page-header-left"><h1>Live bus tracking</h1></div>
-        <div class="page-header-right">
+<body class="has-bottom-nav commuter-live-page">
+<main class="lv-main" role="main">
+    <div id="trackingMap" class="lv-map" role="region" aria-label="Map of live buses"></div>
+
+    <header class="lv-header">
+        <div class="lv-title">
+            <p class="lv-eyebrow"><span class="lv-live-dot" aria-hidden="true"></span> LIVE TRACKING</p>
+            <h1>Live buses</h1>
+        </div>
+        <div class="lv-header-actions">
+            <div class="lv-live-count" role="status" aria-live="polite">
+                <span class="lv-live-indicator" aria-hidden="true"></span>
+                <span class="lv-live-count-text"><strong id="busCount">0</strong><span id="busLabel">live</span></span>
+            </div>
             <div class="profile-menu-wrap">
                 <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
                     <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span>
                 </button>
                 <div class="profile-menu" id="profileMenu" role="menu">
-                    <div class="profile-menu-header"><span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span><span class="profile-menu-role">Commuter account</span></div>
+                    <div class="profile-menu-header">
+                        <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
+                        <span class="profile-menu-role">Commuter account</span>
+                    </div>
                     <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                     <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                 </div>
             </div>
         </div>
     </header>
-    <p id="liveMessage" class="board-notice" role="status" aria-live="polite" hidden></p>
 
-    <section class="lv-pickup" aria-label="Pick up">
-        <div class="lv-pick-text"><strong id="lvPickTitle">Waiting for your bus?</strong><span id="lvPickSub">Tap Pick up and the operator will see where you are.</span></div>
-        <button type="button" id="lvPickBtn" class="lv-pick-btn">Pick up</button>
-    </section>
+    <p id="liveMessage" class="lv-notice" role="status" aria-live="polite" hidden></p>
 
-    <section class="board-summary" aria-label="Summary">
-        <div class="board-stat">
-            <span class="board-stat-value" id="busCount">0</span>
-            <span class="board-stat-label" id="busLabel">buses live</span>
-        </div>
-        <label class="board-filter">
-            <span class="sr-only">Choose a bus</span>
-            <select id="liveSchedule" name="schedule_id" aria-label="Choose a bus" disabled>
-                <option value="">All buses</option>
-            </select>
-        </label>
-    </section>
-
-    <section class="board-map-card" aria-labelledby="mapHeading">
-        <div class="board-map-head">
-            <h2 id="mapHeading">Live map</h2>
-            <div class="board-legend">
-                <span><i class="dot-bus" aria-hidden="true"></i>Bus</span>
-                <span><i class="route-line-key" aria-hidden="true"></i>Route</span>
-                <span><i class="dot-stale" aria-hidden="true"></i>Old location</span>
+    <section class="lv-sheet" aria-label="Live bus routes">
+        <div class="lv-sheet-handle" aria-hidden="true"></div>
+        <div class="lv-sheet-head">
+            <div class="lv-sheet-title">
+                <h2 id="busListHeading">Buses in service</h2>
+                <p><strong id="trackingStatus">0</strong> active trips · tap a bus to focus</p>
             </div>
-            <button type="button" id="routeViewButton" class="route-view-btn" disabled>Focus bus</button>
+            <label class="lv-filter">
+                <span class="sr-only">Choose a bus</span>
+                <select id="liveSchedule" name="schedule_id" aria-label="Choose a bus" disabled>
+                    <option value="">All buses</option>
+                </select>
+            </label>
         </div>
-        <div id="trackingMap" class="board-map" role="region" aria-label="Map of live buses"></div>
-        <p id="mapMessage" class="board-map-error live-map-note" hidden></p>
-        <p id="routeEstimate" class="route-estimate live-route-estimate" role="status" aria-live="polite">Select a bus to see its road route and destination estimate.</p>
-    </section>
 
-    <section class="board-list-card" aria-labelledby="busListHeading">
-        <div class="board-list-head">
-            <h2 id="busListHeading">Buses</h2>
-            <span class="board-count" id="trackingStatus">0</span>
+        <div class="lv-route-controls">
+            <p id="routeEstimate" class="lv-route-estimate" role="status" aria-live="polite">Select a bus to see its road route and destination estimate.</p>
+            <button type="button" id="routeViewButton" class="route-view-btn" disabled aria-pressed="false">Focus bus</button>
         </div>
-        <p id="busEmpty" class="board-empty">Loading buses…</p>
-        <div id="busList" class="board-list" aria-live="polite"></div>
-        <p class="board-empty live-refresh-note">Updates every few seconds while this page is open.</p>
+
+        <div class="lv-legend" aria-label="Map legend">
+            <span><i class="dot-bus" aria-hidden="true"></i>Live bus</span>
+            <span><i class="route-line-key" aria-hidden="true"></i>Road route</span>
+            <span><i class="dot-stale" aria-hidden="true"></i>Last pin</span>
+        </div>
+
+        <p id="mapMessage" class="lv-map-error" role="status" aria-live="polite" hidden></p>
+        <p id="busEmpty" class="lv-empty">Finding active buses…</p>
+        <div id="busList" class="lv-bus-list" aria-live="polite"></div>
+        <p class="lv-refresh-note"><i class="fa fa-rotate" aria-hidden="true"></i> Auto-refreshes while open</p>
     </section>
-    <noscript><p class="live-notice live-notice-error">Enable JavaScript to load live bus locations.</p></noscript>
 </main>
+
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="commuter_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
     <a href="schedule.php" class="bottom-nav-item"><i class="fa fa-calendar" aria-hidden="true"></i><span>Schedule</span></a>
     <a href="live.php" class="bottom-nav-item active" aria-current="page"><i class="fa fa-map-location-dot" aria-hidden="true"></i><span>Live</span></a>
     <a href="my_reservations.php" class="bottom-nav-item"><i class="fa fa-ticket" aria-hidden="true"></i><span>Trips</span></a>
-    <a href="waiting.php" class="bottom-nav-item">
-        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
-    </a>
+    <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
 </nav>
-<script>window.mbusLive = <?php echo json_encode(['scheduleId' => $schedule_id, 'csrfToken' => csrf_get_token()], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
+
+<script>window.mbusLive = <?php echo json_encode(['scheduleId' => $schedule_id], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="../Assets/js/route_utils.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/route_utils.js'); ?>"></script>
 <script src="../Assets/js/live_schedule_selection.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/live_schedule_selection.js'); ?>"></script>
 <script src="../Assets/js/commuter_live.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/commuter_live.js'); ?>"></script>
-<script src="../Assets/js/mbus_quick_pickup.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/mbus_quick_pickup.js'); ?>"></script>
-<script src="../Assets/js/commuter_live_pickup.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/commuter_live_pickup.js'); ?>"></script>
-<script src="../Assets/js/flow-feedback.js"></script>
 <script src="../Assets/js/app-header.js"></script>
 </body>
 </html>

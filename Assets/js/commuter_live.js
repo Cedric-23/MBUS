@@ -15,6 +15,7 @@
     let map = null, markerLayer = null, routeLayer = null, pollTimer = null, loading = false, version = 0, fitted = false;
     let routeKey = '', routeData = null, routeFitKey = '', routeRequestId = 0, routeFailure = null, routeViewMode = 'route';
     const visible = () => !document.hidden;
+    const reducedMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function number(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }
     function valid(lat, lng) {
@@ -56,8 +57,11 @@
             return;
         }
         try {
-            map = L.map('trackingMap', { zoomControl: true }).setView([14.6798552, 120.2728757], 13);
-            const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · routing by OSRM' }).addTo(map);
+            map = L.map('trackingMap', { zoomControl: false }).setView([14.6798552, 120.2728757], 13);
+            L.control.zoom({ position: 'topleft' }).addTo(map);
+            if (map.attributionControl && map.attributionControl.setPrefix) map.attributionControl.setPrefix(false);
+            if (map.attributionControl && map.attributionControl.setPosition) map.attributionControl.setPosition('topright');
+            const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · <a href="https://project-osrm.org/" target="_blank" rel="noopener">OSRM</a>' }).addTo(map);
             tiles.on('tileerror', () => { el('mapMessage').hidden = false; el('mapMessage').textContent = 'Map tiles could not load. Bus status below is still current.'; });
             markerLayer = L.layerGroup().addTo(map);
             routeLayer = L.layerGroup().addTo(map);
@@ -105,12 +109,12 @@
         if (!map || !routeData || !chosen) return;
         if (routeViewMode === 'bus') {
             routeViewMode = 'route';
-            map.fitBounds(L.latLngBounds(routeData.points).pad(0.08), { maxZoom: 12, animate: false });
+            map.fitBounds(L.latLngBounds(routeData.points).pad(0.08), { maxZoom: 12, animate: !reducedMotion, duration: 0.45 });
         } else {
             routeViewMode = 'bus';
             const trip = trips.find(t => String(t.schedule_id) === chosen);
             const state = trip ? stateOf(trip) : null;
-            if (state && state.loc) map.setView([Number(state.loc.latitude), Number(state.loc.longitude)], 16, { animate: false });
+            if (state && state.loc) map.flyTo([Number(state.loc.latitude), Number(state.loc.longitude)], 16, { animate: !reducedMotion, duration: 0.45 });
         }
         updateRouteViewControl();
     }
@@ -174,7 +178,7 @@
                 L.circleMarker(route.points[route.points.length - 1], { radius: 5, color: '#fff', weight: 2, fillColor: '#18365d', fillOpacity: 1 }).addTo(routeLayer);
                 routeFitKey = key;
                 if (routeViewMode === 'route') {
-                    map.fitBounds(L.latLngBounds(route.points).pad(0.08), { maxZoom: 12, animate: false });
+                    map.fitBounds(L.latLngBounds(route.points).pad(0.08), { maxZoom: 12, animate: !reducedMotion, duration: 0.45 });
                 }
                 updateRouteViewControl();
                 updateRouteEstimate(trip, stateOf(trip));
@@ -272,12 +276,12 @@
                     .addTo(markerLayer).bindPopup(popup);
             });
             if (!fitted && bounds.length) {
-                if (focus) map.setView(focus, 16, { animate: false });
-                else if (bounds.length === 1) map.setView(bounds[0], 16, { animate: false });
-                else map.fitBounds(bounds, { padding: [28, 28], maxZoom: 15 });
+                if (focus) map.flyTo(focus, 16, { animate: !reducedMotion, duration: 0.45 });
+                else if (bounds.length === 1) map.flyTo(bounds[0], 16, { animate: !reducedMotion, duration: 0.45 });
+                else map.fitBounds(bounds, { padding: [28, 28], maxZoom: 15, animate: !reducedMotion, duration: 0.45 });
                 fitted = true;
             } else if (focus && routeViewMode === 'bus') {
-                map.setView(focus, Math.max(16, map.getZoom()), { animate: false });
+                map.panTo(focus, { animate: !reducedMotion, duration: 0.65 });
             }
             window.requestAnimationFrame(() => map.invalidateSize({ pan: false }));
         }
