@@ -399,7 +399,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                         </div>
                         <div class="form-tos-check">
                             <input type="checkbox" required/>
-                            <label class="tos">I agree to the<a style="color:#086FCF;"> Terms of Service </a> and <a style="color:#086FCF;"> Privacy Policy. </a> </label>
+                            <label class="tos">I agree to the<a href="terms.php" target="_blank" rel="noopener" style="color:#2f6fe4;font-weight:600;"> Terms of Service </a> and <a href="privacy.php" target="_blank" rel="noopener" style="color:#2f6fe4;font-weight:600;"> Privacy Policy. </a> </label>
                         </div>
                         <button class="submit-button" id="passenger-submit" type="submit"><?= reg_e($submit_text) ?></button>
                         </fieldset>
@@ -585,7 +585,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                 </section>
                                 <div class="terms-conditions">
                                     <input type="checkbox" required>
-                                    <p>I agree to the terms and conditions and certify that all information provided is accurate.</p>
+                                    <p>I agree to the <a href="terms.php" target="_blank" rel="noopener">Terms of Service</a> and <a href="privacy.php" target="_blank" rel="noopener">Privacy Policy</a> and certify that all information provided is accurate.</p>
                                 </div>
                             </div>
                         </div>

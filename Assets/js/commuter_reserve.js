@@ -132,6 +132,7 @@ function loadDestinations() {
     renderSeatDestinationControls();
 }
 
+pickup.addEventListener("change", loadDestinations);
 loadDestinations();
 
 destination.addEventListener("change", () => {

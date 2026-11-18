@@ -50,7 +50,7 @@ if($co['status'] === 'Submitted' && $_SERVER['REQUEST_METHOD'] === 'POST' && iss
                     if(!empty($res['ok'])){ header("Location: ticket.php?schedule_id=" . $schedule_id); exit(); }
                     $conn->pdo->prepare("UPDATE incoming_payments SET used_by = NULL WHERE used_by = ?")->execute([$co['session_id']]);
                 }
-                header("Location: payment_return.php?schedule_id=" . $schedule_id); exit();
+                header("Location: my_reservations.php?ref_sent=1"); exit();
             }
         }
     }

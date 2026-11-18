@@ -93,8 +93,7 @@ $fixed_pickup = (string)($stops[0] ?? ($route_data['origin'] ?? ''));
 
 /* PICKUP */
 $pickup_stops=$stops;
-array_pop($pickup_stops);
-array_pop($pickup_stops);
+array_pop($pickup_stops); /* the last stop can only be a destination */
 
 /* RESERVED */
 $seat_sql="SELECT seat_number FROM reservation
@@ -127,21 +126,19 @@ if($reviewed_input !== '1'){
 }
 $reservation_mode = (string)($_POST['reservation_mode'] ?? 'solo');
 $reservation_mode = in_array($reservation_mode, ['solo', 'multi'], true) ? $reservation_mode : '';
-$pickup_input=$fixed_pickup;
+$pickup_input=$_POST['pickup'] ?? '';
 $destination_input=$_POST['destination'] ?? '';
 $destinations_in = json_decode((string)($_POST['destinations'] ?? '{}'), true);
 if(!is_array($destinations_in)) $destinations_in = [];
 $seats_input=$_POST['seats'] ?? '';
-if(!is_string($destination_input) || !is_string($seats_input) || trim($pickup_input) === '' || ($reservation_mode === 'solo' && trim($destination_input) === '')){
+if(!is_string($pickup_input) || !is_string($destination_input) || !is_string($seats_input) || trim($pickup_input) === '' || ($reservation_mode === 'solo' && trim($destination_input) === '')){
     die("Invalid reservation details.");
 }
 $pickup=mbus_db_escape($conn,$pickup_input);
 $destination=mbus_db_escape($conn,$destination_input);
 $pickup_index = array_search($pickup_input, $stops, true);
 if($pickup_index === false){
-    http_response_code(422);
-    echo "This route has an invalid pickup terminal configuration.";
-    exit();
+    die("Invalid pickup location.");
 }
 $raw_seats = array_map('trim', explode(',', $seats_input));
 if(empty($raw_seats) || count(array_filter($raw_seats, function($seat){ return $seat === '' || !preg_match('/^\d+$/', $seat); })) > 0){
@@ -439,9 +436,12 @@ echo "</div>";
 <div class="card pickup-card">
 
 <div class="form-group">
-    <span class="form-label">Pickup Terminal</span>
-    <div class="fixed-stop form-control" id="pickupDisplay"><?php echo htmlspecialchars($fixed_pickup); ?></div>
-    <input type="hidden" id="pickup" value="<?php echo htmlspecialchars($fixed_pickup, ENT_QUOTES, 'UTF-8'); ?>">
+    <label for="pickup">Pickup Location</label>
+    <select id="pickup" class="form-control" required>
+        <?php foreach($pickup_stops as $stop): $e = htmlspecialchars($stop, ENT_QUOTES, 'UTF-8'); ?>
+        <option value="<?php echo $e; ?>"<?php echo $stop === $fixed_pickup ? ' selected' : ''; ?>><?php echo $e; ?></option>
+        <?php endforeach; ?>
+    </select>
 </div>
 
 <div class="form-group" id="destinationGroup">

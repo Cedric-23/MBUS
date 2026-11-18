@@ -93,6 +93,10 @@ $sql = mbus_db_prepare($conn, "
             </div>
 </header>
 
+<?php if(isset($_GET['ref_sent'])): ?>
+<div class="ref-sent-note" role="status"><strong>Reference number sent.</strong> An operator will confirm your payment shortly. Your ticket appears here once it&rsquo;s confirmed.</div>
+<?php endif; ?>
+
 <?php
 $all = [];
 while($sql !== false && ($r0 = mbus_db_fetch_assoc($sql))) $all[] = $r0;
