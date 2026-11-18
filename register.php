@@ -291,7 +291,12 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
             .form-fieldset { display: contents; border: 0; padding: 0; margin: 0; min-width: 0; }
         </style>
     </head>
-    <body>
+    <body class="auth-register">
+        <div class="auth-hero-m">
+            <a class="auth-back" href="javascript:history.length>1?history.back():location.href='index.php'" aria-label="Go back"><i data-lucide="arrow-left"></i></a>
+            <h1>Create your account</h1>
+            <p>Plan your next bus trip in just a few steps.</p>
+        </div>
         <div class="left-container">
             <div class="left-container-child-1">
                 <div class="logo-wordmark">
@@ -313,6 +318,10 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
         </div>
         <div class="right-container">
             <div class="form-container">
+                <div class="auth-tabs" role="tablist">
+                    <a href="login.php" role="tab">Login</a>
+                    <a href="register.php" class="on" role="tab">Register</a>
+                </div>
                 <div class="form-header">
                     <div class="form-header-text">
                         <h1>Create your Account</h1>

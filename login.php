@@ -156,7 +156,12 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
             .login-form .form-email-input,.login-form .password-input{position:relative}
         </style>
     </head>
-    <body>
+    <body class="auth-login">
+        <div class="auth-hero-m">
+            <a class="auth-back" href="javascript:history.length>1?history.back():location.href='index.php'" aria-label="Go back"><i data-lucide="arrow-left"></i></a>
+            <h1>Welcome back</h1>
+            <p>Sign in to manage your trips and bookings.</p>
+        </div>
         <div class="left-container">
             <div class="left-container-child-1">
                 <div class="logo-wordmark">
@@ -178,6 +183,10 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
         </div>
         <div class="right-container">
             <div class="form-container">
+                <div class="auth-tabs" role="tablist">
+                    <a href="login.php" class="on" role="tab">Login</a>
+                    <a href="register.php" class="" role="tab">Register</a>
+                </div>
                 <div class="form-header">
                     <div class="form-header-text">
                         <h1>Welcome back</h1>
@@ -231,7 +240,7 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
 
                         <button class="submit-button" id="login-submit" type="submit">Sign in</button>
 
-                        <div class="auth-or"><span>Or</span></div>
+                        <div class="auth-or"><span>Or login with</span></div>
                         <a class="google-btn" href="google_login.php">
                             <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 0 1 0-9.4l-7.9-6.1a24 24 0 0 0 0 21.6l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
                             Continue with Google
