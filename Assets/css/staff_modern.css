@@ -112,3 +112,41 @@
 .stf section.cards .card p{margin:0}
 .stf section.cards .card .btn{margin-top:10px;align-self:flex-start;min-height:42px;padding:0 20px;display:inline-flex;align-items:center}
 .stf .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- Waiting board (operator + admin): same layout as the commuter one ---------- */
+.stf.staff-wait-page{--nav-h:84px;background:#e6efff!important}
+.stf.staff-wait-page .main{padding:0!important}
+.stf.staff-wait-page .sw-bar{background:transparent;box-shadow:none;pointer-events:none}
+.stf.staff-wait-page .sw-bar>*{pointer-events:auto}
+.stf.staff-wait-page .sw-title{flex:0 1 auto;background:rgba(255,255,255,.92);border-radius:18px;padding:8px 14px;box-shadow:var(--stf-shadow-sm)}
+.stf.staff-wait-page .sw-title h1{font-size:1rem;color:#14213d}
+.stf.staff-wait-page .sw-bar::after{content:"";order:1;flex:1}
+.stf.staff-wait-page .sw-filter{order:2;max-width:46%}
+.stf.staff-wait-page .sw-icon-btn{order:3;background:#fff;color:#2f6fe4;border:0;box-shadow:var(--stf-shadow-sm)}
+.stf.staff-wait-page .profile-menu-wrap{order:4}
+.stf.staff-wait-page .sw-filter select{border:0;border-radius:999px;background:#fff;box-shadow:var(--stf-shadow-sm);color:#14213d;font-weight:600;padding:0 14px}
+.stf.staff-wait-page .sw-notice{border-radius:18px;background:#14213d}
+.stf.staff-wait-page .sw-notice-soft{background:#fff4e0}
+.stf.staff-wait-page .sw-sheet{left:14px;right:14px;max-width:none;margin:0;bottom:calc(98px + env(safe-area-inset-bottom));border-radius:26px;box-shadow:0 14px 36px rgba(47,111,228,.22);padding:12px 14px}
+.stf.staff-wait-page .sw-sheet-head h2{color:#14213d;font-size:1rem}
+.stf.staff-wait-page .sw-route-estimate{background:#eef4ff;color:#2f4f86;border-radius:14px}
+.stf.staff-wait-page .sw-route-view{background:#2f6fe4;color:#fff;border:0;border-radius:999px}
+.stf.staff-wait-page .sw-row{border-top-color:#e8effb}
+.stf.staff-wait-page .sw-row.is-on{background:#eef4ff;border-radius:16px}
+.stf.staff-wait-page .sw-dist{background:#e3edff;color:#2f6fe4}
+.stf.staff-wait-page .sw-done,.stf.staff-wait-page .sw-card-pick{background:#2f6fe4;border-radius:999px;box-shadow:0 8px 18px rgba(47,111,228,.28)}
+.stf.staff-wait-page .sw-card-close{border-radius:999px}
+.stf.staff-wait-page .sw-card{border-radius:28px 28px 0 0}
+.stf.staff-wait-page .sw-compact{background:#f4f8ff;border-color:#dde7f8;border-radius:20px}
+.stf.staff-wait-page .sw-stack-more{background:#2f6fe4}
+.stf.staff-wait-page .sw-bus{background:#2f6fe4}
+@media(min-width:769px){
+  .stf.staff-wait-page .sw-sheet{left:16px;right:auto;width:390px;bottom:16px}
+  .stf.staff-wait-page .bottom-nav{left:50%;right:auto;width:520px;transform:translateX(-50%)}
+}
+.stf.staff-wait-page .sw-map{bottom:0}
+.stf.staff-wait-page .sw-title{white-space:nowrap}
+.stf.staff-wait-page .sw-title p{font-size:.7rem}
+.stf.staff-wait-page .sw-notice{top:calc(74px + env(safe-area-inset-top))}
+.stf.staff-wait-page .op-loc{top:calc(74px + env(safe-area-inset-top))}
+@media(max-width:420px){.stf.staff-wait-page .sw-filter{max-width:38%}}
