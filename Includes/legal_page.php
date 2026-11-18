@@ -1,6 +1,15 @@
 <?php
 // Shared layout for Terms of Service / Privacy Policy. Caller sets $legal_title, $legal_updated and $legal_sections [[heading, [paragraphs]]].
 $cur = basename($_SERVER['SCRIPT_NAME']);
+if (isset($_GET['embed'])) {
+    echo '<p class="legal-updated">Last updated ' . htmlspecialchars($legal_updated) . '</p>';
+    foreach ($legal_sections as $i => $s) {
+        echo '<section><h2>' . ($i + 1) . '. ' . htmlspecialchars($s[0]) . '</h2>';
+        foreach ($s[1] as $para) echo '<p>' . htmlspecialchars($para) . '</p>';
+        echo '</section>';
+    }
+    return;
+}
 ?><!DOCTYPE html>
 <html lang="en">
 <head>

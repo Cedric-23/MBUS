@@ -4,6 +4,7 @@ include_once __DIR__ . '/../config/db_connect.php';
 include_once __DIR__ . '/../Includes/profile_photo.php';
 include_once __DIR__ . '/../Includes/validation.php';
 include_once __DIR__ . '/../Includes/csrf.php';
+include_once __DIR__ . '/../Includes/phone_unique.php';
 
 if (!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'operator') {
     header('Location: ../login.php');
@@ -61,6 +62,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['update_pro
             } elseif (mbus_db_fetch_assoc($duplicate)) {
                 $profileErrors['email'] = 'That email address is already linked to another account.';
             }
+        }
+
+        if (!isset($profileErrors['phone_number']) && $formValues['phone_number'] !== '' && mbus_phone_in_use($conn, (string)$formValues['phone_number'], (int)$userId) !== false) {
+            $profileErrors['phone_number'] = 'That mobile number is already used by another account.';
         }
 
         if (!$profileErrors) {

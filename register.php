@@ -7,6 +7,7 @@ include "Includes/activity_log.php";
 require_once "Includes/csrf.php";
 require_once __DIR__ . '/Includes/reset_mailer.php';
 require_once __DIR__ . '/Includes/registration_security.php';
+require_once __DIR__ . '/Includes/phone_unique.php';
 
 /*
  * Conductor accounts:
@@ -104,6 +105,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $error = 'Email verification is temporarily unavailable. Please try again later.';
         }
 
+        if (!$errors && $error === '') {
+            $phone_used = mbus_phone_in_use($conn, $phone);
+            if ($phone_used === null) $error = 'Registration is temporarily unavailable. Please try again in a moment.';
+            elseif ($phone_used) $errors['mobileNumber'] = 'That mobile number is already used by another account. Use a different number or log in.';
+        }
         if (!$errors && $error === '') {
             $dup = mbus_db_prepare($conn,
                 "SELECT 1 FROM users WHERE LOWER(email) = ?
@@ -204,6 +210,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 [$email, $email, $email]);
             if ($dup !== false && mbus_db_num_rows($dup) > 0) $errors['email-address'] = 'This email already has an account or a pending application. Log in, or wait for the admin to review it.';
         }
+        if (!isset($errors['phone-number'])) {
+            $phone_used = mbus_phone_in_use($conn, $phone_number);
+            if ($phone_used === null) $error = 'Registration is temporarily unavailable. Please try again in a moment.';
+            elseif ($phone_used) $errors['phone-number'] = 'That mobile number is already used by another account. Use a different number or log in.';
+        }
         if (!$errors && $error === '') {
             $application_limit = mbus_registration_allow_application($conn, $email);
             if ($application_limit !== null) $error = mbus_registration_limit_message($application_limit);
@@ -281,7 +292,8 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
         <title>MBUS</title>
         <link rel="stylesheet" href="Assets/css/global/font.css"/>
         <link rel="stylesheet" href="Assets/css/main/register.css?v=<?= @filemtime(__DIR__ . '/Assets/css/main/register.css') ?>"/>
-        <link rel="stylesheet" href="Assets/css/main/auth_modern.css?v=<?= @filemtime(__DIR__ . '/Assets/css/main/auth_modern.css') ?>"/>
+        <link rel="stylesheet" href="Assets/css/legal_modal.css?v=<?= @filemtime(__DIR__ . '/Assets/css/legal_modal.css') ?>"/>
+    <link rel="stylesheet" href="Assets/css/main/auth_modern.css?v=<?= @filemtime(__DIR__ . '/Assets/css/main/auth_modern.css') ?>"/>
         <link rel="stylesheet" href="Assets/css/main/driver_bus_setup.css?v=<?= @filemtime(__DIR__ . '/Assets/css/main/driver_bus_setup.css') ?>"/>
         <script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
         <style>
@@ -399,7 +411,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                         </div>
                         <div class="form-tos-check">
                             <input type="checkbox" required/>
-                            <label class="tos">I agree to the<a href="terms.php" target="_blank" rel="noopener" style="color:#2f6fe4;font-weight:600;"> Terms of Service </a> and <a href="privacy.php" target="_blank" rel="noopener" style="color:#2f6fe4;font-weight:600;"> Privacy Policy. </a> </label>
+                            <label class="tos">I agree to the<a href="terms.php" data-legal="terms" style="color:#2f6fe4;font-weight:600;"> Terms of Service </a> and <a href="privacy.php" data-legal="privacy" style="color:#2f6fe4;font-weight:600;"> Privacy Policy. </a> </label>
                         </div>
                         <button class="submit-button" id="passenger-submit" type="submit"><?= reg_e($submit_text) ?></button>
                         </fieldset>
@@ -585,7 +597,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                 </section>
                                 <div class="terms-conditions">
                                     <input type="checkbox" required>
-                                    <p>I agree to the <a href="terms.php" target="_blank" rel="noopener">Terms of Service</a> and <a href="privacy.php" target="_blank" rel="noopener">Privacy Policy</a> and certify that all information provided is accurate.</p>
+                                    <p>I agree to the <a href="terms.php" data-legal="terms">Terms of Service</a> and <a href="privacy.php" data-legal="privacy">Privacy Policy</a> and certify that all information provided is accurate.</p>
                                 </div>
                             </div>
                         </div>
@@ -620,5 +632,46 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
         <script src="Assets/js/driver_bus_setup.js?v=<?= @filemtime(__DIR__ . '/Assets/js/driver_bus_setup.js') ?>"></script>
         <script> if (window.lucide) lucide.createIcons(); </script>
         <script src="Assets/js/password-toggle.js"></script>
-    </body>
+    
+<div class="legal-modal" id="legalModal" hidden>
+    <div class="legal-modal-backdrop" data-legal-close></div>
+    <div class="legal-modal-card" role="dialog" aria-modal="true" aria-labelledby="legalTitle">
+        <div class="legal-modal-head">
+            <h2 id="legalTitle">Terms of Service</h2>
+            <button type="button" class="legal-modal-x" data-legal-close aria-label="Close">&times;</button>
+        </div>
+        <div class="legal-modal-tabs">
+            <button type="button" data-legal-tab="terms" class="active">Terms of Service</button>
+            <button type="button" data-legal-tab="privacy">Privacy Policy</button>
+        </div>
+        <div class="legal-modal-body" id="legalBody" tabindex="0"></div>
+        <button type="button" class="legal-modal-ok" data-legal-close>Got it</button>
+    </div>
+</div>
+<script>
+(function(){
+    var modal=document.getElementById('legalModal'),body=document.getElementById('legalBody'),title=document.getElementById('legalTitle');
+    var names={terms:'Terms of Service',privacy:'Privacy Policy'},cache={},last=null;
+    function show(kind){
+        title.textContent=names[kind];
+        modal.querySelectorAll('[data-legal-tab]').forEach(function(b){b.classList.toggle('active',b.dataset.legalTab===kind);});
+        function put(h){body.innerHTML=h;body.scrollTop=0;}
+        if(cache[kind]){put(cache[kind]);return;}
+        body.textContent='Loading…';
+        fetch(kind+'.php?embed=1',{credentials:'same-origin'}).then(function(r){if(!r.ok)throw 0;return r.text();})
+            .then(function(h){cache[kind]=h;put(h);})
+            .catch(function(){body.innerHTML='<p>Could not load this right now. <a href="'+kind+'.php" target="_blank" rel="noopener">Open it in a new page</a>.</p>';});
+    }
+    function open(kind,from){last=from;modal.hidden=false;document.body.style.overflow='hidden';show(kind);modal.querySelector('.legal-modal-ok').focus();}
+    function close(){modal.hidden=true;document.body.style.overflow='';if(last)last.focus();}
+    document.addEventListener('click',function(e){
+        var a=e.target.closest('[data-legal]');
+        if(a){e.preventDefault();open(a.dataset.legal,a);return;}
+        var t=e.target.closest('[data-legal-tab]');if(t){show(t.dataset.legalTab);return;}
+        if(e.target.closest('[data-legal-close]'))close();
+    });
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!modal.hidden)close();});
+})();
+</script>
+</body>
 </html>
