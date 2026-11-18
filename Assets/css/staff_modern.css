@@ -150,3 +150,19 @@
 .stf.staff-wait-page .sw-notice{top:calc(74px + env(safe-area-inset-top))}
 .stf.staff-wait-page .op-loc{top:calc(74px + env(safe-area-inset-top))}
 @media(max-width:420px){.stf.staff-wait-page .sw-filter{max-width:38%}}
+
+/* ---------- GCash approval: current vs requested ---------- */
+.stf .gc-grid{max-width:860px;gap:16px;align-items:stretch}
+.stf .gc-card{border:1px solid rgba(255,255,255,.9);border-radius:var(--stf-r);box-shadow:var(--stf-shadow-sm);padding:20px;gap:16px}
+.stf .gc-pending{border:2px solid #2f6fe4;box-shadow:0 14px 34px rgba(47,111,228,.18)}
+.stf .gc-top h2{font-size:1.05rem;font-weight:700}
+.stf .gc-body{background:#f4f8ff;border-radius:18px;padding:14px}
+.stf .gc-qr{width:88px;height:88px;border-radius:14px;border:0;background:#fff;padding:4px}
+.stf .gc-name{font-size:1.05rem;font-weight:700;color:#14213d}
+.stf .gc-num{color:#2f6fe4;font-weight:600}
+.stf .gc-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto}
+.stf .gc-btn{flex:none;width:100%;min-height:46px;height:46px;padding:0 16px;border-radius:999px;border:1.5px solid #cfe0fb;background:#fff;color:#4a5b78;font-size:.95rem;font-weight:600;display:inline-flex;align-items:center;justify-content:center;box-shadow:none}
+.stf .gc-btn:hover{background:#eef4ff}
+.stf .gc-btn.primary{background:#2f6fe4;border-color:#2f6fe4;color:#fff;box-shadow:0 8px 18px rgba(47,111,228,.28)}
+.stf .gc-btn.primary:hover{background:#2358c0}
+.stf .pay-badge{padding:4px 12px;font-size:.78rem}
