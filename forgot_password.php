@@ -83,8 +83,8 @@ function reset_page_e(mixed $value): string { return htmlspecialchars((string)$v
             <?php csrf_field(); ?>
             <div class="form-field<?= $field_error ? ' is-invalid' : '' ?>">
                 <label for="email">Email address</label>
-                <input id="email" name="email" type="email" value="<?= reset_page_e($email_value) ?>" placeholder="juan@example.com" maxlength="100" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" autofocus <?= $field_error ? 'aria-invalid="true" aria-describedby="email-error"' : '' ?>>
-                <i class="input-icon" data-lucide="mail" aria-hidden="true"></i>
+                <div class="reset-input"><input id="email" name="email" type="email" value="<?= reset_page_e($email_value) ?>" placeholder="juan@example.com" maxlength="100" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" autofocus <?= $field_error ? 'aria-invalid="true" aria-describedby="email-error"' : '' ?>>
+                <i class="input-icon" data-lucide="mail" aria-hidden="true"></i></div>
                 <?php if ($field_error): ?><span class="field-error" id="email-error"><?= reset_page_e($field_error) ?></span><?php endif; ?>
             </div>
             <button class="submit-button" type="submit" name="send_code">Send verification code</button>
