@@ -60,8 +60,6 @@ function setUserType(type) {
         passengerSubmit.textContent = submitMessages[type];
     }
 
-    var gt = document.getElementById("google-top");
-    if (gt) gt.style.display = isPassenger ? "" : "none";
     pickerText.textContent = pickerMessages[type];
     userTypeInput.value = type;
 }
