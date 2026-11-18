@@ -102,8 +102,9 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
     <link rel="stylesheet" href="../Assets/css/operator_profile.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/operator_profile.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
+    <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
 </head>
-<body class="has-bottom-nav profile-page operator-profile">
+<body class="stf has-bottom-nav profile-page operator-profile">
 <main class="main" role="main">
     <header class="page-header" role="banner">
         <div class="page-header-left"><h1>My Profile</h1></div>

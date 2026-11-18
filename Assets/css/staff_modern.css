@@ -1,0 +1,114 @@
+/* Operator + Admin skin ("stf"): same soft-blue look as the commuter pages.
+   Loaded last; everything is scoped to body.stf so other pages are untouched. */
+.stf{
+  --color-primary:#2f6fe4;--color-primary-light:#4a86f0;--color-primary-dark:#2358c0;
+  --color-accent:#2f6fe4;--color-accent-hover:#4a86f0;
+  --color-bg:#edf3fe;--color-text-primary:#14213d;--color-text-secondary:#4a5b78;--color-text-muted:#7a8aa6;
+  --color-border:#dde7f8;--color-border-light:#e8effb;
+  --ad-bg:#fff;--ad-line:#dde7f8;--ad-text:#14213d;--ad-muted:#7a8aa6;--ad-primary:#2f6fe4;--ad-soft:#f1f6ff;
+  --stf-shadow:0 12px 32px rgba(47,111,228,.10);--stf-shadow-sm:0 4px 14px rgba(47,111,228,.08);--stf-r:22px;
+  background:linear-gradient(180deg,#e6efff 0,#f3f7ff 55%,#f7f9ff 100%) fixed!important;
+  color:var(--color-text-primary);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+.stf h1,.stf h2,.stf h3{letter-spacing:-.01em;color:#14213d}
+.stf .main{background:transparent}
+
+/* ---------- Sidebar (desktop) ---------- */
+.stf .sidebar{background:#fff!important;color:#4a5b78;border-radius:0 28px 28px 0;border-right:1px solid #e3ecfb;box-shadow:0 0 40px rgba(47,111,228,.10)}
+.stf .sidebar .logo{filter:brightness(0) saturate(100%) invert(37%) sepia(88%) saturate(2200%) hue-rotate(206deg) brightness(94%)}
+.stf .sidebar h2,.stf .sidebar .menu-label,.stf .sidebar .menu-section{color:#8a9bb8!important;-webkit-text-fill-color:#8a9bb8;background:none;border:0}
+.stf .sidebar a{color:#4a5b78;border-radius:16px;font-weight:600;border-left:0!important}
+.stf .sidebar a i{color:#8a9bb8}
+.stf .sidebar a:hover{background:#eef4ff;color:#2f6fe4}
+.stf .sidebar a:hover i{color:#2f6fe4}
+.stf .sidebar a[aria-current="page"],.stf .sidebar a.active{background:#2f6fe4!important;color:#fff!important;box-shadow:0 8px 18px rgba(47,111,228,.30)}
+.stf .sidebar a[aria-current="page"] i,.stf .sidebar a.active i{color:#fff}
+.stf .sidebar .menu-badge{background:#ff5b5b;color:#fff;border-radius:999px}
+.stf .sidebar .menu-bottom{border-top:1px solid #e8effb}
+.stf .sidebar .logout-btn,.stf .sidebar .btn-outline{background:#fff;border:1.5px solid #cfe0fb;color:#2f6fe4;border-radius:999px}
+.stf .sidebar .logout-btn:hover{background:#eef4ff}
+
+/* ---------- Header ---------- */
+.stf .page-header h1{font-weight:700}
+.stf .profile-avatar,.stf .profile-trigger{background:linear-gradient(135deg,#2f6fe4,#4f8cf5);color:#fff;box-shadow:var(--stf-shadow-sm)}
+.stf .profile-menu{border-radius:20px;border:1px solid #e3ecfb;box-shadow:var(--stf-shadow)}
+
+/* ---------- Cards ---------- */
+.stf .card,.stf .ad-card,.stf .stat-card,.stf .kpi,.stf .panel,.stf .pay-panel,.stf .trip-card,.stf .bus-card,.stf .home-perk,
+.stf .manage-card,.stf .rider-card,.stf .gc-card,.stf .oa-card,.stf .vf-card,.stf .table-wrap,.stf .ad-table{
+  background:#fff;border:1px solid rgba(255,255,255,.9);border-radius:var(--stf-r);box-shadow:var(--stf-shadow-sm)}
+.stf .ad-card{padding:18px}
+.stf .ad-card:hover{box-shadow:var(--stf-shadow);transform:none}
+
+/* Dashboard hero + tiles */
+.stf .next-trip{background:linear-gradient(135deg,#2f6fe4 0,#4f8cf5 100%)!important;color:#fff;border:0;border-radius:26px;box-shadow:0 14px 34px rgba(47,111,228,.32)}
+.stf .next-trip *{color:inherit}
+.stf .next-trip a.next-cta{background:#fff!important;color:#2f6fe4!important;border-radius:999px;box-shadow:none}
+.stf .next-trip a.next-cta.secondary,.stf .next-trip .next-cta.ghost{background:rgba(255,255,255,.22)!important;color:#fff!important}
+.stf .next-trip.is-empty{background:#fff!important;color:var(--color-text-primary);border:1px solid rgba(255,255,255,.9);box-shadow:var(--stf-shadow-sm)}
+.stf .next-trip .badge,.stf .next-trip .next-label{background:rgba(255,255,255,.22);color:#fff}
+.stf .soon-list a,.stf .home-list a,.stf .manage-list a{background:#fff;border-radius:20px}
+
+/* ---------- Buttons ---------- */
+.stf .btn-primary,.stf .btn.btn-primary,.stf .ad-btn.primary,.stf .submit-button,.stf .next-cta{border-radius:999px!important;background:#2f6fe4!important;border-color:#2f6fe4!important;color:#fff!important;font-weight:600;box-shadow:0 8px 18px rgba(47,111,228,.28)}
+.stf .ad-btn.primary:hover,.stf .btn-primary:hover{background:#2358c0!important}
+.stf .ad-btn{border-radius:999px;border:1.5px solid #cfe0fb;background:#fff;color:#2f6fe4}
+.stf .ad-btn:hover{background:#eef4ff}
+.stf .ad-btn.primary{border:0}
+.stf .ad-btn.danger,.stf .btn-danger{border-radius:999px}
+.stf .btn-outline,.stf .btn.btn-outline{border-radius:999px;border:1.5px solid #cfe0fb;color:#2f6fe4;background:#fff}
+.stf .btn-success,.stf .btn{border-radius:999px}
+.stf .btn-success{background:#1f9d5a;color:#fff}
+.stf button[type=submit]:not(.btn-outline):not(.ad-btn){border-radius:999px}
+
+/* ---------- Chips, badges, tabs ---------- */
+.stf .badge,.stf .status-badge,.stf .pill,.stf .tag,.stf .pay-badge,.stf .ad-pill,.stf .ad-badge,.stf .seat-chip{border-radius:999px;font-weight:600}
+.stf .ad-seg,.stf .seg,.stf .tabs,.stf .filter-tabs,.stf .direction-tabs{background:#e3edff;border-radius:999px;padding:4px;border:0}
+.stf .ad-seg a,.stf .seg a,.stf .tabs a,.stf .filter-tabs a,.stf .direction-tabs a{border-radius:999px;color:#4a5b78}
+.stf .ad-seg a.active,.stf .ad-seg a[aria-current],.stf .seg a.active,.stf .tabs .active,.stf .filter-tabs .active,.stf .direction-tabs .active{background:#fff;color:#2f6fe4;box-shadow:var(--stf-shadow-sm)}
+.stf .filter-chip,.stf .chip,.stf .date-filter-btn{border-radius:999px;background:#fff;border:1px solid #dde7f8;color:#4a5b78}
+.stf .filter-chip.active,.stf .chip.active,.stf .date-filter-btn.active{background:#2f6fe4;border-color:#2f6fe4;color:#fff;box-shadow:0 6px 16px rgba(47,111,228,.28)}
+
+/* ---------- Forms ---------- */
+.stf input[type=text],.stf input[type=email],.stf input[type=tel],.stf input[type=password],.stf input[type=number],.stf input[type=search],
+.stf input[type=date],.stf input[type=time],.stf select,.stf textarea{border-radius:16px;border:1.5px solid #dde7f8;background:#fff;color:#14213d}
+.stf input:focus,.stf select:focus,.stf textarea:focus{border-color:#2f6fe4;box-shadow:0 0 0 4px rgba(47,111,228,.14);outline:0}
+.stf label{color:#4a5b78}
+
+/* ---------- Tables ---------- */
+.stf table{border-collapse:separate;border-spacing:0}
+.stf thead th,.stf .ad-th{background:#f1f6ff;color:#4a5b78;font-weight:600;border-bottom:1px solid #dde7f8}
+.stf tbody tr:hover td{background:#f8fbff}
+.stf td{border-color:#e8effb}
+.stf .ad-table,.stf .ad-tbl{border-radius:var(--stf-r);overflow:hidden}
+.stf .ad-tr:hover{background:#f8fbff}
+
+/* ---------- Modals / sheets ---------- */
+.stf .ad-modal,.stf .modal-card,.stf .modal-content,.stf dialog{border-radius:26px;border:0;box-shadow:0 24px 60px rgba(20,33,61,.22)}
+.stf .sheet,.stf [class*="sheet"]{border-radius:28px 28px 0 0}
+
+/* ---------- Floating bottom nav (mobile) ---------- */
+@media(max-width:768px){
+  .stf .bottom-nav{left:14px;right:14px;bottom:calc(12px + env(safe-area-inset-bottom));padding:8px;min-height:68px;border:0;border-radius:30px;background:rgba(255,255,255,.96);box-shadow:0 14px 36px rgba(47,111,228,.22);backdrop-filter:blur(10px)}
+  .stf .bottom-nav-item{border-radius:22px;color:#7a8aa6}
+  .stf .bottom-nav-item.active,.stf .bottom-nav-item:hover{background:#2f6fe4;color:#fff;box-shadow:0 8px 18px rgba(47,111,228,.35)}
+  .stf .bottom-nav-item.active::after{display:none}
+}
+.stf.has-bottom-nav .main{padding-bottom:calc(110px + env(safe-area-inset-bottom))}
+
+/* ---------- Operator pages ---------- */
+.stf.scan-page .scan-card,.stf.scan-page .card{border-radius:26px}
+.stf.riders-page .rider,.stf.riders-page .card{border-radius:22px}
+.stf.pay-page .pay-panel,.stf.pay-page details{border-radius:22px}
+.stf .manage-trips .trip,.stf .trip-card{border-radius:22px}
+
+/* ---------- Analytics: metric cards as a grid ---------- */
+.stf .dashboard-content{padding:0 0 24px}
+.stf section.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.stf section.cards .card{padding:20px;display:flex;flex-direction:column;gap:6px}
+.stf section.cards .card .day{font-size:1.9rem;font-weight:700;color:#2f6fe4;margin:0}
+.stf section.cards .card .date{margin:0;color:#7a8aa6}
+.stf section.cards .card p{margin:0}
+.stf section.cards .card .btn{margin-top:10px;align-self:flex-start;min-height:42px;padding:0 20px;display:inline-flex;align-items:center}
+.stf .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
