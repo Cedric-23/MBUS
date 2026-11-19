@@ -8,6 +8,7 @@
     const pickupEndpoint = root.dataset.endpoint;
     const liveEndpoint = root.dataset.liveEndpoint || '../api/live_tracking.php';
     const FRESH_MS = 120000;
+    const STOP_COORDS = window.MBUS_STOP_COORDS || {};
     const el = id => document.getElementById(id);
     const list = el('staffList'), empty = el('staffEmpty'), filter = el('staffSchedule');
     const rList = el('staffReserveList'), rEmpty = el('staffReserveEmpty');
@@ -37,6 +38,25 @@
     function sizeSheet() {
         const sheet = document.querySelector('.sw-sheet');
         document.documentElement.style.setProperty('--sw-sheet-h', (sheet ? sheet.offsetHeight : 0) + 'px');
+    }
+
+    /* ---------- sheet collapse (keeps the map visible) ---------- */
+    function setCollapsed(on) {
+        const sheet = document.querySelector('.sw-sheet'), toggle = el('swToggle');
+        if (!sheet || !toggle) return;
+        sheet.classList.toggle('is-collapsed', on);
+        toggle.setAttribute('aria-expanded', on ? 'false' : 'true');
+        try { localStorage.setItem('mbusWaitSheet', on ? '1' : '0'); } catch (e) { /* storage may be blocked */ }
+        sizeSheet();
+        if (map) setTimeout(() => { map.invalidateSize({ pan: false }); sizeSheet(); }, 260);
+    }
+    function initSheetToggle() {
+        const sheet = document.querySelector('.sw-sheet'), toggle = el('swToggle');
+        if (!sheet || !toggle) return;
+        toggle.addEventListener('click', () => setCollapsed(!sheet.classList.contains('is-collapsed')));
+        let saved = null;
+        try { saved = localStorage.getItem('mbusWaitSheet'); } catch (e) { saved = null; }
+        if (saved === '1') setCollapsed(true);
     }
 
     /* ---------- map ---------- */
@@ -70,6 +90,9 @@
     }
     const personIcon = (name, on, r) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
         html: '<span class="sw-person' + (on ? ' is-on' : '') + '"><img src="' + photoOf(r) + '" alt=""></span>' });
+    /* reservation pin: the rider's photo at the stop they chose. kind = 'pick' (pick-up stop) or 'drop' (drop-off stop) */
+    const reserveIcon = (r, kind, approx) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
+        html: '<span class="sw-res-pin sw-res-' + kind + (approx ? ' is-approx' : '') + '"><span class="sw-person"><img src="' + photoOf(r) + '" alt=""></span><span class="sw-res-tag">' + (kind === 'drop' ? 'Drop-off' : 'Pick-up') + '</span></span>' });
 
     function fit(points) {
         if (!map || !points.length) return;
@@ -165,7 +188,7 @@
                 routeFitKey = key;
                 if (routeViewMode === 'route') map.fitBounds(L.latLngBounds(route.points).pad(0.08), { maxZoom: 12, animate: false });
                 updateRouteButton();
-                updateStaffRoute();
+                render(); // also redraws the reservation pins that sit along this route (render refreshes the estimate too)
             }).catch(error => {
                 if (thisRequest !== routeRequest || routeKey !== key) return;
                 routeFailure = { key, until: Date.now() + 30000 };
@@ -252,9 +275,57 @@
         document.addEventListener('keydown', esc); (q || x).focus();
     }
 
+    /* ---------- reservation pins: where each reserved rider gets on and off ---------- */
+    /* A point part-way along the road route (frac 0 = origin, 1 = destination). */
+    function alongRoute(route, frac) {
+        const pts = route && route.points, cum = route && route.cumulativeMeters;
+        if (!Array.isArray(pts) || pts.length < 2 || !Array.isArray(cum) || cum.length !== pts.length) return null;
+        const total = cum[cum.length - 1];
+        if (!(total > 0)) return null;
+        const want = total * Math.min(1, Math.max(0, frac));
+        let i = 1;
+        while (i < cum.length - 1 && cum[i] < want) i++;
+        const span = cum[i] - cum[i - 1];
+        const t = span > 0 ? Math.min(1, Math.max(0, (want - cum[i - 1]) / span)) : 0;
+        return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t];
+    }
+    /* Exact when the stop is in MBUS_STOP_COORDS. Otherwise approximate: placed along the loaded route by the
+       stop's position in the trip's stop list (only while that trip's road route is loaded). */
+    function stopPoint(r, name) {
+        const key = String(name || '').trim().toUpperCase();
+        if (!key) return null;
+        const known = STOP_COORDS[key];
+        if (known && validPt(known[0], known[1])) return { p: [Number(known[0]), Number(known[1])], approx: false };
+        const trip = schedules.find(s => Number(s.schedule_id) === Number(r.schedule_id));
+        if (!trip || !routeData || routeKey.indexOf(String(trip.schedule_id) + ':') !== 0) return null;
+        const stops = Array.isArray(trip.stops) ? trip.stops : [];
+        const i = stops.indexOf(key);
+        if (i < 0 || stops.length < 2) return null;
+        const p = alongRoute(routeData, i / (stops.length - 1));
+        return p ? { p, approx: true } : null;
+    }
+    function reservationPins(rows, pts) {
+        if (!layer || !map) return;
+        const used = new Map();
+        rows.forEach(r => {
+            [['pick', r.pickup_location], ['drop', r.stop_destination]].forEach(([kind, name]) => {
+                const sp = stopPoint(r, name);
+                if (!sp) return;
+                const k = sp.p[0].toFixed(4) + ',' + sp.p[1].toFixed(4);
+                const n = used.get(k) || 0; used.set(k, n + 1);
+                const p = [sp.p[0], sp.p[1] + n * 0.00009]; // riders at the same stop sit side by side
+                pts.push(p);
+                const m = L.marker(p, { icon: reserveIcon(r, kind, sp.approx), title: (r.full_name || 'Commuter') + (kind === 'drop' ? ' · drop-off at ' : ' · pick-up at ') + name + (sp.approx ? ' (approx.)' : ''), zIndexOffset: 200 }).addTo(layer);
+                bindAvatarFallback(m.getElement() && m.getElement().querySelector('.sw-person img'));
+                m.on('click', () => showReservation(r));
+            });
+        });
+    }
+
     function render() {
         const sel = filter.value;
         const reqs = requests.filter(r => !sel || String(r.schedule_id) === sel);
+        const resRows = reservations.filter(r => !sel || String(r.schedule_id) === sel);
         const buses = locations.filter(l => (!sel || String(l.schedule_id) === sel) && validPt(l.latitude, l.longitude));
 
         // distance from each rider to the bus of their trip
@@ -266,7 +337,10 @@
 
         lastReqs = reqs;
         el('staffCount').textContent = String(reqs.length);
-        el('busLabel').textContent = buses.length ? buses.length + (buses.length === 1 ? ' bus live' : ' buses live') : 'No bus location yet';
+        const busText = buses.length ? buses.length + (buses.length === 1 ? ' bus live' : ' buses live') : 'No bus location yet';
+        el('busLabel').textContent = busText;
+        const summary = el('swSummary');
+        if (summary) summary.textContent = reqs.length + ' pick-up · ' + resRows.length + ' reserved · ' + busText;
         empty.hidden = reqs.length > 0 || !ready;
         empty.textContent = ready ? 'No one is waiting for a pick-up.' : 'Waiting is not available yet.';
         renderReservations(sel);
@@ -319,6 +393,7 @@
             list.append(li);
         });
 
+        reservationPins(resRows, pts);
         updateCompact(reqs);
         if (!fittedOnce && pts.length) { fit(pts); fittedOnce = true; }
         updateStaffRoute();
@@ -369,9 +444,15 @@
         const dl = node('dl', undefined, 'sw-card-list');
         rows.forEach(([k, v]) => { dl.append(node('dt', k), node('dd', v)); });
         const close = node('button', 'Close', 'sw-card-close'); close.type = 'button';
-        card.append(head, dl, close); back.append(card); document.body.append(back);
+        const spots = map ? [stopPoint(r, r.pickup_location), stopPoint(r, r.stop_destination)].filter(Boolean).map(s => s.p) : [];
+        let show = null;
+        if (spots.length) { show = node('button', 'Show on map', 'sw-card-pick'); show.type = 'button'; }
+        card.append(head, dl);
+        if (show) card.append(show);
+        card.append(close); back.append(card); document.body.append(back);
         const shut = () => { back.remove(); document.removeEventListener('keydown', esc); };
         const esc = e => { if (e.key === 'Escape') shut(); };
+        if (show) show.addEventListener('click', () => { shut(); fit(spots); });
         close.addEventListener('click', shut); back.addEventListener('click', e => { if (e.target === back) shut(); });
         document.addEventListener('keydown', esc); close.focus();
     }
@@ -485,6 +566,7 @@
     window.addEventListener('resize', () => { sizeSheet(); if (map) map.invalidateSize(); });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 
+    initSheetToggle();
     initMap();
     refresh();
     const timer = setInterval(() => { if (!document.hidden && !busy) refresh(); }, 8000);
