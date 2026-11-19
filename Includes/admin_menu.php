@@ -1,18 +1,37 @@
 <?php
-/* Account-menu entries for ID approvals and operator applications. */
-function mbus_admin_approvals_link($conn): string {
+/* Account-menu entries for ID approvals, operator applications and the GCash account,
+ * plus the red dot on the profile icon when any of them is waiting for the admin. */
+
+/* How many items are waiting in each approval queue. Counted once per request. */
+function mbus_admin_pending_counts($conn): array {
+    static $counts = null;
+    if ($counts !== null) return $counts;
     $q = mbus_db_prepare($conn, "SELECT COUNT(*) AS c FROM commuter_verification WHERE verification_status = 'Pending'", []);
     $row = $q === false ? false : mbus_db_fetch_assoc($q);
-    $n = $row ? (int)$row['c'] : 0;
-    $badge = $n > 0 ? ' <span class="menu-badge">' . $n . '</span>' : '';
     $oq = mbus_db_prepare($conn, "SELECT COUNT(*) AS c FROM operator_application WHERE application_status::text = 'Pending'", []);
     $orow = $oq === false ? false : mbus_db_fetch_assoc($oq);
-    $on = $orow ? (int)$orow['c'] : 0;
-    $obadge = $on > 0 ? ' <span class="menu-badge">' . $on . '</span>' : '';
     require_once dirname(__DIR__) . '/Includes/gcash_manual.php';
-    $gn = mbus_gcash_pending($conn) ? 1 : 0;
-    $gbadge = $gn ? ' <span class="menu-badge">1</span>' : '';
+    $counts = [
+        'id'    => $row ? (int)$row['c'] : 0,
+        'op'    => $orow ? (int)$orow['c'] : 0,
+        'gcash' => mbus_gcash_pending($conn) ? 1 : 0,
+    ];
+    return $counts;
+}
+
+function mbus_admin_approvals_link($conn): string {
+    $c = mbus_admin_pending_counts($conn);
+    $badge  = $c['id']    > 0 ? ' <span class="menu-badge">' . $c['id'] . '</span>' : '';
+    $obadge = $c['op']    > 0 ? ' <span class="menu-badge">' . $c['op'] . '</span>' : '';
+    $gbadge = $c['gcash'] > 0 ? ' <span class="menu-badge">' . $c['gcash'] . '</span>' : '';
     return '<a href="verifications.php" role="menuitem"><i class="fa fa-id-card" aria-hidden="true"></i> ID approvals' . $badge . '</a>'
         . '<a href="operator_applications.php" role="menuitem"><i class="fa fa-user-check" aria-hidden="true"></i> Operator applications' . $obadge . '</a>'
         . '<a href="gcash_approval.php" role="menuitem"><i class="fa fa-mobile-screen" aria-hidden="true"></i> GCash account' . $gbadge . '</a>';
+}
+
+/* Red dot for the corner of the profile icon (empty string when nothing is waiting). */
+function mbus_admin_dot($conn): string {
+    $n = array_sum(mbus_admin_pending_counts($conn));
+    if ($n <= 0) return '';
+    return '<span class="pay-alert-dot"><span class="pay-alert-vh">' . $n . ' item' . ($n === 1 ? '' : 's') . ' to review</span></span>';
 }
