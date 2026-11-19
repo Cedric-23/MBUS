@@ -101,6 +101,11 @@ function mbus_home_when(string $ts): string {
             <p class="home-hello"><?php echo $greeting; ?></p>
             <h1><?php echo htmlspecialchars($first_name); ?></h1>
         </div>
+        <div class="home-actions">
+                <div class="notif-wrap">
+                    <button class="notif-btn" type="button" id="notifBtn" aria-expanded="false" aria-controls="notifPanel" aria-label="Notifications"><i class="fa fa-bell" aria-hidden="true"></i><span class="notif-dot" id="notifDot" hidden>0</span></button>
+                    <div class="notif-panel" id="notifPanel" hidden><h2>Notifications</h2><ul id="notifList" class="notif-list"></ul></div>
+                </div>
         <div class="page-header-right">
                 <div class="profile-menu-wrap">
                     <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
@@ -117,6 +122,7 @@ function mbus_home_when(string $ts): string {
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>
                 </div>
+            </div>
             </div>
     </header>
 
@@ -214,5 +220,6 @@ function mbus_home_when(string $ts): string {
 </nav>
 
 <script src="../Assets/js/app-header.js"></script>
+<script src="../Assets/js/notifications.js"></script>
 </body>
 </html>

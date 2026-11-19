@@ -89,7 +89,7 @@ function initReservationMap() {
 
 function updateMultiSeatWarning() {
     const warning = document.getElementById("multiSeatWarning");
-    warning.hidden = reservationMode !== "multi" || selectedSeats.length >= 2;
+    if (warning) warning.hidden = reservationMode !== "multi" || selectedSeats.length >= 2;
 }
 
 function hideReview() {

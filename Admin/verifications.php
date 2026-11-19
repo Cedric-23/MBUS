@@ -7,6 +7,7 @@ if(!isset($_SESSION['user_type']) || strtolower($_SESSION['user_type']) != "admi
 include "../config/db_connect.php";
 include "../Includes/csrf.php";
 include "../Includes/activity_log.php";
+require_once "../Includes/notify.php";
 
 $error = ""; $success = "";
 $status_opts = ['pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected'];
@@ -39,6 +40,7 @@ if(isset($_POST['review'])){
             } else {
                 mbus_db_prepare($conn, "UPDATE users SET verification_status = 'Rejected', verification_type = NULL WHERE user_id = ?", [(int)$v['user_id']]);
             }
+            mbus_notify($conn, (int)$v['user_id'], $decision === 'Approved' ? 'Your ' . $v['verification_type'] . ' ID was approved. Your 20% discount is active.' : 'Your ID was rejected: ' . $reason . ' You can send a new one.');
             $done++;
         }
         if($done){

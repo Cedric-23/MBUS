@@ -4,6 +4,7 @@ require_once "../config/db_connect.php";
 require_once "../config/mysqli_compat.php";
 require_once "../Includes/csrf.php";
 require_once "../Includes/activity_log.php";
+require_once "../Includes/notify.php";
 
 if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type']) !== 'operator'){
     header("Location: ../login.php");
@@ -68,7 +69,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])){
             if($stmt !== false && $conn->affectedRows > 0){
                 $success = "Trip status updated";
                 $departed_now = ($trip_status === 'Departed');
-                if ($departed_now) { $track_focus = (int)$schedule_id; }
+                if ($departed_now) { $track_focus = (int)$schedule_id; mbus_notify_departure($conn, (int)$schedule_id); }
             } else {
                 $error = "Failed to update status";
             }

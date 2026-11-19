@@ -2,6 +2,7 @@
 /** Marks a paid PayMongo checkout's reservations as Paid and records the payment. Safe to call twice (webhook + return page). */
 require_once __DIR__ . '/activity_log.php';
 require_once __DIR__ . '/email_helper.php';
+require_once __DIR__ . '/notify.php';
 
 function mbus_finalize_payment($conn, string $sessionId, string $paymentRef): array
 {
@@ -56,6 +57,7 @@ function mbus_finalize_payment($conn, string $sessionId, string $paymentRef): ar
     // Notifications are best effort and never block the ticket.
     try {
         log_activity($conn, (int)$co['user_id'], ACTION_PAYMENT_SUCCESS, "GCash payment {$paymentRef} for schedule {$co['schedule_id']}, ticket $ticket, total {$co['amount']}");
+        mbus_notify($conn, (int)$co['user_id'], "Payment approved. Your ticket $ticket is ready.");
         $u = mbus_db_prepare($conn, 'SELECT email FROM users WHERE user_id = ?', [(int)$co['user_id']]);
         $ur = $u === false ? false : mbus_db_fetch_assoc($u);
         if ($ur && !empty($ur['email'])) {

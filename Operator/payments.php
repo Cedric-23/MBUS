@@ -5,6 +5,7 @@ require_once "../config/mysqli_compat.php";
 require_once "../Includes/csrf.php";
 require_once "../Includes/fare.php";
 require_once "../Includes/payment_finalize.php";
+require_once "../Includes/notify.php";
 require_once "../Includes/gcash_manual.php";
 
 if (!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'operator') {
@@ -70,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $conn->pdo->prepare("UPDATE reservation SET status = 'Cancelled' WHERE status = 'Pending' AND user_id = ? AND reservation_id IN ($in)")->execute(array_merge([(int)$co['user_id']], $ids));
                 }
                 $conn->pdo->commit();
+                mbus_notify($conn, (int)$co['user_id'], 'Payment rejected: ' . $reason . ' Your seats were released.');
                 $_SESSION['op_pay_flash'] = 'Rejected. Seats released.';
                 header('Location: payments.php?status=rejected'); exit();
             }
