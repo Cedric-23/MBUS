@@ -117,32 +117,28 @@ $resendWait = max(0, 60 - (time() - $sentAt));
 $maskedEmail = mbus_reset_mask_email($email);
 ?>
 <!doctype html>
-<html lang="en">
-<head>
+<html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verify MBUS Email</title>
-<link rel="stylesheet" href="Assets/css/responsive.css"><link rel="stylesheet" href="login.css"><link rel="stylesheet" href="Assets/css/auth.css">
-</head>
-<body class="login-page">
-<div class="login-container"><div class="login-card">
-<div class="login-header"><h3>Verify your email</h3><p>Enter the 6-digit code sent to <?php echo htmlspecialchars($maskedEmail, ENT_QUOTES, 'UTF-8'); ?>. It expires in 15 minutes.</p></div>
-<?php if ($error): ?><div class="login-alert login-alert-error" role="alert"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
-<?php if ($success): ?><div class="login-alert login-alert-success" role="status"><?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
-<?php if (!$mailSent && $error === ''): ?><div class="login-alert login-alert-error" role="alert">We could not send the verification email. Please wait, then request a new code.</div><?php endif; ?>
-<form method="post" action="verify_registration.php" class="login-form">
+<title>Verify your email | MBUS</title>
+<link rel="stylesheet" href="Assets/css/global/font.css"><link rel="stylesheet" href="Assets/css/main/register.css?v=<?= @filemtime(__DIR__ . '/Assets/css/main/register.css') ?>"/>
+<link rel="stylesheet" href="Assets/css/main/auth_modern.css?v=<?= @filemtime(__DIR__ . '/Assets/css/main/auth_modern.css') ?>"/><link rel="stylesheet" href="Assets/css/auth.css?v=<?= @filemtime(__DIR__ . '/Assets/css/auth.css') ?>"><link rel="stylesheet" href="Assets/css/reset.css?v=<?= @filemtime(__DIR__ . '/Assets/css/reset.css') ?>"><script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+</head><body class="auth-reset">
+<div class="auth-hero-m"><a class="auth-back" href="register.php" aria-label="Back to registration"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></a><h1>Verify your email</h1><p>Enter the 6-digit code we sent you.</p></div>
+<div class="left-container"><div class="left-container-child-1"><div class="logo-wordmark"><img src="Assets/images/mbus_logo.png" alt="MBUS"></div></div><div class="left-container-child-2"><div class="lc-heading"><h1>Travel smarter.</h1><h1>Travel on time.</h1></div><div class="lc-sub-heading"><p>Your dependable way to reserve seats, manage trips, and travel with confidence.</p></div></div><img class="auth-art" src="Assets/images/auth_bus.svg" alt="" aria-hidden="true"><div class="lc-circle-1"></div><div class="lc-circle-2"></div></div>
+<main class="right-container"><div class="form-container"><header class="form-header"><div class="form-header-text"><h1>Verify your email</h1><p>Enter the 6-digit code sent to <?php echo htmlspecialchars($maskedEmail, ENT_QUOTES, 'UTF-8'); ?>. It expires in 15 minutes.</p></div></header>
+<?php if ($error): ?><div class="form-alert error" role="alert"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
+<?php if ($success): ?><div class="form-alert success" role="status"><?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
+<?php if (!$mailSent && $error === ''): ?><div class="form-alert error" role="alert">We could not send the verification email. Please wait, then request a new code.</div><?php endif; ?>
+<form method="post" action="verify_registration.php" class="form-body reset-form" novalidate>
 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES, 'UTF-8'); ?>">
-<div class="form-field"><label for="code">Verification code</label><input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required placeholder="123456"></div>
-<button class="btn btn-primary btn-block login-submit" type="submit" name="verify_registration">Verify email</button>
-<p class="form-hint-text">For your security, the code locks after five incorrect attempts. You can request a new one after the resend timer.</p>
+<div class="form-field"><label for="code">Verification code</label><div class="reset-input"><input id="code" name="code" class="code-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required placeholder="000000" autofocus aria-describedby="code-hint"><i class="input-icon" data-lucide="key-round" aria-hidden="true"></i></div><span class="field-hint" id="code-hint">The code locks after five wrong attempts.</span></div>
+<button class="submit-button" type="submit" name="verify_registration">Verify email</button>
 </form>
-<form method="post" action="verify_registration.php" class="login-form">
-<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES, 'UTF-8'); ?>">
-<button class="btn btn-block" type="submit" name="resend" id="resend-button" <?php echo $resendWait > 0 ? 'disabled' : ''; ?>>Send a new code</button>
-<span id="resend-timer" class="form-hint-text" aria-live="polite"></span>
-</form>
-<div class="login-footer"><p><a href="register.php">Back to registration</a> · <a href="login.php">Back to login</a></p></div>
-</div></div>
+<div class="reset-actions"><form method="post" action="verify_registration.php"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES, 'UTF-8'); ?>"><button type="submit" name="resend" id="resend-button" <?php echo $resendWait > 0 ? 'disabled' : ''; ?>>Send a new code</button></form><span class="reset-timer" id="resend-timer" aria-live="polite"></span></div>
+<footer class="reset-footer"><p style="margin-top:14px"><a href="register.php">Back to registration</a> &middot; <a href="login.php">Back to sign in</a></p></footer>
+</div></main>
 <script>
+if (window.lucide) lucide.createIcons();
 (function () {
     const button = document.getElementById('resend-button');
     const timer = document.getElementById('resend-timer');
@@ -150,7 +146,7 @@ $maskedEmail = mbus_reset_mask_email($email);
     function updateResendTimer() {
         const seconds = Math.max(0, Math.ceil((availableAt - Date.now()) / 1000));
         button.disabled = seconds > 0;
-        timer.textContent = seconds > 0 ? 'You can resend in ' + seconds + ' seconds.' : 'You can request up to five codes per hour.';
+        timer.textContent = seconds > 0 ? 'Resend available in ' + seconds + 's' : '';
     }
     updateResendTimer();
     window.setInterval(updateResendTimer, 1000);
