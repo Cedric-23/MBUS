@@ -29,6 +29,15 @@
         $('rdRef').textContent = r.reference || '-';
         $('rdId').value = r.id;
 
+        // Payment button: jumps to this rider's payment on the Payments page (online riders only).
+        var pay = $('rdPay');
+        if (r.user_id && r.schedule_id) {
+            pay.href = 'payments.php?user_id=' + encodeURIComponent(r.user_id) + '&schedule_id=' + encodeURIComponent(r.schedule_id);
+            pay.hidden = false;
+        } else {
+            pay.hidden = true;
+        }
+
         var canBoard = (r.status === 'Paid' || r.status === 'Confirmed') && TRIP_OPEN;
         $('boardForm').hidden = !canBoard;
         var note = $('rdNote');
