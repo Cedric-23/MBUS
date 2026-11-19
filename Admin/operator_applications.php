@@ -96,6 +96,7 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
     <link rel="stylesheet" href="../Assets/css/admin/admin_ui.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/admin/admin_ui.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
+    <link rel="stylesheet" href="../Assets/css/admin/admin_application_review.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/admin/admin_application_review.css'); ?>">
 </head>
 
 <body class="has-sidebar">
@@ -150,6 +151,11 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
                 </div>
             </div>
 </header>
+
+<nav class="ar-page-nav" aria-label="Application navigation">
+    <a class="ar-back-link" href="manage_operators.php"><i class="fa fa-arrow-left" aria-hidden="true"></i><span>Back to Manage Operators</span></a>
+    <a class="ad-btn" href="conductor_applications.php"><i class="fa fa-id-badge" aria-hidden="true"></i><span>Conductor applications</span></a>
+</nav>
 
 <?php if($success !== ''): ?><div class="alert alert-success" role="status"><?php echo htmlspecialchars($success); ?></div><?php endif; ?>
 <?php if($error !== ''): ?><div class="alert alert-error" role="alert"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
