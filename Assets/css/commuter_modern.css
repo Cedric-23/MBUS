@@ -213,3 +213,4 @@
 .cm .rg-row .status-badge{grid-area:status}
 .cm .rg-x{grid-area:x;width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;max-width:34px;flex:none;padding:0!important;line-height:1}
 .cm .rg-stop{grid-area:stop;white-space:normal;overflow:visible;text-overflow:clip;font-size:.8rem}
+.cm .home-section-head a{margin-right:0;background:transparent;padding:0 2px;min-height:32px}

@@ -274,5 +274,6 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
             });
         </script>
         <script src="Assets/js/password-toggle.js"></script>
-    </body>
+    <script src="Assets/js/submit_feedback.js"></script>
+</body>
 </html>

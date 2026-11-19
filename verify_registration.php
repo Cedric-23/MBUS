@@ -152,5 +152,6 @@ if (window.lucide) lucide.createIcons();
     window.setInterval(updateResendTimer, 1000);
 })();
 </script>
+<script src="Assets/js/submit_feedback.js"></script>
 </body>
 </html>

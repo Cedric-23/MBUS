@@ -672,5 +672,6 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
     document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!modal.hidden)close();});
 })();
 </script>
+<script src="Assets/js/submit_feedback.js"></script>
 </body>
 </html>

@@ -92,5 +92,6 @@ function reset_page_e(mixed $value): string { return htmlspecialchars((string)$v
         <footer class="reset-footer"><p>Remembered your password? <a href="login.php">Sign in</a></p></footer>
     </div></main>
 <script>if(window.lucide) lucide.createIcons();</script>
+<script src="Assets/js/submit_feedback.js"></script>
 </body>
 </html>

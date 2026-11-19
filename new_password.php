@@ -59,4 +59,5 @@ function new_password_e(mixed $value): string { return htmlspecialchars((string)
 </form><footer class="reset-footer"><p><a href="login.php">Back to sign in</a></p></footer>
 </div></main>
 <script src="Assets/js/password-toggle.js"></script><script>if(window.lucide)lucide.createIcons();const p=document.getElementById('password');const rules={length:v=>v.length>=8,upper:v=>/[A-Z]/.test(v),lower:v=>/[a-z]/.test(v),number:v=>/\d/.test(v),symbol:v=>/[^A-Za-z0-9]/.test(v)};function updateRules(){Object.entries(rules).forEach(([k,fn])=>document.querySelector('[data-rule="'+k+'"]').classList.toggle('met',fn(p.value)));}p.addEventListener('input',updateRules);updateRules();</script>
+<script src="Assets/js/submit_feedback.js"></script>
 </body></html>
