@@ -193,7 +193,7 @@ $riders = [];     // seat number => details
 $pickups = [];    // waiting pick-up requests for this trip
 if($selected){
     $rq = mbus_db_prepare($conn, "
-        SELECT r.reservation_id, r.user_id, r.seat_number, r.status, r.pickup_location, r.destination, r.ticket_code, r.source, r.walkin_name,
+        SELECT r.reservation_id, r.seat_number, r.status, r.pickup_location, r.destination, r.ticket_code, r.source, r.walkin_name,
                u.full_name, u.phone_number,
                (SELECT p.amount FROM payment p WHERE p.reservation_id = r.reservation_id OR p.reservation_id IN
                     (SELECT reservation_id FROM reservation WHERE user_id = r.user_id AND schedule_id = r.schedule_id)
@@ -211,8 +211,6 @@ if($selected){
         $walk = ($r['source'] ?? 'Online') !== 'Online';
         $riders[(string)$r['seat_number']] = [
             'id' => (int)$r['reservation_id'],
-            'user_id' => $walk ? 0 : (int)$r['user_id'],   // used by the Payment button (online riders only)
-            'schedule_id' => (int)$selected['schedule_id'],
             'seat' => $r['seat_number'],
             'status' => $r['status'],
             'walk' => $walk,
@@ -487,7 +485,6 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
         <dt>Paid</dt><dd id="rdAmount"></dd>
         <dt>Reference</dt><dd id="rdRef"></dd>
     </dl>
-    <a class="rider-pay" id="rdPay" href="payments.php" hidden><i class="fa fa-wallet" aria-hidden="true"></i> View payment</a>
     <form method="POST" id="boardForm">
         <?php csrf_field(); ?>
         <input type="hidden" name="mark_boarded" value="1">

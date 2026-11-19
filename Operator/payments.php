@@ -83,11 +83,6 @@ $opts = ['submitted' => 'To check', 'paid' => 'Approved', 'rejected' => 'Rejecte
 $f = $_GET['status'] ?? 'submitted';
 if (!isset($opts[$f])) $f = 'submitted';
 
-/* Opened from the Riders page: show only this rider's payment(s) for this trip, whatever their status. */
-$fu = (int)($_GET['user_id'] ?? 0);
-$fs = (int)($_GET['schedule_id'] ?? 0);
-$byRider = $fu > 0 && $fs > 0;
-
 $counts = array_fill_keys(array_keys($opts), 0);
 $cq = mbus_db_prepare($conn, "SELECT LOWER(status) AS s, COUNT(*) AS c FROM paymongo_checkout WHERE session_id LIKE 'manual\\_%' GROUP BY 1", []);
 while ($cq !== false && ($r = mbus_db_fetch_assoc($cq))) if (isset($counts[$r['s']])) $counts[$r['s']] = (int)$r['c'];
@@ -98,7 +93,7 @@ $q = mbus_db_prepare($conn, "SELECT (c.receipt_b64 IS NOT NULL AND c.receipt_b64
     (SELECT r.origin || ' → ' || r.destination FROM schedule s JOIN routes r ON r.route_id = s.route_id WHERE s.schedule_id = c.schedule_id) AS route,
     (SELECT s.departure_time FROM schedule s WHERE s.schedule_id = c.schedule_id) AS departure
     FROM paymongo_checkout c JOIN users u ON u.user_id = c.user_id
-    WHERE c.session_id LIKE 'manual\\_%' AND " . ($byRider ? "c.user_id = ? AND c.schedule_id = ?" : "LOWER(c.status) = ?") . " ORDER BY c.submitted_at DESC LIMIT 100", $byRider ? [$fu, $fs] : [$f]);
+    WHERE c.session_id LIKE 'manual\\_%' AND LOWER(c.status) = ? ORDER BY c.submitted_at DESC LIMIT 100", [$f]);
 while ($q !== false && ($r = mbus_db_fetch_assoc($q))) $rows[] = $r;
 
 $gName = mbus_setting($conn, 'gcash_name');
@@ -182,21 +177,14 @@ $phoneOk = $lastSecs !== null && $lastSecs < 86400 * 2;
 <div class="pay-alert warn" role="status"><i class="fa fa-triangle-exclamation" aria-hidden="true"></i> Add your GCash account below so commuters can pay.</div>
 <?php endif; ?>
 
-<?php if ($byRider): ?>
-<nav class="pay-tabs" aria-label="Rider payment">
-    <a href="passengers.php?schedule_id=<?php echo (int)$fs; ?>"><i class="fa fa-arrow-left" aria-hidden="true"></i> Back to riders</a>
-    <a href="payments.php" class="on">All payments</a>
-</nav>
-<?php else: ?>
 <nav class="pay-tabs" aria-label="Payment status">
     <?php foreach ($opts as $k => $label): ?>
     <a href="?status=<?php echo $k; ?>" class="<?php echo $f === $k ? 'on' : ''; ?>"><?php echo $label; ?><span><?php echo $counts[$k]; ?></span></a>
     <?php endforeach; ?>
 </nav>
-<?php endif; ?>
 
 <?php if (!$rows): ?>
-<p class="pay-empty"><i class="fa fa-circle-check" aria-hidden="true"></i><?php echo $byRider ? 'No GCash receipt was submitted for this rider on this trip. They may have paid another way.' : ($f === 'submitted' ? 'Nothing to check.' : 'Nothing here.'); ?></p>
+<p class="pay-empty"><i class="fa fa-circle-check" aria-hidden="true"></i><?php echo $f === 'submitted' ? 'Nothing to check.' : 'Nothing here.'; ?></p>
 <?php endif; ?>
 
 <div class="pay-list">
@@ -213,7 +201,6 @@ $phoneOk = $lastSecs !== null && $lastSecs < 86400 * 2;
             <span class="pay-amt">&#8369;<?php echo number_format((float)$c['amount'], 2); ?></span>
         </div>
         <div class="pay-meta">
-            <?php if ($byRider): ?><span><i class="fa fa-circle-info" aria-hidden="true"></i> <?php echo htmlspecialchars(ucfirst(strtolower((string)$c['status']))); ?></span><?php endif; ?>
             <span><i class="fa fa-chair" aria-hidden="true"></i> <?php echo htmlspecialchars(implode(', ', $seats)); ?></span>
             <span><i class="fa fa-hashtag" aria-hidden="true"></i> <?php echo $c['reference_number'] ? htmlspecialchars((string)$c['reference_number']) : 'No reference yet'; ?></span>
             <?php if ((int)$c['dups'] > 0): ?><span class="pay-flag"><i class="fa fa-triangle-exclamation" aria-hidden="true"></i> Reference used before</span><?php endif; ?>
