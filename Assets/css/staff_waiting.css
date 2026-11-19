@@ -143,3 +143,8 @@
 .staff-wait-page .sw-group-reserve .sw-details { background: #ece7ff !important; color: #4a32b0 !important; }
 .sw-group:has(.sw-list:empty) { padding-bottom: 6px; }
 .sw-group:has(.sw-list:empty) .sw-group-head { margin-bottom: 0; }
+
+
+.staff-wait-page .sw-res-map-toggle { padding:0 9px; background:#f0edff; color:#4a32b0; font-size:.75rem; }
+.staff-wait-page .sw-res-map-toggle[aria-pressed="false"] { background:#eef1f5; color:#526174; }
+@media(max-width:420px){.staff-wait-page .sw-res-map-toggle{padding:0 7px;font-size:.7rem}}

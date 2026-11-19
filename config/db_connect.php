@@ -54,6 +54,10 @@ function mbus_run_schema_upgrades(PDO $pdo): void {
           "discount_reviewed_by INT",
           "discount_reviewed_at TIMESTAMP",
           "expires_at TIMESTAMPTZ",
+          "pickup_latitude DOUBLE PRECISION",
+          "pickup_longitude DOUBLE PRECISION",
+          "destination_latitude DOUBLE PRECISION",
+          "destination_longitude DOUBLE PRECISION",
       ] as $col) {
           $pdo->exec('ALTER TABLE reservation ADD COLUMN IF NOT EXISTS ' . $col);
       }
@@ -141,7 +145,7 @@ try {
     ]);
     $pdo->exec("SET TIME ZONE '" . str_replace("'", "''", mbus_timezone()) . "'");
     // Schema upgrades are ~35 extra round trips to the database. Run them once per version, not on every page.
-    $schemaVersion = '2026-11-18c';
+    $schemaVersion = '2026-11-20a';
     $schemaFlag = sys_get_temp_dir() . '/mbus_schema_' . md5($host . $database . $schemaVersion) . '.ok';
     if (!is_file($schemaFlag)) {
         $done = false;

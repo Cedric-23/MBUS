@@ -286,6 +286,15 @@ function mbus_pickup_feed(PDO $pdo, string $role, int $userId): array
                 b.bus_number, r.origin, r.destination AS route_destination,
                 MIN(rv.pickup_location) AS pickup_location, MIN(rv.destination) AS stop_destination,
                 COUNT(*) AS seats, STRING_AGG(rv.seat_number, ', ' ORDER BY rv.seat_number) AS seat_numbers,
+                jsonb_agg(jsonb_build_object(
+                    'seat_number', rv.seat_number,
+                    'pickup_location', rv.pickup_location,
+                    'destination', rv.destination,
+                    'pickup_latitude', NULLIF(to_jsonb(rv)->>'pickup_latitude','')::double precision,
+                    'pickup_longitude', NULLIF(to_jsonb(rv)->>'pickup_longitude','')::double precision,
+                    'destination_latitude', NULLIF(to_jsonb(rv)->>'destination_latitude','')::double precision,
+                    'destination_longitude', NULLIF(to_jsonb(rv)->>'destination_longitude','')::double precision
+                ) ORDER BY rv.seat_number::integer) AS seat_details,
                 MAX(rv.created_at) AS reserved_at
             FROM public.reservation rv
             JOIN public.users u ON u.user_id = rv.user_id
@@ -299,13 +308,12 @@ function mbus_pickup_feed(PDO $pdo, string $role, int $userId): array
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            if (!isset($eligible[(int)$row['schedule_id']])) {
-                continue;
-            }
             $row['has_pic'] = in_array($row['has_pic'] ?? null, [true, 1, '1', 't', 'true'], true);
             foreach (['user_id', 'schedule_id', 'seats'] as $key) {
                 $row[$key] = (int)$row[$key];
             }
+            $row['seat_details'] = json_decode((string)($row['seat_details'] ?? '[]'), true);
+            if (!is_array($row['seat_details'])) $row['seat_details'] = [];
             $row['reserved_at'] = $row['reserved_at'] ? (new DateTimeImmutable($row['reserved_at']))->format(DATE_ATOM) : null;
             $reservations[] = $row;
         }

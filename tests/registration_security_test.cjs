@@ -88,7 +88,7 @@ assert.match(securityMigration, /VARCHAR\(254\)/,
     'database email length must match server-side email validation');
 
 const db = read('config/db_connect.php');
-assert.match(db, /schemaVersion\s*=\s*'2026-11-18c'/,
+assert.match(db, /schemaVersion\s*=\s*'2026-11-20a'/,
     'existing deployments must run the new additive schema upgrade');
 assert.match(db, /CREATE TABLE IF NOT EXISTS registration_rate_limit_events/);
 assert.match(db, /registration_code_attempts SMALLINT NOT NULL DEFAULT 0/);

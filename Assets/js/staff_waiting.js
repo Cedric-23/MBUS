@@ -14,11 +14,12 @@
     const rList = el('staffReserveList'), rEmpty = el('staffReserveEmpty');
 
     let requests = [], reservations = [], schedules = [], locations = [], csrf = '', ready = false;
+    const hiddenReservationKeys = new Set();
     let map = null, layer = null, line = null, routeLayer = null, selected = null, fittedOnce = false;
     let routeKey = '', routeData = null, routeFitKey = '', routeRequest = 0, routeFailure = null, routeViewMode = 'focus';
     let busy = false, refreshing = null;
 
-    const num = v => { const n = Number(v); return Number.isFinite(n) ? n : null; };
+    const num = v => { if (v === null || v === undefined || String(v).trim() === '') return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
     const validPt = (a, b) => num(a) !== null && num(b) !== null && Math.abs(a) <= 90 && Math.abs(b) <= 180;
     const node = (tag, text, cls) => { const n = document.createElement(tag); if (text !== undefined) n.textContent = text; if (cls) n.className = cls; return n; };
     const ago = v => { const t = Date.parse(v); if (!Number.isFinite(t)) return ''; const s = Math.max(0, (Date.now() - t) / 1000); return s < 45 ? 'just now' : s < 3600 ? Math.round(s / 60) + ' min ago' : Math.round(s / 3600) + ' h ago'; };
@@ -91,8 +92,8 @@
     const personIcon = (name, on, r) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
         html: '<span class="sw-person' + (on ? ' is-on' : '') + '"><img src="' + photoOf(r) + '" alt=""></span>' });
     /* reservation pin: the rider's photo at the stop they chose. kind = 'pick' (pick-up stop) or 'drop' (drop-off stop) */
-    const reserveIcon = (r, kind, approx) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
-        html: '<span class="sw-res-pin sw-res-' + kind + (approx ? ' is-approx' : '') + '"><span class="sw-person"><img src="' + photoOf(r) + '" alt=""></span><span class="sw-res-tag">' + (kind === 'drop' ? 'Drop-off' : 'Pick-up') + '</span></span>' });
+    const reserveIcon = (r, kind, approx, seat) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
+        html: '<span class="sw-res-pin sw-res-' + kind + (approx ? ' is-approx' : '') + '"><span class="sw-person"><img src="' + photoOf(r) + '" alt=""></span><span class="sw-res-tag">' + (kind === 'drop' ? 'Drop-off' : 'Pick-up') + ' · ' + String(seat || '') + '</span></span>' });
 
     function fit(points) {
         if (!map || !points.length) return;
@@ -304,21 +305,40 @@
         const p = alongRoute(routeData, i / (stops.length - 1));
         return p ? { p, approx: true } : null;
     }
+    const reservationKey = r => String(r.user_id) + ':' + String(r.schedule_id);
+    function reservationSeats(r) {
+        if (Array.isArray(r.seat_details) && r.seat_details.length) return r.seat_details;
+        return [{ seat_number: r.seat_numbers || '1', pickup_location: r.pickup_location, destination: r.stop_destination }];
+    }
+    function reservationSeatPoint(r, seat, kind) {
+        const prefix = kind === 'pick' ? 'pickup' : 'destination';
+        const lat = seat[prefix + '_latitude'], lng = seat[prefix + '_longitude'];
+        if (validPt(lat, lng)) return {p:[Number(lat),Number(lng)], approx:false};
+        return stopPoint(r, kind === 'pick' ? seat.pickup_location : seat.destination);
+    }
+    function reservationMapPoints(r) {
+        const points = [];
+        reservationSeats(r).forEach(seat => ['pick','drop'].forEach(kind => {
+            const point = reservationSeatPoint(r, seat, kind);
+            if (point) points.push(point.p);
+        }));
+        return points;
+    }
     function reservationPins(rows, pts) {
         if (!layer || !map) return;
-        const used = new Map();
         rows.forEach(r => {
-            [['pick', r.pickup_location], ['drop', r.stop_destination]].forEach(([kind, name]) => {
-                const sp = stopPoint(r, name);
+            if (hiddenReservationKeys.has(reservationKey(r))) return;
+            reservationSeats(r).forEach(seat => ['pick','drop'].forEach(kind => {
+                const sp = reservationSeatPoint(r, seat, kind);
                 if (!sp) return;
-                const k = sp.p[0].toFixed(4) + ',' + sp.p[1].toFixed(4);
-                const n = used.get(k) || 0; used.set(k, n + 1);
-                const p = [sp.p[0], sp.p[1] + n * 0.00009]; // riders at the same stop sit side by side
-                pts.push(p);
-                const m = L.marker(p, { icon: reserveIcon(r, kind, sp.approx), title: (r.full_name || 'Commuter') + (kind === 'drop' ? ' · drop-off at ' : ' · pick-up at ') + name + (sp.approx ? ' (approx.)' : ''), zIndexOffset: 200 }).addTo(layer);
+                const name = kind === 'pick' ? seat.pickup_location : seat.destination;
+                const seatNumber = seat.seat_number || '?';
+                const pinData = Object.assign({}, r, seat);
+                pts.push(sp.p);
+                const m = L.marker(sp.p, { icon: reserveIcon(pinData, kind, sp.approx, seatNumber), title: (r.full_name || 'Commuter') + ' · seat ' + seatNumber + (kind === 'drop' ? ' · drop-off at ' : ' · pick-up at ') + (name || '') + (sp.approx ? ' (approx.)' : ''), zIndexOffset: 200 }).addTo(layer);
                 bindAvatarFallback(m.getElement() && m.getElement().querySelector('.sw-person img'));
                 m.on('click', () => showReservation(r));
-            });
+            }));
         });
     }
 
@@ -420,7 +440,15 @@
             open.addEventListener('click', () => showReservation(r));
             const more = node('button', 'Details', 'sw-done sw-details'); more.type = 'button';
             more.addEventListener('click', () => showReservation(r));
-            li.append(open, more);
+            const key = reservationKey(r), hidden = hiddenReservationKeys.has(key);
+            const toggle = node('button', hidden ? 'Show pins' : 'Hide pins', 'sw-done sw-res-map-toggle');
+            toggle.type = 'button'; toggle.setAttribute('aria-pressed', hidden ? 'false' : 'true');
+            toggle.setAttribute('aria-label', (hidden ? 'Show' : 'Hide') + ' map pins for ' + (r.full_name || 'this reservation'));
+            toggle.addEventListener('click', () => {
+                if (hiddenReservationKeys.has(key)) hiddenReservationKeys.delete(key); else hiddenReservationKeys.add(key);
+                render();
+            });
+            li.append(open, more, toggle);
             rList.append(li);
         });
         sizeSheet();
@@ -433,18 +461,18 @@
         const img = node('img', undefined, 'sw-card-photo'); img.alt = ''; bindAvatarFallback(img); img.src = photoOf(r);
         const who = node('div'); who.append(node('strong', r.full_name || 'Commuter'), node('small', 'Reserved seat · not on board yet'));
         head.append(img, who);
+        const seatStops = reservationSeats(r).map(seat => 'Seat ' + (seat.seat_number || '?') + ': ' + (seat.pickup_location || '-') + ' → ' + (seat.destination || '-')).join(' · ');
         const rows = [
             ['Bus', (r.bus_number || '-') + (r.origin ? ' · ' + r.origin + ' to ' + (r.route_destination || '') : '')],
             [r.seats === 1 ? 'Seat' : 'Seats', r.seat_numbers || String(r.seats)],
-            ['Pickup stop', r.pickup_location || '-'],
-            ['Destination', r.stop_destination || '-'],
+            ['Seat stops', seatStops || '-'],
             ['Reserved', ago(r.reserved_at) || '-'],
             ['Phone', r.phone_number && String(r.phone_number).length > 3 ? r.phone_number : 'Not provided']
         ];
         const dl = node('dl', undefined, 'sw-card-list');
         rows.forEach(([k, v]) => { dl.append(node('dt', k), node('dd', v)); });
         const close = node('button', 'Close', 'sw-card-close'); close.type = 'button';
-        const spots = map ? [stopPoint(r, r.pickup_location), stopPoint(r, r.stop_destination)].filter(Boolean).map(s => s.p) : [];
+        const spots = map ? reservationMapPoints(r) : [];
         let show = null;
         if (spots.length) { show = node('button', 'Show on map', 'sw-card-pick'); show.type = 'button'; }
         card.append(head, dl);
@@ -452,7 +480,7 @@
         card.append(close); back.append(card); document.body.append(back);
         const shut = () => { back.remove(); document.removeEventListener('keydown', esc); };
         const esc = e => { if (e.key === 'Escape') shut(); };
-        if (show) show.addEventListener('click', () => { shut(); fit(spots); });
+        if (show) show.addEventListener('click', () => { hiddenReservationKeys.delete(reservationKey(r)); shut(); render(); fit(spots); });
         close.addEventListener('click', shut); back.addEventListener('click', e => { if (e.target === back) shut(); });
         document.addEventListener('keydown', esc); close.focus();
     }
@@ -507,6 +535,7 @@
         const add = (id, label) => { id = String(id); if (!seen.has(id)) { seen.add(id); filter.append(new Option(label, id)); } };
         schedules.forEach(s => add(s.schedule_id, 'Bus ' + s.bus_number));
         locations.forEach(b => add(b.schedule_id, 'Bus ' + b.bus_number));
+        reservations.forEach(r => add(r.schedule_id, 'Bus ' + r.bus_number));
         if (!cur && seen.size === 1) cur = Array.from(seen)[0];
         if ([...filter.options].some(o => o.value === cur)) filter.value = cur;
         filter.parentElement.hidden = seen.size < 2 && root.dataset.role === 'operator';
