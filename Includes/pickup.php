@@ -274,7 +274,43 @@ function mbus_pickup_feed(PDO $pdo, string $role, int $userId): array
             $requests[] = $row;
         }
     }
-    $result = ['ok' => true, 'ready' => $ready, 'schedules' => $schedules, 'requests' => $requests, 'server_time' => date(DATE_ATOM, $now)];
+    // Staff also see riders holding a paid/confirmed reservation who have not boarded yet, so the Waiting
+    // board can show "waiting for pick-up" (pinned on the map) apart from "reservations" (seat holders).
+    $reservations = [];
+    if ($role !== 'commuter') {
+        $params = [date('Y-m-d 00:00:00', $now)];
+        $scopeSql = mbus_pickup_scope($role, $userId, $params);
+        $sql = "SELECT rv.user_id, rv.schedule_id, u.full_name, u.profile_picture, u.phone_number,
+                (u.profile_picture_b64 IS NOT NULL AND u.profile_picture_b64 <> '') AS has_pic,
+                LEFT(MD5(COALESCE(u.profile_picture_b64,'')),8) AS pic_v,
+                b.bus_number, r.origin, r.destination AS route_destination,
+                MIN(rv.pickup_location) AS pickup_location, MIN(rv.destination) AS stop_destination,
+                COUNT(*) AS seats, STRING_AGG(rv.seat_number, ', ' ORDER BY rv.seat_number) AS seat_numbers,
+                MAX(rv.created_at) AS reserved_at
+            FROM public.reservation rv
+            JOIN public.users u ON u.user_id = rv.user_id
+            JOIN public.schedule s ON s.schedule_id = rv.schedule_id
+            JOIN public.buses b ON b.bus_id = s.bus_id
+            JOIN public.routes r ON r.route_id = s.route_id
+            WHERE rv.status IN ('Paid', 'Confirmed') AND " . mbus_pickup_eligible_sql() . $scopeSql . "
+            GROUP BY rv.user_id, rv.schedule_id, u.full_name, u.profile_picture, u.phone_number, u.profile_picture_b64,
+                b.bus_number, r.origin, r.destination, s.departure_time
+            ORDER BY s.departure_time, MAX(rv.created_at) DESC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            if (!isset($eligible[(int)$row['schedule_id']])) {
+                continue;
+            }
+            $row['has_pic'] = in_array($row['has_pic'] ?? null, [true, 1, '1', 't', 'true'], true);
+            foreach (['user_id', 'schedule_id', 'seats'] as $key) {
+                $row[$key] = (int)$row[$key];
+            }
+            $row['reserved_at'] = $row['reserved_at'] ? (new DateTimeImmutable($row['reserved_at']))->format(DATE_ATOM) : null;
+            $reservations[] = $row;
+        }
+    }
+    $result = ['ok' => true, 'ready' => $ready, 'schedules' => $schedules, 'requests' => $requests, 'reservations' => $reservations, 'server_time' => date(DATE_ATOM, $now)];
     if ($role === 'commuter') {
         $result['my_trip'] = mbus_pickup_reserved_trip($pdo, $userId);
     }

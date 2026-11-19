@@ -10,8 +10,9 @@
     const FRESH_MS = 120000;
     const el = id => document.getElementById(id);
     const list = el('staffList'), empty = el('staffEmpty'), filter = el('staffSchedule');
+    const rList = el('staffReserveList'), rEmpty = el('staffReserveEmpty');
 
-    let requests = [], schedules = [], locations = [], csrf = '', ready = false;
+    let requests = [], reservations = [], schedules = [], locations = [], csrf = '', ready = false;
     let map = null, layer = null, line = null, routeLayer = null, selected = null, fittedOnce = false;
     let routeKey = '', routeData = null, routeFitKey = '', routeRequest = 0, routeFailure = null, routeViewMode = 'focus';
     let busy = false, refreshing = null;
@@ -220,9 +221,9 @@
     function openList() {
         const old = document.getElementById('swCard'); if (old) old.remove();
         const back = node('div', undefined, 'sw-card-back'); back.id = 'swCard';
-        const card = node('div', undefined, 'sw-card sw-listcard'); card.setAttribute('role', 'dialog'); card.setAttribute('aria-modal', 'true'); card.setAttribute('aria-label', 'Waiting riders');
+        const card = node('div', undefined, 'sw-card sw-listcard'); card.setAttribute('role', 'dialog'); card.setAttribute('aria-modal', 'true'); card.setAttribute('aria-label', 'Riders waiting for pick-up');
         const head = node('div', undefined, 'sw-listcard-head');
-        head.append(node('h3', lastReqs.length + ' waiting'));
+        head.append(node('h3', lastReqs.length + ' waiting for pick-up'));
         const x = node('button', 'Close', 'sw-listcard-x'); x.type = 'button'; head.append(x);
         card.append(head);
         let q = null;
@@ -267,7 +268,8 @@
         el('staffCount').textContent = String(reqs.length);
         el('busLabel').textContent = buses.length ? buses.length + (buses.length === 1 ? ' bus live' : ' buses live') : 'No bus location yet';
         empty.hidden = reqs.length > 0 || !ready;
-        empty.textContent = ready ? 'No one is waiting right now.' : 'Waiting is not available yet.';
+        empty.textContent = ready ? 'No one is waiting for a pick-up.' : 'Waiting is not available yet.';
+        renderReservations(sel);
 
         if (layer) layer.clearLayers();
         if (line && map) { map.removeLayer(line); line = null; }
@@ -322,6 +324,56 @@
         updateStaffRoute();
         if (map) requestAnimationFrame(() => map.invalidateSize({ pan: false }));
         sizeSheet();
+    }
+
+    /* ---------- reservations (paid seat, not on board yet) ---------- */
+    const seatLabel = r => (r.seats === 1 ? 'Seat ' : 'Seats ') + (r.seat_numbers || r.seats);
+    const stopLabel = r => (r.pickup_location && r.stop_destination) ? r.pickup_location + ' → ' + r.stop_destination : (r.pickup_location || r.stop_destination || '');
+    function renderReservations(sel) {
+        const rows = reservations.filter(r => !sel || String(r.schedule_id) === sel);
+        el('staffReserveCount').textContent = String(rows.length);
+        rEmpty.hidden = rows.length > 0;
+        rList.replaceChildren();
+        rows.forEach(r => {
+            const li = node('li', undefined, 'sw-row');
+            const open = node('button', undefined, 'sw-row-main'); open.type = 'button';
+            const avatar = node('img', undefined, 'sw-avatar'); avatar.alt = ''; bindAvatarFallback(avatar); avatar.src = photoOf(r);
+            const txt = node('span', undefined, 'sw-row-text');
+            txt.append(node('strong', r.full_name || 'Commuter'),
+                node('small', [seatLabel(r), stopLabel(r), r.bus_number].filter(Boolean).join(' · ')));
+            open.append(avatar, txt, node('span', r.seats + (r.seats === 1 ? ' seat' : ' seats'), 'sw-dist sw-dist-reserve'));
+            open.addEventListener('click', () => showReservation(r));
+            const more = node('button', 'Details', 'sw-done sw-details'); more.type = 'button';
+            more.addEventListener('click', () => showReservation(r));
+            li.append(open, more);
+            rList.append(li);
+        });
+        sizeSheet();
+    }
+    function showReservation(r) {
+        const old = document.getElementById('swCard'); if (old) old.remove();
+        const back = node('div', undefined, 'sw-card-back'); back.id = 'swCard';
+        const card = node('div', undefined, 'sw-card'); card.setAttribute('role', 'dialog'); card.setAttribute('aria-modal', 'true'); card.setAttribute('aria-label', 'Reservation details');
+        const head = node('div', undefined, 'sw-card-head');
+        const img = node('img', undefined, 'sw-card-photo'); img.alt = ''; bindAvatarFallback(img); img.src = photoOf(r);
+        const who = node('div'); who.append(node('strong', r.full_name || 'Commuter'), node('small', 'Reserved seat · not on board yet'));
+        head.append(img, who);
+        const rows = [
+            ['Bus', (r.bus_number || '-') + (r.origin ? ' · ' + r.origin + ' to ' + (r.route_destination || '') : '')],
+            [r.seats === 1 ? 'Seat' : 'Seats', r.seat_numbers || String(r.seats)],
+            ['Pickup stop', r.pickup_location || '-'],
+            ['Destination', r.stop_destination || '-'],
+            ['Reserved', ago(r.reserved_at) || '-'],
+            ['Phone', r.phone_number && String(r.phone_number).length > 3 ? r.phone_number : 'Not provided']
+        ];
+        const dl = node('dl', undefined, 'sw-card-list');
+        rows.forEach(([k, v]) => { dl.append(node('dt', k), node('dd', v)); });
+        const close = node('button', 'Close', 'sw-card-close'); close.type = 'button';
+        card.append(head, dl, close); back.append(card); document.body.append(back);
+        const shut = () => { back.remove(); document.removeEventListener('keydown', esc); };
+        const esc = e => { if (e.key === 'Escape') shut(); };
+        close.addEventListener('click', shut); back.addEventListener('click', e => { if (e.target === back) shut(); });
+        document.addEventListener('keydown', esc); close.focus();
     }
 
     function showDetails(r) {
@@ -398,9 +450,10 @@
                 if (p.status === 'fulfilled') {
                     ready = p.value.ready === true; csrf = p.value.csrf_token || '';
                     requests = Array.isArray(p.value.requests) ? p.value.requests : [];
+                    reservations = Array.isArray(p.value.reservations) ? p.value.reservations : [];
                     schedules = Array.isArray(p.value.schedules) ? p.value.schedules : [];
                     if (!ready) say(p.value.message || 'Waiting is not set up yet.');
-                } else { ready = false; requests = []; say(p.reason && p.reason.message || 'Could not load waiting riders.'); }
+                } else { ready = false; requests = []; reservations = []; say(p.reason && p.reason.message || 'Could not load waiting riders.'); }
                 locations = l.status === 'fulfilled' && Array.isArray(l.value.locations) ? l.value.locations : [];
                 if (selected && !requests.some(r => r.request_id === selected)) selected = null;
                 updateFilter(); render();
