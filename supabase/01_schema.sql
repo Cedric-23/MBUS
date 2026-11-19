@@ -56,6 +56,10 @@ CREATE TABLE reservation (
     reservation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status reservation_status DEFAULT 'Pending',
     destination VARCHAR(100),
+    pickup_latitude DOUBLE PRECISION,
+    pickup_longitude DOUBLE PRECISION,
+    destination_latitude DOUBLE PRECISION,
+    destination_longitude DOUBLE PRECISION,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ticket_code VARCHAR(20) NOT NULL
 );

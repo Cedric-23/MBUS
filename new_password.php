@@ -47,7 +47,8 @@ function new_password_e(mixed $value): string { return htmlspecialchars((string)
 <title>Create a new password | MBUS</title>
 <link rel="stylesheet" href="Assets/css/global/font.css"><link rel="stylesheet" href="Assets/css/main/register.css?v=<?= @filemtime(__DIR__ . '/Assets/css/main/register.css') ?>"/>
         <link rel="stylesheet" href="Assets/css/main/auth_modern.css?v=<?= @filemtime(__DIR__ . '/Assets/css/main/auth_modern.css') ?>"/><link rel="stylesheet" href="Assets/css/auth.css?v=<?= @filemtime(__DIR__ . '/Assets/css/auth.css') ?>"><link rel="stylesheet" href="Assets/css/reset.css?v=<?= @filemtime(__DIR__ . '/Assets/css/reset.css') ?>"><script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
-</head><body>
+</head><body class="auth-reset">
+<div class="auth-hero-m"><a class="auth-back" href="login.php" aria-label="Back to login"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></a><h1>Create a new password</h1><p>Choose a strong password you haven’t used before.</p></div>
 <div class="left-container"><div class="left-container-child-1"><div class="logo-wordmark"><img src="Assets/images/mbus_logo.png" alt="MBUS"></div></div><div class="left-container-child-2"><div class="lc-heading"><h1>Travel smarter.</h1><h1>Travel on time.</h1></div><div class="lc-sub-heading"><p>Your dependable way to reserve seats, manage trips, and travel with confidence.</p></div></div><img class="auth-art" src="Assets/images/auth_bus.svg" alt="" aria-hidden="true"><div class="lc-circle-1"></div><div class="lc-circle-2"></div></div>
 <main class="right-container"><div class="form-container"><header class="form-header"><div class="form-header-text"><h1>Create a new password</h1><p>Choose a strong password you haven’t used before.</p></div></header>
 <?php if($error): ?><div class="form-alert error" role="alert"><?= new_password_e($error) ?></div><?php endif; ?>
@@ -58,4 +59,5 @@ function new_password_e(mixed $value): string { return htmlspecialchars((string)
 </form><footer class="reset-footer"><p><a href="login.php">Back to sign in</a></p></footer>
 </div></main>
 <script src="Assets/js/password-toggle.js"></script><script>if(window.lucide)lucide.createIcons();const p=document.getElementById('password');const rules={length:v=>v.length>=8,upper:v=>/[A-Z]/.test(v),lower:v=>/[a-z]/.test(v),number:v=>/\d/.test(v),symbol:v=>/[^A-Za-z0-9]/.test(v)};function updateRules(){Object.entries(rules).forEach(([k,fn])=>document.querySelector('[data-rule="'+k+'"]').classList.toggle('met',fn(p.value)));}p.addEventListener('input',updateRules);updateRules();</script>
+<script src="Assets/js/submit_feedback.js"></script>
 </body></html>

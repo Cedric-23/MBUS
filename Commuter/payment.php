@@ -259,37 +259,29 @@ if(isset($_POST['cancel_reservation'])){
 <?php echo htmlspecialchars($reservations[0]['origin']); ?> &#8594; <?php echo htmlspecialchars($reservations[0]['route_destination']); ?>
 </div>
 
-<ul class="trip-details">
-    <li><strong>Bus</strong><span><?php echo htmlspecialchars($reservations[0]['bus_number']); ?></span></li>
-    <li><strong>Departure</strong><span><?php echo date("M j, Y g:i A", strtotime($reservations[0]['departure_time'])); ?></span></li>
-    <li><strong>Arrival</strong><span><?php echo date("M j, Y g:i A", strtotime($reservations[0]['arrival_time'])); ?></span></li>
-    <li class="trip-stops"><strong>Stops</strong>
-        <span>
-        <?php foreach($reservations as $reservation): ?>
-            <span class="payment-seat-stop">Seat <?php echo htmlspecialchars((string)$reservation['seat_number']); ?>: <?php echo htmlspecialchars($reservation['pickup_location']); ?> → <?php echo htmlspecialchars($reservation['destination']); ?></span>
-        <?php endforeach; ?>
-        </span>
-    </li>
-    <li class="trip-total"><strong>Total:</strong> <span>&#8369;<span id="totalAmt"><?php echo number_format($total, 2); ?></span></span></li>
-</ul>
-
-<div class="seats-section">
-    <strong>Seats</strong>
-    <?php foreach($quote['lines'] as $ln){ ?>
-    <div class="pay-seat">
-        <div class="pay-seat-head">
-            <span class="seat-tag">Seat <?php echo htmlspecialchars((string)$ln['seat']); ?></span>
-            <span class="pay-type-label"><?php echo htmlspecialchars($ln['type']); ?></span>
-            <span class="pay-line">&#8369;<?php echo number_format($ln['final'], 2); ?></span>
-        </div>
-        <div class="pay-breakdown">
-            <span>Fare</span><span>&#8369;<?php echo number_format($ln['base'], 2); ?></span>
-            <?php if($ln['discount'] > 0): ?><span>Discount (<?php echo htmlspecialchars($ln['type']); ?>)</span><span>&minus;&#8369;<?php echo number_format($ln['discount'], 2); ?></span><?php endif; ?>
-            <span>Reservation fee</span><span>&#8369;<?php echo number_format($ln['fee'], 2); ?></span>
-        </div>
-    </div>
-    <?php } ?>
+<div class="pay-meta">
+    <div><span>Bus</span><strong><?php echo htmlspecialchars($reservations[0]['bus_number']); ?></strong></div>
+    <div><span>Departs</span><strong><?php echo date("M j, g:i A", strtotime($reservations[0]['departure_time'])); ?></strong></div>
+    <div><span>Arrives</span><strong><?php echo date("M j, g:i A", strtotime($reservations[0]['arrival_time'])); ?></strong></div>
 </div>
+
+<?php
+    $stopBySeat = [];
+    foreach($reservations as $reservation){ $stopBySeat[(string)$reservation['seat_number']] = $reservation['pickup_location'] . ' → ' . $reservation['destination']; }
+?>
+<ul class="pay-seats">
+    <?php foreach($quote['lines'] as $ln){ $sk = (string)$ln['seat']; ?>
+    <li class="pay-seat-row">
+        <span class="seat-tag">Seat <?php echo htmlspecialchars($sk); ?></span>
+        <span class="pay-seat-info">
+            <span class="pay-seat-stop"><?php echo htmlspecialchars($stopBySeat[$sk] ?? ''); ?></span>
+            <small class="pay-seat-break"><?php echo htmlspecialchars($ln['type']); ?> &middot; Fare &#8369;<?php echo number_format($ln['base'], 2); ?><?php if($ln['discount'] > 0): ?> &middot; &minus;&#8369;<?php echo number_format($ln['discount'], 2); ?> off<?php endif; ?> &middot; Fee &#8369;<?php echo number_format($ln['fee'], 2); ?></small>
+        </span>
+        <span class="pay-line">&#8369;<?php echo number_format($ln['final'], 2); ?></span>
+    </li>
+    <?php } ?>
+</ul>
+<div class="pay-total"><span>Total</span><strong>&#8369;<span id="totalAmt"><?php echo number_format($total, 2); ?></span></strong></div>
 </div>
 
 </div>

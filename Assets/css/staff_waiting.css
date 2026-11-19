@@ -19,7 +19,7 @@
 .sw-notice-ok { background: #067647; }
 .sw-notice-soft { background: #fff4e0; color: #7a4a00; }
 
-.sw-sheet { position: fixed; z-index: 500; left: 0; right: 0; bottom: var(--nav-h); max-width: 560px; margin: 0 auto; max-height: 46vh; display: flex; flex-direction: column; padding: 14px 14px 8px; border-radius: 22px 22px 0 0; background: #fff; box-shadow: 0 -6px 24px rgba(0,0,0,.16); }
+.sw-sheet { position: fixed; z-index: 500; left: 0; right: 0; bottom: var(--nav-h); max-width: 560px; margin: 0 auto; max-height: 42vh; display: flex; flex-direction: column; padding: 10px 12px 6px; border-radius: 22px 22px 0 0; background: #fff; box-shadow: 0 -6px 24px rgba(0,0,0,.16); }
 .sw-sheet-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
 .sw-sheet-head h2 { margin: 0; font-size: 1.125rem; }
 .sw-sheet-sub { font-size: .8125rem; color: #6b7a8d; }
@@ -29,7 +29,8 @@
 .sw-route-view:disabled { opacity: .45; }
 .sw-empty { margin: 6px 0 10px; color: #6b7a8d; font-size: .9375rem; }
 .sw-empty[hidden] { display: none; }
-.sw-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain; }
+.sw-list { list-style: none; margin: 0; padding: 0; }
+.sw-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 6px; }
 .sw-row { display: flex; align-items: center; gap: 8px; min-height: 60px; border-top: 1px solid #eef1f5; }
 .sw-row.is-on { background: #f1f6fd; border-radius: 12px; }
 .sw-row-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 4px; border: 0; background: none; font: inherit; text-align: left; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -72,7 +73,7 @@
 @media (min-width: 769px) { .sw-card-back { align-items: center; } .sw-card { border-radius: 20px; } }
 
 /* compact mode: more than 3 waiting */
-.sw-sheet.is-compact .sw-list { display: none; }
+.sw-sheet.is-compact #staffList { display: none; }
 .sw-compact { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; margin: 6px 0 4px; padding: 10px 12px; border: 1px solid #dbe4f0; border-radius: 14px; background: #f5f8fc; font: inherit; color: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .sw-compact:focus-visible, .sw-mini:focus-visible, .sw-listcard-x:focus-visible, .sw-search:focus-visible { outline: 3px solid #1e90ff; outline-offset: 2px; }
 .sw-stack { display: flex; flex: none; align-items: center; }
@@ -98,3 +99,52 @@
 .sw-card-pick { width: 100%; min-height: 48px; margin: 0 0 8px; border: 0; border-radius: 12px; background: #1e3a5f; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
 .sw-card-pick:disabled { opacity: .6; }
 .sw-card-close { background: #eef1f5 !important; color: #1e3a5f !important; }
+
+/* Waiting for pick-up vs. waiting for reservation: two separate groups */
+.sw-group { margin: 0 0 10px; padding: 10px 10px 4px; border: 1px solid #e3eaf3; border-radius: 16px; background: #fff; }
+.sw-group + .sw-group { margin-top: 10px; }
+.sw-group-pickup { border-left: 4px solid #1e90ff; background: #f7fbff; }
+.sw-group-reserve { border-left: 4px solid #7a5af8; background: #faf8ff; }
+.sw-group-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.sw-group-icon { display: grid; flex: none; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #dcecff; color: #176fc1; font-size: .875rem; }
+.sw-group-reserve .sw-group-icon { background: #ece7ff; color: #5b3fd1; }
+.sw-group-title { flex: 1; min-width: 0; }
+.sw-group-title h3 { margin: 0; font-size: .9375rem; line-height: 1.25; color: #172b4d; }
+.sw-group-title small { display: block; color: #6b7a8d; font-size: .75rem; }
+.sw-group-count { flex: none; min-width: 28px; padding: 3px 10px; border-radius: 999px; background: #1e3a5f; color: #fff; font-size: .8125rem; font-weight: 700; text-align: center; }
+.sw-group-reserve .sw-group-count { background: #5b3fd1; }
+.sw-group .sw-empty { margin: 2px 0 8px; font-size: .875rem; }
+.sw-group .sw-row:first-child { border-top: 0; }
+.sw-dist-reserve { background: #ece7ff; color: #4a32b0; }
+.sw-group-reserve .sw-details { background: #ece7ff; color: #4a32b0; }
+
+/* Compact sheet: leave the map visible */
+.sw-sheet-head { margin-bottom: 4px; }
+.sw-sheet-head h2 { display: none; }
+.sw-sheet-head .sw-sheet-sub { margin-left: auto; font-size: .75rem; }
+.sw-route-controls { margin-bottom: 6px; gap: 6px; }
+.sw-route-estimate { padding: 5px 8px; font-size: .6875rem; line-height: 1.3; }
+.sw-route-view { min-height: 30px; padding: 0 10px; }
+.sw-group { margin: 0 0 6px; padding: 6px 8px 2px; border-radius: 14px; }
+.sw-group + .sw-group { margin-top: 6px; }
+.sw-group-head { gap: 8px; margin-bottom: 2px; }
+.sw-group-icon { width: 28px; height: 28px; font-size: .75rem; }
+.sw-group-title h3 { font-size: .875rem; }
+.sw-group-title small { display: none; }
+.sw-group-count { min-width: 24px; padding: 2px 8px; font-size: .75rem; }
+.sw-group .sw-empty { display: none; }
+.sw-group .sw-row { min-height: 50px; }
+.sw-group .sw-row-main { padding: 5px 2px; gap: 8px; }
+.sw-group .sw-avatar { width: 34px; height: 34px; }
+.sw-group .sw-row-text strong { font-size: .875rem; }
+.sw-group .sw-row-text small { font-size: .75rem; }
+.staff-wait-page .sw-group .sw-done { min-height: 34px; padding: 0 12px; border-radius: 10px; font-size: .8125rem; box-shadow: none !important; }
+.staff-wait-page .sw-group .sw-details { background: #e3effd !important; color: #1e3a5f !important; }
+.staff-wait-page .sw-group-reserve .sw-details { background: #ece7ff !important; color: #4a32b0 !important; }
+.sw-group:has(.sw-list:empty) { padding-bottom: 6px; }
+.sw-group:has(.sw-list:empty) .sw-group-head { margin-bottom: 0; }
+
+
+.staff-wait-page .sw-res-map-toggle { padding:0 9px; background:#f0edff; color:#4a32b0; font-size:.75rem; }
+.staff-wait-page .sw-res-map-toggle[aria-pressed="false"] { background:#eef1f5; color:#526174; }
+@media(max-width:420px){.staff-wait-page .sw-res-map-toggle{padding:0 7px;font-size:.7rem}}

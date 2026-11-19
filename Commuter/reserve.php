@@ -89,12 +89,7 @@ if($booking_action !== 'reserve'){
 if(strtoupper($route_data['origin'])=='SBMA' && strtoupper($route_data['destination'])=='MORONG TERMINAL'){
     $stops=array_reverse($stops);
 }
-$fixed_pickup = (string)($stops[0] ?? ($route_data['origin'] ?? ''));
-
-/* PICKUP */
-$pickup_stops=$stops;
-array_pop($pickup_stops);
-array_pop($pickup_stops);
+$fixed_pickup = (string)($stops[0] ?? ($route_data['origin'] ?? '')); /* default pickup for each rider; the last stop can only be a destination */
 
 /* RESERVED */
 $seat_sql="SELECT seat_number FROM reservation
@@ -127,21 +122,16 @@ if($reviewed_input !== '1'){
 }
 $reservation_mode = (string)($_POST['reservation_mode'] ?? 'solo');
 $reservation_mode = in_array($reservation_mode, ['solo', 'multi'], true) ? $reservation_mode : '';
-$pickup_input=$fixed_pickup;
-$destination_input=$_POST['destination'] ?? '';
+/* Every rider (seat) has their own pickup and destination: {"17":"APPAREL","18":"MORONG GATE"} */
+$pickups_in = json_decode((string)($_POST['pickups'] ?? '{}'), true);
+if(!is_array($pickups_in)) $pickups_in = [];
 $destinations_in = json_decode((string)($_POST['destinations'] ?? '{}'), true);
 if(!is_array($destinations_in)) $destinations_in = [];
+$pins_in = json_decode((string)($_POST['stop_pins'] ?? '{}'), true);
+if(!is_array($pins_in)) $pins_in = [];
 $seats_input=$_POST['seats'] ?? '';
-if(!is_string($destination_input) || !is_string($seats_input) || trim($pickup_input) === '' || ($reservation_mode === 'solo' && trim($destination_input) === '')){
+if(!is_string($seats_input)){
     die("Invalid reservation details.");
-}
-$pickup=mbus_db_escape($conn,$pickup_input);
-$destination=mbus_db_escape($conn,$destination_input);
-$pickup_index = array_search($pickup_input, $stops, true);
-if($pickup_index === false){
-    http_response_code(422);
-    echo "This route has an invalid pickup terminal configuration.";
-    exit();
 }
 $raw_seats = array_map('trim', explode(',', $seats_input));
 if(empty($raw_seats) || count(array_filter($raw_seats, function($seat){ return $seat === '' || !preg_match('/^\d+$/', $seat); })) > 0){
@@ -157,16 +147,50 @@ if($reservation_mode === '' || ($reservation_mode === 'solo' && count($requested
     exit();
 }
 $seats=$requested_seats;
+$pickup_by_seat = [];
 $destination_by_seat = [];
+$pin_by_seat = [];
 foreach($seats as $seat_no){
-    $seat_destination = (string)($destinations_in[(string)$seat_no] ?? $destination_input);
-    $destination_index = array_search($seat_destination, $stops, true);
-    if($destination_index === false || $destination_index <= $pickup_index){
+    $seat_pickup = $pickups_in[(string)$seat_no] ?? '';
+    $seat_destination = $destinations_in[(string)$seat_no] ?? '';
+    $pickup_index = is_string($seat_pickup) ? array_search($seat_pickup, $stops, true) : false;
+    /* the last stop can only be a destination */
+    if($pickup_index === false || $pickup_index >= count($stops) - 1){
         http_response_code(422);
-        echo "Invalid destination for seat $seat_no. Choose a stop after the pickup location.";
+        echo "Choose a pickup stop for seat $seat_no.";
         exit();
     }
-    $destination_by_seat[$seat_no] = mbus_db_escape($conn, $seat_destination);
+    $destination_index = is_string($seat_destination) ? array_search($seat_destination, $stops, true) : false;
+    if($destination_index === false || $destination_index <= $pickup_index){
+        http_response_code(422);
+        echo "Invalid destination for seat $seat_no. Choose a stop after the pickup.";
+        exit();
+    }
+    /* stored values come from the trusted stop list, never straight from the request */
+    $pickup_by_seat[$seat_no] = $stops[$pickup_index];
+    $destination_by_seat[$seat_no] = $stops[$destination_index];
+    $seat_pins = $pins_in[(string)$seat_no] ?? null;
+    $pin_by_seat[$seat_no] = ['pickup'=>null, 'destination'=>null];
+    if(is_array($seat_pins)){
+        $has_pickup = isset($seat_pins['pickup']);
+        $has_destination = isset($seat_pins['destination']);
+        if($has_pickup !== $has_destination){
+            http_response_code(422); echo "Set both map pins or clear both pins for seat $seat_no."; exit();
+        }
+        if($has_pickup){
+            foreach(['pickup','destination'] as $kind){
+                $point = $seat_pins[$kind];
+                $lat = is_array($point) && isset($point['lat']) && is_numeric($point['lat']) ? (float)$point['lat'] : NAN;
+                $lng = is_array($point) && isset($point['lng']) && is_numeric($point['lng']) ? (float)$point['lng'] : NAN;
+                if(!is_finite($lat) || !is_finite($lng) || abs($lat) > 90 || abs($lng) > 180){
+                    http_response_code(422); echo "Set valid pickup and drop-off map pins for seat $seat_no."; exit();
+                }
+                $pin_by_seat[$seat_no][$kind] = ['lat'=>$lat, 'lng'=>$lng];
+            }
+        }
+    } elseif($seat_pins !== null){
+        http_response_code(422); echo "Invalid map pins for seat $seat_no."; exit();
+    }
 }
 /* Per-seat passenger type (+ ID photo for discounted seats that are not the verified account holder's own) */
 $types_in = json_decode((string)($_POST['types'] ?? '{}'), true); if(!is_array($types_in)) $types_in = [];
@@ -258,9 +282,9 @@ FOR UPDATE
             throw new DomainException($locked_action);
         }
         $inserted = mbus_db_prepare($conn,"
-INSERT INTO reservation(ticket_code,user_id,schedule_id,seat_number,pickup_location,destination,reservation_date,created_at,expires_at,status,passenger_type,discount_status,id_image_b64,id_image_mime)
-VALUES(?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW() + INTERVAL '10 minutes', 'Pending', ?, ?, ?, ?)
-        ", [$ticket_code, $user_id, $schedule_id, $seat, $pickup, $destination_by_seat[$seat], $seat_info[$seat]['type'], $seat_info[$seat]['status'], $seat_info[$seat]['b64'], $seat_info[$seat]['mime']]);
+INSERT INTO reservation(ticket_code,user_id,schedule_id,seat_number,pickup_location,destination,pickup_latitude,pickup_longitude,destination_latitude,destination_longitude,reservation_date,created_at,expires_at,status,passenger_type,discount_status,id_image_b64,id_image_mime)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW() + INTERVAL '10 minutes', 'Pending', ?, ?, ?, ?)
+        ", [$ticket_code, $user_id, $schedule_id, $seat, $pickup_by_seat[$seat], $destination_by_seat[$seat], $pin_by_seat[$seat]['pickup']['lat'] ?? null, $pin_by_seat[$seat]['pickup']['lng'] ?? null, $pin_by_seat[$seat]['destination']['lat'] ?? null, $pin_by_seat[$seat]['destination']['lng'] ?? null, $seat_info[$seat]['type'], $seat_info[$seat]['status'], $seat_info[$seat]['b64'], $seat_info[$seat]['mime']]);
         if($inserted === false){
             throw new RuntimeException("Reservation insert failed");
         }
@@ -316,7 +340,8 @@ exit();
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../Assets/css/responsive.css">
 <link rel="stylesheet" href="../Assets/css/commuter_sidebar.css">
-<link rel="stylesheet" href="../Assets/css/commuter_reserve.css">
+<link rel="stylesheet" href="../Assets/css/commuter_reserve.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_reserve.css'); ?>">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
@@ -397,7 +422,7 @@ exit();
     <button type="button" class="reservation-mode-tab active" id="soloModeTab" role="tab" aria-selected="true" data-mode="solo">Solo reservation</button>
     <button type="button" class="reservation-mode-tab" id="multiModeTab" role="tab" aria-selected="false" data-mode="multi">Multi reservation</button>
 </div>
-<p class="reservation-mode-help" id="reservationModeHelp">Choose one seat. Pickup and destination above apply to your reservation.</p>
+<p class="reservation-mode-help" id="reservationModeHelp">Choose one seat, then set its pickup and destination.</p>
 <p class="reservation-mode-warning" id="multiSeatWarning" role="status" hidden>Select at least 2 seats for a multi reservation.</p>
 
 </div>
@@ -438,19 +463,22 @@ echo "</div>";
 
 <div class="card pickup-card">
 
-<div class="form-group">
-    <span class="form-label">Pickup Terminal</span>
-    <div class="fixed-stop form-control" id="pickupDisplay"><?php echo htmlspecialchars($fixed_pickup); ?></div>
-    <input type="hidden" id="pickup" value="<?php echo htmlspecialchars($fixed_pickup, ENT_QUOTES, 'UTF-8'); ?>">
-</div>
+<h2 class="seat-trips-title">Pickup &amp; destination</h2>
+<p class="seat-trips-empty" id="seatTripsEmpty">Tap a seat above. Each rider gets their own pickup and destination.</p>
+<div id="seatTrips" class="seat-trips" aria-live="polite"></div>
 
-<div class="form-group" id="destinationGroup">
-    <label for="destination">Destination</label>
-    <select id="destination" class="form-control" required disabled>
-        <option value="">Select pickup first</option>
-    </select>
-</div>
-<div id="seatDestinations" class="seat-destinations" aria-live="polite"></div>
+<section class="reserve-stop-map" aria-labelledby="stopMapTitle">
+    <h3 id="stopMapTitle">Optional exact map pins</h3>
+    <p>Choose a seat and pickup or drop-off, then tap the map. You can pin a specific place in addition to the named route stops above. If you skip pins, the driver will see the named stops.</p>
+    <div class="reserve-pin-controls">
+        <label>Seat <select id="pinSeat" aria-label="Seat to place map pins for"></select></label>
+        <button type="button" class="reserve-pin-mode active" data-pin-mode="pickup">Pickup pin</button>
+        <button type="button" class="reserve-pin-mode" data-pin-mode="destination">Drop-off pin</button>
+        <button type="button" class="reserve-pin-clear">Clear this seat’s pins</button>
+    </div>
+    <div id="reservationMap" role="application" aria-label="Tap the map to set the selected seat’s pickup or drop-off pin"></div>
+    <p id="pinStatus" role="status" aria-live="polite">Select seats, then place optional pickup and drop-off pins.</p>
+</section>
 
 <button type="button" id="doneBtn" class="btn btn-primary btn-block">
     Review my trip
@@ -517,72 +545,15 @@ echo "</div>";
 const scheduleId = <?php echo (int)$schedule_id; ?>;
 const csrfToken = <?php echo json_encode(csrf_get_token()); ?>;
 const route = <?php echo json_encode($stops); ?>;
+const fixedPickup = <?php echo json_encode($fixed_pickup); ?>;
+const routeBounds = <?php echo json_encode([(float)($route_data['origin_lat'] ?? 14.6798552),(float)($route_data['origin_lng'] ?? 120.2728757),(float)($route_data['destination_lat'] ?? 14.8243652),(float)($route_data['destination_lng'] ?? 120.2801434)]); ?>;
 const fareTable = <?php echo json_encode($fare_table); ?>;
 const passengerType = <?php echo json_encode($passenger_type); ?>;
 </script>
 
 
-<script src="../Assets/js/commuter_reserve.js"></script>
-
-<div class="seat-bar" id="seatBar">
-    <div class="seat-bar-info">
-        <span class="seat-bar-title" id="seatBarTitle">Pick your seats</span>
-        <span class="seat-bar-sub" id="seatBarSub">Tap an available seat</span>
-    </div>
-    <button type="button" class="seat-bar-btn" id="seatBarBtn">Choose seats</button>
-</div>
-
-<script>
-/* Sticky seat bar (phones): shows the live selection and walks to the next missing step */
-(function(){
-    const bar = document.getElementById('seatBar');
-    const title = document.getElementById('seatBarTitle');
-    const sub = document.getElementById('seatBarSub');
-    const btn = document.getElementById('seatBarBtn');
-    const pickup = document.getElementById('pickup');
-    const dest = document.getElementById('destination');
-    if (!bar) return;
-
-    function selected(){ return Array.from(document.querySelectorAll('.seat-btn.selected')).map(b => b.dataset.seat); }
-
-    function refresh(){
-        const fare = document.getElementById('fareBreakdown');
-        bar.hidden = !!fare && fare.style.display !== 'none';
-        const seats = selected();
-        if (!seats.length) {
-            title.textContent = 'Pick your seats';
-            sub.textContent = 'Tap an available seat';
-            btn.textContent = 'Choose seats';
-        } else if (!pickup.value) {
-            title.textContent = (seats.length === 1 ? 'Seat ' : 'Seats ') + seats.join(', ');
-            sub.textContent = 'Next: pickup location';
-            btn.textContent = 'Set pickup';
-        } else if (!dest.value) {
-            title.textContent = (seats.length === 1 ? 'Seat ' : 'Seats ') + seats.join(', ');
-            sub.textContent = 'Next: destination';
-            btn.textContent = 'Set destination';
-        } else {
-            title.textContent = (seats.length === 1 ? 'Seat ' : 'Seats ') + seats.join(', ');
-            sub.textContent = 'Ready to review';
-            btn.textContent = 'Review';
-        }
-    }
-
-    btn.addEventListener('click', function(){
-        const seats = selected();
-        if (!seats.length) { document.querySelector('.seat-map').scrollIntoView({behavior:'smooth', block:'center'}); return; }
-        if (!pickup.value) { pickup.scrollIntoView({behavior:'smooth', block:'center'}); pickup.focus(); return; }
-        if (!dest.value) { dest.scrollIntoView({behavior:'smooth', block:'center'}); dest.focus(); return; }
-        document.getElementById('doneBtn').click();
-        document.getElementById('summaryPanel').scrollIntoView({behavior:'smooth', block:'start'});
-    });
-
-    document.addEventListener('click', function(){ setTimeout(refresh, 0); });
-    pickup.addEventListener('change', function(){ setTimeout(refresh, 0); });
-    dest.addEventListener('change', function(){ setTimeout(refresh, 0); });
-    refresh();
-})();
-</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="../Assets/js/commuter_reserve.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/commuter_reserve.js'); ?>"></script>
 
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="commuter_dashboard.php" class="bottom-nav-item">

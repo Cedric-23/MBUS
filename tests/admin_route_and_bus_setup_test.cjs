@@ -25,7 +25,7 @@ const db = read('config/db_connect.php');
 for (const column of ['origin_lat DECIMAL(10, 8)', 'origin_lng DECIMAL(11, 8)', 'destination_lat DECIMAL(10, 8)', 'destination_lng DECIMAL(11, 8)']) {
     assert.ok(db.includes(column), `runtime schema upgrade must add ${column}`);
 }
-assert.match(db, /schemaVersion\s*=\s*'2026-11-18c'/,
+assert.match(db, /schemaVersion\s*=\s*'2026-11-20a'/,
     'the runtime schema version must advance so existing deployments run the new upgrades');
 
 const registration = read('register.php');

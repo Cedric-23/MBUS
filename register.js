@@ -28,6 +28,10 @@ const submitMessages = {
 };
 
 function toggleFields(form, enabled) {
+    // The fieldsets start disabled for the hidden tab; they must be switched too or every field inside stays locked.
+    form.querySelectorAll("fieldset").forEach(function (fs) {
+        fs.disabled = !enabled;
+    });
     form.querySelectorAll("input, select, textarea").forEach(function (field) {
         field.disabled = !enabled;
     });

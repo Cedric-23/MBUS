@@ -125,9 +125,10 @@ $qs = fn(array $over = []) => '?' . http_build_query(array_filter(array_merge(['
     <link rel="stylesheet" href="../Assets/css/admin/admin_ui.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/admin/admin_ui.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
+    <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
 </head>
 
-<body class="has-sidebar">
+<body class="stf has-sidebar">
 
 <!-- Mobile Sidebar Toggle -->
 <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
@@ -166,7 +167,7 @@ $qs = fn(array $over = []) => '?' . http_build_query(array_filter(array_merge(['
             <div class="page-header-right">
                 <div class="profile-menu-wrap">
                     <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
-                        <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span>
+                        <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span><?php include_once dirname(__DIR__) . '/Includes/admin_menu.php'; echo mbus_admin_dot($conn); ?>
                     </button>
                     <div class="profile-menu" id="profileMenu" role="menu">
                         <div class="profile-menu-header">
@@ -352,7 +353,7 @@ document.addEventListener('keydown', function(e) {
     <a href="manage_buses.php" class="bottom-nav-item">
         <i class="fa fa-bus" aria-hidden="true"></i><span>Buses</span>
     </a>
-    <a href="manage_operators.php" class="bottom-nav-item active" aria-current="page">
+    <a href="manage_operators.php" class="bottom-nav-item">
         <i class="fa fa-users" aria-hidden="true"></i><span>Operators</span>
     </a>
     <a href="waiting.php" class="bottom-nav-item">

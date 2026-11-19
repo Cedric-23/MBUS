@@ -32,3 +32,37 @@ function mbus_header_avatar(string $base = '../'): string
     }
     return $initial_html;
 }
+
+/* Operator alert: how many GCash payments are waiting for someone to check them.
+ * Counted once per request. Shown as a red dot on the profile icon and a count
+ * beside "Payments" in the account menu. */
+function mbus_pending_payments_count(): int
+{
+    static $n = null;
+    if ($n !== null) return $n;
+    $n = 0;
+    $conn = $GLOBALS['conn'] ?? null;
+    if ($conn && function_exists('mbus_db_prepare')) {
+        try {
+            $q = mbus_db_prepare($conn, "SELECT COUNT(*) AS c FROM paymongo_checkout WHERE session_id LIKE 'manual\\_%' AND LOWER(status) = 'submitted'", []);
+            $r = $q === false ? false : mbus_db_fetch_assoc($q);
+            if ($r) $n = (int)$r['c'];
+        } catch (Throwable $e) { error_log('pending payments count failed: ' . $e->getMessage()); }
+    }
+    return $n;
+}
+
+/* Red dot for the corner of the profile icon (empty string when nothing to check). */
+function mbus_payment_dot(): string
+{
+    $n = mbus_pending_payments_count();
+    if ($n <= 0) return '';
+    return '<span class="pay-alert-dot"><span class="pay-alert-vh">' . $n . ' payment' . ($n === 1 ? '' : 's') . ' to check</span></span>';
+}
+
+/* Count pill for the "Payments" item in the account menu. */
+function mbus_payment_pill(): string
+{
+    $n = mbus_pending_payments_count();
+    return $n > 0 ? '<span class="pay-alert-pill">' . ($n > 99 ? '99+' : $n) . '</span>' : '';
+}

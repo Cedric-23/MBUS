@@ -1,0 +1,14 @@
+:root{--p:#2f6fe4;--ink:#14213d;--muted:#4a5b78;--line:#dde7f8}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#e6efff,#f7f9ff) fixed;color:var(--ink);font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;line-height:1.65}
+.legal{max-width:760px;margin:0 auto;padding:20px 16px 60px}
+.legal-back{display:inline-block;color:var(--p);font-weight:600;text-decoration:none;margin-bottom:14px}
+.legal-tabs{display:flex;gap:4px;background:#e3edff;border-radius:999px;padding:4px;margin-bottom:22px}
+.legal-tabs a{flex:1;text-align:center;padding:10px 8px;border-radius:999px;color:var(--muted);text-decoration:none;font-weight:600;font-size:.92rem}
+.legal-tabs a.active{background:#fff;color:var(--p);box-shadow:0 4px 14px rgba(47,111,228,.12)}
+h1{font-size:1.7rem;margin:0 0 4px;letter-spacing:-.01em}
+.legal-updated{color:#7a8aa6;margin:0 0 20px;font-size:.9rem}
+section{background:#fff;border-radius:20px;padding:16px 18px;margin-bottom:12px;box-shadow:0 4px 14px rgba(47,111,228,.08)}
+h2{font-size:1.02rem;margin:0 0 6px;color:var(--ink)}
+section p{margin:0 0 8px;color:var(--muted);font-size:.95rem}
+section p:last-child{margin-bottom:0}

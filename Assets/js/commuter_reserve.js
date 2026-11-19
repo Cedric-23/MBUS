@@ -1,10 +1,91 @@
 let selectedSeats = [];
+/* every rider (seat) has their own pickup and destination */
+const seatPickups = {};
 const seatDestinations = {};
+const seatPins = {};
+/* ...and their own passenger classification (+ ID photo for discounted seats that are not the account holder's own).
+   Declared up here because the seat cards below read them. */
+const seatTypes = {};
+const seatIds = {};
+const PASSENGER_TYPE_OPTIONS = [
+    ["Regular", "Regular (Standard)"],
+    ["Student", "Student"],
+    ["Senior", "Senior Citizen"],
+    ["PWD", "PWD"]
+];
+const PASSENGER_TYPE_SHORT = { Regular: "Regular", Student: "Student", Senior: "Senior Citizen", PWD: "PWD" };
 let reservationMode = "solo";
 let reviewed = false;
+let pinMode = "pickup";
+let reservationMap = null;
+let reservationPinLayer = null;
 
-const pickup = document.getElementById("pickup");
-const destination = document.getElementById("destination");
+function renderSeatPins() {
+    const select = document.getElementById("pinSeat"), status = document.getElementById("pinStatus");
+    if (!select || !status) return;
+    const previous = select.value;
+    select.replaceChildren(...selectedSeats.map(seat => new Option("Seat " + seat, String(seat))));
+    select.value = selectedSeats.some(seat => String(seat) === previous) ? previous : (selectedSeats.length ? String(selectedSeats[0]) : "");
+    if (reservationPinLayer) reservationPinLayer.clearLayers();
+    if (!selectedSeats.length) { status.textContent = "Select seats, then place optional pickup and drop-off pins."; return; }
+    const seat = select.value, pins = seatPins[seat] || {};
+    status.textContent = `Seat ${seat}: pickup ${pins.pickup ? "pinned" : "not set"}; drop-off ${pins.destination ? "pinned" : "not set"}.`;
+    if (!reservationMap || !reservationPinLayer) return;
+    selectedSeats.forEach(number => ["pickup", "destination"].forEach(kind => {
+        const point = seatPins[number] && seatPins[number][kind];
+        if (!point) return;
+        const active = String(number) === seat;
+        L.circleMarker([point.lat, point.lng], {radius:active ? 9 : 7, color:"#fff", weight:2, fillColor:kind === "pickup" ? "#16834a" : "#244a9b", fillOpacity:active ? 1 : .5})
+            .addTo(reservationPinLayer).bindTooltip(`Seat ${number} · ${kind === "pickup" ? "Pickup" : "Drop-off"}`);
+    }));
+}
+
+function initReservationMap() {
+    const host = document.getElementById("reservationMap");
+    if (!host) return;
+    if (!window.L) { document.getElementById("pinStatus").textContent = "Map unavailable; named stops can still be used."; return; }
+    const bounds = routeBounds.map(Number), [oLat,oLng,dLat,dLng] = bounds;
+    const center = bounds.every(Number.isFinite) ? [(oLat+dLat)/2, (oLng+dLng)/2] : [14.75,120.27];
+    reservationMap = L.map(host, {scrollWheelZoom:false}).setView(center, 12);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"&copy; OpenStreetMap contributors"}).addTo(reservationMap);
+    if (bounds.every(Number.isFinite)) reservationMap.fitBounds([[oLat,oLng],[dLat,dLng]], {padding:[20,20], maxZoom:13});
+    reservationPinLayer = L.layerGroup().addTo(reservationMap);
+    reservationMap.on("click", event => {
+        const seat = document.getElementById("pinSeat").value;
+        if (!seat || !selectedSeats.some(number => String(number) === seat)) { document.getElementById("pinStatus").textContent = "Select a seat before placing a pin."; return; }
+        seatPins[seat] = seatPins[seat] || {};
+        seatPins[seat][pinMode] = {lat:event.latlng.lat, lng:event.latlng.lng};
+        hideReview(); renderSeatPins();
+    });
+    document.getElementById("pinSeat").addEventListener("change", renderSeatPins);
+    document.querySelectorAll("[data-pin-mode]").forEach(button => button.addEventListener("click", () => {
+        pinMode = button.dataset.pinMode;
+        document.querySelectorAll("[data-pin-mode]").forEach(other => other.classList.toggle("active", other === button));
+    }));
+    document.querySelector(".reserve-pin-clear").addEventListener("click", () => {
+        const seat = document.getElementById("pinSeat").value;
+        if (seat) delete seatPins[seat];
+        hideReview(); renderSeatPins();
+    });
+    renderSeatPins();
+}
+
+/* Styles for the read-only rider list in the Reservation Summary (MBUS-48) */
+(function addSummaryStyles() {
+    const style = document.createElement("style");
+    style.textContent = `
+.sum-seats{display:grid;gap:10px;margin:12px 0}
+.sum-seat{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:12px;border:1px solid rgba(127,140,160,.35);border-radius:14px}
+.sum-seat-badge{display:grid;place-items:center;min-width:34px;height:34px;padding:0 6px;border-radius:50%;background:#2f6fe4;color:#fff;font-weight:700;font-size:.9rem}
+.sum-seat-body{display:grid;gap:4px;min-width:0}
+.sum-seat-line{display:grid;grid-template-columns:84px minmax(0,1fr);gap:8px;align-items:baseline;font-size:.88rem}
+.sum-seat-line span{opacity:.7}
+.sum-seat-line strong{overflow-wrap:anywhere}
+.sum-seat-type{align-self:start;padding:4px 10px;border-radius:999px;background:rgba(47,111,228,.12);color:#2f6fe4;font-size:.78rem;font-weight:600;white-space:nowrap}
+@media(max-width:420px){.sum-seat{grid-template-columns:auto minmax(0,1fr)}.sum-seat-type{grid-column:2;justify-self:start}}
+`;
+    document.head.appendChild(style);
+})();
 
 function updateMultiSeatWarning() {
     const warning = document.getElementById("multiSeatWarning");
@@ -15,7 +96,6 @@ function hideReview() {
     reviewed = false;
     document.getElementById("summaryPanel").hidden = true;
     document.getElementById("fareBreakdown").style.display = "none";
-    document.getElementById("seatDestinations").innerHTML = "";
 }
 
 function setReservationMode(mode) {
@@ -28,44 +108,169 @@ function setReservationMode(mode) {
     const multiTab = document.getElementById("multiModeTab");
     multiTab.textContent = reservationMode === "multi" ? "Multi reservation selected" : "Multi reservation";
     document.getElementById("reservationModeHelp").textContent = reservationMode === "multi"
-        ? "Select at least two seats. Choose each destination during review."
-        : "Choose one seat. Pickup and destination above apply to your reservation.";
-    document.getElementById("destinationGroup").hidden = reservationMode === "multi";
-    destination.required = reservationMode === "solo";
+        ? "Select at least two seats. Each rider sets their own pickup, destination and classification."
+        : "Choose one seat, then set its pickup and destination.";
     document.querySelectorAll(".seat-btn.selected").forEach(seat => seat.classList.remove("selected"));
     selectedSeats = [];
-    Object.keys(seatDestinations).forEach(seat => delete seatDestinations[seat]);
+    clearSeatTrips();
     hideReview();
     updateMultiSeatWarning();
-    renderSeatDestinationControls();
+    renderSeatTripControls();
+    renderSeatPins();
 }
 
 document.querySelectorAll(".reservation-mode-tab").forEach(tab => {
     tab.addEventListener("click", () => setReservationMode(tab.dataset.mode));
 });
 
-function renderSeatDestinationControls() {
-    const destinationBox = document.getElementById("seatDestinations");
-    destinationBox.innerHTML = "";
-    if (reservationMode !== "multi" || selectedSeats.length < 2) return;
+/* PICKUP + DESTINATION + CLASSIFICATION, one set of fields per seat.
+   The last stop can only be a destination, and a destination must come after that seat's pickup. */
+function clearSeatTrips() {
+    Object.keys(seatPickups).forEach(seat => delete seatPickups[seat]);
+    Object.keys(seatDestinations).forEach(seat => delete seatDestinations[seat]);
+    Object.keys(seatTypes).forEach(seat => delete seatTypes[seat]);
+    Object.keys(seatIds).forEach(seat => delete seatIds[seat]);
+    Object.keys(seatPins).forEach(seat => delete seatPins[seat]);
+}
 
-    selectedSeats.forEach(seat => {
-        const row = document.createElement("label");
-        row.className = "passenger-row destination-row";
-        row.textContent = "Destination for seat " + seat;
+function fillStops(select, stops, placeholder, selected) {
+    select.innerHTML = "";
+    const first = document.createElement("option");
+    first.value = "";
+    first.textContent = placeholder;
+    select.appendChild(first);
+    stops.forEach(stop => {
+        const option = document.createElement("option");
+        option.value = option.textContent = stop;
+        select.appendChild(option);
+    });
+    select.value = stops.indexOf(selected) === -1 ? "" : selected;
+}
 
-        const select = destination.cloneNode(false);
-        select.id = "destination_" + seat;
-        select.name = "destination_" + seat;
-        select.disabled = false;
-        select.innerHTML = destination.innerHTML;
-        select.value = seatDestinations[seat] || "";
-        select.addEventListener("change", () => {
-            seatDestinations[seat] = select.value;
+function destinationStops(pickupStop) {
+    const index = route.indexOf(pickupStop);
+    return index === -1 ? [] : route.slice(index + 1);
+}
+
+function seatTripField(labelText, select) {
+    const field = document.createElement("label");
+    field.className = "seat-trip-field";
+    const text = document.createElement("span");
+    text.textContent = labelText;
+    field.appendChild(text);
+    field.appendChild(select);
+    return field;
+}
+
+/* Passenger classification of a seat. The first selected seat is the account holder's own and follows the account status. */
+function seatType(seat, i) {
+    if (i === 0) return passengerType;
+    if (!seatTypes[seat]) seatTypes[seat] = "Regular";
+    return seatTypes[seat];
+}
+
+function seatCovered(seat, i) {
+    return i === 0;
+}
+
+/* ID photo upload for a discounted seat that is not the account holder's own */
+function idUploadField(seat) {
+    const up = document.createElement("label");
+    up.className = "pt-upload";
+    const img = document.createElement("img");
+    img.alt = "ID preview";
+    img.hidden = !seatIds[seat];
+    if (seatIds[seat]) img.src = seatIds[seat];
+    const text = document.createElement("span");
+    text.textContent = seatIds[seat] ? "ID attached · tap to replace" : "Upload ID photo";
+    const file = document.createElement("input");
+    file.type = "file"; file.accept = "image/*"; file.hidden = true;
+    file.addEventListener("change", () => readIdPhoto(file.files && file.files[0], seat, img, text));
+    up.appendChild(img); up.appendChild(text); up.appendChild(file);
+    return up;
+}
+
+function renderSeatTripControls() {
+    const box = document.getElementById("seatTrips");
+    box.innerHTML = "";
+    document.getElementById("seatTripsEmpty").hidden = selectedSeats.length > 0;
+
+    selectedSeats.forEach((seat, i) => {
+        if (!(seat in seatPickups)) seatPickups[seat] = fixedPickup;
+
+        const card = document.createElement("div");
+        card.className = "seat-trip";
+        card.setAttribute("role", "group");
+        card.setAttribute("aria-label", "Pickup, destination and classification for seat " + seat);
+
+        const head = document.createElement("div");
+        head.className = "seat-trip-head";
+        const badge = document.createElement("span");
+        badge.className = "seat-trip-badge";
+        badge.textContent = seat;
+        const name = document.createElement("strong");
+        name.textContent = "Seat " + seat;
+        head.appendChild(badge);
+        head.appendChild(name);
+
+        const pickupSelect = document.createElement("select");
+        pickupSelect.id = "pickup_" + seat;
+        pickupSelect.className = "form-control";
+        fillStops(pickupSelect, route.slice(0, -1), "Select pickup", seatPickups[seat]);
+
+        const destinationSelect = document.createElement("select");
+        destinationSelect.id = "destination_" + seat;
+        destinationSelect.className = "form-control";
+        fillStops(destinationSelect, destinationStops(seatPickups[seat]), "Select destination", seatDestinations[seat]);
+        if (!destinationSelect.value) delete seatDestinations[seat];
+
+        pickupSelect.addEventListener("change", () => {
+            seatPickups[seat] = pickupSelect.value;
+            fillStops(destinationSelect, destinationStops(pickupSelect.value), "Select destination", seatDestinations[seat]);
+            if (destinationSelect.value) seatDestinations[seat] = destinationSelect.value;
+            else delete seatDestinations[seat];
+            hideReview();
+        });
+        destinationSelect.addEventListener("change", () => {
+            if (destinationSelect.value) seatDestinations[seat] = destinationSelect.value;
+            else delete seatDestinations[seat];
+            hideReview();
         });
 
-        row.appendChild(select);
-        destinationBox.appendChild(row);
+        /* passenger classification: Regular (Standard), Student, Senior Citizen, PWD */
+        const type = seatType(seat, i);
+        const typeSelect = document.createElement("select");
+        typeSelect.id = "type_" + seat;
+        typeSelect.className = "form-control";
+        typeSelect.setAttribute("aria-label", "Passenger classification for seat " + seat);
+        PASSENGER_TYPE_OPTIONS.forEach(pair => {
+            const option = document.createElement("option");
+            option.value = pair[0];
+            option.textContent = pair[1];
+            if (pair[0] === type) option.selected = true;
+            typeSelect.appendChild(option);
+        });
+        if (i === 0) {
+            typeSelect.disabled = true;
+            typeSelect.title = "Your own seat follows your account status";
+        }
+        typeSelect.addEventListener("change", () => {
+            seatTypes[seat] = typeSelect.value;
+            if (typeSelect.value === "Regular") delete seatIds[seat];
+            hideReview();
+            renderSeatTripControls();
+        });
+
+        const fields = document.createElement("div");
+        fields.className = "seat-trip-fields";
+        fields.appendChild(seatTripField("Pickup", pickupSelect));
+        fields.appendChild(seatTripField("Destination", destinationSelect));
+        fields.appendChild(seatTripField("Passenger classification", typeSelect));
+
+        card.appendChild(head);
+        card.appendChild(fields);
+        if (i > 0 && type !== "Regular") card.appendChild(idUploadField(seat));
+        box.appendChild(card);
     });
 }
 
@@ -83,7 +288,7 @@ document.querySelectorAll(".seat-btn").forEach(seat => {
         if (reservationMode === "solo" && !this.classList.contains("selected")) {
             document.querySelectorAll(".seat-btn.selected").forEach(other => other.classList.remove("selected"));
             selectedSeats = [];
-            Object.keys(seatDestinations).forEach(seat => delete seatDestinations[seat]);
+            clearSeatTrips();
         }
 
         if (this.classList.contains("selected")) {
@@ -93,7 +298,11 @@ document.querySelectorAll(".seat-btn").forEach(seat => {
             selectedSeats = selectedSeats.filter(
                 s => s != seatNumber
             );
+            delete seatPickups[seatNumber];
             delete seatDestinations[seatNumber];
+            delete seatPins[seatNumber];
+            delete seatTypes[seatNumber];
+            delete seatIds[seatNumber];
 
         } else {
 
@@ -102,42 +311,36 @@ document.querySelectorAll(".seat-btn").forEach(seat => {
 
         }
 
-        renderSeatDestinationControls();
+        renderSeatTripControls();
+        renderSeatPins();
         updateMultiSeatWarning();
 
     });
 
 });
 
-/* DESTINATION: pickup is the fixed route terminal, so only build the valid stops once. */
-function loadDestinations() {
-    destination.innerHTML = "<option value=''>Select Destination</option>";
+renderSeatTripControls();
+initReservationMap();
 
-    let index = route.indexOf(pickup.value);
-
-    for (let i = index + 1; i < route.length; i++) {
-
-        let option = document.createElement("option");
-
-        option.value = route[i];
-        option.text = route[i];
-
-        destination.appendChild(option);
-
+/* The first selected seat that is missing a valid pickup/destination, or null when all are set. */
+function firstIncompleteSeat() {
+    for (const seat of selectedSeats) {
+        const pickupIndex = route.indexOf(seatPickups[seat]);
+        if (pickupIndex === -1 || pickupIndex >= route.length - 1) return { seat: seat, field: "pickup" };
+        const destinationIndex = route.indexOf(seatDestinations[seat]);
+        if (destinationIndex === -1 || destinationIndex <= pickupIndex) return { seat: seat, field: "destination" };
     }
-
-    destination.disabled = !pickup.value;
-    hideReview();
-    selectedSeats.forEach(seat => { seatDestinations[seat] = seatDestinations[seat] || destination.value; });
-    renderSeatDestinationControls();
+    return null;
 }
 
-loadDestinations();
-
-destination.addEventListener("change", () => {
-    hideReview();
-    renderSeatDestinationControls();
-});
+/* Tell the rider which seat still needs what, and jump to that dropdown. */
+function tripError(missing, show) {
+    show(missing.field === "pickup"
+        ? "Choose a pickup for seat " + missing.seat + "."
+        : "Choose a destination for seat " + missing.seat + ".");
+    const field = document.getElementById(missing.field + "_" + missing.seat);
+    if (field) { field.scrollIntoView({ behavior: "smooth", block: "center" }); field.focus(); }
+}
 
 /* DONE */
 document.getElementById("doneBtn")
@@ -160,27 +363,17 @@ document.getElementById("doneBtn")
         return;
     }
 
-    if (!pickup.value) {
-        showTopError("Select pickup location.");
+    const missing = firstIncompleteSeat();
+    if (missing) {
+        tripError(missing, showTopError);
         return;
     }
-
-    if (reservationMode === "solo" && !destination.value) {
-        showTopError("Select destination.");
+    const partialPin = selectedSeats.find(seat => Boolean(seatPins[seat]?.pickup) !== Boolean(seatPins[seat]?.destination));
+    if (partialPin) {
+        showTopError("For seat " + partialPin + ", set both map pins or clear the one already placed.");
+        document.getElementById("reservationMap").scrollIntoView({behavior:"smooth",block:"center"});
         return;
     }
-
-    selectedSeats.forEach(seat => {
-        if (reservationMode === "solo") seatDestinations[seat] = destination.value;
-    });
-    renderSeatDestinationControls();
-
-    if (reservationMode === "multi" && selectedSeats.some(seat => !seatDestinations[seat])) {
-        showTopError("Choose a destination for every selected seat.");
-        return;
-    }
-
-    renderSeatDestinationControls();
 
     reviewed = true;
     document.getElementById("summaryPanel").hidden = false;
@@ -188,38 +381,29 @@ document.getElementById("doneBtn")
     document.getElementById("summarySeats").innerText =
         selectedSeats.join(", ");
 
-    document.getElementById("summaryPickup").innerText =
-        pickup.value;
-
-    const summaryDestination = document.getElementById("summaryDestination");
-    summaryDestination.innerHTML = "";
-    if (reservationMode === "multi") {
-        selectedSeats.forEach(seat => {
-            const item = document.createElement("span");
-            item.textContent = "Seat " + seat + " · " + seatDestinations[seat];
-            summaryDestination.appendChild(item);
-        });
-    } else {
-        summaryDestination.textContent = destination.value;
-    }
+    /* one rider: show their stops here. Several riders: each seat's own stops are listed
+       once, in the rider list below */
+    const manyRiders = selectedSeats.length > 1;
+    document.getElementById("summaryPanel").classList.toggle("multi-dest", manyRiders);
+    document.getElementById("summaryPickup").innerText = manyRiders ? "" : seatPickups[selectedSeats[0]];
+    document.getElementById("summaryDestination").textContent = manyRiders ? "" : seatDestinations[selectedSeats[0]];
 
     renderPassengerTypes();
 
 });
 
-/* PASSENGER TYPES: each seat can be Regular, Student, Senior or PWD.
-   The verified account holder's own (first) seat needs no ID; every other discounted seat needs an ID photo. */
-const seatTypes = {};
-const seatIds = {};
-
-function seatType(seat, i) {
-    if (i === 0) return passengerType;
-    if (!seatTypes[seat]) seatTypes[seat] = "Regular";
-    return seatTypes[seat];
-}
-
-function seatCovered(seat, i) {
-    return i === 0;
+/* RESERVATION SUMMARY RIDERS: read-only. Classification is chosen per seat in the trip configuration above,
+   so the summary only shows it (MBUS-47) and lists each seat's pickup and destination in an aligned layout (MBUS-48). */
+function summaryLine(label, value) {
+    const line = document.createElement("div");
+    line.className = "sum-seat-line";
+    const l = document.createElement("span");
+    l.textContent = label;
+    const v = document.createElement("strong");
+    v.textContent = value;
+    line.appendChild(l);
+    line.appendChild(v);
+    return line;
 }
 
 function renderPassengerTypes() {
@@ -227,54 +411,41 @@ function renderPassengerTypes() {
     const box = document.getElementById("passengerTypes");
     box.innerHTML = "";
 
+    const manyRiders = selectedSeats.length > 1;
+    const list = document.createElement("div");
+    list.className = "sum-seats";
+
     selectedSeats.forEach((seat, i) => {
         const type = seatType(seat, i);
-        const needsId = i > 0 && type !== "Regular";
 
         const row = document.createElement("div");
-        row.className = "passenger-row pt-row";
+        row.className = "sum-seat";
 
-        const label = document.createElement("div");
-        label.textContent = "Seat " + seat;
+        const badge = document.createElement("span");
+        badge.className = "sum-seat-badge";
+        badge.textContent = seat;
 
-        const select = document.createElement("select");
-        select.className = "pt-select";
-        select.setAttribute("aria-label", "Passenger type for seat " + seat);
-        if (i === 0) { select.disabled = true; select.title = "Your own seat follows your account status"; }
-        ["Regular", "Student", "Senior", "PWD"].forEach(t => {
-            const o = document.createElement("option");
-            o.value = o.textContent = t;
-            if (t === type) o.selected = true;
-            select.appendChild(o);
-        });
-        select.addEventListener("change", () => {
-            seatTypes[seat] = select.value;
-            renderPassengerTypes();
-            if (document.getElementById("fareBreakdown").style.display !== "none") calculateFare();
-        });
-
-        row.appendChild(label);
-        row.appendChild(select);
-        box.appendChild(row);
-
-        if (needsId) {
-            const up = document.createElement("label");
-            up.className = "pt-upload";
-            const img = document.createElement("img");
-            img.alt = "ID preview";
-            img.hidden = !seatIds[seat];
-            if (seatIds[seat]) img.src = seatIds[seat];
-            const text = document.createElement("span");
-            text.textContent = seatIds[seat] ? "ID attached · tap to replace" : "Upload ID photo";
-            const file = document.createElement("input");
-            file.type = "file"; file.accept = "image/*"; file.hidden = true;
-            file.addEventListener("change", () => readIdPhoto(file.files && file.files[0], seat, img, text));
-            up.appendChild(img); up.appendChild(text); up.appendChild(file);
-            box.appendChild(up);
+        const body = document.createElement("div");
+        body.className = "sum-seat-body";
+        if (manyRiders) {
+            body.appendChild(summaryLine("Seat", seat));
+            body.appendChild(summaryLine("Pickup", seatPickups[seat]));
+            body.appendChild(summaryLine("Destination", seatDestinations[seat]));
         } else {
-            delete seatIds[seat];
+            body.appendChild(summaryLine("Seat", seat));
         }
+
+        const pill = document.createElement("span");
+        pill.className = "sum-seat-type";
+        pill.textContent = (PASSENGER_TYPE_SHORT[type] || type) + (i > 0 && type !== "Regular" && seatIds[seat] ? " · ID attached" : "");
+
+        row.appendChild(badge);
+        row.appendChild(body);
+        row.appendChild(pill);
+        list.appendChild(row);
     });
+
+    box.appendChild(list);
 
     if (passengerType === "Regular") {
         const a = document.createElement("a");
@@ -317,7 +488,6 @@ function calculateFare() {
 
     if (!reviewed) return;
 
-    const pickupFare = fareTable[pickup.value];
     let reservationFee = selectedSeats.length * 10;
     let total = 0;
     let html = "";
@@ -325,10 +495,12 @@ function calculateFare() {
     selectedSeats.forEach((seat, index) => {
 
         let type = seatType(seat, index);
-        const seatDestination = seatDestinations[seat] || destination.value;
+        const seatPickup = seatPickups[seat];
+        const seatDestination = seatDestinations[seat];
+        const pickupFare = fareTable[seatPickup];
         const destinationFare = fareTable[seatDestination];
         let farePerSeat = Math.max(14, Math.abs(destinationFare - pickupFare));
-        if (pickup.value === seatDestination || isNaN(farePerSeat)) farePerSeat = 0;
+        if (seatPickup === seatDestination || isNaN(farePerSeat)) farePerSeat = 0;
         let baseFare = farePerSeat;
         let discount = 0;
 
@@ -341,7 +513,7 @@ function calculateFare() {
 
         html += `
         <p>
-            Seat ${seat} → ${seatDestination} (${type})<br>
+            Seat ${seat}: ${seatPickup} → ${seatDestination} (${type})<br>
             Base Fare: ₱${baseFare.toFixed(2)}<br>
             Discount: ₱${discount.toFixed(2)}<br>
             Final Fare: ₱${finalFare.toFixed(2)}
@@ -371,10 +543,10 @@ async function reserveSeats() {
     formData.append("confirm_reserve", "1");
     formData.append("csrf_token", csrfToken);
     formData.append("reviewed", "1");
-    formData.append("pickup", pickup.value);
-    formData.append("destination", destination.value);
     formData.append("reservation_mode", reservationMode);
+    formData.append("pickups", JSON.stringify(seatPickups));
     formData.append("destinations", JSON.stringify(seatDestinations));
+    formData.append("stop_pins", JSON.stringify(seatPins));
     formData.append("seats", selectedSeats.join(","));
     const types = {}, ids = {};
     selectedSeats.forEach((seat, i) => {
@@ -425,18 +597,9 @@ document.getElementById("reserveBtn")
         return;
     }
 
-    if (!pickup.value) {
-        showError("Select pickup location.");
-        return;
-    }
-
-    if (reservationMode === "solo" && !destination.value) {
-        showError("Select destination.");
-        return;
-    }
-
-    if (selectedSeats.some(seat => !seatDestinations[seat])) {
-        showError("Set a destination for every selected seat.");
+    const missing = firstIncompleteSeat();
+    if (missing) {
+        tripError(missing, showError);
         return;
     }
 
@@ -522,18 +685,19 @@ function showTopError(message) {
     errorBox.style.fontSize = "14px";
 
     errorBox.innerText = message;
+    errorBox.setAttribute("role", "alert");
 
-    const container = document.querySelector(".container");
-
-    errorBox.style.position = "absolute";
-    errorBox.style.top = "58px";
+    /* fixed to the screen so the rider sees it wherever they have scrolled (the page has no .container wrapper) */
+    errorBox.style.position = "fixed";
+    errorBox.style.top = "72px";
     errorBox.style.left = "50%";
     errorBox.style.transform = "translateX(-50%)";
     errorBox.style.zIndex = "999";
-    errorBox.style.width = "320px";
+    errorBox.style.width = "min(320px, calc(100vw - 32px))";
+    errorBox.style.boxSizing = "border-box";
     errorBox.style.textAlign = "center";
 
-    container.appendChild(errorBox);
+    document.body.appendChild(errorBox);
 
     setTimeout(() => {
         const currentBox = document.getElementById("topErrorBox");
@@ -573,8 +737,16 @@ function showTopError(message) {
 
         if (counter && typeof data.available === "number") counter.textContent = data.available + " seats left";
         if (lost.length) {
+            lost.forEach(seat => {
+                delete seatPickups[seat];
+                delete seatDestinations[seat];
+                delete seatTypes[seat];
+                delete seatIds[seat];
+            });
+            hideReview();
+            renderSeatTripControls();
+            updateMultiSeatWarning();
             showError("Seat " + lost.join(", ") + " was just taken by someone else. Please pick another.");
-            if (typeof renderPassengerTypes === "function") renderPassengerTypes();
         }
     }
 

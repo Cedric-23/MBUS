@@ -4,6 +4,7 @@ include "../config/db_connect.php";
 include "../Includes/activity_log.php";
 include "../Includes/email_helper.php";
 include "../Includes/csrf.php";
+require_once __DIR__ . "/../Includes/phone_unique.php";
 include "../Includes/fare.php";
 
 if(!isset($_SESSION['user_id'])){
@@ -39,6 +40,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
             $error = "Name can't be empty.";
         } elseif ($phone_number !== '' && !preg_match('/^09\d{9}$/', $phone_number)) {
             $error = "Phone number must be 11 digits starting with 09 (e.g., 09123456789).";
+        } elseif ($phone_number !== '' && mbus_phone_in_use($conn, $phone_number, (int)$user_id) !== false) {
+            $error = "That mobile number is already used by another account.";
         } else {
             mbus_db_prepare($conn,"UPDATE users SET full_name = ?, phone_number = ? WHERE user_id = ?", [$full_name, $phone_number, $user_id]);
             log_activity($conn, $user_id, ACTION_PROFILE_UPDATE, "Profile information updated");

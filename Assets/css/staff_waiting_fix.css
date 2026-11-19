@@ -1,0 +1,28 @@
+/* Waiting board: smaller bottom sheet so the map stays visible, a collapse handle, and reservation pins.
+   Loaded after staff_modern.css so it wins over the older sheet rules. */
+
+/* ---------- smaller sheet ---------- */
+.stf.staff-wait-page .sw-sheet{max-height:min(30vh,260px);padding:4px 12px 8px;transition:max-height .22s ease}
+.stf.staff-wait-page .sw-sheet.is-collapsed{max-height:48px;overflow:hidden}
+.stf.staff-wait-page .sw-sheet.is-collapsed .sw-route-controls,
+.stf.staff-wait-page .sw-sheet.is-collapsed .sw-scroll{display:none}
+.stf.staff-wait-page .sw-sheet-head{display:none}
+.stf.staff-wait-page .sw-route-estimate{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+@media(min-width:769px){
+  .stf.staff-wait-page .sw-sheet{max-height:min(46vh,420px)}
+}
+
+/* ---------- collapse handle ---------- */
+.sw-handle{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:4px 2px;border:0;background:none;font:inherit;color:#14213d;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.sw-handle:focus-visible{outline:3px solid rgba(47,111,228,.4);outline-offset:2px;border-radius:12px}
+.sw-handle-title{flex:1;min-width:0;font-size:.875rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sw-handle-caret{flex:none;color:#6b7a8d;transition:transform .2s}
+.sw-sheet.is-collapsed .sw-handle-caret{transform:rotate(180deg)}
+
+/* ---------- reservation pins (pick-up stop and drop-off stop on the map) ---------- */
+.sw-res-pin{position:relative;display:block;width:38px;height:38px}
+.sw-res-pin .sw-person{border-color:#7a5af8}
+.sw-res-pin.sw-res-drop .sw-person{border-color:#18365d}
+.sw-res-pin.is-approx .sw-person{border-style:dashed}
+.sw-res-tag{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:2px;padding:1px 7px;border-radius:999px;background:#5b3fd1;color:#fff;font:700 .625rem/1.4 Inter,system-ui,sans-serif;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.sw-res-pin.sw-res-drop .sw-res-tag{background:#18365d}

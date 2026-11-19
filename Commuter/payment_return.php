@@ -50,7 +50,7 @@ if($co['status'] === 'Submitted' && $_SERVER['REQUEST_METHOD'] === 'POST' && iss
                     if(!empty($res['ok'])){ header("Location: ticket.php?schedule_id=" . $schedule_id); exit(); }
                     $conn->pdo->prepare("UPDATE incoming_payments SET used_by = NULL WHERE used_by = ?")->execute([$co['session_id']]);
                 }
-                header("Location: payment_return.php?schedule_id=" . $schedule_id); exit();
+                header("Location: my_reservations.php?ref_sent=1"); exit();
             }
         }
     }
@@ -116,11 +116,23 @@ details.ref summary{min-height:44px;display:flex;align-items:center;font-weight:
 .refform .shot{font-size:.82rem;color:#5b6b7e;display:grid;gap:4px}.refform .shot i{display:none}.refform input[type=file]{font-size:.8rem}
 .refform .cp{flex:none}details.ref .sent{margin:0 0 8px;font-size:.84rem;color:#1a7f37}details.ref .err{margin:0 0 8px;font-size:.84rem;color:#b42318}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
+.approval{text-align:center;padding:6px 0 4px}.approval-ico{width:64px;height:64px;margin:0 auto 10px;border-radius:50%;background:#fff4e0;display:grid;place-items:center;font-size:30px}.approval h1{margin:0 0 6px;font-size:1.3rem;color:#14213d}.approval p{margin:0 0 14px;font-size:.9rem;color:#4a5b78;line-height:1.5}.approval-amt{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:16px;background:#f1f6ff;margin-bottom:14px}.approval-amt span{color:#7a8aa6;font-size:.85rem}.approval-amt strong{font-size:1.2rem;color:#2f6fe4}.approval-btn{display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 13px;border-radius:999px;background:#2f6fe4;color:#fff;font-weight:700;text-decoration:none}details.paydetails{margin-top:14px;border-top:1px solid #e8effb;padding-top:10px}details.paydetails>summary{cursor:pointer;font-weight:600;color:#2f6fe4;font-size:.9rem;margin-bottom:8px}
 </style>
 </head>
 <body>
 <main class="box" role="status" aria-live="polite">
 <?php if($state === 'review'): ?>
+    <?php $hasRef = !empty($co['reference_number']); ?>
+    <?php if($hasRef): ?>
+    <div class="approval">
+        <div class="approval-ico" aria-hidden="true">&#8987;</div>
+        <h1>Waiting for approval</h1>
+        <p>An operator is checking reference <strong><?php echo htmlspecialchars($co['reference_number']); ?></strong>. Your ticket appears here automatically once it&rsquo;s approved.</p>
+        <div class="approval-amt"><span>Amount</span><strong>&#8369;<?php echo number_format((float)$co['amount'], 2); ?></strong></div>
+        <a href="my_reservations.php" class="approval-btn">View my trips</a>
+    </div>
+    <details class="paydetails"><summary>Payment details</summary>
+    <?php endif; ?>
     <p class="lbl">Send exactly</p>
     <p class="amt">&#8369;<?php echo number_format((float)$co['amount'], 2); ?></p>
     <p class="hint">Use this exact amount, centavos included. It&rsquo;s how we know the payment is yours.</p>
@@ -130,7 +142,7 @@ details.ref summary{min-height:44px;display:flex;align-items:center;font-weight:
         <button type="button" class="cp" data-copy="<?php echo htmlspecialchars($gNum); ?>">Copy number</button>
         <button type="button" class="cp" data-copy="<?php echo number_format((float)$co['amount'], 2, '.', ''); ?>">Copy amount</button>
     </div>
-    <div class="wait"><div class="spin sm" aria-hidden="true"></div><span id="waitMsg">Waiting for your payment. Your ticket appears here automatically.</span></div>
+    <?php if(!$hasRef): ?><div class="wait"><div class="spin sm" aria-hidden="true"></div><span id="waitMsg">Waiting for your payment. Your ticket appears here automatically.</span></div><?php endif; ?>
     <details class="ref"<?php echo ($refError !== '') ? ' open' : ''; ?>>
         <summary>Paid already? Enter reference no.</summary>
         <?php if(!empty($co['reference_number'])): ?><p class="sent"><strong>Sent.</strong> An operator will confirm reference <?php echo htmlspecialchars($co['reference_number']); ?> shortly.</p><?php endif; ?>
@@ -142,8 +154,9 @@ details.ref summary{min-height:44px;display:flex;align-items:center;font-weight:
             <button type="submit" name="send_ref" value="1" class="cp">Submit</button>
         </form>
     </details>
+    <?php if($hasRef): ?></details><?php endif; ?>
     <p class="hint">Seats held until <?php echo htmlspecialchars($until); ?>.</p>
-    <a href="my_reservations.php" class="alt">Back to my trips</a>
+    <?php if(!$hasRef): ?><a href="my_reservations.php" class="alt">Back to my trips</a><?php endif; ?>
 <?php elseif($state === 'expired'): ?>
     <h1>Payment window ended</h1>
     <p>We didn&rsquo;t receive a matching payment in time. If you already paid, show your GCash receipt to an operator. Otherwise, start again.</p>

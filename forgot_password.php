@@ -68,7 +68,8 @@ function reset_page_e(mixed $value): string { return htmlspecialchars((string)$v
     <link rel="stylesheet" href="Assets/css/reset.css?v=<?= @filemtime(__DIR__ . '/Assets/css/reset.css') ?>">
     <script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
 </head>
-<body>
+<body class="auth-reset">
+<div class="auth-hero-m"><a class="auth-back" href="login.php" aria-label="Back to login"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></a><h1>Reset your password</h1><p>We’ll send a 6-digit verification code to your MBUS email.</p></div>
     <div class="left-container">
         <div class="left-container-child-1"><div class="logo-wordmark"><img src="Assets/images/mbus_logo.png" alt="MBUS"></div></div>
         <div class="left-container-child-2"><div class="lc-heading"><h1>Travel smarter.</h1><h1>Travel on time.</h1></div><div class="lc-sub-heading"><p>Your dependable way to reserve seats, manage trips, and travel with confidence.</p></div></div>
@@ -82,8 +83,8 @@ function reset_page_e(mixed $value): string { return htmlspecialchars((string)$v
             <?php csrf_field(); ?>
             <div class="form-field<?= $field_error ? ' is-invalid' : '' ?>">
                 <label for="email">Email address</label>
-                <input id="email" name="email" type="email" value="<?= reset_page_e($email_value) ?>" placeholder="juan@example.com" maxlength="100" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" autofocus <?= $field_error ? 'aria-invalid="true" aria-describedby="email-error"' : '' ?>>
-                <i class="input-icon" data-lucide="mail" aria-hidden="true"></i>
+                <div class="reset-input"><input id="email" name="email" type="email" value="<?= reset_page_e($email_value) ?>" placeholder="juan@example.com" maxlength="100" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" autofocus <?= $field_error ? 'aria-invalid="true" aria-describedby="email-error"' : '' ?>>
+                <i class="input-icon" data-lucide="mail" aria-hidden="true"></i></div>
                 <?php if ($field_error): ?><span class="field-error" id="email-error"><?= reset_page_e($field_error) ?></span><?php endif; ?>
             </div>
             <button class="submit-button" type="submit" name="send_code">Send verification code</button>
@@ -91,5 +92,6 @@ function reset_page_e(mixed $value): string { return htmlspecialchars((string)$v
         <footer class="reset-footer"><p>Remembered your password? <a href="login.php">Sign in</a></p></footer>
     </div></main>
 <script>if(window.lucide) lucide.createIcons();</script>
+<script src="Assets/js/submit_feedback.js"></script>
 </body>
 </html>

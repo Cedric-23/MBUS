@@ -383,38 +383,6 @@
   font-weight: 500;
 }
 
-.seat-destinations {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: var(--space-3);
-}
-
-.seat-destinations .destination-row {
-  display: grid;
-  grid-template-columns: minmax(92px, .9fr) minmax(0, 1.1fr);
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  padding: 4px 0;
-  font-size: .72rem;
-  line-height: 1.2;
-}
-
-.seat-destinations .destination-row select {
-  min-width: 0;
-  width: 100%;
-  min-height: 34px;
-  padding: 4px 7px;
-  font-size: .78rem;
-}
-
-@media (max-width: 480px) {
-  .seat-destinations {
-    grid-template-columns: 1fr;
-  }
-}
-
 .passenger-types {
   margin-bottom: var(--space-4);
 }
@@ -532,3 +500,16 @@
     align-items: flex-start;
   }
 }
+
+
+.reserve-stop-map { margin-top:16px; padding:14px; border:1px solid #e5eaf0; border-radius:16px; background:#fff; }
+.reserve-stop-map h3 { margin:0 0 6px; color:#18365d; font-size:1rem; }
+.reserve-stop-map p { margin:4px 0 10px; color:#63748a; font-size:.82rem; line-height:1.45; }
+.reserve-pin-controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:8px 0; }
+.reserve-pin-controls label { display:flex; align-items:center; gap:6px; color:#44556b; font-size:.82rem; }
+.reserve-pin-controls select,.reserve-pin-mode,.reserve-pin-clear { min-height:38px; padding:6px 10px; border:1px solid #d8e1ec; border-radius:10px; background:#fff; color:#18365d; font:inherit; font-size:.8rem; }
+.reserve-pin-mode.active { border-color:#2f6fe4; background:#eaf1ff; color:#174fae; font-weight:700; }
+.reserve-pin-clear { color:#8a3340; }
+#reservationMap { width:100%; height:320px; min-height:260px; z-index:0; border-radius:12px; background:#edf2f7; }
+#pinStatus { min-height:1.2em; }
+@media(max-width:600px){.reserve-stop-map{padding:11px}.reserve-pin-controls{align-items:stretch}.reserve-pin-controls label{width:100%}.reserve-pin-controls label select{flex:1;min-width:0}#reservationMap{height:280px}}

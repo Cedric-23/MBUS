@@ -324,3 +324,97 @@
     justify-content: center;
   }
 }
+
+/* ---- Fare card polish (overrides the global .stf input/button styles that caused a nested box) ---- */
+.stf .fare-input-wrap {
+  min-height: 48px;
+  border: 1.5px solid #d3deee;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.stf .fare-input-wrap:focus-within {
+  border-color: var(--color-primary, #1672ce);
+  box-shadow: 0 0 0 3px rgba(22, 114, 206, .16);
+}
+
+.stf .fare-input-wrap > span {
+  padding-left: 14px;
+  color: #475a73;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.stf .fare-input-wrap input[type="number"],
+.stf .fare-input-wrap input[type="number"]:focus {
+  min-height: 46px;
+  padding: 9px 14px 9px 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  outline: 0;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.fare-input-wrap input[type="number"]::-webkit-outer-spin-button,
+.fare-input-wrap input[type="number"]::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.stf .fare-editor .btn.btn-primary {
+  min-height: 48px;
+  border-radius: 12px !important;
+  box-shadow: 0 3px 8px rgba(47, 111, 228, .2) !important;
+}
+
+.fare-editor label {
+  letter-spacing: .01em;
+}
+
+.fare-editor small {
+  margin-top: 10px;
+  line-height: 1.4;
+}
+
+.route-fare-card {
+  scroll-margin-top: 84px;
+}
+
+/* Keep the last card clear of the floating bottom navigation. */
+.stf.has-sidebar .main {
+  padding-bottom: calc(110px + env(safe-area-inset-bottom));
+}
+
+@media (max-width: 600px) {
+  .routes-panel {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .page-header {
+    padding-right: 52px; /* room for the fixed account avatar */
+  }
+
+  .route-fare-card {
+    padding: 16px;
+  }
+
+  .route-journey {
+    min-height: 0;
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .route-fare-current strong {
+    font-size: 22px;
+  }
+
+  .stf .fare-editor .btn.btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+}

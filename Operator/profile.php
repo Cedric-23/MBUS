@@ -4,6 +4,7 @@ include_once __DIR__ . '/../config/db_connect.php';
 include_once __DIR__ . '/../Includes/profile_photo.php';
 include_once __DIR__ . '/../Includes/validation.php';
 include_once __DIR__ . '/../Includes/csrf.php';
+include_once __DIR__ . '/../Includes/phone_unique.php';
 
 if (!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'operator') {
     header('Location: ../login.php');
@@ -63,6 +64,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['update_pro
             }
         }
 
+        if (!isset($profileErrors['phone_number']) && $formValues['phone_number'] !== '' && mbus_phone_in_use($conn, (string)$formValues['phone_number'], (int)$userId) !== false) {
+            $profileErrors['phone_number'] = 'That mobile number is already used by another account.';
+        }
+
         if (!$profileErrors) {
             $updated = mbus_db_prepare($conn, "UPDATE users SET full_name = ?, email = ?, phone_number = ? WHERE user_id = ?", [
                 $formValues['full_name'], $formValues['email'], $formValues['phone_number'], $userId,
@@ -102,16 +107,17 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
     <link rel="stylesheet" href="../Assets/css/operator_profile.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/operator_profile.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
+    <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
 </head>
-<body class="has-bottom-nav profile-page operator-profile">
+<body class="stf has-bottom-nav profile-page operator-profile">
 <main class="main" role="main">
     <header class="page-header" role="banner">
         <div class="page-header-left"><h1>My Profile</h1></div>
         <div class="page-header-right"><div class="profile-menu-wrap">
-            <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span></button>
+            <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span><?php echo mbus_payment_dot(); ?></button>
             <div class="profile-menu" id="profileMenu" role="menu">
                 <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $name; ?></span><span class="profile-menu-role">Operator account</span></div>
-                <a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> Payments</a>
+                <a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> Payments<?php echo mbus_payment_pill(); ?></a>
                 <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>

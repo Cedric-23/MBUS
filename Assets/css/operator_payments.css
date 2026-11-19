@@ -19,14 +19,23 @@
 .pay-meta i{margin-right:4px;opacity:.7}.pay-meta a{color:var(--color-primary,#1e3a5f);font-weight:600;text-decoration:none}
 .pay-flag{color:#b42318;font-weight:600}
 .pay-reason{margin:10px 0 0;font-size:.86rem;color:var(--color-text-secondary,#5b6b7e)}
-.pay-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:flex-start}
 .pay-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:0 16px;border:1.5px solid var(--color-border,#dfe5ee);border-radius:12px;background:var(--color-surface,#fff);color:var(--color-text,#172b4d);font:600 .9rem Inter,system-ui,sans-serif;cursor:pointer;list-style:none}
 .pay-btn::-webkit-details-marker{display:none}
 .pay-btn.primary{background:var(--color-primary,#1e3a5f);border-color:var(--color-primary,#1e3a5f);color:#fff}
 .pay-btn.danger{border-color:#b42318;color:#b42318}
 .pay-btn:focus-visible,.pay-tabs a:focus-visible{outline:3px solid var(--color-accent,#3b82f6);outline-offset:2px}
-.pay-reject{flex:1 1 220px}.pay-reject[open]{flex-basis:100%}
-.pay-reject textarea{width:100%;margin:8px 0;padding:10px;border:1.5px solid var(--color-border,#dfe5ee);border-radius:12px;font:inherit;resize:vertical}
+
+/* Approve / Reject: two equal pills side by side; Reject opens a reason box underneath */
+.pay-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;align-items:start}
+.pay-actions .pay-btn{box-sizing:border-box;width:100%;min-height:48px;border-radius:999px}
+.pay-actions .pay-btn.primary{grid-column:1;box-shadow:0 6px 16px rgba(47,111,228,.25)}
+.pay-actions .pay-reject{grid-column:2;min-width:0}
+.pay-actions .pay-reject>summary.pay-btn{border-color:#f1c7c2;background:#fff;color:#b42318}
+.pay-actions .pay-reject[open]{grid-column:1/-1;grid-row:2}
+.pay-actions:has(.pay-reject[open]) .pay-btn.primary{grid-column:1/-1}
+.pay-actions .pay-reject .pay-btn.danger{background:#b42318;border-color:#b42318;color:#fff}
+.pay-reject textarea{width:100%;box-sizing:border-box;margin:10px 0;padding:10px 12px;border:1.5px solid var(--color-border,#dfe5ee);border-radius:14px;font:inherit;resize:vertical}
+
 .pay-panel{border:1px solid var(--color-border,#dfe5ee);border-radius:16px;background:var(--color-surface,#fff)}
 .pay-panel>summary{display:flex;align-items:center;gap:10px;padding:14px 16px;font-weight:700;cursor:pointer;list-style:none}
 .pay-panel>summary::-webkit-details-marker{display:none}
