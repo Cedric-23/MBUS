@@ -128,6 +128,7 @@ $navItems = $isAdmin
 <script src="../Assets/js/route_utils.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/route_utils.js'); ?>"></script>
 <script src="../Assets/js/stop_coords.js?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/js/stop_coords.js'); ?>"></script>
 <script src="../Assets/js/staff_waiting.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/staff_waiting.js'); ?>"></script>
+<script src="../Assets/js/staff_waiting_toggles.js?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/js/staff_waiting_toggles.js'); ?>"></script>
 <script src="../Assets/js/app-header.js"></script>
 <?php if (strtolower((string)($_SESSION['user_type'] ?? '')) === 'operator') { ?><script src="../Assets/js/operator_tracker.js"></script><?php } ?>
 </body>
