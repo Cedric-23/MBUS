@@ -146,7 +146,7 @@ if (window.lucide) lucide.createIcons();
     function updateResendTimer() {
         const seconds = Math.max(0, Math.ceil((availableAt - Date.now()) / 1000));
         button.disabled = seconds > 0;
-        timer.textContent = seconds > 0 ? 'Resend available in ' + seconds + 's' : '';
+        timer.textContent = seconds > 0 ? 'You can resend in ' + seconds + ' seconds.' : '';
     }
     updateResendTimer();
     window.setInterval(updateResendTimer, 1000);
