@@ -3,8 +3,13 @@ session_start();
 include "config/db_connect.php";
 include "Includes/activity_log.php";
 
+/* ONLY THESE BUS TYPES ARE AVAILABLE (matches Admin/manage_buses.php) */
+$allowed_vehicle_types = ['Ordinary', 'Aircon'];
+
 /* HANDLE OPERATOR APPLICATION SUBMISSION */
-if(isset($_POST['submit_application'])){
+if(isset($_POST['submit_application']) && !in_array($_POST['vehicle_type'] ?? '', $allowed_vehicle_types, true)){
+    $error = "Please select a valid bus type (Ordinary or Aircon).";
+} elseif(isset($_POST['submit_application'])){
     $full_name = mbus_db_escape($conn, $_POST['full_name']);
     $email = mbus_db_escape($conn, $_POST['email']);
     $phone_number = mbus_db_escape($conn, $_POST['phone_number']);
@@ -150,9 +155,8 @@ if(isset($_POST['submit_application'])){
                 <label>Vehicle Type</label>
                 <select name="vehicle_type" class="input-modern" required>
                     <option value="">Select Vehicle Type</option>
-                    <option value="Bus">Bus</option>
-                    <option value="Van">Van</option>
-                    <option value="Minibus">Minibus</option>
+                    <option value="Ordinary">Ordinary</option>
+                    <option value="Aircon">Aircon</option>
                 </select>
             </div>
             
