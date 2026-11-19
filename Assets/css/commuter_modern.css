@@ -183,6 +183,20 @@
 .cm .pay-total strong{font-size:1.35rem}
 @media(max-width:380px){.cm .pay-meta{grid-template-columns:1fr 1fr}}
 
+/* Pickup + destination: one card per rider (seat) */
+.cm .seat-trips-title{margin:0 0 4px;font-size:1.05rem;color:#14213d}
+.cm .seat-trips-empty{margin:0 0 14px;font-size:.9rem;color:#7a8aa6}
+.cm .seat-trips{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.cm .seat-trip{padding:12px;border-radius:16px;background:#f1f6ff}
+.cm .seat-trip-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.cm .seat-trip-head strong{font-size:.95rem;color:#14213d}
+.cm .seat-trip-badge{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 6px;box-sizing:border-box;border-radius:10px;background:#2f6fe4;color:#fff;font-weight:700;font-size:.9rem}
+.cm .seat-trip-fields{display:grid;gap:10px}
+.cm .seat-trip-field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.cm .seat-trip-field span{font-size:.78rem;font-weight:600;color:#5b6b88}
+.cm .seat-trip-field .form-control{min-width:0;background:#fff}
+@media (min-width:560px){.cm .seat-trip-fields{grid-template-columns:1fr 1fr}}
+
 /* Reservation summary: one compact list (seat, stop, passenger type) */
 .cm #summaryPanel.multi-dest .summary-details dt:nth-of-type(n+4),
 .cm #summaryPanel.multi-dest .summary-details dd:nth-of-type(n+4){display:none}

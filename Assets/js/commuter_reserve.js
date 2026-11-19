@@ -1,10 +1,9 @@
 let selectedSeats = [];
+/* every rider (seat) has their own pickup and destination */
+const seatPickups = {};
 const seatDestinations = {};
 let reservationMode = "solo";
 let reviewed = false;
-
-const pickup = document.getElementById("pickup");
-const destination = document.getElementById("destination");
 
 function updateMultiSeatWarning() {
     const warning = document.getElementById("multiSeatWarning");
@@ -15,7 +14,6 @@ function hideReview() {
     reviewed = false;
     document.getElementById("summaryPanel").hidden = true;
     document.getElementById("fareBreakdown").style.display = "none";
-    document.getElementById("seatDestinations").innerHTML = "";
 }
 
 function setReservationMode(mode) {
@@ -28,44 +26,111 @@ function setReservationMode(mode) {
     const multiTab = document.getElementById("multiModeTab");
     multiTab.textContent = reservationMode === "multi" ? "Multi reservation selected" : "Multi reservation";
     document.getElementById("reservationModeHelp").textContent = reservationMode === "multi"
-        ? "Select at least two seats. Choose each destination during review."
-        : "Choose one seat. Pickup and destination above apply to your reservation.";
-    document.getElementById("destinationGroup").hidden = reservationMode === "multi";
-    destination.required = reservationMode === "solo";
+        ? "Select at least two seats. Each rider sets their own pickup and destination."
+        : "Choose one seat, then set its pickup and destination.";
     document.querySelectorAll(".seat-btn.selected").forEach(seat => seat.classList.remove("selected"));
     selectedSeats = [];
-    Object.keys(seatDestinations).forEach(seat => delete seatDestinations[seat]);
+    clearSeatTrips();
     hideReview();
     updateMultiSeatWarning();
-    renderSeatDestinationControls();
+    renderSeatTripControls();
 }
 
 document.querySelectorAll(".reservation-mode-tab").forEach(tab => {
     tab.addEventListener("click", () => setReservationMode(tab.dataset.mode));
 });
 
-function renderSeatDestinationControls() {
-    const destinationBox = document.getElementById("seatDestinations");
-    destinationBox.innerHTML = "";
-    if (reservationMode !== "multi" || selectedSeats.length < 2) return;
+/* PICKUP + DESTINATION, one pair of dropdowns per seat.
+   The last stop can only be a destination, and a destination must come after that seat's pickup. */
+function clearSeatTrips() {
+    Object.keys(seatPickups).forEach(seat => delete seatPickups[seat]);
+    Object.keys(seatDestinations).forEach(seat => delete seatDestinations[seat]);
+}
+
+function fillStops(select, stops, placeholder, selected) {
+    select.innerHTML = "";
+    const first = document.createElement("option");
+    first.value = "";
+    first.textContent = placeholder;
+    select.appendChild(first);
+    stops.forEach(stop => {
+        const option = document.createElement("option");
+        option.value = option.textContent = stop;
+        select.appendChild(option);
+    });
+    select.value = stops.indexOf(selected) === -1 ? "" : selected;
+}
+
+function destinationStops(pickupStop) {
+    const index = route.indexOf(pickupStop);
+    return index === -1 ? [] : route.slice(index + 1);
+}
+
+function seatTripField(labelText, select) {
+    const field = document.createElement("label");
+    field.className = "seat-trip-field";
+    const text = document.createElement("span");
+    text.textContent = labelText;
+    field.appendChild(text);
+    field.appendChild(select);
+    return field;
+}
+
+function renderSeatTripControls() {
+    const box = document.getElementById("seatTrips");
+    box.innerHTML = "";
+    document.getElementById("seatTripsEmpty").hidden = selectedSeats.length > 0;
 
     selectedSeats.forEach(seat => {
-        const row = document.createElement("label");
-        row.className = "passenger-row destination-row";
-        row.textContent = "Destination for seat " + seat;
+        if (!(seat in seatPickups)) seatPickups[seat] = fixedPickup;
 
-        const select = destination.cloneNode(false);
-        select.id = "destination_" + seat;
-        select.name = "destination_" + seat;
-        select.disabled = false;
-        select.innerHTML = destination.innerHTML;
-        select.value = seatDestinations[seat] || "";
-        select.addEventListener("change", () => {
-            seatDestinations[seat] = select.value;
+        const card = document.createElement("div");
+        card.className = "seat-trip";
+        card.setAttribute("role", "group");
+        card.setAttribute("aria-label", "Pickup and destination for seat " + seat);
+
+        const head = document.createElement("div");
+        head.className = "seat-trip-head";
+        const badge = document.createElement("span");
+        badge.className = "seat-trip-badge";
+        badge.textContent = seat;
+        const name = document.createElement("strong");
+        name.textContent = "Seat " + seat;
+        head.appendChild(badge);
+        head.appendChild(name);
+
+        const pickupSelect = document.createElement("select");
+        pickupSelect.id = "pickup_" + seat;
+        pickupSelect.className = "form-control";
+        fillStops(pickupSelect, route.slice(0, -1), "Select pickup", seatPickups[seat]);
+
+        const destinationSelect = document.createElement("select");
+        destinationSelect.id = "destination_" + seat;
+        destinationSelect.className = "form-control";
+        fillStops(destinationSelect, destinationStops(seatPickups[seat]), "Select destination", seatDestinations[seat]);
+        if (!destinationSelect.value) delete seatDestinations[seat];
+
+        pickupSelect.addEventListener("change", () => {
+            seatPickups[seat] = pickupSelect.value;
+            fillStops(destinationSelect, destinationStops(pickupSelect.value), "Select destination", seatDestinations[seat]);
+            if (destinationSelect.value) seatDestinations[seat] = destinationSelect.value;
+            else delete seatDestinations[seat];
+            hideReview();
+        });
+        destinationSelect.addEventListener("change", () => {
+            if (destinationSelect.value) seatDestinations[seat] = destinationSelect.value;
+            else delete seatDestinations[seat];
+            hideReview();
         });
 
-        row.appendChild(select);
-        destinationBox.appendChild(row);
+        const fields = document.createElement("div");
+        fields.className = "seat-trip-fields";
+        fields.appendChild(seatTripField("Pickup", pickupSelect));
+        fields.appendChild(seatTripField("Destination", destinationSelect));
+
+        card.appendChild(head);
+        card.appendChild(fields);
+        box.appendChild(card);
     });
 }
 
@@ -83,7 +148,7 @@ document.querySelectorAll(".seat-btn").forEach(seat => {
         if (reservationMode === "solo" && !this.classList.contains("selected")) {
             document.querySelectorAll(".seat-btn.selected").forEach(other => other.classList.remove("selected"));
             selectedSeats = [];
-            Object.keys(seatDestinations).forEach(seat => delete seatDestinations[seat]);
+            clearSeatTrips();
         }
 
         if (this.classList.contains("selected")) {
@@ -93,6 +158,7 @@ document.querySelectorAll(".seat-btn").forEach(seat => {
             selectedSeats = selectedSeats.filter(
                 s => s != seatNumber
             );
+            delete seatPickups[seatNumber];
             delete seatDestinations[seatNumber];
 
         } else {
@@ -102,43 +168,34 @@ document.querySelectorAll(".seat-btn").forEach(seat => {
 
         }
 
-        renderSeatDestinationControls();
+        renderSeatTripControls();
         updateMultiSeatWarning();
 
     });
 
 });
 
-/* DESTINATION: pickup is the fixed route terminal, so only build the valid stops once. */
-function loadDestinations() {
-    destination.innerHTML = "<option value=''>Select Destination</option>";
+renderSeatTripControls();
 
-    let index = route.indexOf(pickup.value);
-
-    for (let i = index + 1; i < route.length; i++) {
-
-        let option = document.createElement("option");
-
-        option.value = route[i];
-        option.text = route[i];
-
-        destination.appendChild(option);
-
+/* The first selected seat that is missing a valid pickup/destination, or null when all are set. */
+function firstIncompleteSeat() {
+    for (const seat of selectedSeats) {
+        const pickupIndex = route.indexOf(seatPickups[seat]);
+        if (pickupIndex === -1 || pickupIndex >= route.length - 1) return { seat: seat, field: "pickup" };
+        const destinationIndex = route.indexOf(seatDestinations[seat]);
+        if (destinationIndex === -1 || destinationIndex <= pickupIndex) return { seat: seat, field: "destination" };
     }
-
-    destination.disabled = !pickup.value;
-    hideReview();
-    selectedSeats.forEach(seat => { seatDestinations[seat] = seatDestinations[seat] || destination.value; });
-    renderSeatDestinationControls();
+    return null;
 }
 
-pickup.addEventListener("change", loadDestinations);
-loadDestinations();
-
-destination.addEventListener("change", () => {
-    hideReview();
-    renderSeatDestinationControls();
-});
+/* Tell the rider which seat still needs what, and jump to that dropdown. */
+function tripError(missing, show) {
+    show(missing.field === "pickup"
+        ? "Choose a pickup for seat " + missing.seat + "."
+        : "Choose a destination for seat " + missing.seat + ".");
+    const field = document.getElementById(missing.field + "_" + missing.seat);
+    if (field) { field.scrollIntoView({ behavior: "smooth", block: "center" }); field.focus(); }
+}
 
 /* DONE */
 document.getElementById("doneBtn")
@@ -161,27 +218,11 @@ document.getElementById("doneBtn")
         return;
     }
 
-    if (!pickup.value) {
-        showTopError("Select pickup location.");
+    const missing = firstIncompleteSeat();
+    if (missing) {
+        tripError(missing, showTopError);
         return;
     }
-
-    if (reservationMode === "solo" && !destination.value) {
-        showTopError("Select destination.");
-        return;
-    }
-
-    selectedSeats.forEach(seat => {
-        if (reservationMode === "solo") seatDestinations[seat] = destination.value;
-    });
-    renderSeatDestinationControls();
-
-    if (reservationMode === "multi" && selectedSeats.some(seat => !seatDestinations[seat])) {
-        showTopError("Choose a destination for every selected seat.");
-        return;
-    }
-
-    renderSeatDestinationControls();
 
     reviewed = true;
     document.getElementById("summaryPanel").hidden = false;
@@ -189,15 +230,12 @@ document.getElementById("doneBtn")
     document.getElementById("summarySeats").innerText =
         selectedSeats.join(", ");
 
-    document.getElementById("summaryPickup").innerText =
-        pickup.value;
-
-    const summaryDestination = document.getElementById("summaryDestination");
-    summaryDestination.innerHTML = "";
-    /* several destinations are listed once, next to each seat's passenger type below */
-    const multiDest = reservationMode === "multi" && selectedSeats.length > 1;
-    document.getElementById("summaryPanel").classList.toggle("multi-dest", multiDest);
-    if (!multiDest) summaryDestination.textContent = destination.value;
+    /* one rider: show their stops here. Several riders: each seat's own stops are listed
+       once, next to its passenger type below */
+    const manyRiders = selectedSeats.length > 1;
+    document.getElementById("summaryPanel").classList.toggle("multi-dest", manyRiders);
+    document.getElementById("summaryPickup").innerText = manyRiders ? "" : seatPickups[selectedSeats[0]];
+    document.getElementById("summaryDestination").textContent = manyRiders ? "" : seatDestinations[selectedSeats[0]];
 
     renderPassengerTypes();
 
@@ -235,9 +273,9 @@ function renderPassengerTypes() {
         const strong = document.createElement("strong");
         strong.textContent = "Seat " + seat;
         label.appendChild(strong);
-        if (reservationMode === "multi" && selectedSeats.length > 1) {
+        if (selectedSeats.length > 1) {
             const stop = document.createElement("small");
-            stop.textContent = pickup.value + " → " + (seatDestinations[seat] || destination.value);
+            stop.textContent = seatPickups[seat] + " → " + seatDestinations[seat];
             label.appendChild(stop);
         }
 
@@ -321,7 +359,6 @@ function calculateFare() {
 
     if (!reviewed) return;
 
-    const pickupFare = fareTable[pickup.value];
     let reservationFee = selectedSeats.length * 10;
     let total = 0;
     let html = "";
@@ -329,10 +366,12 @@ function calculateFare() {
     selectedSeats.forEach((seat, index) => {
 
         let type = seatType(seat, index);
-        const seatDestination = seatDestinations[seat] || destination.value;
+        const seatPickup = seatPickups[seat];
+        const seatDestination = seatDestinations[seat];
+        const pickupFare = fareTable[seatPickup];
         const destinationFare = fareTable[seatDestination];
         let farePerSeat = Math.max(14, Math.abs(destinationFare - pickupFare));
-        if (pickup.value === seatDestination || isNaN(farePerSeat)) farePerSeat = 0;
+        if (seatPickup === seatDestination || isNaN(farePerSeat)) farePerSeat = 0;
         let baseFare = farePerSeat;
         let discount = 0;
 
@@ -345,7 +384,7 @@ function calculateFare() {
 
         html += `
         <p>
-            Seat ${seat} → ${seatDestination} (${type})<br>
+            Seat ${seat}: ${seatPickup} → ${seatDestination} (${type})<br>
             Base Fare: ₱${baseFare.toFixed(2)}<br>
             Discount: ₱${discount.toFixed(2)}<br>
             Final Fare: ₱${finalFare.toFixed(2)}
@@ -375,9 +414,8 @@ async function reserveSeats() {
     formData.append("confirm_reserve", "1");
     formData.append("csrf_token", csrfToken);
     formData.append("reviewed", "1");
-    formData.append("pickup", pickup.value);
-    formData.append("destination", destination.value);
     formData.append("reservation_mode", reservationMode);
+    formData.append("pickups", JSON.stringify(seatPickups));
     formData.append("destinations", JSON.stringify(seatDestinations));
     formData.append("seats", selectedSeats.join(","));
     const types = {}, ids = {};
@@ -429,18 +467,9 @@ document.getElementById("reserveBtn")
         return;
     }
 
-    if (!pickup.value) {
-        showError("Select pickup location.");
-        return;
-    }
-
-    if (reservationMode === "solo" && !destination.value) {
-        showError("Select destination.");
-        return;
-    }
-
-    if (selectedSeats.some(seat => !seatDestinations[seat])) {
-        showError("Set a destination for every selected seat.");
+    const missing = firstIncompleteSeat();
+    if (missing) {
+        tripError(missing, showError);
         return;
     }
 
@@ -526,18 +555,19 @@ function showTopError(message) {
     errorBox.style.fontSize = "14px";
 
     errorBox.innerText = message;
+    errorBox.setAttribute("role", "alert");
 
-    const container = document.querySelector(".container");
-
-    errorBox.style.position = "absolute";
-    errorBox.style.top = "58px";
+    /* fixed to the screen so the rider sees it wherever they have scrolled (the page has no .container wrapper) */
+    errorBox.style.position = "fixed";
+    errorBox.style.top = "72px";
     errorBox.style.left = "50%";
     errorBox.style.transform = "translateX(-50%)";
     errorBox.style.zIndex = "999";
-    errorBox.style.width = "320px";
+    errorBox.style.width = "min(320px, calc(100vw - 32px))";
+    errorBox.style.boxSizing = "border-box";
     errorBox.style.textAlign = "center";
 
-    container.appendChild(errorBox);
+    document.body.appendChild(errorBox);
 
     setTimeout(() => {
         const currentBox = document.getElementById("topErrorBox");

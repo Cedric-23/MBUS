@@ -383,38 +383,6 @@
   font-weight: 500;
 }
 
-.seat-destinations {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: var(--space-3);
-}
-
-.seat-destinations .destination-row {
-  display: grid;
-  grid-template-columns: minmax(92px, .9fr) minmax(0, 1.1fr);
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  padding: 4px 0;
-  font-size: .72rem;
-  line-height: 1.2;
-}
-
-.seat-destinations .destination-row select {
-  min-width: 0;
-  width: 100%;
-  min-height: 34px;
-  padding: 4px 7px;
-  font-size: .78rem;
-}
-
-@media (max-width: 480px) {
-  .seat-destinations {
-    grid-template-columns: 1fr;
-  }
-}
-
 .passenger-types {
   margin-bottom: var(--space-4);
 }

@@ -19,11 +19,19 @@ const allExpirySources = [
   read('api/get_seat_availability.php'), read('api/get_calendar_events.php'), read('Operator/passengers.php'), read('Includes/pickup.php')
 ].join('\n');
 
-assert.match(reserveJs, /reservationMode === "solo" && !destination\.value/, 'multi mode must not require the hidden shared destination');
-assert.match(reserveJs, /Choose a destination for every selected seat/);
+// Every rider (seat) has their own pickup AND destination: no shared pickup/destination fields remain.
+assert.doesNotMatch(reservePhp, /id="pickup"|id="destination"|\$_POST\['pickup'\]|\$_POST\['destination'\]/, 'the shared pickup/destination fields must be gone');
+assert.match(reserveJs, /const seatPickups = \{\}/);
+assert.match(reserveJs, /"pickup_" \+ seat/, 'each seat gets its own pickup dropdown');
+assert.match(reserveJs, /"destination_" \+ seat/, 'each seat gets its own destination dropdown');
+assert.match(reserveJs, /Choose a destination for seat/);
+assert.match(reserveJs, /Choose a pickup for seat/);
+assert.match(reserveJs, /formData\.append\("pickups", JSON\.stringify\(seatPickups\)\)/);
+assert.match(reserveJs, /formData\.append\("destinations", JSON\.stringify\(seatDestinations\)\)/);
 assert.match(reservePhp, /\$destination_by_seat\[\$seat_no\]/, 'server must retain the destination per seat');
+assert.match(reservePhp, /\$pickup_by_seat\[\$seat_no\]/, 'server must retain the pickup per seat');
+assert.match(reservePhp, /\$pickup_by_seat\[\$seat\], \$destination_by_seat\[\$seat\]/, 'each reservation row stores its own pickup and destination');
 assert.match(reservePhp, /created_at,expires_at,status/);
-assert.match(reserveJs, /reservationMode === "multi" && selectedSeats\.some\(seat => !seatDestinations\[seat\]\)/, 'multi booking must require a destination for every seat');
 assert.match(migration, /ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ/);
 assert.match(migration, /reservation_pending_expiry_idx/);
 assert.match(db, /ADD COLUMN IF NOT EXISTS ' \. \$col/);
