@@ -2,8 +2,36 @@ let selectedSeats = [];
 /* every rider (seat) has their own pickup and destination */
 const seatPickups = {};
 const seatDestinations = {};
+/* ...and their own passenger classification (+ ID photo for discounted seats that are not the account holder's own).
+   Declared up here because the seat cards below read them. */
+const seatTypes = {};
+const seatIds = {};
+const PASSENGER_TYPE_OPTIONS = [
+    ["Regular", "Regular (Standard)"],
+    ["Student", "Student"],
+    ["Senior", "Senior Citizen"],
+    ["PWD", "PWD"]
+];
+const PASSENGER_TYPE_SHORT = { Regular: "Regular", Student: "Student", Senior: "Senior Citizen", PWD: "PWD" };
 let reservationMode = "solo";
 let reviewed = false;
+
+/* Styles for the read-only rider list in the Reservation Summary (MBUS-48) */
+(function addSummaryStyles() {
+    const style = document.createElement("style");
+    style.textContent = `
+.sum-seats{display:grid;gap:10px;margin:12px 0}
+.sum-seat{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:12px;border:1px solid rgba(127,140,160,.35);border-radius:14px}
+.sum-seat-badge{display:grid;place-items:center;min-width:34px;height:34px;padding:0 6px;border-radius:50%;background:#2f6fe4;color:#fff;font-weight:700;font-size:.9rem}
+.sum-seat-body{display:grid;gap:4px;min-width:0}
+.sum-seat-line{display:grid;grid-template-columns:84px minmax(0,1fr);gap:8px;align-items:baseline;font-size:.88rem}
+.sum-seat-line span{opacity:.7}
+.sum-seat-line strong{overflow-wrap:anywhere}
+.sum-seat-type{align-self:start;padding:4px 10px;border-radius:999px;background:rgba(47,111,228,.12);color:#2f6fe4;font-size:.78rem;font-weight:600;white-space:nowrap}
+@media(max-width:420px){.sum-seat{grid-template-columns:auto minmax(0,1fr)}.sum-seat-type{grid-column:2;justify-self:start}}
+`;
+    document.head.appendChild(style);
+})();
 
 function updateMultiSeatWarning() {
     const warning = document.getElementById("multiSeatWarning");
@@ -26,7 +54,7 @@ function setReservationMode(mode) {
     const multiTab = document.getElementById("multiModeTab");
     multiTab.textContent = reservationMode === "multi" ? "Multi reservation selected" : "Multi reservation";
     document.getElementById("reservationModeHelp").textContent = reservationMode === "multi"
-        ? "Select at least two seats. Each rider sets their own pickup and destination."
+        ? "Select at least two seats. Each rider sets their own pickup, destination and classification."
         : "Choose one seat, then set its pickup and destination.";
     document.querySelectorAll(".seat-btn.selected").forEach(seat => seat.classList.remove("selected"));
     selectedSeats = [];
@@ -40,11 +68,13 @@ document.querySelectorAll(".reservation-mode-tab").forEach(tab => {
     tab.addEventListener("click", () => setReservationMode(tab.dataset.mode));
 });
 
-/* PICKUP + DESTINATION, one pair of dropdowns per seat.
+/* PICKUP + DESTINATION + CLASSIFICATION, one set of fields per seat.
    The last stop can only be a destination, and a destination must come after that seat's pickup. */
 function clearSeatTrips() {
     Object.keys(seatPickups).forEach(seat => delete seatPickups[seat]);
     Object.keys(seatDestinations).forEach(seat => delete seatDestinations[seat]);
+    Object.keys(seatTypes).forEach(seat => delete seatTypes[seat]);
+    Object.keys(seatIds).forEach(seat => delete seatIds[seat]);
 }
 
 function fillStops(select, stops, placeholder, selected) {
@@ -76,18 +106,46 @@ function seatTripField(labelText, select) {
     return field;
 }
 
+/* Passenger classification of a seat. The first selected seat is the account holder's own and follows the account status. */
+function seatType(seat, i) {
+    if (i === 0) return passengerType;
+    if (!seatTypes[seat]) seatTypes[seat] = "Regular";
+    return seatTypes[seat];
+}
+
+function seatCovered(seat, i) {
+    return i === 0;
+}
+
+/* ID photo upload for a discounted seat that is not the account holder's own */
+function idUploadField(seat) {
+    const up = document.createElement("label");
+    up.className = "pt-upload";
+    const img = document.createElement("img");
+    img.alt = "ID preview";
+    img.hidden = !seatIds[seat];
+    if (seatIds[seat]) img.src = seatIds[seat];
+    const text = document.createElement("span");
+    text.textContent = seatIds[seat] ? "ID attached · tap to replace" : "Upload ID photo";
+    const file = document.createElement("input");
+    file.type = "file"; file.accept = "image/*"; file.hidden = true;
+    file.addEventListener("change", () => readIdPhoto(file.files && file.files[0], seat, img, text));
+    up.appendChild(img); up.appendChild(text); up.appendChild(file);
+    return up;
+}
+
 function renderSeatTripControls() {
     const box = document.getElementById("seatTrips");
     box.innerHTML = "";
     document.getElementById("seatTripsEmpty").hidden = selectedSeats.length > 0;
 
-    selectedSeats.forEach(seat => {
+    selectedSeats.forEach((seat, i) => {
         if (!(seat in seatPickups)) seatPickups[seat] = fixedPickup;
 
         const card = document.createElement("div");
         card.className = "seat-trip";
         card.setAttribute("role", "group");
-        card.setAttribute("aria-label", "Pickup and destination for seat " + seat);
+        card.setAttribute("aria-label", "Pickup, destination and classification for seat " + seat);
 
         const head = document.createElement("div");
         head.className = "seat-trip-head";
@@ -123,13 +181,39 @@ function renderSeatTripControls() {
             hideReview();
         });
 
+        /* passenger classification: Regular (Standard), Student, Senior Citizen, PWD */
+        const type = seatType(seat, i);
+        const typeSelect = document.createElement("select");
+        typeSelect.id = "type_" + seat;
+        typeSelect.className = "form-control";
+        typeSelect.setAttribute("aria-label", "Passenger classification for seat " + seat);
+        PASSENGER_TYPE_OPTIONS.forEach(pair => {
+            const option = document.createElement("option");
+            option.value = pair[0];
+            option.textContent = pair[1];
+            if (pair[0] === type) option.selected = true;
+            typeSelect.appendChild(option);
+        });
+        if (i === 0) {
+            typeSelect.disabled = true;
+            typeSelect.title = "Your own seat follows your account status";
+        }
+        typeSelect.addEventListener("change", () => {
+            seatTypes[seat] = typeSelect.value;
+            if (typeSelect.value === "Regular") delete seatIds[seat];
+            hideReview();
+            renderSeatTripControls();
+        });
+
         const fields = document.createElement("div");
         fields.className = "seat-trip-fields";
         fields.appendChild(seatTripField("Pickup", pickupSelect));
         fields.appendChild(seatTripField("Destination", destinationSelect));
+        fields.appendChild(seatTripField("Passenger classification", typeSelect));
 
         card.appendChild(head);
         card.appendChild(fields);
+        if (i > 0 && type !== "Regular") card.appendChild(idUploadField(seat));
         box.appendChild(card);
     });
 }
@@ -160,6 +244,8 @@ document.querySelectorAll(".seat-btn").forEach(seat => {
             );
             delete seatPickups[seatNumber];
             delete seatDestinations[seatNumber];
+            delete seatTypes[seatNumber];
+            delete seatIds[seatNumber];
 
         } else {
 
@@ -231,7 +317,7 @@ document.getElementById("doneBtn")
         selectedSeats.join(", ");
 
     /* one rider: show their stops here. Several riders: each seat's own stops are listed
-       once, next to its passenger type below */
+       once, in the rider list below */
     const manyRiders = selectedSeats.length > 1;
     document.getElementById("summaryPanel").classList.toggle("multi-dest", manyRiders);
     document.getElementById("summaryPickup").innerText = manyRiders ? "" : seatPickups[selectedSeats[0]];
@@ -241,19 +327,18 @@ document.getElementById("doneBtn")
 
 });
 
-/* PASSENGER TYPES: each seat can be Regular, Student, Senior or PWD.
-   The verified account holder's own (first) seat needs no ID; every other discounted seat needs an ID photo. */
-const seatTypes = {};
-const seatIds = {};
-
-function seatType(seat, i) {
-    if (i === 0) return passengerType;
-    if (!seatTypes[seat]) seatTypes[seat] = "Regular";
-    return seatTypes[seat];
-}
-
-function seatCovered(seat, i) {
-    return i === 0;
+/* RESERVATION SUMMARY RIDERS: read-only. Classification is chosen per seat in the trip configuration above,
+   so the summary only shows it (MBUS-47) and lists each seat's pickup and destination in an aligned layout (MBUS-48). */
+function summaryLine(label, value) {
+    const line = document.createElement("div");
+    line.className = "sum-seat-line";
+    const l = document.createElement("span");
+    l.textContent = label;
+    const v = document.createElement("strong");
+    v.textContent = value;
+    line.appendChild(l);
+    line.appendChild(v);
+    return line;
 }
 
 function renderPassengerTypes() {
@@ -261,62 +346,41 @@ function renderPassengerTypes() {
     const box = document.getElementById("passengerTypes");
     box.innerHTML = "";
 
+    const manyRiders = selectedSeats.length > 1;
+    const list = document.createElement("div");
+    list.className = "sum-seats";
+
     selectedSeats.forEach((seat, i) => {
         const type = seatType(seat, i);
-        const needsId = i > 0 && type !== "Regular";
 
         const row = document.createElement("div");
-        row.className = "passenger-row pt-row";
+        row.className = "sum-seat";
 
-        const label = document.createElement("div");
-        label.className = "pt-label";
-        const strong = document.createElement("strong");
-        strong.textContent = "Seat " + seat;
-        label.appendChild(strong);
-        if (selectedSeats.length > 1) {
-            const stop = document.createElement("small");
-            stop.textContent = seatPickups[seat] + " → " + seatDestinations[seat];
-            label.appendChild(stop);
-        }
+        const badge = document.createElement("span");
+        badge.className = "sum-seat-badge";
+        badge.textContent = seat;
 
-        const select = document.createElement("select");
-        select.className = "pt-select";
-        select.setAttribute("aria-label", "Passenger type for seat " + seat);
-        if (i === 0) { select.disabled = true; select.title = "Your own seat follows your account status"; }
-        ["Regular", "Student", "Senior", "PWD"].forEach(t => {
-            const o = document.createElement("option");
-            o.value = o.textContent = t;
-            if (t === type) o.selected = true;
-            select.appendChild(o);
-        });
-        select.addEventListener("change", () => {
-            seatTypes[seat] = select.value;
-            renderPassengerTypes();
-            if (document.getElementById("fareBreakdown").style.display !== "none") calculateFare();
-        });
-
-        row.appendChild(label);
-        row.appendChild(select);
-        box.appendChild(row);
-
-        if (needsId) {
-            const up = document.createElement("label");
-            up.className = "pt-upload";
-            const img = document.createElement("img");
-            img.alt = "ID preview";
-            img.hidden = !seatIds[seat];
-            if (seatIds[seat]) img.src = seatIds[seat];
-            const text = document.createElement("span");
-            text.textContent = seatIds[seat] ? "ID attached · tap to replace" : "Upload ID photo";
-            const file = document.createElement("input");
-            file.type = "file"; file.accept = "image/*"; file.hidden = true;
-            file.addEventListener("change", () => readIdPhoto(file.files && file.files[0], seat, img, text));
-            up.appendChild(img); up.appendChild(text); up.appendChild(file);
-            box.appendChild(up);
+        const body = document.createElement("div");
+        body.className = "sum-seat-body";
+        if (manyRiders) {
+            body.appendChild(summaryLine("Seat", seat));
+            body.appendChild(summaryLine("Pickup", seatPickups[seat]));
+            body.appendChild(summaryLine("Destination", seatDestinations[seat]));
         } else {
-            delete seatIds[seat];
+            body.appendChild(summaryLine("Seat", seat));
         }
+
+        const pill = document.createElement("span");
+        pill.className = "sum-seat-type";
+        pill.textContent = (PASSENGER_TYPE_SHORT[type] || type) + (i > 0 && type !== "Regular" && seatIds[seat] ? " · ID attached" : "");
+
+        row.appendChild(badge);
+        row.appendChild(body);
+        row.appendChild(pill);
+        list.appendChild(row);
     });
+
+    box.appendChild(list);
 
     if (passengerType === "Regular") {
         const a = document.createElement("a");
@@ -607,8 +671,16 @@ function showTopError(message) {
 
         if (counter && typeof data.available === "number") counter.textContent = data.available + " seats left";
         if (lost.length) {
+            lost.forEach(seat => {
+                delete seatPickups[seat];
+                delete seatDestinations[seat];
+                delete seatTypes[seat];
+                delete seatIds[seat];
+            });
+            hideReview();
+            renderSeatTripControls();
+            updateMultiSeatWarning();
             showError("Seat " + lost.join(", ") + " was just taken by someone else. Please pick another.");
-            if (typeof renderPassengerTypes === "function") renderPassengerTypes();
         }
     }
 
