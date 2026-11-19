@@ -184,7 +184,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if (!$d || $d->format('Y-m-d') !== $license_expiry) $errors['license-expiry'] = 'Enter the license expiry date.';
         elseif ($license_expiry < date('Y-m-d')) $errors['license-expiry'] = 'This license has expired. Apply again with a valid license.';
         elseif ($license_expiry > date('Y-m-d', strtotime('+15 years'))) $errors['license-expiry'] = 'That expiry date is too far ahead. Check the year.';
-        if (!in_array($vehicle_type, ['Bus', 'Van', 'Minibus'], true)) $errors['vehicle-type'] = 'Choose a vehicle type.';
+        if (!in_array($vehicle_type, ['Ordinary', 'Aircon'], true)) $errors['vehicle-type'] = 'Choose a bus type (Ordinary or Aircon).';
         if ($e = mbus_check_plate($plate)) $errors['vehicle-plate'] = $e;
         $seat_count = 0;
         if (!is_array($seat_layout) || count($seat_layout) < 1 || count($seat_layout) > 25) {
@@ -530,9 +530,8 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         <select name="vehicle-type" class="vehicle-selection" required>
                                             <?php $vt = $_POST['vehicle-type'] ?? ''; ?>
                                             <option value="" disabled <?= $vt === '' ? 'selected' : '' ?>>Select Vehicle Type</option>
-                                            <option value="Bus"     <?= $vt === 'Bus' ? 'selected' : '' ?>>Bus</option>
-                                            <option value="Van"     <?= $vt === 'Van' ? 'selected' : '' ?>>Van</option>
-                                            <option value="Minibus" <?= $vt === 'Minibus' ? 'selected' : '' ?>>Mini Bus</option>
+                                            <option value="Ordinary" <?= $vt === 'Ordinary' ? 'selected' : '' ?>>Ordinary</option>
+                                            <option value="Aircon"   <?= $vt === 'Aircon' ? 'selected' : '' ?>>Aircon</option>
                                         </select>
                                         <?= mbus_field_error($errors, 'vehicle-type') ?>
                                     </div>
