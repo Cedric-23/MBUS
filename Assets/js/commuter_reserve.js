@@ -194,15 +194,10 @@ document.getElementById("doneBtn")
 
     const summaryDestination = document.getElementById("summaryDestination");
     summaryDestination.innerHTML = "";
-    if (reservationMode === "multi") {
-        selectedSeats.forEach(seat => {
-            const item = document.createElement("span");
-            item.textContent = "Seat " + seat + " · " + seatDestinations[seat];
-            summaryDestination.appendChild(item);
-        });
-    } else {
-        summaryDestination.textContent = destination.value;
-    }
+    /* several destinations are listed once, next to each seat's passenger type below */
+    const multiDest = reservationMode === "multi" && selectedSeats.length > 1;
+    document.getElementById("summaryPanel").classList.toggle("multi-dest", multiDest);
+    if (!multiDest) summaryDestination.textContent = destination.value;
 
     renderPassengerTypes();
 
@@ -236,7 +231,15 @@ function renderPassengerTypes() {
         row.className = "passenger-row pt-row";
 
         const label = document.createElement("div");
-        label.textContent = "Seat " + seat;
+        label.className = "pt-label";
+        const strong = document.createElement("strong");
+        strong.textContent = "Seat " + seat;
+        label.appendChild(strong);
+        if (reservationMode === "multi" && selectedSeats.length > 1) {
+            const stop = document.createElement("small");
+            stop.textContent = pickup.value + " → " + (seatDestinations[seat] || destination.value);
+            label.appendChild(stop);
+        }
 
         const select = document.createElement("select");
         select.className = "pt-select";
