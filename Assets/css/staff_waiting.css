@@ -19,7 +19,7 @@
 .sw-notice-ok { background: #067647; }
 .sw-notice-soft { background: #fff4e0; color: #7a4a00; }
 
-.sw-sheet { position: fixed; z-index: 500; left: 0; right: 0; bottom: var(--nav-h); max-width: 560px; margin: 0 auto; max-height: 46vh; display: flex; flex-direction: column; padding: 14px 14px 8px; border-radius: 22px 22px 0 0; background: #fff; box-shadow: 0 -6px 24px rgba(0,0,0,.16); }
+.sw-sheet { position: fixed; z-index: 500; left: 0; right: 0; bottom: var(--nav-h); max-width: 560px; margin: 0 auto; max-height: 42vh; display: flex; flex-direction: column; padding: 10px 12px 6px; border-radius: 22px 22px 0 0; background: #fff; box-shadow: 0 -6px 24px rgba(0,0,0,.16); }
 .sw-sheet-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
 .sw-sheet-head h2 { margin: 0; font-size: 1.125rem; }
 .sw-sheet-sub { font-size: .8125rem; color: #6b7a8d; }
@@ -117,3 +117,29 @@
 .sw-group .sw-row:first-child { border-top: 0; }
 .sw-dist-reserve { background: #ece7ff; color: #4a32b0; }
 .sw-group-reserve .sw-details { background: #ece7ff; color: #4a32b0; }
+
+/* Compact sheet: leave the map visible */
+.sw-sheet-head { margin-bottom: 4px; }
+.sw-sheet-head h2 { display: none; }
+.sw-sheet-head .sw-sheet-sub { margin-left: auto; font-size: .75rem; }
+.sw-route-controls { margin-bottom: 6px; gap: 6px; }
+.sw-route-estimate { padding: 5px 8px; font-size: .6875rem; line-height: 1.3; }
+.sw-route-view { min-height: 30px; padding: 0 10px; }
+.sw-group { margin: 0 0 6px; padding: 6px 8px 2px; border-radius: 14px; }
+.sw-group + .sw-group { margin-top: 6px; }
+.sw-group-head { gap: 8px; margin-bottom: 2px; }
+.sw-group-icon { width: 28px; height: 28px; font-size: .75rem; }
+.sw-group-title h3 { font-size: .875rem; }
+.sw-group-title small { display: none; }
+.sw-group-count { min-width: 24px; padding: 2px 8px; font-size: .75rem; }
+.sw-group .sw-empty { display: none; }
+.sw-group .sw-row { min-height: 50px; }
+.sw-group .sw-row-main { padding: 5px 2px; gap: 8px; }
+.sw-group .sw-avatar { width: 34px; height: 34px; }
+.sw-group .sw-row-text strong { font-size: .875rem; }
+.sw-group .sw-row-text small { font-size: .75rem; }
+.staff-wait-page .sw-group .sw-done { min-height: 34px; padding: 0 12px; border-radius: 10px; font-size: .8125rem; box-shadow: none !important; }
+.staff-wait-page .sw-group .sw-details { background: #e3effd !important; color: #1e3a5f !important; }
+.staff-wait-page .sw-group-reserve .sw-details { background: #ece7ff !important; color: #4a32b0 !important; }
+.sw-group:has(.sw-list:empty) { padding-bottom: 6px; }
+.sw-group:has(.sw-list:empty) .sw-group-head { margin-bottom: 0; }
