@@ -75,15 +75,39 @@ $navItems = $isAdmin
 
     <section class="sw-sheet" aria-label="Riders waiting">
         <div class="sw-sheet-head">
-            <h2><span id="staffCount">0</span> waiting</h2>
+            <h2>Waiting</h2>
             <span class="sw-sheet-sub" id="busLabel"></span>
         </div>
         <div class="sw-route-controls">
             <p id="staffRouteEstimate" class="sw-route-estimate" role="status" aria-live="polite">Choose a bus to see its route and destination estimate.</p>
             <button type="button" id="staffRouteView" class="sw-route-view" disabled>Full route</button>
         </div>
-        <p id="staffEmpty" class="sw-empty">No one is waiting right now.</p>
-        <ul id="staffList" class="sw-list" aria-live="polite"></ul>
+        <div class="sw-scroll">
+            <section class="sw-group sw-group-pickup" aria-labelledby="swPickupTitle">
+                <header class="sw-group-head">
+                    <span class="sw-group-icon" aria-hidden="true"><i class="fa fa-location-dot"></i></span>
+                    <div class="sw-group-title">
+                        <h3 id="swPickupTitle">Waiting for pick-up</h3>
+                        <small>Pinned a spot on the map</small>
+                    </div>
+                    <span class="sw-group-count" id="staffCount">0</span>
+                </header>
+                <p id="staffEmpty" class="sw-empty">No one is waiting for a pick-up.</p>
+                <ul id="staffList" class="sw-list" aria-live="polite"></ul>
+            </section>
+            <section class="sw-group sw-group-reserve" aria-labelledby="swReserveTitle">
+                <header class="sw-group-head">
+                    <span class="sw-group-icon" aria-hidden="true"><i class="fa fa-ticket"></i></span>
+                    <div class="sw-group-title">
+                        <h3 id="swReserveTitle">Waiting for reservation</h3>
+                        <small>Paid seat, not on board yet</small>
+                    </div>
+                    <span class="sw-group-count" id="staffReserveCount">0</span>
+                </header>
+                <p id="staffReserveEmpty" class="sw-empty">No reserved riders are waiting to board.</p>
+                <ul id="staffReserveList" class="sw-list" aria-live="polite"></ul>
+            </section>
+        </div>
     </section>
     <noscript><p class="sw-notice">Enable JavaScript to see waiting riders.</p></noscript>
 </main>
