@@ -16,7 +16,7 @@
     let requests = [], reservations = [], schedules = [], locations = [], csrf = '', ready = false;
     const hiddenReservationKeys = new Set();
     let map = null, layer = null, line = null, routeLayer = null, selected = null, fittedOnce = false;
-    let routeKey = '', routeData = null, routeFitKey = '', routeRequest = 0, routeFailure = null, routeViewMode = 'focus';
+    let routeKey = '', routeData = null, routeFitKey = '', routeRequest = 0, routeFailure = null;
     let busy = false, refreshing = null;
 
     const num = v => { if (v === null || v === undefined || String(v).trim() === '') return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
@@ -104,40 +104,6 @@
     /* ---------- render ---------- */
     function busFor(scheduleId) { return locations.find(l => Number(l.schedule_id) === Number(scheduleId) && validPt(l.latitude, l.longitude)); }
 
-    function updateRouteButton() {
-        const button = el('staffRouteView');
-        if (!button) return;
-        button.disabled = !routeData;
-        button.textContent = routeViewMode === 'route' ? 'Focus bus' : 'Full route';
-        button.setAttribute('aria-pressed', routeViewMode === 'route' ? 'true' : 'false');
-    }
-
-    function toggleStaffRoute() {
-        if (!map || !routeData) return;
-        const selectedId = filter.value || (schedules.length === 1 ? String(schedules[0].schedule_id) : '');
-        const trip = schedules.find(s => String(s.schedule_id) === selectedId);
-        if (!trip) return;
-        if (routeViewMode === 'focus') {
-            routeViewMode = 'route';
-            const bounds = L.latLngBounds(routeData.points);
-            const bus = busFor(trip.schedule_id);
-            const rider = requests.find(r => r.request_id === selected && String(r.schedule_id) === selectedId);
-            if (bus) bounds.extend([Number(bus.latitude), Number(bus.longitude)]);
-            if (rider && validPt(rider.latitude, rider.longitude)) bounds.extend([Number(rider.latitude), Number(rider.longitude)]);
-            map.fitBounds(bounds.pad(0.08), { paddingTopLeft: [24, 105], paddingBottomRight: [24, 240], maxZoom: 12, animate: false });
-        } else {
-            routeViewMode = 'focus';
-            const bus = busFor(trip.schedule_id);
-            const rider = requests.find(r => r.request_id === selected && String(r.schedule_id) === selectedId);
-            const points = [];
-            if (rider && validPt(rider.latitude, rider.longitude)) points.push([Number(rider.latitude), Number(rider.longitude)]);
-            if (bus) points.push([Number(bus.latitude), Number(bus.longitude)]);
-            if (points.length) fit(points);
-            else map.setView([Number(trip.origin_lat), Number(trip.origin_lng)], 14, { animate: false });
-        }
-        updateRouteButton();
-    }
-
     function updateStaffRoute() {
         const box = el('staffRouteEstimate');
         if (!box) return;
@@ -148,7 +114,6 @@
             routeKey = ''; routeData = null; routeFailure = null;
             if (routeLayer) routeLayer.clearLayers();
             box.textContent = schedules.length > 1 ? 'Choose a bus to see its route and destination estimate.' : 'No active route is available.';
-            updateRouteButton();
             return;
         }
         const rawPoints = [trip.origin_lat, trip.origin_lng, trip.destination_lat, trip.destination_lng];
@@ -157,7 +122,6 @@
             routeKey = ''; routeData = null; routeFailure = null;
             box.textContent = 'This bus route needs terminal coordinates before an estimate is available.';
             if (routeLayer) routeLayer.clearLayers();
-            updateRouteButton();
             return;
         }
         const origin = { lat: Number(trip.origin_lat), lng: Number(trip.origin_lng) };
@@ -167,7 +131,6 @@
             routeKey = ''; routeData = null; routeFailure = null;
             box.textContent = 'This bus route needs valid terminal coordinates before an estimate is available.';
             if (routeLayer) routeLayer.clearLayers();
-            updateRouteButton();
             return;
         }
         const key = String(trip.schedule_id) + ':' + [origin.lat, origin.lng, destination.lat, destination.lng].join(',');
@@ -176,7 +139,6 @@
             const thisRequest = ++routeRequest;
             if (routeLayer) routeLayer.clearLayers();
             box.textContent = 'Loading the road route to ' + (trip.destination_label || trip.destination || 'the destination') + '…';
-            updateRouteButton();
             if (!window.MBUSRouting || !map) { box.textContent = 'Road directions are unavailable; live bus and rider pins remain visible.'; return; }
             window.MBUSRouting.getDrivingRoute(origin, destination).then(route => {
                 if (thisRequest !== routeRequest || routeKey !== key) return;
@@ -187,14 +149,11 @@
                 L.circleMarker(route.points[0], { radius: 5, color: '#fff', weight: 2, fillColor: '#1e90ff', fillOpacity: 1 }).addTo(routeLayer);
                 L.circleMarker(route.points[route.points.length - 1], { radius: 5, color: '#fff', weight: 2, fillColor: '#18365d', fillOpacity: 1 }).addTo(routeLayer);
                 routeFitKey = key;
-                if (routeViewMode === 'route') map.fitBounds(L.latLngBounds(route.points).pad(0.08), { maxZoom: 12, animate: false });
-                updateRouteButton();
-                render(); // also redraws the reservation pins that sit along this route (render refreshes the estimate too)
+                    render(); // also redraws the reservation pins that sit along this route (render refreshes the estimate too)
             }).catch(error => {
                 if (thisRequest !== routeRequest || routeKey !== key) return;
                 routeFailure = { key, until: Date.now() + 30000 };
-                updateRouteButton();
-                box.textContent = (error.message || 'Road directions are unavailable right now.') + ' Live bus and rider pins remain visible.';
+                    box.textContent = (error.message || 'Road directions are unavailable right now.') + ' Live bus and rider pins remain visible.';
             });
             return;
         }
@@ -429,6 +388,16 @@
         el('staffReserveCount').textContent = String(rows.length);
         rEmpty.hidden = rows.length > 0;
         rList.replaceChildren();
+        const hIcon = document.querySelector('.sw-group-reserve .sw-group-icon');
+        if (hIcon) {
+            if (rows.length) {
+                const pic = node('img'); pic.alt = ''; bindAvatarFallback(pic); pic.src = photoOf(rows[0]);
+                pic.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;display:block';
+                hIcon.style.overflow = 'hidden'; hIcon.replaceChildren(pic);
+            } else if (!hIcon.querySelector('.fa-ticket')) {
+                const t = node('i', undefined, 'fa fa-ticket'); hIcon.replaceChildren(t);
+            }
+        }
         rows.forEach(r => {
             const li = node('li', undefined, 'sw-row');
             const open = node('button', undefined, 'sw-row-main'); open.type = 'button';
@@ -517,8 +486,6 @@
     }
     function choose(r) {
         selected = selected === r.request_id ? null : r.request_id;
-        routeViewMode = 'focus';
-        updateRouteButton();
         render();
         if (selected) {
             const b = busFor(r.schedule_id), pts = [];
@@ -589,9 +556,8 @@
         busy = false; btn.disabled = false;
     }
 
-    filter.addEventListener('change', () => { selected = null; fittedOnce = false; routeFitKey = ''; routeViewMode = 'focus'; render(); });
+    filter.addEventListener('change', () => { selected = null; fittedOnce = false; routeFitKey = ''; render(); });
     el('staffRefresh').addEventListener('click', refresh);
-    el('staffRouteView').addEventListener('click', toggleStaffRoute);
     window.addEventListener('resize', () => { sizeSheet(); if (map) map.invalidateSize(); });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 

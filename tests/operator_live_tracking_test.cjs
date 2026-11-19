@@ -46,9 +46,9 @@ assert.doesNotMatch(script, /riderFeed/);
 
 // Staff Waiting has live buses, rider photos, road estimates and a view toggle.
 assert.match(waitingBoard, /data-role="<\?php echo \$pickupStaffRole; \?>"/);
-assert.match(waitingBoard, /id="staffRouteView"/);
-assert.match(waitingBoardScript, /routeViewMode/);
-assert.match(waitingBoardScript, /toggleStaffRoute/);
+assert.doesNotMatch(waitingBoard, /id="staffRouteView"/);
+assert.doesNotMatch(waitingBoardScript, /routeViewMode/);
+assert.doesNotMatch(waitingBoardScript, /toggleStaffRoute/);
 assert.match(waitingBoardScript, /L\.marker\(p/);
 assert.match(waitingBoardScript, /remainingOnRoute/);
 

@@ -85,7 +85,6 @@ $navItems = $isAdmin
         </div>
         <div class="sw-route-controls">
             <p id="staffRouteEstimate" class="sw-route-estimate" role="status" aria-live="polite">Choose a bus to see its route and destination estimate.</p>
-            <button type="button" id="staffRouteView" class="sw-route-view" disabled>Full route</button>
         </div>
         <div class="sw-scroll" id="swScroll">
             <section class="sw-group sw-group-pickup" aria-labelledby="swPickupTitle">

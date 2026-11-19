@@ -30,9 +30,9 @@ async function main() {
     assert.match(waitingJs, /getDrivingRoute/);
     assert.match(waitingJs, /remainingOnRoute/);
     assert.match(waitingJs, /distanceMeters/);
-    assert.match(staffView, /id="staffRouteView"/);
+    assert.doesNotMatch(staffView, /id="staffRouteView"/);
     assert.match(staffJs, /remainingOnRoute/);
-    assert.match(staffJs, /toggleStaffRoute/);
+    assert.doesNotMatch(staffJs, /toggleStaffRoute/);
     assert.match(locations, /14\.6798552/);
     assert.match(locations, /120\.2728757/);
     assert.match(locations, /14\.8243652/);
