@@ -46,7 +46,6 @@
 .stf .next-trip *{color:inherit}
 .stf .next-trip a.next-cta{background:#fff!important;color:#2f6fe4!important;border-radius:999px;box-shadow:none}
 .stf .next-trip a.next-cta.secondary,.stf .next-trip .next-cta.ghost{background:rgba(255,255,255,.22)!important;color:#fff!important}
-.stf .next-trip.is-empty{background:#fff!important;color:var(--color-text-primary);border:1px solid rgba(255,255,255,.9);box-shadow:var(--stf-shadow-sm)}
 .stf .next-trip .badge,.stf .next-trip .next-label{background:rgba(255,255,255,.22);color:#fff}
 .stf .soon-list a,.stf .home-list a,.stf .manage-list a{background:#fff;border-radius:20px}
 
