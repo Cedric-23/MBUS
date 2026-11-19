@@ -38,6 +38,7 @@ $navItems = $isAdmin
     <link rel="stylesheet" href="../Assets/css/staff_waiting.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/staff_waiting.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/unify.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/staff_waiting_fix.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_waiting_fix.css'); ?>">
 </head>
 <body class="stf has-bottom-nav staff-wait-page">
 <main class="main" role="main" id="pickupStaff" data-role="<?php echo $pickupStaffRole; ?>" data-endpoint="../api/pickup.php" data-live-endpoint="../api/live_tracking.php">
@@ -74,6 +75,10 @@ $navItems = $isAdmin
     <p id="staffMapError" class="sw-notice sw-notice-soft" hidden>Map tiles are unavailable right now. The list below is still current.</p>
 
     <section class="sw-sheet" aria-label="Riders waiting">
+        <button type="button" class="sw-handle" id="swToggle" aria-expanded="true" aria-controls="swScroll">
+            <span class="sw-handle-title" id="swSummary">Waiting</span>
+            <i class="fa fa-chevron-down sw-handle-caret" aria-hidden="true"></i>
+        </button>
         <div class="sw-sheet-head">
             <h2>Waiting</h2>
             <span class="sw-sheet-sub" id="busLabel"></span>
@@ -82,7 +87,7 @@ $navItems = $isAdmin
             <p id="staffRouteEstimate" class="sw-route-estimate" role="status" aria-live="polite">Choose a bus to see its route and destination estimate.</p>
             <button type="button" id="staffRouteView" class="sw-route-view" disabled>Full route</button>
         </div>
-        <div class="sw-scroll">
+        <div class="sw-scroll" id="swScroll">
             <section class="sw-group sw-group-pickup" aria-labelledby="swPickupTitle">
                 <header class="sw-group-head">
                     <span class="sw-group-icon" aria-hidden="true"><i class="fa fa-location-dot"></i></span>
@@ -121,6 +126,7 @@ $navItems = $isAdmin
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="../Assets/js/route_utils.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/route_utils.js'); ?>"></script>
+<script src="../Assets/js/stop_coords.js?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/js/stop_coords.js'); ?>"></script>
 <script src="../Assets/js/staff_waiting.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/staff_waiting.js'); ?>"></script>
 <script src="../Assets/js/app-header.js"></script>
 <?php if (strtolower((string)($_SESSION['user_type'] ?? '')) === 'operator') { ?><script src="../Assets/js/operator_tracker.js"></script><?php } ?>
