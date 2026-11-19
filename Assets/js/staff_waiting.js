@@ -327,7 +327,7 @@
     }
 
     /* ---------- reservations (paid seat, not on board yet) ---------- */
-    const seatLabel = r => (r.seats === 1 ? 'Seat ' : 'Seats ') + (r.seat_numbers || r.seats);
+    const seatLabel = r => r.seats === 1 ? 'Seat ' + (r.seat_numbers || 1) : r.seats + ' seats';
     const stopLabel = r => (r.pickup_location && r.stop_destination) ? r.pickup_location + ' → ' + r.stop_destination : (r.pickup_location || r.stop_destination || '');
     function renderReservations(sel) {
         const rows = reservations.filter(r => !sel || String(r.schedule_id) === sel);
@@ -341,7 +341,7 @@
             const txt = node('span', undefined, 'sw-row-text');
             txt.append(node('strong', r.full_name || 'Commuter'),
                 node('small', [seatLabel(r), stopLabel(r), r.bus_number].filter(Boolean).join(' · ')));
-            open.append(avatar, txt, node('span', r.seats + (r.seats === 1 ? ' seat' : ' seats'), 'sw-dist sw-dist-reserve'));
+            open.append(avatar, txt);
             open.addEventListener('click', () => showReservation(r));
             const more = node('button', 'Details', 'sw-done sw-details'); more.type = 'button';
             more.addEventListener('click', () => showReservation(r));
