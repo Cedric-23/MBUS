@@ -114,10 +114,10 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
     <header class="page-header" role="banner">
         <div class="page-header-left"><h1>My Profile</h1></div>
         <div class="page-header-right"><div class="profile-menu-wrap">
-            <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span></button>
+            <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span><?php echo mbus_payment_dot(); ?></button>
             <div class="profile-menu" id="profileMenu" role="menu">
                 <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $name; ?></span><span class="profile-menu-role">Operator account</span></div>
-                <a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> Payments</a>
+                <a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> Payments<?php echo mbus_payment_pill(); ?></a>
                 <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>

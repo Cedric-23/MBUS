@@ -18,7 +18,51 @@
 }
 
 .profile-menu-wrap { position: relative; }
+
+/* Operator: red dot on the profile icon + count in the menu when GCash payments need checking */
+.pay-alert-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: #e5322d;
+  border: 2px solid var(--color-surface, #fff);
+  animation: pay-alert-pulse 2s ease-out infinite;
+}
+.pay-alert-vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.pay-alert-pill {
+  display: inline-block;
+  min-width: 20px;
+  margin-left: 8px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #e5322d;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+@keyframes pay-alert-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0.5); }
+  70% { box-shadow: 0 0 0 7px rgba(229, 50, 45, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(229, 50, 45, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .pay-alert-dot { animation: none; } }
+
 .profile-trigger {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
