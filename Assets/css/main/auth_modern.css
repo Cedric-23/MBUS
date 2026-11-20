@@ -107,3 +107,7 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
   .form-container{border-radius:40px 40px 0 0}
   .auth-back{border-radius:50%;width:44px;height:44px;aspect-ratio:1/1;flex:none}
 }
+/* let the blue header show behind the sheet's rounded top corners */
+@media(max-width:900px){
+  .right-container{background:transparent}
+}
