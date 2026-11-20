@@ -4,6 +4,7 @@ require_once "../config/db_connect.php";
 require_once "../config/mysqli_compat.php";
 require_once "../Includes/csrf.php";
 require_once "../Includes/activity_log.php";
+require_once "../Includes/seat_layout.php";
 
 if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'operator'){
     header("Location: ../login.php");
@@ -191,7 +192,11 @@ $mode = in_array($mode_in, ['res', 'walk', 'pick'], true) ? $mode_in : (($select
 
 $riders = [];     // seat number => details
 $pickups = [];    // waiting pick-up requests for this trip
+$seat_layout_saved = null; // the bus's own seat layout (null = plain 4 per row)
 if($selected){
+    $lq = mbus_db_prepare($conn, "SELECT seat_layout FROM buses WHERE bus_id = (SELECT bus_id FROM schedule WHERE schedule_id = ?)", [(int)$selected['schedule_id']]);
+    $lr = $lq === false ? false : mbus_db_fetch_assoc($lq);
+    $seat_layout_saved = $lr['seat_layout'] ?? null;
     $rq = mbus_db_prepare($conn, "
         SELECT r.reservation_id, r.seat_number, r.status, r.pickup_location, r.destination, r.ticket_code, r.source, r.walkin_name,
                u.full_name, u.phone_number,
@@ -278,6 +283,7 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/operator_riders_seats.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/operator_riders_seats.css'); ?>">
 </head>
 <body class="stf has-sidebar has-bottom-nav riders-page">
 
@@ -424,12 +430,12 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
         <div class="rider-map mode-<?php echo $mode; ?>" role="group" aria-label="Bus seats">
         <?php
         $capacity = (int)$selected['capacity'];
-        $rows = (int)ceil($capacity / 4);
-        $n = 1;
-        for($r = 1; $r <= $rows; $r++){
+        foreach(mbus_bus_seat_rows($seat_layout_saved, $capacity) as $cells){
             echo "<div class='seat-row'>";
-            for($c = 1; $c <= 4; $c++){
-                if($n <= $capacity){
+            foreach($cells as $ci => $n){
+                if($n === null){
+                    echo "<span class='rseat gap' aria-hidden='true'></span>";
+                } else {
                     $info = $riders[(string)$n] ?? null;
                     if($info){
                         $cls = $info['status'] === 'Boarded' ? 'boarded' : (in_array($info['status'], ['Paid','Confirmed'], true) ? 'paid' : 'pending');
@@ -445,9 +451,8 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
                     } else {
                         echo "<span class='rseat empty locked' aria-disabled='true' aria-label='Seat $n empty'>$n</span>";
                     }
-                    $n++;
                 }
-                if($c == 2){ echo "<span class='aisle'></span>"; }
+                if($ci == 1){ echo "<span class='aisle'></span>"; }
             }
             echo "</div>";
         }
