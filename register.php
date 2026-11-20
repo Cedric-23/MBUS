@@ -340,18 +340,6 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                         <p>Plan your next bus trip in just a few steps.</p>
                     </div>
                     <div class="form-header-picker">
-                        <div class="picker-container">
-                            <div id="option-bar" class="option-bar <?= $option_bar_class ?>"></div>
-                            <div id="option-passenger" class="picker-passenger <?= $passenger_class ?>">
-                                <a href="register.php?type=passenger" data-type="passenger">Passenger</a>
-                            </div>
-                            <div id="option-conductor" class="picker-conductor <?= $conductor_class ?>">
-                                <a href="register.php?type=conductor" data-type="conductor">Conductor</a>
-                            </div>
-                            <div id="option-driver" class="picker-driver <?= $driver_class ?>">
-                                <a href="register.php?type=driver" data-type="driver">Driver/Operator</a>
-                            </div>
-                        </div>
                         <div class="picker-container-text">
                             <span id="picker-text"><?= reg_e($picker_text) ?></span>
                         </div>
@@ -419,7 +407,11 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                         
                         <div class="footer">
                             <p>Already have an account? <a style="color: #086FCF; text-decoration: none;" href="login.php">Sign In</a></p>
-                            
+                            <?php if ($user_type === 'conductor'): ?>
+                            <p>Not a conductor? <a style="color: #086FCF; text-decoration: none;" href="register.php?type=passenger">Register as a passenger</a></p>
+                            <?php else: ?>
+                            <p>Want to drive with us? <a style="color: #086FCF; text-decoration: none;" href="register.php?type=driver">Apply as Driver/Operator</a></p>
+                            <?php endif; ?>
                         </div>
                     </div>
 
