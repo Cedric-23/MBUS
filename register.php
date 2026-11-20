@@ -336,7 +336,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                     <a href="register.php" class="on" role="tab">Register</a>
                     <?php else: ?>
                     <a href="register.php?type=conductor" class="<?= $user_type === 'conductor' ? 'on' : '' ?>" role="tab">Conductor</a>
-                    <a href="register.php?type=driver" class="<?= $user_type === 'driver' ? 'on' : '' ?>" role="tab">Driver/Operator</a>
+                    <a href="register.php?type=driver" class="<?= $user_type === 'driver' ? 'on' : '' ?>" role="tab">Driver</a>
                     <?php endif; ?>
                 </div>
                 <div class="form-header">
