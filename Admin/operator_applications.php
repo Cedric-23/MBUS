@@ -134,7 +134,7 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
 
 <main class="main" role="main">
 <header class="page-header">
-    <h1>Operator applications</h1>
+    <div class="ar-head-title"><a class="ar-back-link" href="admin_dashboard.php" aria-label="Back"><i class="fa fa-arrow-left" aria-hidden="true"></i></a><h1>Applications</h1></div>
 
             <div class="page-header-right">
                 <div class="profile-menu-wrap">
@@ -153,16 +153,15 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
             </div>
 </header>
 
-<a class="ar-back-link" href="admin_dashboard.php" aria-label="Back"><i class="fa fa-arrow-left" aria-hidden="true"></i></a>
-<nav class="ad-seg vf-tabs" aria-label="Application type">
-    <a href="operator_applications.php" class="on" aria-current="page">Operator applications</a>
-    <a href="conductor_applications.php" class="">Conductor applications</a>
+<nav class="ad-seg vf-tabs ar-type-tabs" aria-label="Application type">
+    <a href="operator_applications.php" class="on" aria-current="page">Operators</a>
+    <a href="conductor_applications.php" class="">Conductors</a>
 </nav>
 
 <?php if($success !== ''): ?><div class="alert alert-success" role="status"><?php echo htmlspecialchars($success); ?></div><?php endif; ?>
 <?php if($error !== ''): ?><div class="alert alert-error" role="alert"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
 
-<nav class="ad-seg vf-tabs" aria-label="Status">
+<nav class="ad-seg vf-tabs ar-status-tabs" aria-label="Status">
     <?php foreach($opts as $k => $label): ?>
     <a href="?status=<?php echo $k; ?>" class="<?php echo $f === $k ? 'on' : ''; ?>"><?php echo $label; ?> <span class="vf-count"><?php echo $counts[$k]; ?></span></a>
     <?php endforeach; ?>

@@ -95,7 +95,7 @@ $h = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
 <main class="main" role="main">
     <header class="page-header">
-        <h1>Conductor applications</h1>
+        <div class="ar-head-title"><a class="ar-back-link" href="admin_dashboard.php" aria-label="Back"><i class="fa fa-arrow-left" aria-hidden="true"></i></a><h1>Applications</h1></div>
         <div class="page-header-right">
             <div class="profile-menu-wrap">
                 <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
@@ -113,16 +113,15 @@ $h = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
         </div>
     </header>
 
-    <a class="ar-back-link" href="admin_dashboard.php" aria-label="Back"><i class="fa fa-arrow-left" aria-hidden="true"></i></a>
-<nav class="ad-seg vf-tabs" aria-label="Application type">
-    <a href="operator_applications.php" class="">Operator applications</a>
-    <a href="conductor_applications.php" class="on" aria-current="page">Conductor applications</a>
+    <nav class="ad-seg vf-tabs ar-type-tabs" aria-label="Application type">
+    <a href="operator_applications.php" class="">Operators</a>
+    <a href="conductor_applications.php" class="on" aria-current="page">Conductors</a>
 </nav>
 
     <?php if ($flash): ?><div class="alert alert-success" role="status"><?php echo $h($flash); ?></div><?php endif; ?>
     <?php if ($error): ?><div class="alert alert-error" role="alert"><?php echo $h($error); ?></div><?php endif; ?>
 
-    <nav class="ad-seg vf-tabs" aria-label="Filter applications by status">
+    <nav class="ad-seg vf-tabs ar-status-tabs" aria-label="Filter applications by status">
         <?php foreach ($opts as $key => $label): ?>
         <a href="?status=<?php echo $h($key); ?>" class="<?php echo $f === $key ? 'on' : ''; ?>" <?php echo $f === $key ? 'aria-current="page"' : ''; ?>><?php echo $label; ?> <span class="vf-count"><?php echo (int)$counts[$key]; ?></span></a>
         <?php endforeach; ?>
