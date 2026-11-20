@@ -217,3 +217,5 @@
 .ar-back-link span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .ar-page-nav .ad-btn { flex: 1 1 auto; min-height: 44px; }
 @media (min-width: 769px) { .ar-page-nav .ad-btn { flex: 0 0 auto; } }
+.ar-page-nav .ad-btn { flex: 1 1 100%; justify-content: center; }
+@media (min-width: 769px) { .ar-page-nav .ad-btn { flex: 0 0 auto; } }
