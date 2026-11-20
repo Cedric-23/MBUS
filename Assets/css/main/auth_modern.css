@@ -111,3 +111,8 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
 @media(max-width:900px){
   .right-container{background:transparent}
 }
+/* login and register headers share one fixed height */
+@media(max-width:900px){
+  .auth-hero-m{box-sizing:border-box;height:300px;padding:20px 24px 74px;display:flex;flex-direction:column;justify-content:flex-end}
+  .auth-hero-m .auth-back{position:absolute;left:24px;top:20px;margin:0}
+}
