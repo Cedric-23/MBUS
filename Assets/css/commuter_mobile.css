@@ -620,8 +620,6 @@
   .reserve-page * { transition: none !important; scroll-behavior: auto !important; }
 }
 
-/* The booking flow has its own sticky action bar; the tab bar would sit under it */
-.reserve-page .bottom-nav { display: none !important; }
 
 .reserve-page .trip-info-card,
 .reserve-page .pickup-card { padding: var(--space-4); }

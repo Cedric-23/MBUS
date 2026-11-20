@@ -341,7 +341,6 @@ exit();
 <link rel="stylesheet" href="../Assets/css/responsive.css">
 <link rel="stylesheet" href="../Assets/css/commuter_sidebar.css">
 <link rel="stylesheet" href="../Assets/css/commuter_reserve.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_reserve.css'); ?>">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
@@ -466,19 +465,6 @@ echo "</div>";
 <p class="seat-trips-empty" id="seatTripsEmpty">Tap a seat above. Each rider gets their own pickup and destination.</p>
 <div id="seatTrips" class="seat-trips" aria-live="polite"></div>
 
-<section class="reserve-stop-map" aria-labelledby="stopMapTitle">
-    <h3 id="stopMapTitle">Optional exact map pins</h3>
-    <p>Choose a seat and pickup or drop-off, then tap the map. You can pin a specific place in addition to the named route stops above. If you skip pins, the driver will see the named stops.</p>
-    <div class="reserve-pin-controls">
-        <label>Seat <select id="pinSeat" aria-label="Seat to place map pins for"></select></label>
-        <button type="button" class="reserve-pin-mode active" data-pin-mode="pickup">Pickup pin</button>
-        <button type="button" class="reserve-pin-mode" data-pin-mode="destination">Drop-off pin</button>
-        <button type="button" class="reserve-pin-clear">Clear this seat’s pins</button>
-    </div>
-    <div id="reservationMap" role="application" aria-label="Tap the map to set the selected seat’s pickup or drop-off pin"></div>
-    <p id="pinStatus" role="status" aria-live="polite">Select seats, then place optional pickup and drop-off pins.</p>
-</section>
-
 <button type="button" id="doneBtn" class="btn btn-primary btn-block">
     Review my trip
 </button>
@@ -551,7 +537,6 @@ const passengerType = <?php echo json_encode($passenger_type); ?>;
 </script>
 
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="../Assets/js/commuter_reserve.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/commuter_reserve.js'); ?>"></script>
 
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">

@@ -229,3 +229,4 @@
 .cm .notif-list li.is-new{background:#e4eeff;box-shadow:inset 3px 0 0 #2f6fe4}
 .cm .notif-list small{color:#6b7a99;font-size:.72rem}
 .cm .notif-empty{margin:4px;color:#6b7a99;font-size:.85rem}
+@media(max-width:768px){.cm.reserve-page .main{padding-bottom:calc(110px + env(safe-area-inset-bottom))}}
