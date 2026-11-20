@@ -110,11 +110,12 @@ p.lbl{margin:0;font-size:.82rem}.amt{margin:2px 0 6px;font-size:2.1rem;font-weig
 .row{display:flex;gap:8px;margin-top:6px}.cp{flex:1;min-height:44px;border:1.5px solid #cfe0fb;border-radius:999px;background:#fff;color:#2f6fe4;font:700 .9rem Inter,system-ui,sans-serif;cursor:pointer}
 .wait{display:flex;align-items:center;gap:10px;margin-top:16px;padding:12px;border-radius:12px;background:#f1f5fa;text-align:left;font-size:.85rem;color:#33445c}.spin.sm{width:20px;height:20px;margin:0;border-width:3px;flex:none}
 a.alt{background:none;color:#5b6b7e;font-weight:600;min-height:40px;margin-top:6px}
-details.ref{margin-top:12px;text-align:left;border:1px solid #e1e7ef;border-radius:12px;padding:0 12px}
-details.ref summary{min-height:44px;display:flex;align-items:center;font-weight:600;font-size:.86rem;color:#33445c;cursor:pointer}
+/* Reference number + screenshot are always visible (no extra tap to reveal them) */
+.ref{margin-top:12px;text-align:left;border:1px solid #e1e7ef;border-radius:12px;padding:0 12px}
+.ref .reflabel{margin:0;min-height:44px;display:flex;align-items:center;font-weight:600;font-size:.86rem;color:#33445c}
 .refform{display:grid;gap:8px;padding-bottom:12px;min-width:0}.refform input{box-sizing:border-box;width:100%;min-width:0}.row .cp{min-width:0;padding:0 8px}.refform input[type=text]{min-height:44px;padding:0 12px;border:1.5px solid #cfd8e6;border-radius:12px;font:inherit;font-size:.95rem}
 .refform .shot{font-size:.82rem;color:#5b6b7e;display:grid;gap:4px}.refform .shot i{display:none}.refform input[type=file]{font-size:.8rem}
-.refform .cp{flex:none}details.ref .sent{margin:0 0 8px;font-size:.84rem;color:#1a7f37}details.ref .err{margin:0 0 8px;font-size:.84rem;color:#b42318}
+.refform .cp{flex:none}.ref .sent{margin:0 0 8px;font-size:.84rem;color:#1a7f37}.ref .err{margin:0 0 8px;font-size:.84rem;color:#b42318}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
 .approval{text-align:center;padding:6px 0 4px}.approval-ico{width:64px;height:64px;margin:0 auto 10px;border-radius:50%;background:#fff4e0;display:grid;place-items:center;font-size:30px}.approval h1{margin:0 0 6px;font-size:1.3rem;color:#14213d}.approval p{margin:0 0 14px;font-size:.9rem;color:#4a5b78;line-height:1.5}.approval-amt{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:16px;background:#f1f6ff;margin-bottom:14px}.approval-amt span{color:#7a8aa6;font-size:.85rem}.approval-amt strong{font-size:1.2rem;color:#2f6fe4}.approval-btn{display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 13px;border-radius:999px;background:#2f6fe4;color:#fff;font-weight:700;text-decoration:none}details.paydetails{margin-top:14px;border-top:1px solid #e8effb;padding-top:10px}details.paydetails>summary{cursor:pointer;font-weight:600;color:#2f6fe4;font-size:.9rem;margin-bottom:8px}
 </style>
@@ -143,8 +144,8 @@ details.ref summary{min-height:44px;display:flex;align-items:center;font-weight:
         <button type="button" class="cp" data-copy="<?php echo number_format((float)$co['amount'], 2, '.', ''); ?>">Copy amount</button>
     </div>
     <?php if(!$hasRef): ?><div class="wait"><div class="spin sm" aria-hidden="true"></div><span id="waitMsg">Waiting for your payment. Your ticket appears here automatically.</span></div><?php endif; ?>
-    <details class="ref"<?php echo ($refError !== '') ? ' open' : ''; ?>>
-        <summary>Paid already? Enter reference no.</summary>
+    <div class="ref">
+        <p class="reflabel">Paid already? Enter reference no.</p>
         <?php if(!empty($co['reference_number'])): ?><p class="sent"><strong>Sent.</strong> An operator will confirm reference <?php echo htmlspecialchars($co['reference_number']); ?> shortly.</p><?php endif; ?>
         <?php if($refError !== ''): ?><p class="err" role="alert"><?php echo htmlspecialchars($refError); ?></p><?php endif; ?>
         <form method="POST" enctype="multipart/form-data" class="refform">
@@ -153,7 +154,7 @@ details.ref summary{min-height:44px;display:flex;align-items:center;font-weight:
             <label class="shot"><i></i>Add screenshot (optional)<input type="file" name="shot" accept="image/jpeg,image/png"></label>
             <button type="submit" name="send_ref" value="1" class="cp">Submit</button>
         </form>
-    </details>
+    </div>
     <?php if($hasRef): ?></details><?php endif; ?>
     <p class="hint">Seats held until <?php echo htmlspecialchars($until); ?>.</p>
     <?php if(!$hasRef): ?><a href="my_reservations.php" class="alt">Back to my trips</a><?php endif; ?>
