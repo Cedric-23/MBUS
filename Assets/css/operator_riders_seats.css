@@ -1,0 +1,85 @@
+/* Operator Riders: seats drawn like the commuter seat map (soft canvas, seat icons).
+   Loaded after operator_riders.css. Colors: empty = green (free), paid = light blue, boarded = solid blue, unpaid = amber. */
+
+.riders-page .seat-key .key { width: 14px; height: 14px; border-radius: 5px 5px 4px 4px; border-width: 1.5px; }
+.riders-page .key.empty { background: #e8f7ee; border-color: #bfe8cf; }
+.riders-page .key.paid { background: #e4edff; border-color: #9db9f2; }
+.riders-page .key.boarded { background: #2f6fe4; border-color: #2f6fe4; }
+.riders-page .key.pending { background: #fff1d9; border-color: #f0c981; }
+
+.riders-page .rider-map {
+    gap: 12px;
+    padding: 18px 14px;
+    border: 1.5px solid #dde7f8;
+    border-radius: 28px;
+    background: #f6f9ff;
+}
+
+.riders-page .rider-map .seat-row { gap: 10px; }
+
+.riders-page .rseat {
+    position: relative;
+    height: 52px;
+    padding-bottom: 8px;
+    border-width: 1.5px;
+    border-radius: 16px 16px 10px 10px;
+    font-weight: 700;
+    box-shadow: none;
+}
+
+/* backrest outline + cushion bar */
+.riders-page .rseat::before {
+    content: "";
+    position: absolute;
+    left: -4px;
+    right: -4px;
+    bottom: 5px;
+    height: 42%;
+    border: 1.5px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 8px;
+    opacity: .28;
+    pointer-events: none;
+}
+.riders-page .rseat::after {
+    content: "";
+    position: absolute;
+    left: 18%;
+    right: 18%;
+    bottom: 4px;
+    height: 4px;
+    border-radius: 4px;
+    background: currentColor;
+    opacity: .35;
+    pointer-events: none;
+}
+/* the walk-in "W" badge used ::after; draw it as a small corner badge instead */
+.riders-page .rseat.walkin::after {
+    content: "W";
+    left: auto;
+    right: 5px;
+    top: 3px;
+    bottom: auto;
+    width: auto;
+    height: auto;
+    background: none;
+    font-size: .625rem;
+    font-weight: 800;
+    opacity: .8;
+}
+
+.riders-page .rseat.empty { background: #e8f7ee; border-color: #bfe8cf; color: #17703f; }
+.riders-page .rseat.paid { background: #e4edff; border-color: #9db9f2; color: #1d4fb4; }
+.riders-page .rseat.boarded { background: #2f6fe4; border-color: #2f6fe4; color: #fff; }
+.riders-page .rseat.pending { background: #fff1d9; border-color: #f0c981; color: #8a5a00; }
+
+.riders-page .rseat.open { border-style: solid; }
+.riders-page .rseat.open:hover,
+.riders-page .rseat.open:focus-visible,
+.riders-page .rseat.open.ready { background: #d6f1e1; border-color: #8fd5ad; color: #17703f; }
+.riders-page .rseat.locked { opacity: .45; }
+
+/* no seat here (removed in the bus layout) */
+.riders-page .rseat.gap { visibility: hidden; }
+.riders-page .rseat.gap::before,
+.riders-page .rseat.gap::after { display: none; }
