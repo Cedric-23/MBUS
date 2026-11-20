@@ -114,6 +114,69 @@ registerForm.addEventListener("submit", function (e) {
     }
 });
 
+/* If the server takes too long (slow phone connection, big upload), never leave the button spinning forever:
+   after a minute put the button back and tell the applicant what to do. A duplicate submit is harmless because the
+   server rejects a second pending application for the same email. */
+registerForm.addEventListener("submit", function (e) {
+    if (e.defaultPrevented) return;
+    setTimeout(function () {
+        document.querySelectorAll(".is-busy").forEach(function (b) {
+            b.classList.remove("is-busy");
+            b.removeAttribute("aria-busy");
+            b.style.pointerEvents = "";
+            if (b.dataset.label) b.textContent = b.dataset.label;
+        });
+        if (!document.getElementById("submit-timeout-note")) {
+            const note = document.createElement("div");
+            note.id = "submit-timeout-note";
+            note.className = "form-alert error";
+            note.setAttribute("role", "alert");
+            note.textContent = "This is taking longer than expected. Check your connection and try again in a minute. If you already submitted, wait a moment: it may have gone through.";
+            registerForm.parentNode.insertBefore(note, registerForm);
+            note.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    }, 60000);
+});
+
+/* Shrink phone photos in the browser before upload: a 4 MB camera photo becomes a few hundred KB,
+   so the application uploads and saves in seconds instead of minutes. PDFs are left untouched. */
+function shrinkImage(file, maxDim, quality) {
+    return new Promise(function (resolve) {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = function () {
+            const k = Math.min(1, maxDim / Math.max(img.width, img.height));
+            const c = document.createElement("canvas");
+            c.width = Math.max(1, Math.round(img.width * k));
+            c.height = Math.max(1, Math.round(img.height * k));
+            const ctx = c.getContext("2d");
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(0, 0, c.width, c.height);
+            ctx.drawImage(img, 0, 0, c.width, c.height);
+            URL.revokeObjectURL(url);
+            c.toBlob(function (blob) { resolve(blob); }, "image/jpeg", quality);
+        };
+        img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+        img.src = url;
+    });
+}
+
+async function optimizeImage(file, targetBytes) {
+    if (!/^image\/(jpeg|png)$/.test(file.type)) return file;
+    if (file.size <= 200 * 1024) return file;
+    const attempts = [[1600, 0.8], [1280, 0.7], [1024, 0.6], [800, 0.5]];
+    let best = null;
+    for (const attempt of attempts) {
+        const blob = await shrinkImage(file, attempt[0], attempt[1]);
+        if (!blob) break;
+        best = blob;
+        if (blob.size <= targetBytes) break;
+    }
+    if (!best || best.size >= file.size) return file;
+    const base = (file.name || "photo").replace(/\.[^.]+$/, "");
+    return new File([best], base + ".jpg", { type: "image/jpeg" });
+}
+
 document.querySelectorAll(".upload-group").forEach(function (group) {
     const input = group.querySelector("input[type='file']");
     const browse = group.querySelector(".document-input-button button");
@@ -124,12 +187,15 @@ document.querySelectorAll(".upload-group").forEach(function (group) {
     const maxFileSize = Number(input.dataset.maxBytes || 3 * 1024 * 1024);
     const defaultName = name.textContent;
     let objectUrl = null;
+    let changeToken = 0;
 
     browse.addEventListener("click", function () {
         input.click();
     });
 
-    input.addEventListener("change", function () {
+    input.addEventListener("change", async function () {
+        const token = ++changeToken;
+
         if (objectUrl) {
             URL.revokeObjectURL(objectUrl);
             objectUrl = null;
@@ -142,11 +208,30 @@ document.querySelectorAll(".upload-group").forEach(function (group) {
         frame.classList.remove("active");
         preview.classList.remove("active");
 
-        const file = input.files[0];
+        let file = input.files[0];
 
         if (!file) {
             name.textContent = defaultName;
             return;
+        }
+
+        if (/^image\//.test(file.type)) {
+            input.setCustomValidity("Still preparing your photo. Please wait a moment.");
+            name.textContent = "Preparing photo…";
+            try {
+                const small = await optimizeImage(file, Math.min(maxFileSize, 600 * 1024));
+                if (token !== changeToken) return;
+                if (small !== file) {
+                    try {
+                        const transfer = new DataTransfer();
+                        transfer.items.add(small);
+                        input.files = transfer.files;
+                        file = input.files[0] || file;
+                    } catch (_) { /* browser can't swap the file: fall back to the original */ }
+                }
+            } catch (_) { /* keep the original file */ }
+            if (token !== changeToken) return;
+            input.setCustomValidity("");
         }
 
         if (file.size > maxFileSize) {
