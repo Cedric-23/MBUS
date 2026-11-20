@@ -8,6 +8,8 @@
     const css = document.createElement('style');
     css.textContent = '.pw-wrap{position:relative;display:block;width:100%}.pw-wrap>input{padding-right:52px!important;width:100%;box-sizing:border-box}' +
         '.password-toggle,.pw-eye{display:grid!important;place-items:center;width:40px;height:40px;padding:0!important;border:0;background:transparent;color:#667085;cursor:pointer;-webkit-tap-highlight-color:transparent}' +
+        /* admin dialogs (Add operator, etc.): sit the eye inside the field, on the right, centred on the input */
+        '.ad-field .pw-wrap>.pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:1;margin:0}' +
         '.password-toggle:focus-visible,.pw-eye:focus-visible{outline:3px solid rgba(30,58,95,.35);outline-offset:0;border-radius:10px}';
     document.head.appendChild(css);
 
