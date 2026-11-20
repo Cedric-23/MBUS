@@ -80,13 +80,16 @@ if(isset($_POST['update_bus'])){
         $bus_type = (string)($_POST['bus_type'] ?? '');
         $capacity = (int)($_POST['capacity'] ?? 0);
         $operator_id = (int)($_POST['operator_id'] ?? 0);
+        $prev_operator_id = (int)($_POST['prev_operator_id'] ?? 0);
         if($bus_id < 1 || $bus_number === '' || !in_array($bus_type, ['Aircon','Ordinary'], true) || $capacity < 1 || $capacity > 100){
             $error = "Please provide a bus number, a type and a capacity from 1 to 100.";
         } else {
             $u = mbus_db_prepare($conn, "UPDATE buses SET bus_number = ?, bus_type = ?, capacity = ? WHERE bus_id = ?", [$bus_number, $bus_type, $capacity, $bus_id]);
             if($u === false){
                 $error = "Bus could not be updated.";
-            } elseif(!mbus_set_bus_operator($conn, $bus_id, $operator_id)){
+            } elseif($operator_id !== $prev_operator_id && !mbus_set_bus_operator($conn, $bus_id, $operator_id)){
+                /* Only touch assignments when the admin actually changed the operator: a plain edit (number/type/seats)
+                   must never drop operators that already have this bus. */
                 $error = "Bus saved, but the operator could not be assigned. Please try again.";
             } else {
                 $success = $operator_id > 0 ? "Bus updated and assigned" : "Bus updated";
@@ -216,7 +219,7 @@ while($opq !== false && ($orow = mbus_db_fetch_assoc($opq))){ $operator_options[
 <div class="ad-cards">
 <?php foreach($bus_list as $row):
     $is_ac = strtolower($row['bus_type']) === 'aircon';
-    $edit = ['bus_id'=>(int)$row['bus_id'],'bus_number'=>$row['bus_number'],'bus_type'=>$row['bus_type'],'capacity'=>(int)$row['capacity'],'operator_id'=>(int)($row['operator_id'] ?? 0)];
+    $edit = ['bus_id'=>(int)$row['bus_id'],'bus_number'=>$row['bus_number'],'bus_type'=>$row['bus_type'],'capacity'=>(int)$row['capacity'],'operator_id'=>(int)($row['operator_id'] ?? 0),'prev_operator_id'=>(int)($row['operator_id'] ?? 0)];
 ?>
 <article class="ad-card" data-q="<?php echo htmlspecialchars(strtolower('bus '.$row['bus_number'].' '.$row['bus_type'].' '.($row['operators'] ?? '')), ENT_QUOTES); ?>">
     <header>
@@ -242,6 +245,7 @@ while($opq !== false && ($orow = mbus_db_fetch_assoc($opq))){ $operator_options[
         <header class="ad-dialog-head"><h2 id="adTitle">Add bus</h2><button type="button" class="ad-x" data-ad-close aria-label="Close"><i class="fa fa-xmark" aria-hidden="true"></i></button></header>
         <div class="ad-dialog-body">
             <input type="hidden" name="bus_id">
+            <input type="hidden" name="prev_operator_id" value="0">
             <label class="ad-field"><span>Bus number</span><input type="text" name="bus_number" required placeholder="e.g. 101"></label>
             <div class="ad-two">
                 <label class="ad-field"><span>Type</span><select name="bus_type" required><option value="Aircon">Aircon</option><option value="Ordinary">Ordinary</option></select></label>

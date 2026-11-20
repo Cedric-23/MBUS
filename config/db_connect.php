@@ -147,6 +147,8 @@ try {
         // costs several round trips on EVERY page; a persistent connection pays that once per web worker.
         PDO::ATTR_PERSISTENT => true,
     ]);
+    // A persistent connection can come back mid-transaction (or aborted) if the previous request died; clear it.
+    if ($pdo->inTransaction()) { try { $pdo->rollBack(); } catch (Throwable $e) { $pdo->exec('ROLLBACK'); } }
     $pdo->exec("SET TIME ZONE '" . str_replace("'", "''", mbus_timezone()) . "'");
     // Schema upgrades are ~35 extra round trips to the database. Run them once per version, not on every page.
     $schemaVersion = '2026-11-20a';
