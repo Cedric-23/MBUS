@@ -113,10 +113,10 @@ $h = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
         </div>
     </header>
 
-    <nav class="ar-page-nav" aria-label="Application navigation">
-        <a class="ar-back-link" href="manage_operators.php" aria-label="Back to Manage Operators"><i class="fa fa-arrow-left" aria-hidden="true"></i></a>
-    <a class="ad-btn" href="operator_applications.php"><i class="fa fa-user-check" aria-hidden="true"></i><span>Operator applications</span></a>
-    </nav>
+    <nav class="ad-seg vf-tabs" aria-label="Application type">
+    <a href="operator_applications.php" class="">Operator applications</a>
+    <a href="conductor_applications.php" class="on" aria-current="page">Conductor applications</a>
+</nav>
 
     <?php if ($flash): ?><div class="alert alert-success" role="status"><?php echo $h($flash); ?></div><?php endif; ?>
     <?php if ($error): ?><div class="alert alert-error" role="alert"><?php echo $h($error); ?></div><?php endif; ?>

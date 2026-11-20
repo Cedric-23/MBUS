@@ -153,9 +153,9 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
             </div>
 </header>
 
-<nav class="ar-page-nav" aria-label="Application navigation">
-    <a class="ar-back-link" href="manage_operators.php" aria-label="Back to Manage Operators"><i class="fa fa-arrow-left" aria-hidden="true"></i></a>
-<a class="ad-btn" href="conductor_applications.php"><i class="fa fa-id-badge" aria-hidden="true"></i><span>Conductor applications</span></a>
+<nav class="ad-seg vf-tabs" aria-label="Application type">
+    <a href="operator_applications.php" class="on" aria-current="page">Operator applications</a>
+    <a href="conductor_applications.php" class="">Conductor applications</a>
 </nav>
 
 <?php if($success !== ''): ?><div class="alert alert-success" role="status"><?php echo htmlspecialchars($success); ?></div><?php endif; ?>
