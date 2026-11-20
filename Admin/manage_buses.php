@@ -15,27 +15,62 @@ if(
 include "../config/db_connect.php";
 include "../Includes/csrf.php";
 
+/* Give a bus to one operator (0 = unassigned). Replaces whoever had the bus before.
+   An operator can still keep several buses: each bus has one operator, an operator can have many buses. */
+function mbus_set_bus_operator($conn, int $bus_id, int $operator_id): bool {
+    $pdo = $conn->pdo;
+    try {
+        $pdo->beginTransaction();
+        if($operator_id > 0){
+            $chk = $pdo->prepare("SELECT 1 FROM users WHERE user_id = ? AND LOWER(user_type) IN ('operator', 'driver')");
+            $chk->execute([$operator_id]);
+            if(!$chk->fetchColumn()){ $pdo->rollBack(); return false; }
+        }
+        $pdo->prepare("DELETE FROM operator_bus_assignments WHERE bus_id = ?")->execute([$bus_id]);
+        if($operator_id > 0){
+            $pdo->prepare("INSERT INTO operator_bus_assignments (operator_id, bus_id) VALUES (?, ?)")->execute([$operator_id, $bus_id]);
+        }
+        $pdo->commit();
+        return true;
+    } catch(Throwable $e){
+        if($pdo->inTransaction()) $pdo->rollBack();
+        error_log('Bus operator assignment failed: ' . $e->getMessage());
+        return false;
+    }
+}
+
 /* ADD BUS */
 if(isset($_POST['add_bus'])){
     // Validate CSRF token
     if(!csrf_validate_token()){
         $error = "Security validation failed. Please try again.";
     } else {
-        $bus_number = trim($_POST['bus_number']);
-        $bus_type   = trim($_POST['bus_type']);
-        $capacity   = trim($_POST['capacity']);
+        $bus_number = trim((string)($_POST['bus_number'] ?? ''));
+        $bus_type   = (string)($_POST['bus_type'] ?? '');
+        $capacity   = (int)($_POST['capacity'] ?? 0);
+        $operator_id = (int)($_POST['operator_id'] ?? 0);
 
-        // Use prepared statement
-        mbus_db_prepare($conn, "
-INSERT INTO buses (bus_number, bus_type, capacity)
-VALUES (?, ?, ?)
-", [$bus_number, $bus_type, $capacity]);
-
-        $success = "Bus added successfully";
+        if($bus_number === '' || !in_array($bus_type, ['Aircon','Ordinary'], true) || $capacity < 1 || $capacity > 100){
+            $error = "Please provide a bus number, a type and a capacity from 1 to 100.";
+        } else {
+            try {
+                $st = $conn->pdo->prepare("INSERT INTO buses (bus_number, bus_type, capacity) VALUES (?, ?, ?) RETURNING bus_id");
+                $st->execute([$bus_number, $bus_type, $capacity]);
+                $new_bus_id = (int)$st->fetchColumn();
+                if($operator_id > 0 && $new_bus_id > 0 && !mbus_set_bus_operator($conn, $new_bus_id, $operator_id)){
+                    $success = "Bus added, but the operator could not be assigned. Open Edit to assign one.";
+                } else {
+                    $success = "Bus added successfully";
+                }
+            } catch(Throwable $e){
+                error_log('Bus insert failed: ' . $e->getMessage());
+                $error = "Bus could not be added. Please try again.";
+            }
+        }
     }
 }
 
-/* UPDATE BUS */
+/* UPDATE BUS (details + assigned operator) */
 if(isset($_POST['update_bus'])){
     if(!csrf_validate_token()){
         $error = "Security validation failed. Please try again.";
@@ -44,12 +79,18 @@ if(isset($_POST['update_bus'])){
         $bus_number = trim((string)($_POST['bus_number'] ?? ''));
         $bus_type = (string)($_POST['bus_type'] ?? '');
         $capacity = (int)($_POST['capacity'] ?? 0);
+        $operator_id = (int)($_POST['operator_id'] ?? 0);
         if($bus_id < 1 || $bus_number === '' || !in_array($bus_type, ['Aircon','Ordinary'], true) || $capacity < 1 || $capacity > 100){
             $error = "Please provide a bus number, a type and a capacity from 1 to 100.";
         } else {
             $u = mbus_db_prepare($conn, "UPDATE buses SET bus_number = ?, bus_type = ?, capacity = ? WHERE bus_id = ?", [$bus_number, $bus_type, $capacity, $bus_id]);
-            $success = $u === false ? "Bus could not be updated." : "Bus updated";
-            if($u === false){ $error = $success; unset($success); }
+            if($u === false){
+                $error = "Bus could not be updated.";
+            } elseif(!mbus_set_bus_operator($conn, $bus_id, $operator_id)){
+                $error = "Bus saved, but the operator could not be assigned. Please try again.";
+            } else {
+                $success = $operator_id > 0 ? "Bus updated and assigned" : "Bus updated";
+            }
         }
     }
 }
@@ -60,6 +101,7 @@ if(isset($_POST['delete_bus'])){
         $error = "Security validation failed. Please try again.";
     } else {
         $bus_id = (int)$_POST['bus_id'];
+        mbus_db_prepare($conn, "DELETE FROM operator_bus_assignments WHERE bus_id = ?", [$bus_id]);
         mbus_db_prepare($conn, "DELETE FROM buses WHERE bus_id = ?", [$bus_id]);
         $success = "Bus deleted successfully";
     }
@@ -144,21 +186,27 @@ if(isset($_POST['delete_bus'])){
 </header>
 
 <?php if(isset($success)): ?>
-<div class="alert alert-success" role="alert"><?php echo $success; ?></div>
+<div class="alert alert-success" role="alert"><?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?></div>
 <?php endif; ?>
 <?php if(isset($error)): ?>
-<div class="alert alert-error" role="alert"><?php echo $error; ?></div>
+<div class="alert alert-error" role="alert"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
 <?php endif; ?>
 
 <?php
 $bq = mbus_db_query($conn, "
     SELECT b.*,
       (SELECT COUNT(*) FROM schedule sc WHERE sc.bus_id=b.bus_id AND sc.departure_time >= NOW() AND sc.schedule_status='Active') AS upcoming,
-      (SELECT string_agg(u.full_name, ', ') FROM operator_bus_assignments oa JOIN users u ON u.user_id=oa.operator_id WHERE oa.bus_id=b.bus_id) AS operators
+      (SELECT string_agg(u.full_name, ', ') FROM operator_bus_assignments oa JOIN users u ON u.user_id=oa.operator_id WHERE oa.bus_id=b.bus_id) AS operators,
+      (SELECT oa.operator_id FROM operator_bus_assignments oa WHERE oa.bus_id=b.bus_id ORDER BY oa.assignment_id LIMIT 1) AS operator_id
     FROM buses b ORDER BY b.bus_number");
 $bus_list = [];
 while($bq !== false && ($row = mbus_db_fetch_assoc($bq))){ $bus_list[] = $row; }
 $aircon = count(array_filter($bus_list, fn($x) => strtolower($x['bus_type']) === 'aircon'));
+
+/* operators the admin can give a bus to */
+$opq = mbus_db_query($conn, "SELECT user_id, full_name FROM users WHERE LOWER(user_type) IN ('operator', 'driver') ORDER BY full_name");
+$operator_options = [];
+while($opq !== false && ($orow = mbus_db_fetch_assoc($opq))){ $operator_options[] = $orow; }
 ?>
 <div class="ad-toolbar">
     <button type="button" class="ad-btn primary" data-ad-open="add" data-title="Add bus" data-action="add_bus"><i class="fa fa-plus" aria-hidden="true"></i> Add bus</button>
@@ -168,7 +216,7 @@ $aircon = count(array_filter($bus_list, fn($x) => strtolower($x['bus_type']) ===
 <div class="ad-cards">
 <?php foreach($bus_list as $row):
     $is_ac = strtolower($row['bus_type']) === 'aircon';
-    $edit = ['bus_id'=>(int)$row['bus_id'],'bus_number'=>$row['bus_number'],'bus_type'=>$row['bus_type'],'capacity'=>(int)$row['capacity']];
+    $edit = ['bus_id'=>(int)$row['bus_id'],'bus_number'=>$row['bus_number'],'bus_type'=>$row['bus_type'],'capacity'=>(int)$row['capacity'],'operator_id'=>(int)($row['operator_id'] ?? 0)];
 ?>
 <article class="ad-card" data-q="<?php echo htmlspecialchars(strtolower('bus '.$row['bus_number'].' '.$row['bus_type'].' '.($row['operators'] ?? '')), ENT_QUOTES); ?>">
     <header>
@@ -181,7 +229,7 @@ $aircon = count(array_filter($bus_list, fn($x) => strtolower($x['bus_type']) ===
         <div><dt>Operator</dt><dd><?php echo !empty($row['operators']) ? htmlspecialchars($row['operators']) : '<span class="muted">Unassigned</span>'; ?></dd></div>
     </dl>
     <footer>
-        <button type="button" class="ad-btn sm" data-ad-open="edit" data-title="Edit bus" data-action="update_bus" data-edit="<?php echo htmlspecialchars(json_encode($edit), ENT_QUOTES); ?>"><i class="fa fa-pen" aria-hidden="true"></i> Edit</button>
+        <button type="button" class="ad-btn sm" data-ad-open="edit" data-title="Edit bus" data-action="update_bus" data-edit="<?php echo htmlspecialchars(json_encode($edit), ENT_QUOTES); ?>"><i class="fa fa-pen" aria-hidden="true"></i> <?php echo empty($row['operators']) ? 'Edit / assign' : 'Edit'; ?></button>
         <form method="POST" data-confirm="Delete this bus?"><?php csrf_field(); ?><input type="hidden" name="bus_id" value="<?php echo (int)$row['bus_id']; ?>"><button type="submit" name="delete_bus" class="ad-icon danger" aria-label="Delete bus"><i class="fa fa-trash" aria-hidden="true"></i></button></form>
     </footer>
 </article>
@@ -199,6 +247,14 @@ $aircon = count(array_filter($bus_list, fn($x) => strtolower($x['bus_type']) ===
                 <label class="ad-field"><span>Type</span><select name="bus_type" required><option value="Aircon">Aircon</option><option value="Ordinary">Ordinary</option></select></label>
                 <label class="ad-field"><span>Seats</span><input type="number" name="capacity" min="1" max="100" required placeholder="40"></label>
             </div>
+            <label class="ad-field"><span>Operator</span>
+                <select name="operator_id">
+                    <option value="0">Unassigned</option>
+                    <?php foreach($operator_options as $op): ?>
+                    <option value="<?php echo (int)$op['user_id']; ?>"><?php echo htmlspecialchars($op['full_name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
         </div>
         <footer class="ad-dialog-foot">
             <button type="button" class="ad-btn" data-ad-close>Cancel</button>
