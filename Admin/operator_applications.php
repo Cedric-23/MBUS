@@ -154,8 +154,8 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
 </header>
 
 <nav class="ad-seg vf-tabs ar-type-tabs" aria-label="Application type">
-    <a href="operator_applications.php" class="on" aria-current="page">Operators</a>
     <a href="conductor_applications.php" class="">Conductors</a>
+    <a href="operator_applications.php" class="on" aria-current="page">Drivers</a>
 </nav>
 
 <?php if($success !== ''): ?><div class="alert alert-success" role="status"><?php echo htmlspecialchars($success); ?></div><?php endif; ?>

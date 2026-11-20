@@ -114,8 +114,8 @@ $h = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
     </header>
 
     <nav class="ad-seg vf-tabs ar-type-tabs" aria-label="Application type">
-    <a href="operator_applications.php" class="">Operators</a>
     <a href="conductor_applications.php" class="on" aria-current="page">Conductors</a>
+    <a href="operator_applications.php" class="">Drivers</a>
 </nav>
 
     <?php if ($flash): ?><div class="alert alert-success" role="status"><?php echo $h($flash); ?></div><?php endif; ?>

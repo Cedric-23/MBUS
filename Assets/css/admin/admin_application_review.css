@@ -251,3 +251,7 @@
   .ca-actions .ad-btn.primary { justify-content: center; min-height: 46px; }
   .ca-reject summary { width: 100%; justify-content: center; min-height: 46px; }
 }
+/* centre everything inside the tabs (no stray margins from older tab styles) */
+.ar-type-tabs a, .ar-status-tabs a { margin: 0 !important; text-align: center; }
+.ar-type-tabs a { padding: 0 !important; }
+.ar-status-tabs a .vf-count { margin: 0 !important; width: 100%; text-align: center; }
