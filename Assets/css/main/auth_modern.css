@@ -94,3 +94,12 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
   .form-container{padding:22px 20px 34px}
 }
 @media(min-width:901px){.auth-hero-m{display:none}}
+
+/* keep the mobile layout inside the screen so rounded shapes never get stretched or zoomed */
+@media(max-width:900px){
+  html,body{max-width:100%;overflow-x:hidden}
+  .right-container,.form-container,.form-body,.driver,.driver *,.passenger{min-width:0;max-width:100%;box-sizing:border-box}
+  .auth-tabs{width:100%;box-sizing:border-box}
+  .auth-tabs a{white-space:nowrap;min-width:0}
+  .form-container{overflow:hidden}
+}

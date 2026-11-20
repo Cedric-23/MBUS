@@ -331,8 +331,13 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
         <div class="right-container">
             <div class="form-container">
                 <div class="auth-tabs" role="tablist">
+                    <?php if ($user_type === 'passenger'): ?>
                     <a href="login.php" role="tab">Login</a>
                     <a href="register.php" class="on" role="tab">Register</a>
+                    <?php else: ?>
+                    <a href="register.php?type=conductor" class="<?= $user_type === 'conductor' ? 'on' : '' ?>" role="tab">Conductor</a>
+                    <a href="register.php?type=driver" class="<?= $user_type === 'driver' ? 'on' : '' ?>" role="tab">Driver/Operator</a>
+                    <?php endif; ?>
                 </div>
                 <div class="form-header">
                     <div class="form-header-text">
