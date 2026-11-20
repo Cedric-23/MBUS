@@ -1,3 +1,27 @@
+/* Upload rows: show the chosen photo as a small thumbnail in the row (the big preview box is hidden by CSS)
+   and turn "Browse" into "Change" once a file is picked. register.js still does the validation and resizing. */
+(() => {
+    document.querySelectorAll('.upload-group').forEach(group => {
+        const icon = group.querySelector('.upload-icon');
+        const img = group.querySelector('.document-preview-image');
+        const input = group.querySelector('input[type="file"]');
+        const button = group.querySelector('.document-input-button button');
+        if (!icon || !img || !input) return;
+        const idleLabel = button ? button.textContent : '';
+
+        const sync = () => {
+            const src = img.getAttribute('src');
+            icon.classList.toggle('has-thumb', Boolean(src));
+            icon.style.backgroundImage = src ? 'url("' + src + '")' : '';
+            if (button) button.textContent = input.files && input.files.length ? 'Change' : idleLabel;
+        };
+
+        new MutationObserver(sync).observe(img, { attributes: true, attributeFilter: ['src'] });
+        input.addEventListener('change', () => setTimeout(sync, 0));
+        sync();
+    });
+})();
+
 (() => {
     const builder = document.querySelector('[data-seat-builder]');
     if (!builder) return;
