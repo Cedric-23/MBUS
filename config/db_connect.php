@@ -136,12 +136,16 @@ function mbus_run_schema_upgrades(PDO $pdo): void {
   }
 }
 
-$dsn = "pgsql:host=$host;port=$port;dbname=$database;sslmode=require";
+// connect_timeout: never hang forever if the database is unreachable.
+$dsn = "pgsql:host=$host;port=$port;dbname=$database;sslmode=require;connect_timeout=10";
 
 try {
     $pdo = new PDO($dsn, $user, $password, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        // Reuse the database connection between requests. Opening a new TLS connection to a far-away database
+        // costs several round trips on EVERY page; a persistent connection pays that once per web worker.
+        PDO::ATTR_PERSISTENT => true,
     ]);
     $pdo->exec("SET TIME ZONE '" . str_replace("'", "''", mbus_timezone()) . "'");
     // Schema upgrades are ~35 extra round trips to the database. Run them once per version, not on every page.
