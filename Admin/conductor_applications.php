@@ -114,7 +114,8 @@ $h = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
     </header>
 
     <nav class="ar-page-nav" aria-label="Application navigation">
-        <a class="ad-btn" href="operator_applications.php"><i class="fa fa-user-check" aria-hidden="true"></i><span>Operator applications</span></a>
+        <a class="ar-back-link" href="manage_operators.php" aria-label="Back to Manage Operators"><i class="fa fa-arrow-left" aria-hidden="true"></i></a>
+    <a class="ad-btn" href="operator_applications.php"><i class="fa fa-user-check" aria-hidden="true"></i><span>Operator applications</span></a>
     </nav>
 
     <?php if ($flash): ?><div class="alert alert-success" role="status"><?php echo $h($flash); ?></div><?php endif; ?>

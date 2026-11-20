@@ -219,3 +219,7 @@
 @media (min-width: 769px) { .ar-page-nav .ad-btn { flex: 0 0 auto; } }
 .ar-page-nav .ad-btn { flex: 1 1 100%; justify-content: center; }
 @media (min-width: 769px) { .ar-page-nav .ad-btn { flex: 0 0 auto; } }
+/* round back arrow, fixed size so it never stretches into an oval */
+.ar-page-nav { flex-wrap: nowrap; justify-content: flex-start; align-items: center; gap: .6rem; }
+.ar-page-nav .ar-back-link { flex: 0 0 44px !important; width: 44px !important; height: 44px !important; min-height: 44px !important; max-width: 44px; padding: 0 !important; border-radius: 50% !important; aspect-ratio: 1 / 1; box-sizing: border-box; }
+.ar-page-nav .ad-btn { flex: 1 1 auto; justify-content: center; }
