@@ -103,3 +103,7 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
   .auth-tabs a{white-space:nowrap;min-width:0}
   .form-container{overflow:hidden}
 }
+@media(max-width:900px){
+  .form-container{border-radius:40px 40px 0 0}
+  .auth-back{border-radius:50%;width:44px;height:44px;aspect-ratio:1/1;flex:none}
+}

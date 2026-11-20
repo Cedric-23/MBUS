@@ -158,6 +158,7 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
     </head>
     <body class="auth-login">
         <div class="auth-hero-m">
+            <a class="auth-back" href="index.php" aria-label="Back to home"><i data-lucide="arrow-left"></i></a>
             <h1>Welcome back</h1>
             <p>Sign in to manage your trips and bookings.</p>
         </div>

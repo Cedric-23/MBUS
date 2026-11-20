@@ -305,7 +305,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
     </head>
     <body class="auth-register">
         <div class="auth-hero-m">
-            <a class="auth-back" href="javascript:history.length>1?history.back():location.href='index.php'" aria-label="Go back"><i data-lucide="arrow-left"></i></a>
+            <a class="auth-back" href="index.php" aria-label="Back to home"><i data-lucide="arrow-left"></i></a>
             <h1>Create your account</h1>
             <p>Plan your next bus trip in just a few steps.</p>
         </div>
