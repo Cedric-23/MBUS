@@ -1,14 +1,85 @@
+/* ---------- simple upload rows (license, registration, bus photos) ---------- */
+.auth-register .upload-group .upload-document-group {
+    display: flex !important;
+    align-items: center;
+    gap: 12px;
+    min-height: 0 !important;
+    padding: 10px 12px !important;
+    border: 1.5px dashed #c9d8ee !important;
+    border-radius: 14px !important;
+    background: #fff !important;
+}
+
+.auth-register .upload-group .upload-icon {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 46px !important;
+    height: 46px !important;
+    border-radius: 12px !important;
+    background: #eaf1ff center / cover no-repeat;
+    color: #2f6fe4;
+    overflow: hidden;
+}
+
+.auth-register .upload-group .upload-icon.has-thumb svg,
+.auth-register .upload-group .upload-icon.has-thumb i { display: none; }
+
+.auth-register .upload-group .document-desc {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex !important;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.auth-register .upload-group .document-desc .document-name {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #14213d;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.auth-register .upload-group .document-desc span:last-child {
+    color: #7a8aa6;
+    font-size: 12px;
+}
+
+.auth-register .upload-group .document-input-button { flex: none; width: auto !important; }
+
+.auth-register .upload-group .document-input-button button {
+    width: auto !important;
+    min-height: 38px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 999px;
+    background: #2f6fe4;
+    color: #fff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* the big preview box is gone: the photo shows as a small thumbnail in the row instead */
+.auth-register .upload-group .document-preview,
+.auth-register .upload-group .document-preview.active { display: none !important; }
+
 .bus-photo-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
 }
 
+/* ---------- seat builder ---------- */
 .seat-builder {
     margin-top: 20px;
     padding: 18px;
-    border: 1px solid #dce5ef;
-    border-radius: 16px;
+    border: 1px solid #dde7f8;
+    border-radius: 24px;
     background: #f8fbff;
 }
 
@@ -34,20 +105,21 @@
 
 .seat-layout-button {
     min-height: 40px;
-    padding: 8px 12px;
-    border: 1px solid #cbd8e7;
-    border-radius: 10px;
+    padding: 8px 14px;
+    border: 1.5px solid #cfe0fb;
+    border-radius: 999px;
     background: #fff;
-    color: #174a7e;
+    color: #2f6fe4;
     font: inherit;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
 }
 
-.seat-layout-button:hover { background: #eff6ff; }
+.seat-layout-button:hover { background: #eef4ff; }
+.seat-layout-button:disabled { opacity: .5; cursor: not-allowed; }
 .seat-layout-button:focus-visible,
-.seat-cell:focus-visible { outline: 3px solid #60a5fa; outline-offset: 2px; }
+.seat-builder .seat-cell:focus-visible { outline: 3px solid rgba(47, 111, 228, .4); outline-offset: 2px; }
 
 .seat-builder-meta {
     margin: 14px 0 9px;
@@ -56,58 +128,85 @@
 }
 
 .seat-builder-meta [data-seat-count] {
-    color: #123c67;
+    color: #14213d;
     font-weight: 700;
 }
 
+/* same look as the commuter seat map: soft canvas, seats drawn as seat icons */
 .seat-layout-preview {
     display: grid;
     justify-content: center;
-    gap: 8px;
-    max-height: 230px;
+    gap: 10px;
+    max-height: 280px;
     overflow: auto;
-    padding: 14px;
-    border: 1px solid #e2eaf3;
-    border-radius: 12px;
-    background: #fff;
+    padding: 16px 12px;
+    border: 1.5px solid #dde7f8;
+    border-radius: 24px;
+    background: #f6f9ff;
 }
 
-.seat-row {
+.seat-layout-preview .seat-row {
     display: grid;
-    grid-template-columns: repeat(2, 42px) 28px repeat(2, 42px);
+    grid-template-columns: repeat(2, 46px) 26px repeat(2, 46px);
     align-items: center;
     gap: 8px;
 }
 
-.seat-cell {
-    min-width: 42px;
-    min-height: 38px;
-    border: 1px solid #cbd5e1;
-    border-radius: 9px;
-    background: #f1f5f9;
-    color: #6b7280;
+.seat-builder .seat-cell {
+    position: relative;
+    min-width: 46px;
+    height: 46px;
+    padding: 0 0 8px;
+    border: 1.5px solid #bfe8cf;
+    border-radius: 14px 14px 10px 10px;
+    background: #e8f7ee;
+    color: #17703f;
     font: inherit;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
 }
 
-.seat-cell.is-open {
-    border-color: #1d75c9;
-    background: #e7f3ff;
-    color: #14538d;
+.seat-builder .seat-cell::before {
+    content: "";
+    position: absolute;
+    left: -3px;
+    right: -3px;
+    bottom: 4px;
+    height: 42%;
+    border: 1.5px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 8px;
+    opacity: .28;
+    pointer-events: none;
 }
 
-.seat-cell.is-removed {
-    border-style: dashed;
-    background: #fff;
-    color: #94a3b8;
+.seat-builder .seat-cell::after {
+    content: "";
+    position: absolute;
+    left: 18%;
+    right: 18%;
+    bottom: 3px;
+    height: 4px;
+    border-radius: 4px;
+    background: currentColor;
+    opacity: .35;
+    pointer-events: none;
 }
+
+.seat-builder .seat-cell.is-removed {
+    border: 1.5px dashed #c5d0e0;
+    background: #fff;
+    color: #a3aec3;
+}
+
+.seat-builder .seat-cell.is-removed::before,
+.seat-builder .seat-cell.is-removed::after { display: none; }
 
 .seat-aisle {
     display: grid;
     place-items: center;
-    color: #94a3b8;
+    color: #a3aec3;
     font-size: 10px;
     letter-spacing: .08em;
     writing-mode: vertical-rl;
@@ -117,6 +216,6 @@
     .bus-photo-grid { grid-template-columns: minmax(0, 1fr); }
     .seat-builder { padding: 14px; }
     .seat-builder-head { align-items: flex-start; flex-direction: column; }
-    .seat-row { grid-template-columns: repeat(2, 38px) 22px repeat(2, 38px); gap: 6px; }
-    .seat-cell { min-width: 38px; }
+    .seat-layout-preview .seat-row { grid-template-columns: repeat(2, 40px) 22px repeat(2, 40px); gap: 6px; }
+    .seat-builder .seat-cell { min-width: 40px; height: 42px; }
 }
