@@ -121,7 +121,7 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
         <a href="admin_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
         <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
         <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>
-        <a href="manage_operators.php" aria-current="page"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
+        <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
         <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
     </nav>
 
@@ -153,6 +153,7 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
             </div>
 </header>
 
+<a class="ar-back-link" href="admin_dashboard.php" aria-label="Back"><i class="fa fa-arrow-left" aria-hidden="true"></i></a>
 <nav class="ad-seg vf-tabs" aria-label="Application type">
     <a href="operator_applications.php" class="on" aria-current="page">Operator applications</a>
     <a href="conductor_applications.php" class="">Conductor applications</a>
@@ -274,7 +275,7 @@ document.addEventListener('keydown', function(e) {
     <a href="manage_buses.php" class="bottom-nav-item">
         <i class="fa fa-bus" aria-hidden="true"></i><span>Buses</span>
     </a>
-    <a href="manage_operators.php" class="bottom-nav-item active" aria-current="page">
+    <a href="manage_operators.php" class="bottom-nav-item">
         <i class="fa fa-users" aria-hidden="true"></i><span>Operators</span>
     </a>
     <a href="waiting.php" class="bottom-nav-item">
