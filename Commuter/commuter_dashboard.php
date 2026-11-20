@@ -101,7 +101,7 @@ function mbus_home_when(string $ts): string {
             <p class="home-hello"><?php echo $greeting; ?></p>
             <h1><?php echo htmlspecialchars($first_name); ?></h1>
         </div>
-        <div class="home-actions">
+        <div class="home-top-actions">
                 <div class="notif-wrap">
                     <button class="notif-btn" type="button" id="notifBtn" aria-expanded="false" aria-controls="notifPanel" aria-label="Notifications"><i class="fa fa-bell" aria-hidden="true"></i><span class="notif-dot" id="notifDot" hidden>0</span></button>
                     <div class="notif-panel" id="notifPanel" hidden><h2>Notifications</h2><ul id="notifList" class="notif-list"></ul></div>
