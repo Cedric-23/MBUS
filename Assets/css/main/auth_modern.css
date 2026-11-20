@@ -113,6 +113,7 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
 }
 /* login and register headers share one fixed height */
 @media(max-width:900px){
-  .auth-hero-m{box-sizing:border-box;height:300px;padding:20px 24px 74px;display:flex;flex-direction:column;justify-content:flex-end}
+  .auth-hero-m{box-sizing:border-box;height:190px;padding:20px 24px 62px;display:flex;flex-direction:column;justify-content:flex-end}
+  .auth-hero-m h1,.auth-hero-m p{max-width:100%}
   .auth-hero-m .auth-back{position:absolute;left:24px;top:20px;margin:0}
 }
