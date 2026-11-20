@@ -154,7 +154,7 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
 </header>
 
 <nav class="ar-page-nav" aria-label="Application navigation">
-    <a class="ar-back-link" href="manage_operators.php"><i class="fa fa-arrow-left" aria-hidden="true"></i><span>Back to Manage Operators</span></a>
+    <a class="ar-back-link" href="manage_operators.php" aria-label="Back to Manage Operators"><i class="fa fa-arrow-left" aria-hidden="true"></i><span>Back to Manage Operators</span></a>
     <a class="ad-btn" href="conductor_applications.php"><i class="fa fa-id-badge" aria-hidden="true"></i><span>Conductor applications</span></a>
 </nav>
 
@@ -169,7 +169,7 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
 </nav>
 
 <?php if(!$rows): ?>
-<p class="oa-empty">No <?php echo $f === 'all' ? '' : htmlspecialchars($f) . ' '; ?>applications.</p>
+<div class="ca-empty"><i class="fa fa-inbox" aria-hidden="true"></i><strong>No <?php echo $f === 'all' ? '' : htmlspecialchars($f) . ' '; ?>applications</strong><span>Applications matching this status will appear here.</span></div>
 <?php endif; ?>
 
 <div class="oa-list">

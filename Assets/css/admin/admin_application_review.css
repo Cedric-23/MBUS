@@ -210,3 +210,10 @@
     .ar-back-link,
     .ca-card { transition: none; }
 }
+
+/* compact round back button beside the switch button (same on both application pages) */
+.ar-page-nav { flex-wrap: nowrap; justify-content: flex-start; gap: .6rem; }
+.ar-back-link { flex: 0 0 44px; width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 50%; }
+.ar-back-link span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.ar-page-nav .ad-btn { flex: 1 1 auto; min-height: 44px; }
+@media (min-width: 769px) { .ar-page-nav .ad-btn { flex: 0 0 auto; } }
