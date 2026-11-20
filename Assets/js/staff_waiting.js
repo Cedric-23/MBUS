@@ -15,6 +15,7 @@
 
     let requests = [], reservations = [], schedules = [], locations = [], csrf = '', ready = false;
     const hiddenReservationKeys = new Set();
+    let trackedKey = null, trackLine = null, trackFitted = false;
     let map = null, layer = null, line = null, routeLayer = null, selected = null, fittedOnce = false;
     let routeKey = '', routeData = null, routeFitKey = '', routeRequest = 0, routeFailure = null;
     let busy = false, refreshing = null;
@@ -373,6 +374,7 @@
         });
 
         reservationPins(resRows, pts);
+        drawTrack();
         updateCompact(reqs);
         if (!fittedOnce && pts.length) { fit(pts); fittedOnce = true; }
         updateStaffRoute();
@@ -409,49 +411,82 @@
             open.addEventListener('click', () => showReservation(r));
             const more = node('button', 'Details', 'sw-done sw-details'); more.type = 'button';
             more.addEventListener('click', () => showReservation(r));
-            const key = reservationKey(r), hidden = hiddenReservationKeys.has(key);
-            const toggle = node('button', hidden ? 'Show pins' : 'Hide pins', 'sw-done sw-res-map-toggle');
-            toggle.type = 'button'; toggle.setAttribute('aria-pressed', hidden ? 'false' : 'true');
-            toggle.setAttribute('aria-label', (hidden ? 'Show' : 'Hide') + ' map pins for ' + (r.full_name || 'this reservation'));
-            toggle.addEventListener('click', () => {
-                if (hiddenReservationKeys.has(key)) hiddenReservationKeys.delete(key); else hiddenReservationKeys.add(key);
-                render();
-            });
+            const key = reservationKey(r), tracking = trackedKey === key;
+            const toggle = node('button', tracking ? 'Stop' : 'Track', 'sw-done sw-res-map-toggle');
+            toggle.type = 'button'; toggle.setAttribute('aria-pressed', tracking ? 'true' : 'false');
+            toggle.setAttribute('aria-label', (tracking ? 'Stop tracking ' : 'Track ') + (r.full_name || 'this reservation'));
+            toggle.addEventListener('click', () => setTrack(tracking ? null : key));
             li.append(open, more, toggle);
             rList.append(li);
         });
         sizeSheet();
     }
+    /* ---------- tracking a reservation: bus -> that rider's pick-up point, live ---------- */
+    function trackTarget(r) {
+        const seat = reservationSeats(r)[0];
+        const sp = seat ? reservationSeatPoint(r, seat, 'pick') : null;
+        return sp ? { p: sp.p, name: seat.pickup_location || 'pick-up' } : null;
+    }
+    function trackChip() {
+        let c = document.getElementById('swTrackChip');
+        if (!c && map) {
+            c = node('div', undefined, 'sw-track-chip'); c.id = 'swTrackChip'; c.setAttribute('role', 'status');
+            const t = node('span'); const x = node('button', 'Stop', 'sw-track-stop'); x.type = 'button';
+            x.addEventListener('click', () => setTrack(null));
+            c.append(t, x); document.getElementById('staffMap').parentNode.append(c);
+        }
+        return c;
+    }
+    function setTrack(key) {
+        trackedKey = key; trackFitted = false;
+        if (!key) { const c = document.getElementById('swTrackChip'); if (c) c.remove(); if (trackLine && map) { map.removeLayer(trackLine); trackLine = null; } }
+        render();
+    }
+    function drawTrack() {
+        if (trackLine && map) { map.removeLayer(trackLine); trackLine = null; }
+        if (!trackedKey || !map) return;
+        const r = reservations.find(x => reservationKey(x) === trackedKey);
+        if (!r) { setTrack(null); return; }
+        const t = trackTarget(r), b = busFor(r.schedule_id), c = trackChip();
+        let msg = 'Tracking ' + (r.full_name || 'commuter') + ' · ';
+        if (t && b) {
+            const bp = [+b.latitude, +b.longitude];
+            trackLine = L.polyline([bp, t.p], { color: '#6d4aff', weight: 4, dashArray: '2 9', opacity: .9 }).addTo(map);
+            msg += (r.bus_number || 'Bus') + ' is ' + dist(km({ lat: bp[0], lng: bp[1] }, { lat: t.p[0], lng: t.p[1] })) + ' from ' + t.name;
+            if (!trackFitted) { fit([bp, t.p]); trackFitted = true; }
+        } else msg += b ? 'pick-up point not on the map' : 'bus location unavailable';
+        if (c) c.firstChild.textContent = msg;
+    }
     function showReservation(r) {
         const old = document.getElementById('swCard'); if (old) old.remove();
+        const key = reservationKey(r), tracking = trackedKey === key;
         const back = node('div', undefined, 'sw-card-back'); back.id = 'swCard';
-        const card = node('div', undefined, 'sw-card'); card.setAttribute('role', 'dialog'); card.setAttribute('aria-modal', 'true'); card.setAttribute('aria-label', 'Reservation details');
+        const card = node('div', undefined, 'sw-card sw-card-compact'); card.setAttribute('role', 'dialog'); card.setAttribute('aria-modal', 'true'); card.setAttribute('aria-label', 'Reservation details');
         const head = node('div', undefined, 'sw-card-head');
         const img = node('img', undefined, 'sw-card-photo'); img.alt = ''; bindAvatarFallback(img); img.src = photoOf(r);
-        const who = node('div'); who.append(node('strong', r.full_name || 'Commuter'), node('small', 'Reserved seat · not on board yet'));
+        const who = node('div'); who.append(node('strong', r.full_name || 'Commuter'), node('small', 'Reserved · not on board yet'));
         head.append(img, who);
-        const seatStops = reservationSeats(r).map(seat => 'Seat ' + (seat.seat_number || '?') + ': ' + (seat.pickup_location || '-') + ' → ' + (seat.destination || '-')).join(' · ');
-        const rows = [
-            ['Bus', (r.bus_number || '-') + (r.origin ? ' · ' + r.origin + ' to ' + (r.route_destination || '') : '')],
-            [r.seats === 1 ? 'Seat' : 'Seats', r.seat_numbers || String(r.seats)],
-            ['Seat stops', seatStops || '-'],
-            ['Reserved', ago(r.reserved_at) || '-'],
-            ['Phone', r.phone_number && String(r.phone_number).length > 3 ? r.phone_number : 'Not provided']
-        ];
-        const dl = node('dl', undefined, 'sw-card-list');
-        rows.forEach(([k, v]) => { dl.append(node('dt', k), node('dd', v)); });
+        const chips = node('div', undefined, 'sw-chips');
+        [r.bus_number, seatLabel(r), ago(r.reserved_at) ? 'Reserved ' + ago(r.reserved_at) : ''].filter(Boolean).forEach(t => chips.append(node('span', t)));
+        const seats = node('ul', undefined, 'sw-seat-list');
+        reservationSeats(r).forEach(seat => {
+            const li = node('li'); li.append(node('b', 'Seat ' + (seat.seat_number || '?')), node('span', (seat.pickup_location || '-') + ' → ' + (seat.destination || '-')));
+            seats.append(li);
+        });
+        card.append(head, chips, seats);
+        const hasPhone = r.phone_number && String(r.phone_number).length > 3;
+        if (hasPhone) { const ph = node('a', String(r.phone_number), 'sw-card-phone'); ph.href = 'tel:' + String(r.phone_number).replace(/[^0-9+]/g, ''); card.append(ph); }
+        const actions = node('div', undefined, 'sw-card-actions');
+        const canTrack = map && trackTarget(r);
+        let track = null;
+        if (canTrack) { track = node('button', tracking ? 'Stop tracking' : 'Track', 'sw-card-pick'); track.type = 'button'; actions.append(track); }
         const close = node('button', 'Close', 'sw-card-close'); close.type = 'button';
-        const spots = map ? reservationMapPoints(r) : [];
-        let show = null;
-        if (spots.length) { show = node('button', 'Show on map', 'sw-card-pick'); show.type = 'button'; }
-        card.append(head, dl);
-        if (show) card.append(show);
-        card.append(close); back.append(card); document.body.append(back);
+        actions.append(close); card.append(actions); back.append(card); document.body.append(back);
         const shut = () => { back.remove(); document.removeEventListener('keydown', esc); };
         const esc = e => { if (e.key === 'Escape') shut(); };
-        if (show) show.addEventListener('click', () => { hiddenReservationKeys.delete(reservationKey(r)); shut(); render(); fit(spots); });
+        if (track) track.addEventListener('click', () => { shut(); setTrack(tracking ? null : key); });
         close.addEventListener('click', shut); back.addEventListener('click', e => { if (e.target === back) shut(); });
-        document.addEventListener('keydown', esc); close.focus();
+        document.addEventListener('keydown', esc); (track || close).focus();
     }
 
     function showDetails(r) {

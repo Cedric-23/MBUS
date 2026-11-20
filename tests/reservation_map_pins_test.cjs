@@ -24,7 +24,7 @@ assert.match(feed, /pickup_latitude/);
 assert.match(staffJs, /reservationSeatPoint/);
 assert.match(staffJs, /hiddenReservationKeys/);
 assert.match(staffJs, /sw-res-map-toggle/);
-assert.match(staffJs, /Seat stops/);
+assert.match(staffJs, /sw-seat-list/);
 for (const column of ['pickup_latitude','pickup_longitude','destination_latitude','destination_longitude']) {
     assert.match(schema, new RegExp(column));
     assert.match(migration, new RegExp(column));
