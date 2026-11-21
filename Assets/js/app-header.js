@@ -39,14 +39,17 @@
             });
         }
 
-        /* ===== Top bar that stays on screen while scrolling: back, title, notifications, profile ===== */
-        const header = document.querySelector('.page-header');
-        if (header) {
+        /* ===== Top bar that stays on screen while scrolling (every page: commuter, operator, admin) ===== */
+        const bar = document.querySelector('.page-header, .home-top');
+        if (bar) {
+            const BG = 'rgba(232,240,255,.96)';
             const css = document.createElement('style');
             css.textContent =
-                '.page-header{position:sticky;top:0;z-index:50;background:rgba(236,243,255,.94);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}' +
+                '.page-header,.home-top{position:sticky;top:0;z-index:50;background:' + BG + ';-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}' +
+                /* on phones the bar spans the whole screen width, so nothing shows beside it while scrolling */
+                '@media(max-width:768px){.page-header::before,.home-top::before{content:"";position:absolute;z-index:-1;top:0;bottom:0;left:calc(50% - 50vw);right:calc(50% - 50vw);background:' + BG + '}}' +
                 '.page-header h1 .hdr-back{display:inline-grid;place-items:center;vertical-align:middle;width:40px;height:40px;margin:0 10px 0 0;border-radius:50%;background:#fff;border:1px solid #dbe5f4;color:#2f6fe4;font-size:.95rem;text-decoration:none}' +
-                '.page-header .notif-wrap{position:relative}' +
+                '.page-header>.notif-wrap{position:absolute;z-index:2}' +
                 '.page-header .notif-btn{position:relative;display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:#fff;color:#2f6fe4;font-size:1.05rem;cursor:pointer;-webkit-tap-highlight-color:transparent}' +
                 '.page-header .notif-dot{position:absolute;top:2px;right:2px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#e5484d;color:#fff;font-size:.68rem;font-weight:700;line-height:18px;text-align:center;box-sizing:border-box}' +
                 '.page-header .notif-dot[hidden],.page-header .notif-panel[hidden]{display:none}' +
@@ -59,14 +62,16 @@
                 '.page-header .notif-empty{margin:0;color:#6b7a90;font-size:.88rem}';
             document.head.appendChild(css);
 
-            // Other sticky bars (like the trip filters) sit just under this header.
             const setHeaderHeight = function () {
-                document.documentElement.style.setProperty('--hdr-h', header.getBoundingClientRect().height + 'px');
+                document.documentElement.style.setProperty('--hdr-h', bar.getBoundingClientRect().height + 'px');
             };
             setHeaderHeight();
             window.addEventListener('resize', setHeaderHeight);
-            if (window.ResizeObserver) new ResizeObserver(setHeaderHeight).observe(header);
+            if (window.ResizeObserver) new ResizeObserver(setHeaderHeight).observe(bar);
+        }
 
+        const header = document.querySelector('.page-header');
+        if (header) {
             const path = location.pathname;
             const inCommuter = path.indexOf('/Commuter/') !== -1;
             const inAdmin = path.indexOf('/Admin/') !== -1;
@@ -93,14 +98,31 @@
             }
 
             // Notification bell on every commuter page (it used to exist only on Home).
-            const right = header.querySelector('.page-header-right');
-            if (inCommuter && right && !document.getElementById('notifBtn')) {
+            // It is placed right next to the profile picture, whatever the page layout is.
+            if (inCommuter && !document.getElementById('notifBtn')) {
                 const wrap = document.createElement('div');
                 wrap.className = 'notif-wrap';
                 wrap.innerHTML =
                     '<button class="notif-btn" type="button" id="notifBtn" aria-expanded="false" aria-controls="notifPanel" aria-label="Notifications"><i class="fa fa-bell" aria-hidden="true"></i><span class="notif-dot" id="notifDot" hidden>0</span></button>' +
                     '<div class="notif-panel" id="notifPanel" hidden><h2>Notifications</h2><ul id="notifList" class="notif-list"></ul></div>';
-                right.insertBefore(wrap, right.firstChild);
+                header.appendChild(wrap);
+
+                const placeBell = function () {
+                    const target = header.querySelector('.profile-trigger') || header.querySelector('.profile-avatar');
+                    if (!target) return;
+                    const h = header.getBoundingClientRect();
+                    const r = target.getBoundingClientRect();
+                    if (!r.width) return;
+                    wrap.style.top = Math.max(0, r.top - h.top + (r.height - 44) / 2) + 'px';
+                    wrap.style.right = Math.max(0, h.right - r.left + 8) + 'px';
+                };
+                placeBell();
+                window.addEventListener('resize', placeBell);
+                window.addEventListener('load', placeBell);
+                if (window.ResizeObserver) new ResizeObserver(placeBell).observe(header);
+                setTimeout(placeBell, 250);
+                setTimeout(placeBell, 800);
+
                 const script = document.createElement('script');
                 script.src = base + 'notifications.js';
                 document.body.appendChild(script);
