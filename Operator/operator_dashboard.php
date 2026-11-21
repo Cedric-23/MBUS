@@ -50,10 +50,7 @@ $sq = mbus_db_prepare($conn, "SELECT COUNT(DISTINCT s.schedule_id) AS trips,
   LEFT JOIN reservation r ON r.schedule_id = s.schedule_id
   WHERE oba.operator_id = ? AND s.schedule_status = 'Active' AND s.departure_time >= ? AND s.departure_time < ?", [$operator_id, $b['today'], $b['tomorrow']]);
 if ($sq !== false && ($row = mbus_db_fetch_assoc($sq))) $stat = array_map('intval', $row);
-$myBuses = [];
-$mq = mbus_db_prepare($conn, "SELECT b.bus_id, b.bus_number, b.bus_type, b.capacity, (b.bus_photo_b64 IS NOT NULL AND b.bus_photo_b64 <> '') AS has_photo
-  FROM buses b JOIN operator_bus_assignments oba ON oba.bus_id = b.bus_id WHERE oba.operator_id = ? ORDER BY b.bus_number", [$operator_id]);
-while ($mq !== false && ($r = mbus_db_fetch_assoc($mq))) $myBuses[] = $r;
+
 $rest = array_slice($trips, 1, 4);
 $greeting = (int)date('G') < 12 ? 'Good morning' : ((int)date('G') < 18 ? 'Good afternoon' : 'Good evening');
 $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
@@ -159,7 +156,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
                 <span class="next-when"><?php echo date('g:i A', strtotime($current['departure_time'])); ?></span>
             </div>
             <p class="next-route"><?php echo htmlspecialchars($current['origin'] . ' to ' . $current['destination']); ?></p>
-            <p class="next-meta"><?php echo htmlspecialchars($current['bus_number']); ?> &middot; <?php echo (int)$current['boarded']; ?> of <?php echo (int)$current['booked']; ?> boarded</p>
+            <p class="next-meta"><?php echo htmlspecialchars(ctype_digit((string)$current['bus_number']) ? 'Bus ' . $current['bus_number'] : $current['bus_number']); ?> &middot; <?php echo (int)$current['boarded']; ?> of <?php echo (int)$current['booked']; ?> boarded</p>
             <div class="next-actions">
                 <a class="next-cta" href="scan.php">Scan tickets</a>
                 <a class="next-cta is-ghost" href="passengers.php?schedule_id=<?php echo (int)$current['schedule_id']; ?>">Seat map</a>
@@ -189,23 +186,6 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i><span>My Bus</span></a>
         </nav>
 
-        <?php if($myBuses){ ?>
-        <section class="home-section" aria-labelledby="mybus-h">
-            <div class="home-section-head"><h2 id="mybus-h">My bus</h2><a href="my_bus.php">Customize</a></div>
-            <ul class="od-buses">
-                <?php foreach($myBuses as $mb){ ?>
-                <li><a href="my_bus.php?bus_id=<?php echo (int)$mb['bus_id']; ?>">
-                    <span class="od-bus-img"<?php if($mb['has_photo'] === true || $mb['has_photo'] === 't' || $mb['has_photo'] === '1'){ ?> style="background-image:url('bus_photo.php?bus_id=<?php echo (int)$mb['bus_id']; ?>&amp;type=exterior')"<?php } ?>><?php if(!($mb['has_photo'] === true || $mb['has_photo'] === 't' || $mb['has_photo'] === '1')){ ?><i class="fa fa-bus-simple" aria-hidden="true"></i><?php } ?></span>
-                    <span class="soon-body"><strong><?php echo htmlspecialchars($mb['bus_number']); ?></strong><small><?php echo htmlspecialchars($mb['bus_type']); ?> &middot; <?php echo (int)$mb['capacity']; ?> seats</small></span>
-                    <i class="fa fa-chevron-right" aria-hidden="true"></i>
-                </a></li>
-                <?php } ?>
-            </ul>
-        </section>
-        <?php } else { ?>
-        <section class="home-section"><p class="od-note">No bus assigned yet. Ask the admin to assign one, then customize it under My Bus.</p></section>
-        <?php } ?>
-
         <?php if($rest){ ?>
         <section class="home-section" aria-labelledby="later-h">
             <div class="home-section-head"><h2 id="later-h">Later today</h2><a href="manage_trips.php">All trips</a></div>
@@ -213,7 +193,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
                 <?php foreach($rest as $t){ $full = (int)$t['booked'] >= (int)$t['capacity']; ?>
                 <li><a href="passengers.php?schedule_id=<?php echo (int)$t['schedule_id']; ?>">
                     <span class="soon-time"><?php echo date('g:i', strtotime($t['departure_time'])); ?><small><?php echo date('A', strtotime($t['departure_time'])); ?></small></span>
-                    <span class="soon-body"><strong><?php echo htmlspecialchars($t['origin'] . ' to ' . $t['destination']); ?></strong><small><?php echo htmlspecialchars($t['bus_number']); ?></small></span>
+                    <span class="soon-body"><strong><?php echo htmlspecialchars($t['origin'] . ' to ' . $t['destination']); ?></strong><small><?php echo htmlspecialchars(ctype_digit((string)$t['bus_number']) ? 'Bus ' . $t['bus_number'] : $t['bus_number']); ?></small></span>
                     <span class="seat-chip <?php echo $full ? 'full' : 'ok'; ?>"><?php echo (int)$t['booked']; ?>/<?php echo (int)$t['capacity']; ?></span>
                 </a></li>
                 <?php } ?>

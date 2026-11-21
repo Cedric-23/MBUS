@@ -124,7 +124,7 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
     </header>
 
 <?php if (!$bus): ?>
-    <section class="card mb-card"><h2>No bus assigned yet</h2><p class="mb-hint">Once an admin assigns a bus to you, you can add its photos and set up its seats here.</p></section>
+    <section class="card mb-card"><h2>No bus assigned yet</h2><p class="mb-hint">Once an admin assigns a bus to you, you can set up its seats here.</p></section>
 <?php else: ?>
     <?php if (count($buses) > 1): ?>
     <nav class="mb-tabs" aria-label="Your buses"><?php foreach ($buses as $id => $b): ?>
@@ -141,9 +141,8 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
 
         <section class="card mb-card">
             <div class="mb-head">
-                <div><h2><?php echo htmlspecialchars($bus['bus_number']); ?></h2><p class="mb-hint"><?php echo htmlspecialchars($bus['bus_type']); ?> · <span id="mbSeatTotal"><?php echo (int)$bus['capacity']; ?></span> seats</p></div>
+                <div><h2><?php echo htmlspecialchars(ctype_digit((string)$bus['bus_number']) ? 'Bus ' . $bus['bus_number'] : $bus['bus_number']); ?></h2><p class="mb-hint"><?php echo htmlspecialchars($bus['bus_type']); ?> · <span id="mbSeatTotal"><?php echo (int)$bus['capacity']; ?></span> seats</p></div>
             </div>
-            <p class="mb-hint">Bus photos are taken from your application. Set up the seats below.</p>
         </section>
 
         <section class="card mb-card">

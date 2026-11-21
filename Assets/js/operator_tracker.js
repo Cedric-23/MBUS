@@ -16,6 +16,7 @@
     let polling = false;
     let sending = false;
 
+    const busLabel = n => /^\d+$/.test(String(n || '')) ? 'Bus ' + n : (n || 'bus');
     const read = () => { try { return JSON.parse(sessionStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
     const write = patch => { try { sessionStorage.setItem(KEY, JSON.stringify({ ...read(), ...patch })); } catch (e) { /* storage blocked */ } };
     const clear = () => { try { sessionStorage.removeItem(KEY); } catch (e) { /* ignore */ } };
@@ -69,7 +70,7 @@
 
     // First paint from the last page's state, so there's no flash of "off".
     const cached = read();
-    if (cached.sid && cached.sharing) show('live', 'Live · ' + (cached.bus || 'bus'), 'Sharing your location.');
+    if (cached.sid && cached.sharing) show('live', 'Live · ' + busLabel(cached.bus), 'Sharing your location.');
 
     /* ---------- choosing the trip ---------- */
     function pickTrip() {
@@ -100,7 +101,7 @@
             if (data && data.csrf_token) token = data.csrf_token;
             if (!res.ok || data.ok !== true) throw new Error(data.message || 'Location rejected.');
             write({ lastSent: Date.now(), sharing: true, sid: trip.schedule_id, bus: trip.bus_number });
-            show('live', 'Live · ' + (trip.bus_number || 'bus'),
+            show('live', 'Live · ' + busLabel(trip.bus_number),
                 'Sharing your location · updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         } catch (e) {
             show('error', 'Location not sent', 'Not sharing: ' + (e.message || 'connection problem'));
