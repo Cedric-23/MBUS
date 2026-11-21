@@ -169,8 +169,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $license_expiry = trim((string)($_POST['license-expiry'] ?? ''));
         $vehicle_type   = trim((string)($_POST['vehicle-type'] ?? ''));
         $plate          = (string)($_POST['vehicle-plate'] ?? '');
-        $seat_layout_raw = (string)($_POST['seat-layout'] ?? '');
-        $seat_layout = json_decode($seat_layout_raw, true);
 
         if ($e = mbus_check_full_name($full_name)) $errors['full-name'] = $e;
         if ($e = mbus_check_email($email)) $errors['email-address'] = $e;
@@ -186,19 +184,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         elseif ($license_expiry > date('Y-m-d', strtotime('+15 years'))) $errors['license-expiry'] = 'That expiry date is too far ahead. Check the year.';
         if (!in_array($vehicle_type, ['Ordinary', 'Aircon'], true)) $errors['vehicle-type'] = 'Choose a bus type (Ordinary or Aircon).';
         if ($e = mbus_check_plate($plate)) $errors['vehicle-plate'] = $e;
-        $seat_count = 0;
-        if (!is_array($seat_layout) || count($seat_layout) < 1 || count($seat_layout) > 25) {
-            $errors['seat-layout'] = 'Choose a seat layout with 1 to 100 seats.';
-        } else {
-            foreach ($seat_layout as $row) {
-                if (!is_array($row) || count($row) !== 4) { $errors['seat-layout'] = 'The seat layout is invalid. Please rebuild it.'; break; }
-                foreach ($row as $seat) {
-                    if (!is_bool($seat)) { $errors['seat-layout'] = 'The seat layout is invalid. Please rebuild it.'; break 2; }
-                    if ($seat) $seat_count++;
-                }
-            }
-            if (!isset($errors['seat-layout']) && ($seat_count < 1 || $seat_count > 100)) $errors['seat-layout'] = 'Choose between 1 and 100 seats.';
-        }
         $_POST['email-address'] = $email; $_POST['phone-number'] = $phone_number; $_POST['full-name'] = $full_name;
         $_POST['license-number'] = $license_number; $_POST['vehicle-plate'] = $plate; $_POST['home-address'] = $address;
 
@@ -219,27 +204,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $application_limit = mbus_registration_allow_application($conn, $email);
             if ($application_limit !== null) $error = mbus_registration_limit_message($application_limit);
         }
-        $lic = $veh = $busPhoto = $interiorPhoto = null;
+        $lic = $veh = null;
         if (!$errors && $error === '') {
             $fe = ''; $lic = mbus_application_file('license_document', $fe);
             if (!$lic) $errors['license_document'] = 'License file: ' . $fe;
             $fe = ''; $veh = mbus_application_file('vehicle_document', $fe);
             if (!$veh) $errors['vehicle_document'] = 'Vehicle registration file: ' . $fe;
-            $fe = ''; $busPhoto = mbus_application_photo('bus_photo', $fe);
-            if (!$busPhoto) $errors['bus_photo'] = 'Bus exterior photo: ' . $fe;
-            $fe = ''; $interiorPhoto = mbus_application_photo('interior_photo', $fe);
-            if (!$interiorPhoto) $errors['interior_photo'] = 'Bus interior photo: ' . $fe;
         }
         if (!$errors && $error === '') {
             $ok = mbus_db_prepare($conn,
                 "INSERT INTO operator_application
                     (full_name, email, phone_number, address, license_number, license_expiry, vehicle_type, vehicle_plate_number,
                      license_document_b64, license_document_mime, vehicle_document_b64, vehicle_document_mime, password_hash,
-                     seat_layout, bus_photo_b64, bus_photo_mime, interior_photo_b64, interior_photo_mime, application_status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')",
+                     application_status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')",
                 [$full_name, $email, $phone_number, $address, $license_number, $license_expiry, $vehicle_type, $plate,
-                 $lic['b64'], $lic['mime'], $veh['b64'], $veh['mime'], password_hash($password, PASSWORD_DEFAULT),
-                 json_encode($seat_layout), $busPhoto['b64'], $busPhoto['mime'], $interiorPhoto['b64'], $interiorPhoto['mime']]);
+                 $lic['b64'], $lic['mime'], $veh['b64'], $veh['mime'], password_hash($password, PASSWORD_DEFAULT)]);
             if ($ok === false) { $error = 'We could not save your application. Please try again.'; }
             else {
                 $_SESSION['register_flash'] = 'Application submitted. An admin will review it. Once approved, log in with ' . $email . ' and the password you chose.';
@@ -251,8 +231,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if ($errors && $error === '') $error = 'Please fix the highlighted fields.';
     // Driver form is a 3-step wizard: reopen on the first step that has an error
     $stepOf = ['full-name'=>0,'email-address'=>0,'phone-number'=>0,'home-address'=>0,'driver-password'=>0,'driver-confirm'=>0,
-               'license-number'=>1,'license-expiry'=>1,'license_document'=>1,'vehicle-type'=>2,'vehicle-plate'=>2,'vehicle_document'=>2,
-               'bus_photo'=>2,'interior_photo'=>2,'seat-layout'=>2];
+               'license-number'=>1,'license-expiry'=>1,'license_document'=>1,'vehicle-type'=>2,'vehicle-plate'=>2,'vehicle_document'=>2];
     foreach (array_keys($errors) as $k) { if (isset($stepOf[$k])) { $step_with_error = $stepOf[$k]; break; } }
 }
 
@@ -559,38 +538,6 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         <iframe class="document-preview-frame" title="Vehicle registration document preview"></iframe>
                                     </div>
                                 </div>
-                                <div class="bus-photo-grid">
-                                    <div class="upload-group">
-                                        <label class="input-label" for="bus-photo-input">Bus Exterior Photo</label>
-                                        <div class="upload-document-group">
-                                            <div class="upload-icon"><i data-lucide="camera"></i></div>
-                                            <div class="document-desc"><span class="document-name">Upload a clear exterior photo</span><span>JPG or PNG · Max 768 KB</span></div>
-                                            <div class="document-input-button"><button type="button">Browse</button><input id="bus-photo-input" type="file" name="bus_photo" accept="image/jpeg,image/png" data-max-bytes="786432" required/></div>
-                                        </div>
-                                        <?= mbus_field_error($errors, 'bus_photo') ?>
-                                        <div class="document-preview"><img class="document-preview-image" alt="Bus exterior photo preview"/><iframe class="document-preview-frame" title="Bus exterior photo preview"></iframe></div>
-                                    </div>
-                                    <div class="upload-group">
-                                        <label class="input-label" for="interior-photo-input">Bus Interior Photo</label>
-                                        <div class="upload-document-group">
-                                            <div class="upload-icon"><i data-lucide="camera"></i></div>
-                                            <div class="document-desc"><span class="document-name">Show the passenger seating area</span><span>JPG or PNG · Max 768 KB</span></div>
-                                            <div class="document-input-button"><button type="button">Browse</button><input id="interior-photo-input" type="file" name="interior_photo" accept="image/jpeg,image/png" data-max-bytes="786432" required/></div>
-                                        </div>
-                                        <?= mbus_field_error($errors, 'interior_photo') ?>
-                                        <div class="document-preview"><img class="document-preview-image" alt="Bus interior photo preview"/><iframe class="document-preview-frame" title="Bus interior photo preview"></iframe></div>
-                                    </div>
-                                </div>
-                                <section class="seat-builder" data-seat-builder aria-labelledby="seat-builder-title">
-                                    <div class="seat-builder-head">
-                                        <div><label id="seat-builder-title" class="input-label">Customize Seat Layout</label><p>Toggle seats to match the vehicle. The aisle is shown between the two seat pairs.</p></div>
-                                        <div class="seat-builder-actions"><button type="button" class="seat-layout-button" data-seat-add-row>Add row</button><button type="button" class="seat-layout-button" data-seat-reset>Reset 2 + 2</button></div>
-                                    </div>
-                                    <div class="seat-builder-meta"><span data-seat-count aria-live="polite">40 seats selected</span><span>1–100 seats</span></div>
-                                    <div class="seat-layout-preview" data-seat-grid role="grid" aria-label="Custom bus seat layout"></div>
-                                    <input type="hidden" name="seat-layout" data-seat-layout value="<?= reg_e($_POST['seat-layout'] ?? json_encode(array_fill(0, 10, [true, true, true, true]))) ?>"/>
-                                    <?= mbus_field_error($errors, 'seat-layout') ?>
-                                </section>
                                 <div class="terms-conditions">
                                     <input type="checkbox" required>
                                     <p>I agree to the <a href="terms.php" data-legal="terms">Terms of Service</a> and <a href="privacy.php" data-legal="privacy">Privacy Policy</a> and certify that all information provided is accurate.</p>

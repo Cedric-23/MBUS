@@ -191,6 +191,7 @@ $query = mbus_db_prepare($conn, "
         <a href="manage_trips.php" aria-current="page"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
         <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
         <a href="payments.php"><i class="fa fa-wallet" aria-hidden="true"></i> Payments</a>
+        <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
     </nav>
 
     <div class="menu-bottom">
@@ -215,6 +216,7 @@ $query = mbus_db_prepare($conn, "
                             <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
                             <span class="profile-menu-role">Operator account</span>
                         </div>
+                <a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
                         <a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> Payments<?php echo mbus_payment_pill(); ?></a>
                         <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>

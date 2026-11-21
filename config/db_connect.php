@@ -126,6 +126,20 @@ function mbus_run_schema_upgrades(PDO $pdo): void {
   } catch (PDOException $schema_error) {
       error_log('Operator bus setup schema check failed: ' . $schema_error->getMessage());
   }
+  // Drivers customise their own bus (photos + seat layout) from Operator > My Bus.
+  try {
+      foreach ([
+          "seat_layout TEXT",
+          "bus_photo_b64 TEXT",
+          "bus_photo_mime VARCHAR(50)",
+          "interior_photo_b64 TEXT",
+          "interior_photo_mime VARCHAR(50)",
+      ] as $col) {
+          $pdo->exec('ALTER TABLE buses ADD COLUMN IF NOT EXISTS ' . $col);
+      }
+  } catch (PDOException $schema_error) {
+      error_log('Bus customisation schema check failed: ' . $schema_error->getMessage());
+  }
   try {
       $pdo->exec("CREATE TABLE IF NOT EXISTS conductor_application (
           application_id SERIAL PRIMARY KEY, full_name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL,
@@ -151,7 +165,7 @@ try {
     if ($pdo->inTransaction()) { try { $pdo->rollBack(); } catch (Throwable $e) { $pdo->exec('ROLLBACK'); } }
     $pdo->exec("SET TIME ZONE '" . str_replace("'", "''", mbus_timezone()) . "'");
     // Schema upgrades are ~35 extra round trips to the database. Run them once per version, not on every page.
-    $schemaVersion = '2026-11-20a';
+    $schemaVersion = '2026-11-22a';
     $schemaFlag = sys_get_temp_dir() . '/mbus_schema_' . md5($host . $database . $schemaVersion) . '.ok';
     if (!is_file($schemaFlag)) {
         $done = false;

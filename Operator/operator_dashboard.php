@@ -39,6 +39,21 @@ AND s.departure_time >= ? AND s.departure_time < ?
 ORDER BY (s.trip_status = 'Departed') DESC, (s.trip_status = 'Boarding') DESC, s.departure_time ASC", [$operator_id, $b['today'], $b['tomorrow']]);
 while($tq !== false && ($r = mbus_db_fetch_assoc($tq))) $trips[] = $r;
 $current = $trips[0] ?? null;
+
+/* TODAY STATS + MY BUSES */
+$stat = ['trips' => 0, 'booked' => 0, 'boarded' => 0, 'pending' => 0];
+$sq = mbus_db_prepare($conn, "SELECT COUNT(DISTINCT s.schedule_id) AS trips,
+    COUNT(CASE WHEN r.status IN ('Paid','Confirmed','Boarded') THEN 1 END) AS booked,
+    COUNT(CASE WHEN r.status = 'Boarded' THEN 1 END) AS boarded,
+    COUNT(CASE WHEN r.status = 'Pending' THEN 1 END) AS pending
+  FROM schedule s JOIN operator_bus_assignments oba ON oba.bus_id = s.bus_id
+  LEFT JOIN reservation r ON r.schedule_id = s.schedule_id
+  WHERE oba.operator_id = ? AND s.schedule_status = 'Active' AND s.departure_time >= ? AND s.departure_time < ?", [$operator_id, $b['today'], $b['tomorrow']]);
+if ($sq !== false && ($row = mbus_db_fetch_assoc($sq))) $stat = array_map('intval', $row);
+$myBuses = [];
+$mq = mbus_db_prepare($conn, "SELECT b.bus_id, b.bus_number, b.bus_type, b.capacity, (b.bus_photo_b64 IS NOT NULL AND b.bus_photo_b64 <> '') AS has_photo
+  FROM buses b JOIN operator_bus_assignments oba ON oba.bus_id = b.bus_id WHERE oba.operator_id = ? ORDER BY b.bus_number", [$operator_id]);
+while ($mq !== false && ($r = mbus_db_fetch_assoc($mq))) $myBuses[] = $r;
 $rest = array_slice($trips, 1, 4);
 $greeting = (int)date('G') < 12 ? 'Good morning' : ((int)date('G') < 18 ? 'Good afternoon' : 'Good evening');
 $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
@@ -68,6 +83,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
     <link rel="stylesheet" href="../Assets/css/gps_status.css">
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=1">
+    <link rel="stylesheet" href="../Assets/css/operator_dashboard_extras.css?v=1">
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
 </head>
 
@@ -87,6 +103,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
             <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
             <a href="payments.php"><i class="fa fa-wallet" aria-hidden="true"></i> Payments</a>
+        <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
             <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
 
         </nav>
@@ -119,6 +136,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
                             <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
                             <span class="profile-menu-role">Operator account</span>
                         </div>
+                <a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
                         <a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> Payments<?php echo mbus_payment_pill(); ?></a>
                         <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
@@ -153,6 +171,39 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <p class="next-meta">Nothing else is assigned to your buses. Check upcoming trips.</p>
             <a class="next-cta" href="manage_trips.php">View trips</a>
         </section>
+        <?php } ?>
+
+        <section class="od-stats" aria-label="Today at a glance">
+            <div><strong><?php echo $stat['trips']; ?></strong><span>Trips today</span></div>
+            <div><strong><?php echo $stat['booked']; ?></strong><span>Seats booked</span></div>
+            <div><strong><?php echo $stat['boarded']; ?></strong><span>Boarded</span></div>
+            <a href="waiting.php"><strong><?php echo $stat['pending']; ?></strong><span>Waiting</span></a>
+        </section>
+
+        <nav class="od-actions" aria-label="Quick actions">
+            <a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
+            <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span></a>
+            <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
+            <a href="payments.php"><i class="fa fa-wallet" aria-hidden="true"></i><span>Payments</span></a>
+            <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
+            <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i><span>My Bus</span></a>
+        </nav>
+
+        <?php if($myBuses){ ?>
+        <section class="home-section" aria-labelledby="mybus-h">
+            <div class="home-section-head"><h2 id="mybus-h">My bus</h2><a href="my_bus.php">Customize</a></div>
+            <ul class="od-buses">
+                <?php foreach($myBuses as $mb){ ?>
+                <li><a href="my_bus.php?bus_id=<?php echo (int)$mb['bus_id']; ?>">
+                    <span class="od-bus-img"<?php if($mb['has_photo'] === true || $mb['has_photo'] === 't' || $mb['has_photo'] === '1'){ ?> style="background-image:url('bus_photo.php?bus_id=<?php echo (int)$mb['bus_id']; ?>&amp;type=exterior')"<?php } ?>><?php if(!($mb['has_photo'] === true || $mb['has_photo'] === 't' || $mb['has_photo'] === '1')){ ?><i class="fa fa-bus-simple" aria-hidden="true"></i><?php } ?></span>
+                    <span class="soon-body"><strong><?php echo htmlspecialchars($mb['bus_number']); ?></strong><small><?php echo htmlspecialchars($mb['bus_type']); ?> &middot; <?php echo (int)$mb['capacity']; ?> seats</small></span>
+                    <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                </a></li>
+                <?php } ?>
+            </ul>
+        </section>
+        <?php } else { ?>
+        <section class="home-section"><p class="od-note">No bus assigned yet. Ask the admin to assign one, then customize it under My Bus.</p></section>
         <?php } ?>
 
         <?php if($rest){ ?>

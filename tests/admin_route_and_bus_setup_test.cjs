@@ -25,19 +25,17 @@ const db = read('config/db_connect.php');
 for (const column of ['origin_lat DECIMAL(10, 8)', 'origin_lng DECIMAL(11, 8)', 'destination_lat DECIMAL(10, 8)', 'destination_lng DECIMAL(11, 8)']) {
     assert.ok(db.includes(column), `runtime schema upgrade must add ${column}`);
 }
-assert.match(db, /schemaVersion\s*=\s*'2026-11-20a'/,
+assert.match(db, /schemaVersion\s*=\s*'2026-11-22a'/,
     'the runtime schema version must advance so existing deployments run the new upgrades');
 
 const registration = read('register.php');
 for (const field of ['name="bus_photo"', 'name="interior_photo"', 'name="seat-layout"']) {
-    assert.ok(registration.includes(field), `driver application should include ${field}`);
+    assert.ok(!registration.includes(field), `registration should no longer include ${field}`);
 }
-assert.match(registration, /mbus_application_photo\('bus_photo'/);
-assert.match(registration, /mbus_application_photo\('interior_photo'/);
-assert.match(registration, /seat_layout, bus_photo_b64, bus_photo_mime, interior_photo_b64, interior_photo_mime/,
-    'photos and the submitted seat layout must be stored on the application');
-assert.match(registration, /array_fill\(0, 10, \[true, true, true, true\]\)/,
-    'the driver should see a usable default 2+2 seating plan');
+const myBus = read('Operator/my_bus.php');
+for (const field of ['name="<?php echo $field; ?>"', 'name="seat-layout"', 'data-seat-builder']) {
+    assert.ok(myBus.includes(field), `My Bus page should include ${field}`);
+}
 
 const setupJs = read('Assets/js/driver_bus_setup.js');
 assert.match(setupJs, /data-seat-add-row/);
