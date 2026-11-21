@@ -103,6 +103,22 @@ while($sql !== false && ($r0 = mbus_db_fetch_assoc($sql))) $all[] = $r0;
 /* one entry per trip; keeps the newest-first order */
 $groups = [];
 foreach($all as $r0){ $groups[(int)$r0['schedule_id']][] = $r0; }
+
+/* Sort every trip into Active / History / Cancelled so the rider can filter instead of scrolling through old trips. */
+$cats = []; $catCount = ['active' => 0, 'history' => 0, 'cancelled' => 0];
+foreach($groups as $sid => $rows0){
+    $f0 = $rows0[0];
+    $sts = array_column($rows0, 'status');
+    $ended = in_array((string)($f0['trip_status'] ?? ''), ['Arrived', 'Completed'], true)
+        || in_array((string)($f0['schedule_status'] ?? ''), ['Completed', 'Cancelled'], true)
+        || strtotime((string)$f0['arrival_time']) < time() - 3 * 3600;
+    if(!array_diff($sts, ['Cancelled'])) $cat = 'cancelled';
+    elseif($ended) $cat = 'history';
+    elseif(array_intersect($sts, ['Pending', 'Paid', 'Boarded'])) $cat = 'active';
+    else $cat = 'history';
+    $cats[$sid] = $cat; $catCount[$cat]++;
+}
+
 $aw_stmt = $conn->pdo->prepare("SELECT COALESCE(NULLIF(reference_number, ''), '') AS ref FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? AND status = 'Submitted' LIMIT 1");
 $seat_actions = function($row, $awaiting, $remaining){ ?>
     <?php if($row['status'] === "Pending" && $awaiting){ ?>
@@ -126,8 +142,19 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
 <?php };
 ?>
 <?php if($groups){ ?>
+    <nav class="trip-filters" role="tablist" aria-label="Filter trips">
+        <button type="button" class="tf-chip" role="tab" data-filter="active" aria-selected="false">Active <b><?php echo (int)$catCount['active']; ?></b></button>
+        <button type="button" class="tf-chip" role="tab" data-filter="history" aria-selected="false">History <b><?php echo (int)$catCount['history']; ?></b></button>
+        <button type="button" class="tf-chip" role="tab" data-filter="cancelled" aria-selected="false">Cancelled <b><?php echo (int)$catCount['cancelled']; ?></b></button>
+        <button type="button" class="tf-chip" role="tab" data-filter="all" aria-selected="false">All <b><?php echo count($groups); ?></b></button>
+    </nav>
+    <div class="card empty-state tf-empty" id="tfEmpty" role="status" hidden>
+        <i class="fa fa-ticket" aria-hidden="true" style="font-size: var(--fs-3xl); color: var(--color-text-muted); margin-bottom: var(--space-4);"></i>
+        <h3 id="tfEmptyText">No trips here.</h3>
+    </div>
     <?php foreach($groups as $sid => $rows){
         $first = $rows[0];
+        $cat = $cats[$sid];
         $tripIsCompleted = (in_array((string)($first['trip_status'] ?? ''), ['Arrived'], true) || (string)($first['schedule_status'] ?? '') === 'Completed')
             && in_array('Boarded', array_column($rows, 'status'), true);
         $info = [];
@@ -142,7 +169,7 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
             $info[$k] = [$remaining, $awaiting];
         }
         if(count($rows) === 1){ $row = $first; [$remaining, $awaiting] = $info[0]; ?>
-    <article class="card reservation-card" data-reservation-id="<?php echo (int)$row['reservation_id']; ?>" data-schedule-id="<?php echo (int)$row['schedule_id']; ?>">
+    <article class="card reservation-card" data-cat="<?php echo $cat; ?>" data-reservation-id="<?php echo (int)$row['reservation_id']; ?>" data-schedule-id="<?php echo (int)$row['schedule_id']; ?>">
     <div class="reservation-header">
         <div class="bus-info"><span class="badge badge-primary">Bus <?php echo htmlspecialchars($row['bus_number']); ?></span></div>
         <div class="status-badge status-<?php echo strtolower($row['status']); ?>"><?php echo htmlspecialchars($row['status']); ?></div>
@@ -165,7 +192,7 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
         $summary = [];
         foreach($counts as $st => $n) $summary[] = $n . ' ' . strtolower($st);
         $seatNums = array_column($rows, 'seat_number'); $seatList = count($seatNums) > 6 ? implode(', ', array_slice($seatNums, 0, 6)) . '…' : implode(', ', $seatNums); ?>
-    <div class="reservation-group" data-schedule-id="<?php echo (int)$sid; ?>">
+    <div class="reservation-group" data-cat="<?php echo $cat; ?>" data-schedule-id="<?php echo (int)$sid; ?>">
     <div class="trip-completion-confirmation" data-trip-completion role="status" aria-live="polite"<?php echo $tripIsCompleted ? '' : ' hidden'; ?>>
         <i class="fa fa-circle-check" aria-hidden="true"></i>
         <span><strong>Trip completed.</strong> Thank you for riding with MBUS.</span>
@@ -382,6 +409,53 @@ async function refreshTripCompletion() {
 }
 refreshTripCompletion();
 setInterval(refreshTripCompletion, 15000);
+
+/* Trip filter: Active / History / Cancelled / All. Instant (no reload) and remembered while the rider is on the site. */
+(function () {
+    const chips = Array.from(document.querySelectorAll('.tf-chip'));
+    if (!chips.length) return;
+    const items = Array.from(document.querySelectorAll('[data-cat]'));
+    const empty = document.getElementById('tfEmpty');
+    const emptyText = document.getElementById('tfEmptyText');
+    const messages = {
+        active: 'No active trips right now.',
+        history: 'No past trips yet.',
+        cancelled: 'No cancelled trips.',
+        all: 'No trips here.'
+    };
+    const countOf = f => items.filter(el => f === 'all' || el.dataset.cat === f).length;
+
+    function apply(filter) {
+        let shown = 0;
+        items.forEach(el => {
+            const show = filter === 'all' || el.dataset.cat === filter;
+            el.hidden = !show;
+            if (show) shown++;
+        });
+        chips.forEach(chip => {
+            const on = chip.dataset.filter === filter;
+            chip.classList.toggle('on', on);
+            chip.setAttribute('aria-selected', String(on));
+        });
+        if (empty) {
+            empty.hidden = shown > 0;
+            if (emptyText) emptyText.textContent = messages[filter] || messages.all;
+        }
+        try { sessionStorage.setItem('mbusTripFilter', filter); } catch (e) { /* storage unavailable */ }
+    }
+
+    chips.forEach(chip => chip.addEventListener('click', () => apply(chip.dataset.filter)));
+
+    let start = 'active';
+    try {
+        const saved = sessionStorage.getItem('mbusTripFilter');
+        if (saved && messages[saved]) start = saved;
+    } catch (e) { /* ignore */ }
+    if (countOf(start) === 0 && start !== 'all') {
+        start = ['active', 'history', 'cancelled'].find(f => countOf(f) > 0) || 'all';
+    }
+    apply(start);
+})();
 </script>
 
 <style>
@@ -414,6 +488,41 @@ setInterval(refreshTripCompletion, 15000);
     color: var(--color-error);
     font-weight: 700;
 }
+
+/* Trip filter chips */
+[data-cat][hidden], .tf-empty[hidden] { display: none !important; }
+.trip-filters {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin: 0 0 14px;
+    padding: 6px;
+    border: 1px solid #dbe5f4;
+    border-radius: 18px;
+    background: #fff;
+}
+.tf-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    min-height: 52px;
+    padding: 6px 2px;
+    border: 0;
+    border-radius: 13px;
+    background: transparent;
+    color: #6b7a90;
+    font: 600 .8rem/1.2 inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.tf-chip b { order: -1; font-size: 1.15rem; font-weight: 800; line-height: 1.1; }
+.tf-chip.on { background: #eaf1fd; color: #2f6fe4; }
+.tf-chip:focus-visible { outline: 2px solid #2f6fe4; outline-offset: 2px; }
 
 /* Mobile reservation card improvements */
 @media (max-width: 768px) {
