@@ -49,5 +49,6 @@ body:not(:has(.sidebar)):not(.commuter-waiting-board):not(.staff-wait-page) .pro
 @media (max-width:768px){.page-header h1,.home-top h1{font-size:1.35rem!important}}
 
 /* pinned: stays on screen while the page scrolls (same page colour, so it looks unchanged) */
-.page-header,.home-top{position:sticky!important;top:0;z-index:50;margin-top:calc(var(--u-top) * -1)!important;padding-top:var(--u-top)!important;padding-bottom:10px!important;background:var(--color-bg,#eef3fb);clip-path:inset(0 -100vmax)}
+.page-header,.home-top{position:sticky!important;top:0;z-index:50;margin-top:calc(var(--u-top) * -1)!important;padding-top:var(--u-top)!important;padding-bottom:10px!important;background:var(--color-bg,#eef3fb)}
+.page-header::before,.home-top::before{content:"";position:absolute;z-index:-1;top:0;bottom:0;left:calc(50% - 50vw);right:calc(50% - 50vw);background:var(--color-bg,#eef3fb);pointer-events:none}
 .home-top h1{line-height:1.1!important}
