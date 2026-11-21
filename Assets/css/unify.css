@@ -52,3 +52,9 @@ body:not(:has(.sidebar)):not(.commuter-waiting-board):not(.staff-wait-page) .pro
 .page-header,.home-top{position:sticky!important;top:0;z-index:50;margin-top:calc(var(--u-top) * -1)!important;padding-top:var(--u-top)!important;padding-bottom:10px!important;background:var(--color-bg,#eef3fb)}
 .page-header::before,.home-top::before{content:"";position:absolute;z-index:-1;top:0;bottom:0;left:calc(50% - 50vw);right:calc(50% - 50vw);background:var(--color-bg,#eef3fb);pointer-events:none}
 .home-top h1{line-height:1.1!important}
+
+/* ---- Same icon sizes on every page: profile button 44px, photo 40px, bell 44px (beats per-page overrides) ---- */
+html body .profile-trigger.profile-trigger.profile-trigger.profile-trigger.profile-trigger{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;padding:0!important;border-radius:50%}
+html body .profile-avatar.profile-avatar.profile-avatar.profile-avatar.profile-avatar{width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;display:grid!important;place-items:center;border-radius:50%;overflow:hidden}
+html body .profile-avatar.profile-avatar.profile-avatar.profile-avatar.profile-avatar img{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;border-radius:50%;object-fit:cover}
+html body .notif-btn.notif-btn.notif-btn.notif-btn.notif-btn{width:44px!important;height:44px!important}
