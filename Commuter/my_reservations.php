@@ -142,12 +142,28 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
 <?php };
 ?>
 <?php if($groups){ ?>
-    <nav class="trip-filters" role="tablist" aria-label="Filter trips">
-        <button type="button" class="tf-chip" role="tab" data-filter="active" aria-selected="false">Active <b><?php echo (int)$catCount['active']; ?></b></button>
-        <button type="button" class="tf-chip" role="tab" data-filter="history" aria-selected="false">History <b><?php echo (int)$catCount['history']; ?></b></button>
-        <button type="button" class="tf-chip" role="tab" data-filter="cancelled" aria-selected="false">Cancelled <b><?php echo (int)$catCount['cancelled']; ?></b></button>
-        <button type="button" class="tf-chip" role="tab" data-filter="all" aria-selected="false">All <b><?php echo count($groups); ?></b></button>
-    </nav>
+    <div class="tf-bar">
+        <nav class="trip-filters" role="tablist" aria-label="Filter trips">
+            <button type="button" class="tf-chip" role="tab" data-filter="active" aria-selected="false">Active <b><?php echo (int)$catCount['active']; ?></b></button>
+            <button type="button" class="tf-chip" role="tab" data-filter="history" aria-selected="false">History <b><?php echo (int)$catCount['history']; ?></b></button>
+            <button type="button" class="tf-chip" role="tab" data-filter="cancelled" aria-selected="false">Cancelled <b><?php echo (int)$catCount['cancelled']; ?></b></button>
+            <button type="button" class="tf-chip" role="tab" data-filter="all" aria-selected="false">All <b><?php echo count($groups); ?></b></button>
+        </nav>
+        <div class="tf-date-row" id="tfDateRow" data-today="<?php echo date('Y-m-d'); ?>">
+            <label class="tf-date"><i class="fa fa-calendar-days" aria-hidden="true"></i>
+                <select id="tfRange" aria-label="Filter by trip date">
+                    <option value="any">Any date</option>
+                    <option value="today">Today</option>
+                    <option value="past7">Last 7 days</option>
+                    <option value="next7">Next 7 days</option>
+                    <option value="month">This month</option>
+                    <option value="lastmonth">Last month</option>
+                    <option value="pick">Pick a date…</option>
+                </select>
+            </label>
+            <input type="date" id="tfPick" hidden aria-label="Pick a trip date">
+        </div>
+    </div>
     <div class="card empty-state tf-empty" id="tfEmpty" role="status" hidden>
         <i class="fa fa-ticket" aria-hidden="true" style="font-size: var(--fs-3xl); color: var(--color-text-muted); margin-bottom: var(--space-4);"></i>
         <h3 id="tfEmptyText">No trips here.</h3>
@@ -155,6 +171,7 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
     <?php foreach($groups as $sid => $rows){
         $first = $rows[0];
         $cat = $cats[$sid];
+        $tripDate = date('Y-m-d', strtotime((string)$first['departure_time']));
         $tripIsCompleted = (in_array((string)($first['trip_status'] ?? ''), ['Arrived'], true) || (string)($first['schedule_status'] ?? '') === 'Completed')
             && in_array('Boarded', array_column($rows, 'status'), true);
         $info = [];
@@ -169,7 +186,7 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
             $info[$k] = [$remaining, $awaiting];
         }
         if(count($rows) === 1){ $row = $first; [$remaining, $awaiting] = $info[0]; ?>
-    <article class="card reservation-card" data-cat="<?php echo $cat; ?>" data-reservation-id="<?php echo (int)$row['reservation_id']; ?>" data-schedule-id="<?php echo (int)$row['schedule_id']; ?>">
+    <article class="card reservation-card" data-cat="<?php echo $cat; ?>" data-date="<?php echo $tripDate; ?>" data-reservation-id="<?php echo (int)$row['reservation_id']; ?>" data-schedule-id="<?php echo (int)$row['schedule_id']; ?>">
     <div class="reservation-header">
         <div class="bus-info"><span class="badge badge-primary">Bus <?php echo htmlspecialchars($row['bus_number']); ?></span></div>
         <div class="status-badge status-<?php echo strtolower($row['status']); ?>"><?php echo htmlspecialchars($row['status']); ?></div>
@@ -192,7 +209,7 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
         $summary = [];
         foreach($counts as $st => $n) $summary[] = $n . ' ' . strtolower($st);
         $seatNums = array_column($rows, 'seat_number'); $seatList = count($seatNums) > 6 ? implode(', ', array_slice($seatNums, 0, 6)) . '…' : implode(', ', $seatNums); ?>
-    <div class="reservation-group" data-cat="<?php echo $cat; ?>" data-schedule-id="<?php echo (int)$sid; ?>">
+    <div class="reservation-group" data-cat="<?php echo $cat; ?>" data-date="<?php echo $tripDate; ?>" data-schedule-id="<?php echo (int)$sid; ?>">
     <div class="trip-completion-confirmation" data-trip-completion role="status" aria-live="polite"<?php echo $tripIsCompleted ? '' : ' hidden'; ?>>
         <i class="fa fa-circle-check" aria-hidden="true"></i>
         <span><strong>Trip completed.</strong> Thank you for riding with MBUS.</span>
@@ -410,25 +427,49 @@ async function refreshTripCompletion() {
 refreshTripCompletion();
 setInterval(refreshTripCompletion, 15000);
 
-/* Trip filter: Active / History / Cancelled / All. Instant (no reload) and remembered while the rider is on the site. */
+/* Trip filter: Active / History / Cancelled / All, plus a date filter.
+   Instant (no reload); the chip counts follow the date filter. */
 (function () {
     const chips = Array.from(document.querySelectorAll('.tf-chip'));
     if (!chips.length) return;
     const items = Array.from(document.querySelectorAll('[data-cat]'));
     const empty = document.getElementById('tfEmpty');
     const emptyText = document.getElementById('tfEmptyText');
+    const range = document.getElementById('tfRange');
+    const pick = document.getElementById('tfPick');
+    const today = document.getElementById('tfDateRow').dataset.today;
     const messages = {
         active: 'No active trips right now.',
         history: 'No past trips yet.',
         cancelled: 'No cancelled trips.',
         all: 'No trips here.'
     };
-    const countOf = f => items.filter(el => f === 'all' || el.dataset.cat === f).length;
+    const pad = n => String(n).padStart(2, '0');
+    const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    const shift = (s, n) => { const p = s.split('-').map(Number); return ymd(new Date(p[0], p[1] - 1, p[2] + n)); };
+    const monthOf = (s, offset) => { const p = s.split('-').map(Number); const d = new Date(p[0], p[1] - 1 + offset, 1); return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
+    let current = 'active';
+
+    function inRange(date) {
+        const mode = range.value;
+        if (mode === 'any') return true;
+        if (!date) return false;
+        if (mode === 'today') return date === today;
+        if (mode === 'past7') return date <= today && date >= shift(today, -6);
+        if (mode === 'next7') return date >= today && date <= shift(today, 6);
+        if (mode === 'month') return date.slice(0, 7) === monthOf(today, 0);
+        if (mode === 'lastmonth') return date.slice(0, 7) === monthOf(today, -1);
+        if (mode === 'pick') return !pick.value || date === pick.value;
+        return true;
+    }
+    const matches = (el, f) => (f === 'all' || el.dataset.cat === f) && inRange(el.dataset.date || '');
+    const countOf = f => items.filter(el => matches(el, f)).length;
 
     function apply(filter) {
+        current = filter;
         let shown = 0;
         items.forEach(el => {
-            const show = filter === 'all' || el.dataset.cat === filter;
+            const show = matches(el, filter);
             el.hidden = !show;
             if (show) shown++;
         });
@@ -436,15 +477,23 @@ setInterval(refreshTripCompletion, 15000);
             const on = chip.dataset.filter === filter;
             chip.classList.toggle('on', on);
             chip.setAttribute('aria-selected', String(on));
+            const b = chip.querySelector('b');
+            if (b) b.textContent = countOf(chip.dataset.filter);
         });
         if (empty) {
             empty.hidden = shown > 0;
-            if (emptyText) emptyText.textContent = messages[filter] || messages.all;
+            if (emptyText) emptyText.textContent = range.value !== 'any' ? 'No trips for this date.' : (messages[filter] || messages.all);
         }
         try { sessionStorage.setItem('mbusTripFilter', filter); } catch (e) { /* storage unavailable */ }
     }
 
     chips.forEach(chip => chip.addEventListener('click', () => apply(chip.dataset.filter)));
+    range.addEventListener('change', () => {
+        pick.hidden = range.value !== 'pick';
+        if (range.value === 'pick' && !pick.value) pick.value = today;
+        apply(current);
+    });
+    pick.addEventListener('change', () => apply(current));
 
     let start = 'active';
     try {
@@ -489,16 +538,22 @@ setInterval(refreshTripCompletion, 15000);
     font-weight: 700;
 }
 
-/* Trip filter chips */
+/* Trip filters: status chips + date filter, pinned under the top bar while scrolling */
 [data-cat][hidden], .tf-empty[hidden] { display: none !important; }
-.trip-filters {
+.tf-bar {
     position: sticky;
-    top: 0;
+    top: var(--hdr-h, 0px);
     z-index: 5;
+    margin: 0 0 12px;
+    padding: 4px 0 8px;
+    background: rgba(236, 243, 255, .96);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+}
+.trip-filters {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 6px;
-    margin: 0 0 14px;
     padding: 6px;
     border: 1px solid #dbe5f4;
     border-radius: 18px;
@@ -516,13 +571,49 @@ setInterval(refreshTripCompletion, 15000);
     border-radius: 13px;
     background: transparent;
     color: #6b7a90;
-    font: 600 .8rem/1.2 inherit;
+    font-family: inherit;
+    font-size: .8rem;
+    font-weight: 600;
+    line-height: 1.2;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
 }
 .tf-chip b { order: -1; font-size: 1.15rem; font-weight: 800; line-height: 1.1; }
 .tf-chip.on { background: #eaf1fd; color: #2f6fe4; }
 .tf-chip:focus-visible { outline: 2px solid #2f6fe4; outline-offset: 2px; }
+.tf-date-row { display: flex; gap: 8px; margin-top: 8px; }
+.tf-date {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 42px;
+    padding: 0 12px;
+    border: 1px solid #dbe5f4;
+    border-radius: 14px;
+    background: #fff;
+    color: #6b7a90;
+}
+.tf-date select, .tf-date-row input[type="date"] {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: #172b4d;
+    font-family: inherit;
+    font-size: .88rem;
+    font-weight: 600;
+    outline: none;
+}
+.tf-date-row input[type="date"] {
+    min-height: 42px;
+    padding: 0 12px;
+    border: 1px solid #dbe5f4;
+    border-radius: 14px;
+    background: #fff;
+}
+.tf-date-row input[hidden] { display: none; }
 
 /* Mobile reservation card improvements */
 @media (max-width: 768px) {
