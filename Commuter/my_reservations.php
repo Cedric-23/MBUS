@@ -60,6 +60,8 @@ $sql = mbus_db_prepare($conn, "
     <link rel="stylesheet" href="../Assets/css/commuter_sidebar.css">
     <link rel="stylesheet" href="../Assets/css/my_reservation.css">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
+    <link rel="stylesheet" href="../Assets/css/professional-filters.css">
+    <link rel="stylesheet" href="../Assets/css/direction_tabs.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/bottom-nav.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
@@ -142,27 +144,22 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
 <?php };
 ?>
 <?php if($groups){ ?>
-    <div class="tf-bar">
-        <nav class="trip-filters" role="tablist" aria-label="Filter trips">
-            <button type="button" class="tf-chip" role="tab" data-filter="active" aria-selected="false">Active <b><?php echo (int)$catCount['active']; ?></b></button>
-            <button type="button" class="tf-chip" role="tab" data-filter="history" aria-selected="false">History <b><?php echo (int)$catCount['history']; ?></b></button>
-            <button type="button" class="tf-chip" role="tab" data-filter="cancelled" aria-selected="false">Cancelled <b><?php echo (int)$catCount['cancelled']; ?></b></button>
-            <button type="button" class="tf-chip" role="tab" data-filter="all" aria-selected="false">All <b><?php echo count($groups); ?></b></button>
+    <!-- Same look as the Schedule page: day pills + a segmented status switch -->
+    <div class="date-filter-container">
+        <nav class="date-filters" id="tfDays" data-today="<?php echo date('Y-m-d'); ?>" aria-label="Trip dates">
+            <a href="#" class="date-filter-btn active" data-range="all" role="button"><i class="fa fa-list" aria-hidden="true"></i>All dates</a>
+            <a href="#" class="date-filter-btn" data-range="today" role="button"><i class="fa fa-calendar-day" aria-hidden="true"></i>Today</a>
+            <a href="#" class="date-filter-btn" data-range="yesterday" role="button"><i class="fa fa-calendar-minus" aria-hidden="true"></i>Yesterday</a>
+            <a href="#" class="date-filter-btn" data-range="thisweek" role="button"><i class="fa fa-calendar-week" aria-hidden="true"></i>This Week</a>
+            <a href="#" class="date-filter-btn" data-range="lastweek" role="button"><i class="fa fa-calendar-alt" aria-hidden="true"></i>Last Week</a>
+            <a href="#" class="date-filter-btn" data-range="month" role="button"><i class="fa fa-calendar" aria-hidden="true"></i>This Month</a>
+            <a href="#" class="date-filter-btn" data-range="lastmonth" role="button"><i class="fa fa-calendar-check" aria-hidden="true"></i>Last Month</a>
         </nav>
-        <div class="tf-date-row" id="tfDateRow" data-today="<?php echo date('Y-m-d'); ?>">
-            <label class="tf-date"><i class="fa fa-calendar-days" aria-hidden="true"></i>
-                <select id="tfRange" aria-label="Filter by trip date">
-                    <option value="any">Any date</option>
-                    <option value="today">Today</option>
-                    <option value="past7">Last 7 days</option>
-                    <option value="next7">Next 7 days</option>
-                    <option value="month">This month</option>
-                    <option value="lastmonth">Last month</option>
-                    <option value="pick">Pick a date…</option>
-                </select>
-            </label>
-            <input type="date" id="tfPick" hidden aria-label="Pick a trip date">
-        </div>
+    </div>
+    <div class="dir-tabs trip-status" role="tablist" aria-label="Trip status">
+        <button type="button" class="dir-tab" role="tab" data-filter="active" aria-selected="false">Active <span class="dir-count"><?php echo (int)$catCount['active']; ?></span></button>
+        <button type="button" class="dir-tab" role="tab" data-filter="history" aria-selected="false">History <span class="dir-count"><?php echo (int)$catCount['history']; ?></span></button>
+        <button type="button" class="dir-tab" role="tab" data-filter="cancelled" aria-selected="false">Cancelled <span class="dir-count"><?php echo (int)$catCount['cancelled']; ?></span></button>
     </div>
     <div class="card empty-state tf-empty" id="tfEmpty" role="status" hidden>
         <i class="fa fa-ticket" aria-hidden="true" style="font-size: var(--fs-3xl); color: var(--color-text-muted); margin-bottom: var(--space-4);"></i>
@@ -427,83 +424,87 @@ async function refreshTripCompletion() {
 refreshTripCompletion();
 setInterval(refreshTripCompletion, 15000);
 
-/* Trip filter: Active / History / Cancelled / All, plus a date filter.
-   Instant (no reload); the chip counts follow the date filter. */
+/* Trip filters: day pills (All dates / Today / Yesterday / This Week / Last Week / This Month / Last Month)
+   combined with the Active / History / Cancelled switch. Instant, no reload; the counts follow the day pill. */
 (function () {
-    const chips = Array.from(document.querySelectorAll('.tf-chip'));
-    if (!chips.length) return;
+    const tabs = Array.from(document.querySelectorAll('.trip-status .dir-tab'));
+    const days = document.getElementById('tfDays');
+    if (!tabs.length || !days) return;
+    const pills = Array.from(days.querySelectorAll('.date-filter-btn'));
     const items = Array.from(document.querySelectorAll('[data-cat]'));
     const empty = document.getElementById('tfEmpty');
     const emptyText = document.getElementById('tfEmptyText');
-    const range = document.getElementById('tfRange');
-    const pick = document.getElementById('tfPick');
-    const today = document.getElementById('tfDateRow').dataset.today;
+    const today = days.dataset.today;
     const messages = {
         active: 'No active trips right now.',
         history: 'No past trips yet.',
-        cancelled: 'No cancelled trips.',
-        all: 'No trips here.'
+        cancelled: 'No cancelled trips.'
     };
     const pad = n => String(n).padStart(2, '0');
     const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-    const shift = (s, n) => { const p = s.split('-').map(Number); return ymd(new Date(p[0], p[1] - 1, p[2] + n)); };
-    const monthOf = (s, offset) => { const p = s.split('-').map(Number); const d = new Date(p[0], p[1] - 1 + offset, 1); return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
-    let current = 'active';
+    const parts = s => s.split('-').map(Number);
+    const shift = (s, n) => { const p = parts(s); return ymd(new Date(p[0], p[1] - 1, p[2] + n)); };
+    const monthOf = (s, offset) => { const p = parts(s); const d = new Date(p[0], p[1] - 1 + offset, 1); return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
+    // Weeks run Monday to Sunday, like the Schedule page.
+    const weekStart = s => { const p = parts(s); const dow = (new Date(p[0], p[1] - 1, p[2]).getDay() + 6) % 7; return shift(s, -dow); };
+    let status = 'active';
+    let range = 'all';
 
     function inRange(date) {
-        const mode = range.value;
-        if (mode === 'any') return true;
+        if (range === 'all') return true;
         if (!date) return false;
-        if (mode === 'today') return date === today;
-        if (mode === 'past7') return date <= today && date >= shift(today, -6);
-        if (mode === 'next7') return date >= today && date <= shift(today, 6);
-        if (mode === 'month') return date.slice(0, 7) === monthOf(today, 0);
-        if (mode === 'lastmonth') return date.slice(0, 7) === monthOf(today, -1);
-        if (mode === 'pick') return !pick.value || date === pick.value;
+        if (range === 'today') return date === today;
+        if (range === 'yesterday') return date === shift(today, -1);
+        if (range === 'thisweek') { const w = weekStart(today); return date >= w && date <= shift(w, 6); }
+        if (range === 'lastweek') { const w = shift(weekStart(today), -7); return date >= w && date <= shift(w, 6); }
+        if (range === 'month') return date.slice(0, 7) === monthOf(today, 0);
+        if (range === 'lastmonth') return date.slice(0, 7) === monthOf(today, -1);
         return true;
     }
-    const matches = (el, f) => (f === 'all' || el.dataset.cat === f) && inRange(el.dataset.date || '');
-    const countOf = f => items.filter(el => matches(el, f)).length;
+    const matches = (el, st) => el.dataset.cat === st && inRange(el.dataset.date || '');
+    const countOf = st => items.filter(el => matches(el, st)).length;
 
-    function apply(filter) {
-        current = filter;
+    function apply() {
         let shown = 0;
         items.forEach(el => {
-            const show = matches(el, filter);
+            const show = matches(el, status);
             el.hidden = !show;
             if (show) shown++;
         });
-        chips.forEach(chip => {
-            const on = chip.dataset.filter === filter;
-            chip.classList.toggle('on', on);
-            chip.setAttribute('aria-selected', String(on));
-            const b = chip.querySelector('b');
-            if (b) b.textContent = countOf(chip.dataset.filter);
+        tabs.forEach(tab => {
+            const on = tab.dataset.filter === status;
+            tab.classList.toggle('on', on);
+            tab.setAttribute('aria-selected', String(on));
+            const n = tab.querySelector('.dir-count');
+            if (n) n.textContent = countOf(tab.dataset.filter);
         });
         if (empty) {
             empty.hidden = shown > 0;
-            if (emptyText) emptyText.textContent = range.value !== 'any' ? 'No trips for this date.' : (messages[filter] || messages.all);
+            if (emptyText) emptyText.textContent = range !== 'all' ? 'No trips for this day.' : (messages[status] || 'No trips here.');
         }
-        try { sessionStorage.setItem('mbusTripFilter', filter); } catch (e) { /* storage unavailable */ }
+        try { sessionStorage.setItem('mbusTripFilter', status); } catch (e) { /* storage unavailable */ }
     }
 
-    chips.forEach(chip => chip.addEventListener('click', () => apply(chip.dataset.filter)));
-    range.addEventListener('change', () => {
-        pick.hidden = range.value !== 'pick';
-        if (range.value === 'pick' && !pick.value) pick.value = today;
-        apply(current);
-    });
-    pick.addEventListener('change', () => apply(current));
+    tabs.forEach(tab => tab.addEventListener('click', () => { status = tab.dataset.filter; apply(); }));
+    pills.forEach(pill => pill.addEventListener('click', e => {
+        e.preventDefault();
+        range = pill.dataset.range;
+        pills.forEach(p => {
+            const on = p === pill;
+            p.classList.toggle('active', on);
+            p.setAttribute('aria-current', on ? 'page' : 'false');
+        });
+        apply();
+    }));
 
-    let start = 'active';
     try {
         const saved = sessionStorage.getItem('mbusTripFilter');
-        if (saved && messages[saved]) start = saved;
+        if (saved && messages[saved]) status = saved;
     } catch (e) { /* ignore */ }
-    if (countOf(start) === 0 && start !== 'all') {
-        start = ['active', 'history', 'cancelled'].find(f => countOf(f) > 0) || 'all';
+    if (countOf(status) === 0) {
+        status = ['active', 'history', 'cancelled'].find(f => countOf(f) > 0) || 'active';
     }
-    apply(start);
+    apply();
 })();
 </script>
 
@@ -538,82 +539,10 @@ setInterval(refreshTripCompletion, 15000);
     font-weight: 700;
 }
 
-/* Trip filters: status chips + date filter, pinned under the top bar while scrolling */
+/* Trip filters reuse the Schedule page styles (date pills + dir-tabs); only the status switch has 3 columns here */
 [data-cat][hidden], .tf-empty[hidden] { display: none !important; }
-.tf-bar {
-    position: sticky;
-    top: var(--hdr-h, 0px);
-    z-index: 5;
-    margin: 0 0 12px;
-    padding: 4px 0 8px;
-    background: rgba(236, 243, 255, .96);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-}
-.trip-filters {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-    padding: 6px;
-    border: 1px solid #dbe5f4;
-    border-radius: 18px;
-    background: #fff;
-}
-.tf-chip {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1px;
-    min-height: 52px;
-    padding: 6px 2px;
-    border: 0;
-    border-radius: 13px;
-    background: transparent;
-    color: #6b7a90;
-    font-family: inherit;
-    font-size: .8rem;
-    font-weight: 600;
-    line-height: 1.2;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-}
-.tf-chip b { order: -1; font-size: 1.15rem; font-weight: 800; line-height: 1.1; }
-.tf-chip.on { background: #eaf1fd; color: #2f6fe4; }
-.tf-chip:focus-visible { outline: 2px solid #2f6fe4; outline-offset: 2px; }
-.tf-date-row { display: flex; gap: 8px; margin-top: 8px; }
-.tf-date {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    min-height: 42px;
-    padding: 0 12px;
-    border: 1px solid #dbe5f4;
-    border-radius: 14px;
-    background: #fff;
-    color: #6b7a90;
-}
-.tf-date select, .tf-date-row input[type="date"] {
-    flex: 1;
-    min-width: 0;
-    border: 0;
-    background: transparent;
-    color: #172b4d;
-    font-family: inherit;
-    font-size: .88rem;
-    font-weight: 600;
-    outline: none;
-}
-.tf-date-row input[type="date"] {
-    min-height: 42px;
-    padding: 0 12px;
-    border: 1px solid #dbe5f4;
-    border-radius: 14px;
-    background: #fff;
-}
-.tf-date-row input[hidden] { display: none; }
+.dir-tabs.trip-status { grid-template-columns: repeat(3, 1fr); }
+.dir-tabs.trip-status .dir-tab { padding: 0 4px; gap: 5px; }
 
 /* Mobile reservation card improvements */
 @media (max-width: 768px) {
