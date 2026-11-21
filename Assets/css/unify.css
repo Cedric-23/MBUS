@@ -37,8 +37,17 @@ body:not(:has(.sidebar)):not(.commuter-waiting-board):not(.staff-wait-page) .pro
 .staff-wait-page .sw-bar .profile-avatar{width:30px!important;height:30px!important}
 .staff-wait-page .sw-bar .profile-menu{top:calc(100% + 8px)!important;right:0!important;left:auto!important}
 
-/* Sticky page header: the greeting / page title stays visible while scrolling (all roles) */
-.home-top,.page-header{position:sticky!important;top:0;z-index:50;margin-top:calc(var(--u-top) * -1)!important;padding-top:var(--u-top)!important;padding-bottom:10px!important;background:var(--color-bg,#eef3fb);clip-path:inset(0 -100vmax -10px)}
-.home-top::after,.page-header::after{content:"";position:absolute;left:0;right:0;bottom:-10px;height:10px;background:linear-gradient(var(--color-bg,#eef3fb),rgba(238,243,251,0));pointer-events:none}
-.home-top{margin-bottom:8px!important}
-.page-header{margin-bottom:10px!important}
+/* ---- One header for every page and role: same size, spacing and placement ----
+   Greeting headers (.home-top) and title headers (.page-header) share the same height, title size,
+   weight and colour, and both stay pinned to the top while scrolling. The profile icon (and the
+   commuter bell) sit in the same spot on the right of this row on every page. */
+.page-header,.home-top{display:flex!important;align-items:center!important;flex-direction:row!important;justify-content:flex-start!important;min-height:44px!important;margin:0 0 20px!important;padding:0 56px 0 0!important;gap:12px}
+.home-top>div:first-child,.page-header-left{flex:1;min-width:0}
+.page-header h1,.home-top h1{margin:0!important;font-size:1.6rem!important;line-height:1.2!important;font-weight:700!important;letter-spacing:-.02em!important;color:var(--color-text-primary,#162033)!important}
+.home-hello{margin:0!important;font-size:.8125rem!important;line-height:1.2!important;white-space:nowrap}
+.cm .home-top{padding-right:108px!important}
+@media (max-width:768px){.page-header h1,.home-top h1{font-size:1.35rem!important}}
+
+/* pinned: stays on screen while the page scrolls (same page colour, so it looks unchanged) */
+.page-header,.home-top{position:sticky!important;top:0;z-index:50;margin-top:calc(var(--u-top) * -1)!important;padding-top:var(--u-top)!important;padding-bottom:10px!important;background:var(--color-bg,#eef3fb);clip-path:inset(0 -100vmax)}
+.home-top h1{line-height:1.1!important}
