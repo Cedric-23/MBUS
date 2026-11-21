@@ -126,11 +126,9 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
 <?php if (!$bus): ?>
     <section class="card mb-card"><h2>No bus assigned yet</h2><p class="mb-hint">Once an admin assigns a bus to you, you can set up its seats here.</p></section>
 <?php else: ?>
-    <?php if (count($buses) > 1): ?>
-    <nav class="mb-tabs" aria-label="Your buses"><?php foreach ($buses as $id => $b): ?>
-        <a href="my_bus.php?bus_id=<?php echo (int)$id; ?>"<?php echo $id === $busId ? ' class="active" aria-current="page"' : ''; ?>><?php echo htmlspecialchars($b['bus_number']); ?></a>
+    <nav class="mb-tabs" aria-label="Your buses"><?php foreach ($buses as $id => $b): $bl = ctype_digit((string)$b['bus_number']) ? 'Bus ' . $b['bus_number'] : $b['bus_number']; ?>
+        <a href="my_bus.php?bus_id=<?php echo (int)$id; ?>"<?php echo $id === $busId ? ' class="active" aria-current="page"' : ''; ?>><strong><?php echo htmlspecialchars($bl); ?></strong><small><?php echo htmlspecialchars($b['bus_type']); ?> &middot; <?php echo (int)$b['capacity']; ?> seats</small></a>
     <?php endforeach; ?></nav>
-    <?php endif; ?>
 
     <?php if ($ok): ?><div class="alert alert-success mb-alert" role="status"><?php echo htmlspecialchars($ok); ?></div><?php endif; ?>
     <?php if ($err): ?><div class="alert alert-error mb-alert" role="alert"><?php echo htmlspecialchars($err); ?></div><?php endif; ?>
@@ -138,12 +136,6 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
     <form method="POST" class="mb-form">
         <?php csrf_field(); ?>
         <input type="hidden" name="bus_id" value="<?php echo (int)$busId; ?>">
-
-        <section class="card mb-card">
-            <div class="mb-head">
-                <div><h2><?php echo htmlspecialchars(ctype_digit((string)$bus['bus_number']) ? 'Bus ' . $bus['bus_number'] : $bus['bus_number']); ?></h2><p class="mb-hint"><?php echo htmlspecialchars($bus['bus_type']); ?> · <span id="mbSeatTotal"><?php echo (int)$bus['capacity']; ?></span> seats</p></div>
-            </div>
-        </section>
 
         <section class="card mb-card">
             <section class="seat-builder" data-seat-builder aria-labelledby="seat-builder-title">

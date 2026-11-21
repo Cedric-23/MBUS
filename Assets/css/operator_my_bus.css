@@ -4,7 +4,7 @@
 .mybus-page .mb-hint{margin:2px 0 0;color:#64748b;font-size:.85rem}
 .mybus-page .mb-alert{max-width:720px;margin:0 auto 12px}
 .mybus-page .mb-tabs{max-width:720px;margin:0 auto 14px;display:flex;gap:8px;flex-wrap:wrap}
-.mybus-page .mb-tabs a{padding:8px 16px;border-radius:999px;background:#fff;color:#25467f;font-weight:600;font-size:.85rem;text-decoration:none;box-shadow:0 1px 6px rgba(47,111,228,.12)}
+.mybus-page .mb-tabs a{display:grid;gap:2px;min-width:130px;padding:10px 16px;border-radius:16px;background:#fff;color:#25467f;font-weight:600;font-size:.85rem;text-decoration:none;box-shadow:0 1px 6px rgba(47,111,228,.12)}
 .mybus-page .mb-tabs a.active{background:#2f6fe4;color:#fff}
 .mybus-page .mb-photos{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
 .mybus-page .mb-photo{display:grid;gap:8px;justify-items:start}
@@ -15,3 +15,5 @@
 .mybus-page .seat-builder{margin:0;padding:0;border:0;background:transparent}
 .mybus-page .mb-save{max-width:720px;margin:0 auto 24px}
 .mybus-page .mb-save .btn{width:100%;min-height:48px;border-radius:999px}
+.mybus-page .mb-tabs a strong{font-size:.95rem}
+.mybus-page .mb-tabs a small{font-size:.75rem;opacity:.75;font-weight:500}
