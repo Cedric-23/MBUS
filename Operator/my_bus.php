@@ -40,14 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $busId > 0) {
         $bus = $buses[$busId];
         $updates = []; $params = []; $notes = [];
 
-        // photos (optional; remove checkboxes clear them)
-        foreach (['bus_photo' => 'Exterior', 'interior_photo' => 'Interior'] as $field => $label) {
-            $pe = null; $photo = mbus_bus_photo_upload($field, $pe);
-            if ($pe) { $err = $label . ' photo: ' . $pe; break; }
-            if ($photo) { $updates[] = "{$field}_b64 = ?"; $updates[] = "{$field}_mime = ?"; array_push($params, $photo['b64'], $photo['mime']); $notes[] = strtolower($label) . ' photo'; }
-            elseif (!empty($_POST['remove_' . $field])) { $updates[] = "{$field}_b64 = NULL"; $updates[] = "{$field}_mime = NULL"; $notes[] = strtolower($label) . ' photo removed'; }
-        }
-
         // seat layout
         if ($err === '') {
             $newLayout = mbus_seat_layout_parse((string)($_POST['seat-layout'] ?? ''));
@@ -143,7 +135,7 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
     <?php if ($ok): ?><div class="alert alert-success mb-alert" role="status"><?php echo htmlspecialchars($ok); ?></div><?php endif; ?>
     <?php if ($err): ?><div class="alert alert-error mb-alert" role="alert"><?php echo htmlspecialchars($err); ?></div><?php endif; ?>
 
-    <form method="POST" enctype="multipart/form-data" class="mb-form">
+    <form method="POST" class="mb-form">
         <?php csrf_field(); ?>
         <input type="hidden" name="bus_id" value="<?php echo (int)$busId; ?>">
 
@@ -151,18 +143,7 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
             <div class="mb-head">
                 <div><h2><?php echo htmlspecialchars($bus['bus_number']); ?></h2><p class="mb-hint"><?php echo htmlspecialchars($bus['bus_type']); ?> · <span id="mbSeatTotal"><?php echo (int)$bus['capacity']; ?></span> seats</p></div>
             </div>
-            <h3>Photos</h3>
-            <p class="mb-hint">Optional. JPG or PNG, up to 768 KB each.</p>
-            <div class="mb-photos">
-                <?php foreach (['bus_photo' => ['Exterior', 'ext', 'exterior'], 'interior_photo' => ['Interior', 'int', 'interior']] as $field => [$label, $flag, $type]): ?>
-                <div class="mb-photo">
-                    <div class="mb-thumb" id="thumb_<?php echo $field; ?>"<?php if ($yes($bus['has_' . $flag])): ?> style="background-image:url('bus_photo.php?bus_id=<?php echo (int)$busId; ?>&amp;type=<?php echo $type; ?>&amp;v=<?php echo time(); ?>')"<?php endif; ?>><?php if (!$yes($bus['has_' . $flag])): ?><i class="fa fa-camera" aria-hidden="true"></i><?php endif; ?></div>
-                    <strong><?php echo $label; ?></strong>
-                    <label class="mb-file"><span>Choose photo</span><input type="file" name="<?php echo $field; ?>" accept="image/jpeg,image/png" data-thumb="thumb_<?php echo $field; ?>"></label>
-                    <?php if ($yes($bus['has_' . $flag])): ?><label class="mb-remove"><input type="checkbox" name="remove_<?php echo $field; ?>" value="1"> Remove</label><?php endif; ?>
-                </div>
-                <?php endforeach; ?>
-            </div>
+            <p class="mb-hint">Bus photos are taken from your application. Set up the seats below.</p>
         </section>
 
         <section class="card mb-card">
@@ -192,12 +173,6 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
 <script src="../Assets/js/app-header.js"></script>
 <script src="../Assets/js/driver_bus_setup.js?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/js/driver_bus_setup.js'); ?>"></script>
 <script>
-document.querySelectorAll('input[type=file][data-thumb]').forEach(function (i) {
-  i.addEventListener('change', function () {
-    var t = document.getElementById(i.dataset.thumb), f = i.files && i.files[0]; if (!t || !f) return;
-    t.style.backgroundImage = "url('" + URL.createObjectURL(f) + "')"; t.textContent = '';
-  });
-});
 (function () { var c = document.querySelector('[data-seat-count]'), t = document.getElementById('mbSeatTotal'); if (!c || !t) return;
   new MutationObserver(function () { var m = c.textContent.match(/\d+/); if (m) t.textContent = m[0]; }).observe(c, { childList: true, characterData: true, subtree: true }); })();
 </script>

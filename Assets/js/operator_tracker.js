@@ -26,12 +26,13 @@
       .op-loc{position:fixed;z-index:900;right:12px;bottom:calc(var(--bottom-nav-height,60px) + 12px + env(safe-area-inset-bottom));
         display:flex;align-items:center;gap:8px;max-width:calc(100vw - 24px);padding:8px 14px;border-radius:999px;
         background:#fff;color:#172b4d;font:600 .8125rem/1.2 Inter,system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.16);pointer-events:none}
+      .op-loc.in-header{position:fixed;top:calc(22px + env(safe-area-inset-top));right:66px;bottom:auto;z-index:900;padding:6px 11px;font-size:.75rem;box-shadow:0 1px 6px rgba(47,111,228,.16);max-width:46vw}
       .op-loc[hidden]{display:none}
       .op-loc i{width:9px;height:9px;border-radius:50%;background:#98a2b3;flex:none}
       .op-loc.is-live i{background:#12b76a;box-shadow:0 0 0 0 rgba(18,183,106,.5);animation:oploc 2s infinite}
       .op-loc.is-wait i{background:#f79009}.op-loc.is-error i{background:#f04438}
       .op-loc span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-      @media (min-width:769px){.op-loc{bottom:16px}}
+      @media (min-width:769px){.op-loc:not(.in-header){bottom:16px}}
       @media (prefers-reduced-motion:reduce){.op-loc.is-live i{animation:none}}
       @keyframes oploc{70%{box-shadow:0 0 0 8px rgba(18,183,106,0)}100%{box-shadow:0 0 0 0 rgba(18,183,106,0)}}`;
     document.head.appendChild(style);
@@ -42,14 +43,17 @@
     pill.setAttribute('aria-live', 'polite');
     pill.innerHTML = '<i aria-hidden="true"></i><span></span>';
     pill.hidden = true;
-    document.body.appendChild(pill);
+    const headerSlot = document.querySelector('.page-header-right');
+    const headerMenu = headerSlot && headerSlot.querySelector('.profile-menu-wrap');
+    if (headerSlot && headerMenu) { headerSlot.insertBefore(pill, headerMenu); headerSlot.style.alignItems = 'center'; }
+    else document.body.appendChild(pill);
 
     const legacyText = document.getElementById('operatorTrackingStatus');
     const legacyBadge = document.getElementById('operatorTrackingBadge');
 
     function show(tone, text, long) {
         pill.hidden = false;
-        pill.className = 'op-loc is-' + tone;
+        pill.className = 'op-loc is-' + tone + (pill.parentNode === document.body ? '' : ' in-header');
         pill.lastChild.textContent = text;
         if (legacyText) legacyText.textContent = long || text;
         if (legacyBadge) {
@@ -65,7 +69,7 @@
 
     // First paint from the last page's state, so there's no flash of "off".
     const cached = read();
-    if (cached.sid && cached.sharing) show('live', 'Location on · ' + (cached.bus || 'bus'), 'Sharing your location.');
+    if (cached.sid && cached.sharing) show('live', 'Live · ' + (cached.bus || 'bus'), 'Sharing your location.');
 
     /* ---------- choosing the trip ---------- */
     function pickTrip() {
@@ -96,7 +100,7 @@
             if (data && data.csrf_token) token = data.csrf_token;
             if (!res.ok || data.ok !== true) throw new Error(data.message || 'Location rejected.');
             write({ lastSent: Date.now(), sharing: true, sid: trip.schedule_id, bus: trip.bus_number });
-            show('live', 'Location on · ' + (trip.bus_number || 'bus'),
+            show('live', 'Live · ' + (trip.bus_number || 'bus'),
                 'Sharing your location · updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         } catch (e) {
             show('error', 'Location not sent', 'Not sharing: ' + (e.message || 'connection problem'));

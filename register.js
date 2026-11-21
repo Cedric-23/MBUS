@@ -260,7 +260,7 @@ document.querySelectorAll(".upload-group").forEach(function (group) {
     });
 });
 
-[optionPassenger, optionConductor, optionDriver].forEach(function (option) {
+[optionPassenger, optionConductor, optionDriver].filter(Boolean).forEach(function (option) {
     option.addEventListener("click", function (e) {
         e.preventDefault();
         const type = option.querySelector("a").dataset.type;

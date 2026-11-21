@@ -29,11 +29,12 @@ assert.match(db, /schemaVersion\s*=\s*'2026-11-22a'/,
     'the runtime schema version must advance so existing deployments run the new upgrades');
 
 const registration = read('register.php');
-for (const field of ['name="bus_photo"', 'name="interior_photo"', 'name="seat-layout"']) {
-    assert.ok(!registration.includes(field), `registration should no longer include ${field}`);
+for (const field of ['name="bus_photo"', 'name="interior_photo"']) {
+    assert.ok(registration.includes(field), `registration should include ${field}`);
 }
+assert.ok(!registration.includes('name="seat-layout"'), 'seat layout now lives on the My Bus page');
 const myBus = read('Operator/my_bus.php');
-for (const field of ['name="<?php echo $field; ?>"', 'name="seat-layout"', 'data-seat-builder']) {
+for (const field of ['name="seat-layout"', 'data-seat-builder']) {
     assert.ok(myBus.includes(field), `My Bus page should include ${field}`);
 }
 

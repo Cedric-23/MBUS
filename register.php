@@ -204,22 +204,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $application_limit = mbus_registration_allow_application($conn, $email);
             if ($application_limit !== null) $error = mbus_registration_limit_message($application_limit);
         }
-        $lic = $veh = null;
+        $lic = $veh = $busPhoto = $interiorPhoto = null;
         if (!$errors && $error === '') {
             $fe = ''; $lic = mbus_application_file('license_document', $fe);
             if (!$lic) $errors['license_document'] = 'License file: ' . $fe;
             $fe = ''; $veh = mbus_application_file('vehicle_document', $fe);
             if (!$veh) $errors['vehicle_document'] = 'Vehicle registration file: ' . $fe;
+            $fe = ''; $busPhoto = mbus_application_photo('bus_photo', $fe);
+            if (!$busPhoto) $errors['bus_photo'] = 'Bus exterior photo: ' . $fe;
+            $fe = ''; $interiorPhoto = mbus_application_photo('interior_photo', $fe);
+            if (!$interiorPhoto) $errors['interior_photo'] = 'Bus interior photo: ' . $fe;
         }
         if (!$errors && $error === '') {
             $ok = mbus_db_prepare($conn,
                 "INSERT INTO operator_application
                     (full_name, email, phone_number, address, license_number, license_expiry, vehicle_type, vehicle_plate_number,
                      license_document_b64, license_document_mime, vehicle_document_b64, vehicle_document_mime, password_hash,
-                     application_status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')",
+                     bus_photo_b64, bus_photo_mime, interior_photo_b64, interior_photo_mime, application_status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')",
                 [$full_name, $email, $phone_number, $address, $license_number, $license_expiry, $vehicle_type, $plate,
-                 $lic['b64'], $lic['mime'], $veh['b64'], $veh['mime'], password_hash($password, PASSWORD_DEFAULT)]);
+                 $lic['b64'], $lic['mime'], $veh['b64'], $veh['mime'], password_hash($password, PASSWORD_DEFAULT),
+                 $busPhoto['b64'], $busPhoto['mime'], $interiorPhoto['b64'], $interiorPhoto['mime']]);
             if ($ok === false) { $error = 'We could not save your application. Please try again.'; }
             else {
                 $_SESSION['register_flash'] = 'Application submitted. An admin will review it. Once approved, log in with ' . $email . ' and the password you chose.';
@@ -231,7 +236,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if ($errors && $error === '') $error = 'Please fix the highlighted fields.';
     // Driver form is a 3-step wizard: reopen on the first step that has an error
     $stepOf = ['full-name'=>0,'email-address'=>0,'phone-number'=>0,'home-address'=>0,'driver-password'=>0,'driver-confirm'=>0,
-               'license-number'=>1,'license-expiry'=>1,'license_document'=>1,'vehicle-type'=>2,'vehicle-plate'=>2,'vehicle_document'=>2];
+               'license-number'=>1,'license-expiry'=>1,'license_document'=>1,'vehicle-type'=>2,'vehicle-plate'=>2,'vehicle_document'=>2,
+               'bus_photo'=>2,'interior_photo'=>2];
     foreach (array_keys($errors) as $k) { if (isset($stepOf[$k])) { $step_with_error = $stepOf[$k]; break; } }
 }
 
@@ -536,6 +542,28 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                     <div class="document-preview">
                                         <img class="document-preview-image" alt="Vehicle registration document preview"/>
                                         <iframe class="document-preview-frame" title="Vehicle registration document preview"></iframe>
+                                    </div>
+                                </div>
+                                <div class="bus-photo-grid">
+                                    <div class="upload-group">
+                                        <label class="input-label" for="bus-photo-input">Bus Exterior Photo</label>
+                                        <div class="upload-document-group">
+                                            <div class="upload-icon"><i data-lucide="camera"></i></div>
+                                            <div class="document-desc"><span class="document-name">Upload a clear exterior photo</span><span>JPG or PNG · Max 768 KB</span></div>
+                                            <div class="document-input-button"><button type="button">Browse</button><input id="bus-photo-input" type="file" name="bus_photo" accept="image/jpeg,image/png" data-max-bytes="786432" required/></div>
+                                        </div>
+                                        <?= mbus_field_error($errors, 'bus_photo') ?>
+                                        <div class="document-preview"><img class="document-preview-image" alt="Bus exterior photo preview"/><iframe class="document-preview-frame" title="Bus exterior photo preview"></iframe></div>
+                                    </div>
+                                    <div class="upload-group">
+                                        <label class="input-label" for="interior-photo-input">Bus Interior Photo</label>
+                                        <div class="upload-document-group">
+                                            <div class="upload-icon"><i data-lucide="camera"></i></div>
+                                            <div class="document-desc"><span class="document-name">Show the passenger seating area</span><span>JPG or PNG · Max 768 KB</span></div>
+                                            <div class="document-input-button"><button type="button">Browse</button><input id="interior-photo-input" type="file" name="interior_photo" accept="image/jpeg,image/png" data-max-bytes="786432" required/></div>
+                                        </div>
+                                        <?= mbus_field_error($errors, 'interior_photo') ?>
+                                        <div class="document-preview"><img class="document-preview-image" alt="Bus interior photo preview"/><iframe class="document-preview-frame" title="Bus interior photo preview"></iframe></div>
                                     </div>
                                 </div>
                                 <div class="terms-conditions">
