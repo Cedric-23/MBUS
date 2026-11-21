@@ -58,6 +58,7 @@ function mbus_check_email(string &$email): string {
     if (isset($typos[$domain])) return "Did you mean $local@{$typos[$domain]}?";
     $disposable = ['mailinator.com', 'guerrillamail.com', '10minutemail.com', 'tempmail.com', 'temp-mail.org', 'yopmail.com', 'trashmail.com', 'sharklasers.com',
         'getnada.com', 'dispostable.com', 'maildrop.cc', 'throwawaymail.com', 'fakeinbox.com', 'mailnesia.com', 'tempmailo.com', 'mohmal.com'];
+    if ($domain !== 'gmail.com') return 'Only @gmail.com addresses are accepted. Use your Gmail, like name@gmail.com.';
     if (in_array($domain, $disposable, true)) return 'Temporary email addresses are not allowed. Use your own email.';
     if (function_exists('checkdnsrr')) {
         static $dnsWorks = null;

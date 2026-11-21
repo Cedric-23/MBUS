@@ -152,6 +152,7 @@ if (window.lucide) lucide.createIcons();
     window.setInterval(updateResendTimer, 1000);
 })();
 </script>
+<script>try{localStorage.removeItem("mbus_reg_draft_v1")}catch(e){}</script>
 <script src="Assets/js/submit_feedback.js"></script>
 </body>
 </html>
