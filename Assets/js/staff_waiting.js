@@ -15,7 +15,7 @@
 
     let requests = [], reservations = [], schedules = [], locations = [], csrf = '', ready = false;
     const hiddenReservationKeys = new Set();
-    let trackedKey = null, trackLine = null, trackFitted = false;
+    let trackedPin = '';
     let map = null, layer = null, line = null, routeLayer = null, selected = null, fittedOnce = false;
     let routeKey = '', routeData = null, routeFitKey = '', routeRequest = 0, routeFailure = null;
     let busy = false, refreshing = null;
@@ -70,7 +70,7 @@
                 .addTo(map).on('tileerror', () => { el('staffMapError').hidden = false; });
             routeLayer = L.layerGroup().addTo(map);
             layer = L.layerGroup().addTo(map);
-            map.on('click', () => { if (selected) { selected = null; render(); } });
+            map.on('click', () => { if (selected || trackedPin) { selected = null; trackedPin = ''; render(); } });
         } catch (e) { map = null; el('staffMapError').hidden = false; }
     }
     const FALLBACK_AVATAR = '../Assets/images/mbus_icon.png';
@@ -93,8 +93,8 @@
     const personIcon = (name, on, r) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
         html: '<span class="sw-person' + (on ? ' is-on' : '') + '"><img src="' + photoOf(r) + '" alt=""></span>' });
     /* reservation pin: the rider's photo at the stop they chose. kind = 'pick' (pick-up stop) or 'drop' (drop-off stop) */
-    const reserveIcon = (r, kind, approx, seat) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
-        html: '<span class="sw-res-pin sw-res-' + kind + (approx ? ' is-approx' : '') + '"><span class="sw-person"><img src="' + photoOf(r) + '" alt=""></span><span class="sw-res-tag">' + (kind === 'drop' ? 'Drop-off' : 'Pick-up') + ' · ' + String(seat || '') + '</span></span>' });
+    const reserveIcon = (r, kind, approx, seat, tracked) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
+        html: '<span class="sw-res-pin sw-res-' + kind + (approx ? ' is-approx' : '') + (tracked ? ' is-tracked' : '') + '"><span class="sw-person"><img src="' + photoOf(r) + '" alt=""></span><span class="sw-res-tag">' + (kind === 'drop' ? 'Drop-off' : 'Pick-up') + ' · ' + String(seat || '') + '</span></span>' });
 
     function fit(points) {
         if (!map || !points.length) return;
@@ -295,7 +295,7 @@
                 const seatNumber = seat.seat_number || '?';
                 const pinData = Object.assign({}, r, seat);
                 pts.push(sp.p);
-                const m = L.marker(sp.p, { icon: reserveIcon(pinData, kind, sp.approx, seatNumber), title: (r.full_name || 'Commuter') + ' · seat ' + seatNumber + (kind === 'drop' ? ' · drop-off at ' : ' · pick-up at ') + (name || '') + (sp.approx ? ' (approx.)' : ''), zIndexOffset: 200 }).addTo(layer);
+                const m = L.marker(sp.p, { icon: reserveIcon(pinData, kind, sp.approx, seatNumber, trackedPin === reservationKey(r) + '|' + seatNumber + '|' + kind), title: (r.full_name || 'Commuter') + ' · seat ' + seatNumber + (kind === 'drop' ? ' · drop-off at ' : ' · pick-up at ') + (name || '') + (sp.approx ? ' (approx.)' : ''), zIndexOffset: 200 }).addTo(layer);
                 bindAvatarFallback(m.getElement() && m.getElement().querySelector('.sw-person img'));
                 m.on('click', () => showReservation(r));
             }));
@@ -374,7 +374,6 @@
         });
 
         reservationPins(resRows, pts);
-        drawTrack();
         updateCompact(reqs);
         if (!fittedOnce && pts.length) { fit(pts); fittedOnce = true; }
         updateStaffRoute();
@@ -411,82 +410,73 @@
             open.addEventListener('click', () => showReservation(r));
             const more = node('button', 'Details', 'sw-done sw-details'); more.type = 'button';
             more.addEventListener('click', () => showReservation(r));
-            const key = reservationKey(r), tracking = trackedKey === key;
-            const toggle = node('button', tracking ? 'Stop' : 'Track', 'sw-done sw-res-map-toggle');
-            toggle.type = 'button'; toggle.setAttribute('aria-pressed', tracking ? 'true' : 'false');
-            toggle.setAttribute('aria-label', (tracking ? 'Stop tracking ' : 'Track ') + (r.full_name || 'this reservation'));
-            toggle.addEventListener('click', () => setTrack(tracking ? null : key));
-            li.append(open, more, toggle);
+            li.append(open, more);
             rList.append(li);
         });
         sizeSheet();
     }
-    /* ---------- tracking a reservation: bus -> that rider's pick-up point, live ---------- */
-    function trackTarget(r) {
-        const seat = reservationSeats(r)[0];
-        const sp = seat ? reservationSeatPoint(r, seat, 'pick') : null;
-        return sp ? { p: sp.p, name: seat.pickup_location || 'pick-up' } : null;
-    }
-    function trackChip() {
-        let c = document.getElementById('swTrackChip');
-        if (!c && map) {
-            c = node('div', undefined, 'sw-track-chip'); c.id = 'swTrackChip'; c.setAttribute('role', 'status');
-            const t = node('span'); const x = node('button', 'Stop', 'sw-track-stop'); x.type = 'button';
-            x.addEventListener('click', () => setTrack(null));
-            c.append(t, x); document.getElementById('staffMap').parentNode.append(c);
-        }
-        return c;
-    }
-    function setTrack(key) {
-        trackedKey = key; trackFitted = false;
-        if (!key) { const c = document.getElementById('swTrackChip'); if (c) c.remove(); if (trackLine && map) { map.removeLayer(trackLine); trackLine = null; } }
+    /* Fly to one seat pin (pick-up or drop-off) and keep it highlighted until the map is tapped. */
+    function trackPin(r, seat, kind) {
+        const sp = reservationSeatPoint(r, seat, kind);
+        if (!sp || !map) { say('That stop has no map position yet.'); return; }
+        hiddenReservationKeys.delete(reservationKey(r));
+        trackedPin = reservationKey(r) + '|' + (seat.seat_number || '?') + '|' + kind;
         render();
-    }
-    function drawTrack() {
-        if (trackLine && map) { map.removeLayer(trackLine); trackLine = null; }
-        if (!trackedKey || !map) return;
-        const r = reservations.find(x => reservationKey(x) === trackedKey);
-        if (!r) { setTrack(null); return; }
-        const t = trackTarget(r), b = busFor(r.schedule_id), c = trackChip();
-        let msg = 'Tracking ' + (r.full_name || 'commuter') + ' · ';
-        if (t && b) {
-            const bp = [+b.latitude, +b.longitude];
-            trackLine = L.polyline([bp, t.p], { color: '#6d4aff', weight: 4, dashArray: '2 9', opacity: .9 }).addTo(map);
-            msg += (r.bus_number || 'Bus') + ' is ' + dist(km({ lat: bp[0], lng: bp[1] }, { lat: t.p[0], lng: t.p[1] })) + ' from ' + t.name;
-            if (!trackFitted) { fit([bp, t.p]); trackFitted = true; }
-        } else msg += b ? 'pick-up point not on the map' : 'bus location unavailable';
-        if (c) c.firstChild.textContent = msg;
+        map.flyTo(sp.p, 17, { duration: .8 });
     }
     function showReservation(r) {
         const old = document.getElementById('swCard'); if (old) old.remove();
-        const key = reservationKey(r), tracking = trackedKey === key;
         const back = node('div', undefined, 'sw-card-back'); back.id = 'swCard';
-        const card = node('div', undefined, 'sw-card sw-card-compact'); card.setAttribute('role', 'dialog'); card.setAttribute('aria-modal', 'true'); card.setAttribute('aria-label', 'Reservation details');
-        const head = node('div', undefined, 'sw-card-head');
-        const img = node('img', undefined, 'sw-card-photo'); img.alt = ''; bindAvatarFallback(img); img.src = photoOf(r);
-        const who = node('div'); who.append(node('strong', r.full_name || 'Commuter'), node('small', 'Reserved · not on board yet'));
-        head.append(img, who);
-        const chips = node('div', undefined, 'sw-chips');
-        [r.bus_number, seatLabel(r), ago(r.reserved_at) ? 'Reserved ' + ago(r.reserved_at) : ''].filter(Boolean).forEach(t => chips.append(node('span', t)));
-        const seats = node('ul', undefined, 'sw-seat-list');
-        reservationSeats(r).forEach(seat => {
-            const li = node('li'); li.append(node('b', 'Seat ' + (seat.seat_number || '?')), node('span', (seat.pickup_location || '-') + ' → ' + (seat.destination || '-')));
-            seats.append(li);
-        });
-        card.append(head, chips, seats);
-        const hasPhone = r.phone_number && String(r.phone_number).length > 3;
-        if (hasPhone) { const ph = node('a', String(r.phone_number), 'sw-card-phone'); ph.href = 'tel:' + String(r.phone_number).replace(/[^0-9+]/g, ''); card.append(ph); }
-        const actions = node('div', undefined, 'sw-card-actions');
-        const canTrack = map && trackTarget(r);
-        let track = null;
-        if (canTrack) { track = node('button', tracking ? 'Stop tracking' : 'Track', 'sw-card-pick'); track.type = 'button'; actions.append(track); }
-        const close = node('button', 'Close', 'sw-card-close'); close.type = 'button';
-        actions.append(close); card.append(actions); back.append(card); document.body.append(back);
+        const card = node('div', undefined, 'sw-card sw-rcard'); card.setAttribute('role', 'dialog'); card.setAttribute('aria-modal', 'true'); card.setAttribute('aria-label', 'Reservation details');
         const shut = () => { back.remove(); document.removeEventListener('keydown', esc); };
         const esc = e => { if (e.key === 'Escape') shut(); };
-        if (track) track.addEventListener('click', () => { shut(); setTrack(tracking ? null : key); });
+
+        const head = node('div', undefined, 'sw-rc-head');
+        const img = node('img', undefined, 'sw-rc-photo'); img.alt = ''; bindAvatarFallback(img); img.src = photoOf(r);
+        const who = node('div', undefined, 'sw-rc-who');
+        who.append(node('strong', r.full_name || 'Commuter'),
+            node('small', [r.bus_number, seatLabel(r), ago(r.reserved_at)].filter(Boolean).join(' · ')));
+        const close = node('button', '×', 'sw-rc-x'); close.type = 'button'; close.setAttribute('aria-label', 'Close');
+        head.append(close, img, who);
+
+        const phone = r.phone_number && String(r.phone_number).length > 3 ? String(r.phone_number) : '';
+        const meta = node('div', undefined, 'sw-rc-meta');
+        meta.append(node('span', (r.origin ? r.origin + ' → ' + (r.route_destination || '') : 'Reserved seat') + ' · not on board yet'));
+        if (phone) { const tel = node('a', phone, 'sw-rc-tel'); tel.href = 'tel:' + phone.replace(/[^\d+]/g, ''); meta.append(tel); }
+
+        const seats = node('ul', undefined, 'sw-rc-seats');
+        reservationSeats(r).forEach(seat => {
+            const li = node('li', undefined, 'sw-rc-seat');
+            li.append(node('span', String(seat.seat_number || '?'), 'sw-rc-no'));
+            const stops = node('span', undefined, 'sw-rc-stops');
+            [['pick', seat.pickup_location, 'Pick-up'], ['drop', seat.destination, 'Drop-off']].forEach(([kind, name, label]) => {
+                const b = node('button', undefined, 'sw-rc-track sw-rc-' + kind); b.type = 'button';
+                const ok = !!reservationSeatPoint(r, seat, kind);
+                b.disabled = !ok || !map;
+                b.append(node('small', label), node('span', name || '-'), node('i', undefined, 'fa fa-location-crosshairs'));
+                b.setAttribute('aria-label', 'Track ' + label.toLowerCase() + ' of seat ' + (seat.seat_number || '?') + ': ' + (name || ''));
+                b.addEventListener('click', () => { shut(); trackPin(r, seat, kind); });
+                stops.append(b);
+            });
+            li.append(stops); seats.append(li);
+        });
+
+        const key = reservationKey(r);
+        const sw = node('button', undefined, 'sw-rc-switch sw-res-map-toggle'); sw.type = 'button';
+        const paint = () => {
+            const on = !hiddenReservationKeys.has(key);
+            sw.setAttribute('aria-pressed', String(on));
+            sw.replaceChildren(node('span', 'Show pins on map'), node('i', undefined, 'sw-rc-knob'));
+        };
+        paint();
+        sw.addEventListener('click', () => {
+            if (hiddenReservationKeys.has(key)) hiddenReservationKeys.delete(key); else hiddenReservationKeys.add(key);
+            paint(); render();
+        });
+
+        card.append(head, meta, seats, sw); back.append(card); document.body.append(back);
         close.addEventListener('click', shut); back.addEventListener('click', e => { if (e.target === back) shut(); });
-        document.addEventListener('keydown', esc); (track || close).focus();
+        document.addEventListener('keydown', esc); close.focus();
     }
 
     function showDetails(r) {

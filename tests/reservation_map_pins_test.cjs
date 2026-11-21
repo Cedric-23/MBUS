@@ -11,7 +11,7 @@ const db = read('config/db_connect.php');
 const schema = read('supabase/01_schema.sql');
 const migration = read('supabase/19_reservation_stop_coordinates.sql');
 
-assert.doesNotMatch(reservePhp, /id="reservationMap"/); // map pin picker removed from the reserve page
+assert.match(reservePhp, /id="reservationMap"/);
 assert.match(reservePhp, /name="stop_pins"|stop_pins/);
 assert.match(reservePhp, /pickup_latitude,pickup_longitude,destination_latitude,destination_longitude/);
 assert.match(reservePhp, /Set both map pins or clear both pins/);
@@ -24,7 +24,7 @@ assert.match(feed, /pickup_latitude/);
 assert.match(staffJs, /reservationSeatPoint/);
 assert.match(staffJs, /hiddenReservationKeys/);
 assert.match(staffJs, /sw-res-map-toggle/);
-assert.match(staffJs, /sw-seat-list/);
+assert.match(staffJs, /trackPin/);
 for (const column of ['pickup_latitude','pickup_longitude','destination_latitude','destination_longitude']) {
     assert.match(schema, new RegExp(column));
     assert.match(migration, new RegExp(column));

@@ -36,3 +36,9 @@ body:not(:has(.sidebar)):not(.commuter-waiting-board):not(.staff-wait-page) .pro
 .staff-wait-page .sw-bar .profile-trigger{width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important}
 .staff-wait-page .sw-bar .profile-avatar{width:30px!important;height:30px!important}
 .staff-wait-page .sw-bar .profile-menu{top:calc(100% + 8px)!important;right:0!important;left:auto!important}
+
+/* Sticky page header: the greeting / page title stays visible while scrolling (all roles) */
+.home-top,.page-header{position:sticky!important;top:0;z-index:50;margin-top:calc(var(--u-top) * -1)!important;padding-top:var(--u-top)!important;padding-bottom:10px!important;background:var(--color-bg,#eef3fb);clip-path:inset(0 -100vmax -10px)}
+.home-top::after,.page-header::after{content:"";position:absolute;left:0;right:0;bottom:-10px;height:10px;background:linear-gradient(var(--color-bg,#eef3fb),rgba(238,243,251,0));pointer-events:none}
+.home-top{margin-bottom:8px!important}
+.page-header{margin-bottom:10px!important}
