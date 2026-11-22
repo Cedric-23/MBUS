@@ -417,6 +417,8 @@ function renderPassengerTypes() {
 
     selectedSeats.forEach((seat, i) => {
         const type = seatType(seat, i);
+        /* one Regular rider: Seats/Pickup/Destination above already say everything */
+        if (!manyRiders && type === "Regular") return;
 
         const row = document.createElement("div");
         row.className = "sum-seat";
@@ -442,7 +444,7 @@ function renderPassengerTypes() {
         list.appendChild(row);
     });
 
-    box.appendChild(list);
+    if (list.children.length) box.appendChild(list);
 
     if (passengerType === "Regular") {
         const a = document.createElement("a");
