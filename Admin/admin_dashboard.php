@@ -16,6 +16,7 @@ if(
 }
 
 include "../config/db_connect.php";
+include_once "../Includes/csrf.php";
 
 include_once "../Includes/admin_menu.php";
 include_once "../config/app.php";
@@ -63,6 +64,8 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=2">
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/notif_bell.css?v=1">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token()); ?>">
 </head>
 
 <body class="stf has-sidebar staff-home">
@@ -101,6 +104,10 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
                 <h1><?php echo htmlspecialchars($first_name); ?></h1>
             </div>
             <div class="page-header-right">
+                <div class="notif-wrap">
+                    <button class="notif-btn" type="button" id="notifBtn" aria-expanded="false" aria-controls="notifPanel" aria-label="Notifications"><i class="fa fa-bell" aria-hidden="true"></i><span class="notif-dot" id="notifDot" hidden>0</span></button>
+                    <div class="notif-panel" id="notifPanel" hidden><h2>Notifications</h2><ul id="notifList" class="notif-list"></ul></div>
+                </div>
                 <div class="profile-menu-wrap">
                     <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
                         <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span><?php include_once dirname(__DIR__) . '/Includes/admin_menu.php'; echo mbus_admin_dot($conn); ?>
@@ -149,6 +156,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
 
 
 <script src="../Assets/js/app-header.js"></script>
+<script src="../Assets/js/notifications.js"></script>
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="admin_dashboard.php" class="bottom-nav-item active" aria-current="page">
         <i class="fa fa-home" aria-hidden="true"></i><span>Home</span>

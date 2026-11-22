@@ -59,6 +59,8 @@ if(isset($_POST['submit_verification'])){
                 log_activity($conn, $user_id, ACTION_VERIFICATION_SUBMIT, "Submitted $type verification");
                 mbus_db_prepare($conn, "UPDATE users SET verification_status = 'Pending' WHERE user_id = ?", [$user_id]);
                 $success = "Submitted. We'll review your ID shortly.";
+                require_once __DIR__ . '/../Includes/notify.php';
+                mbus_notify_admins($conn, ($_SESSION['full_name'] ?? 'A commuter') . " submitted a $type ID for approval.");
             }
         }
     }
