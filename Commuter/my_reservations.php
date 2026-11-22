@@ -217,16 +217,17 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
         $grpAwait = false; $grpRemaining = 0;
         foreach($pendingRows as $k){ if($info[$k][1]){ $grpAwait = $info[$k][1]; } $grpRemaining = max($grpRemaining, $info[$k][0]); }
     ?>
-    <details class="card reservation-card res-group"<?php echo $pendingRows ? ' open' : ''; ?>>
-        <summary>
-            <span class="rg-main">
-                <span class="rg-top"><span class="badge badge-primary">Bus <?php echo htmlspecialchars($first['bus_number']); ?></span>
-                <?php foreach($counts as $st => $n){ ?><span class="status-badge status-<?php echo strtolower($st); ?>"><?php echo (int)$n . ' ' . htmlspecialchars($st); ?></span><?php } ?></span>
-                <strong class="rg-route"><?php echo htmlspecialchars($first['origin']); ?> &#8594; <?php echo htmlspecialchars($first['route_destination']); ?></strong>
-                <small><?php echo date("D, M d · g:i A", strtotime($first['departure_time'])); ?> &middot; <?php echo count($rows); ?> seats</small>
-            </span>
-            <i class="fa fa-chevron-down rg-chev" aria-hidden="true"></i>
-        </summary>
+    <article class="card reservation-card res-group">
+        <div class="reservation-header">
+            <div class="bus-info"><span class="badge badge-primary">Bus <?php echo htmlspecialchars($first['bus_number']); ?></span></div>
+            <div class="rg-statuses"><?php foreach($counts as $st => $n){ ?><span class="status-badge status-<?php echo strtolower($st); ?>"><?php echo (int)$n . ' ' . htmlspecialchars($st); ?></span><?php } ?></div>
+        </div>
+        <div class="reservation-route"><i class="fa fa-map-marker-alt" aria-hidden="true"></i> <span><?php echo htmlspecialchars($first['origin']); ?> &#8594; <?php echo htmlspecialchars($first['route_destination']); ?></span></div>
+        <ul class="reservation-details">
+            <li><strong>Seats:</strong> <?php echo htmlspecialchars($seatList); ?> (<?php echo count($rows); ?>)</li>
+            <li><strong>Departure:</strong> <?php echo date("F d, Y g:i A", strtotime($first['departure_time'])); ?></li>
+            <li><strong>Expected Arrival:</strong> <?php echo date("F d, Y g:i A", strtotime($first['arrival_time'])); ?></li>
+        </ul>
         <?php if($pendingRows){ ?>
         <div class="rg-bar">
             <?php if($grpAwait){ ?>
@@ -238,23 +239,26 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
         </div>
         <?php } ?>
         <?php if($paidCount){ ?>
-        <div class="rg-bar"><a class="btn btn-success rg-pay" href="ticket.php?schedule_id=<?php echo (int)$sid; ?>"><i class="fa fa-ticket" aria-hidden="true"></i> View ticket<?php echo $paidCount > 1 ? 's' : ''; ?></a></div>
+        <div class="rg-bar"><a class="btn btn-success rg-pay" href="ticket.php?schedule_id=<?php echo (int)$sid; ?>"><i class="fa fa-ticket" aria-hidden="true"></i> Show ticket<?php echo $paidCount > 1 ? 's' : ''; ?></a></div>
         <?php } ?>
-        <ul class="rg-list">
-        <?php foreach($rows as $k => $row){ ?>
-            <li class="rg-row" data-reservation-id="<?php echo (int)$row['reservation_id']; ?>">
-                <span class="rg-seat-no">Seat <?php echo htmlspecialchars($row['seat_number']); ?></span>
-                <span class="rg-stop"><?php echo htmlspecialchars($row['pickup_location']); ?> &#8594; <?php echo htmlspecialchars($row['destination']); ?></span>
-                <span class="status-badge status-<?php echo strtolower($row['status']); ?>"><?php echo htmlspecialchars($row['status']); ?></span>
-                <?php if($row['status'] === 'Pending'){ ?>
-                <button type="button" class="rg-x cancel-btn" onclick="cancelReservation(<?php echo (int)$row['reservation_id']; ?>, this)" aria-label="Cancel seat <?php echo htmlspecialchars($row['seat_number']); ?>"><i class="fa fa-times" aria-hidden="true"></i></button>
-                <?php } elseif($row['status'] === 'Paid'){ ?>
-                <a class="rg-x" href="ticket.php?reservation_id=<?php echo (int)$row['reservation_id']; ?>" aria-label="Ticket for seat <?php echo htmlspecialchars($row['seat_number']); ?>"><i class="fa fa-ticket" aria-hidden="true"></i></a>
-                <?php } else { ?><span class="rg-x rg-x-empty"></span><?php } ?>
-            </li>
-        <?php } ?>
-        </ul>
-    </details>
+        <details class="rg-more">
+            <summary><span class="rg-more-open">Show more information</span><span class="rg-more-close">Hide information</span><i class="fa fa-chevron-down rg-chev" aria-hidden="true"></i></summary>
+            <ul class="rg-list">
+            <?php foreach($rows as $k => $row){ ?>
+                <li class="rg-row" data-reservation-id="<?php echo (int)$row['reservation_id']; ?>">
+                    <span class="rg-seat-no">Seat <?php echo htmlspecialchars($row['seat_number']); ?></span>
+                    <span class="rg-stop"><?php echo htmlspecialchars($row['pickup_location']); ?> &#8594; <?php echo htmlspecialchars($row['destination']); ?></span>
+                    <span class="status-badge status-<?php echo strtolower($row['status']); ?>"><?php echo htmlspecialchars($row['status']); ?></span>
+                    <?php if($row['status'] === 'Pending'){ ?>
+                    <button type="button" class="rg-x cancel-btn" onclick="cancelReservation(<?php echo (int)$row['reservation_id']; ?>, this)" aria-label="Cancel seat <?php echo htmlspecialchars($row['seat_number']); ?>"><i class="fa fa-times" aria-hidden="true"></i></button>
+                    <?php } elseif($row['status'] === 'Paid'){ ?>
+                    <a class="rg-x" href="ticket.php?reservation_id=<?php echo (int)$row['reservation_id']; ?>" aria-label="Ticket for seat <?php echo htmlspecialchars($row['seat_number']); ?>"><i class="fa fa-ticket" aria-hidden="true"></i></a>
+                    <?php } else { ?><span class="rg-x rg-x-empty"></span><?php } ?>
+                </li>
+            <?php } ?>
+            </ul>
+        </details>
+    </article>
     </div>
     <?php } } ?>
 
@@ -262,10 +266,10 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
 
 <div class="card empty-state" role="status">
     <i class="fa fa-ticket" aria-hidden="true" style="font-size: var(--fs-3xl); color: var(--color-text-muted); margin-bottom: var(--space-4);"></i>
-    <h3>No reservations found.</h3>
-    <p>You don't have any active reservations yet.</p>
+    <h3>No reservations yet.</h3>
+    <p>Reserve a seat on an upcoming bus and it will show up here.</p>
     <a href="schedule.php" class="btn btn-primary" style="margin-top: var(--space-4);">
-        <i class="fa fa-bus" aria-hidden="true"></i> Browse Schedules
+        <i class="fa fa-bus" aria-hidden="true"></i> Reserve a Bus
     </a>
 </div>
 

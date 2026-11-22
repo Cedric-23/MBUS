@@ -5,6 +5,7 @@ include "../Includes/activity_log.php";
 include "../Includes/email_helper.php";
 include "../Includes/csrf.php";
 include "../Includes/fare.php";
+require_once __DIR__ . '/../Includes/notify.php';
 require_once __DIR__ . '/../Includes/schedule_booking.php';
 require_once __DIR__ . '/../Includes/seat_layout.php';
 
@@ -323,6 +324,8 @@ foreach($created_reservations as $created){
     }
 }
 } catch(Throwable $notify_error){ error_log('Reservation notification failed: ' . $notify_error->getMessage()); }
+$seat_total = count($created_reservations);
+mbus_notify_admins($conn, ($_SESSION['full_name'] ?? 'A commuter') . ' reserved ' . $seat_total . ($seat_total === 1 ? ' seat' : ' seats') . ' (' . $route_info . ', ' . $departure_formatted . '). Waiting for payment.');
 ob_end_clean();
 echo "ok";
 exit();
