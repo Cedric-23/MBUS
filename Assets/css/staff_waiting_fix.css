@@ -2,7 +2,7 @@
    Loaded after staff_modern.css so it wins over the older sheet rules. */
 
 /* ---------- smaller sheet ---------- */
-.stf.staff-wait-page .sw-sheet{max-height:min(30vh,260px);padding:4px 12px 8px;transition:max-height .22s ease}
+.stf.staff-wait-page .sw-sheet{max-height:min(46vh,400px);padding:4px 12px 8px;transition:max-height .22s ease}
 .stf.staff-wait-page .sw-sheet.is-collapsed{max-height:48px;overflow:hidden}
 .stf.staff-wait-page .sw-sheet.is-collapsed .sw-route-controls,
 .stf.staff-wait-page .sw-sheet.is-collapsed .sw-scroll{display:none}
@@ -26,3 +26,23 @@
 .sw-res-pin.is-approx .sw-person{border-style:dashed}
 .sw-res-tag{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:2px;padding:1px 7px;border-radius:999px;background:#5b3fd1;color:#fff;font:700 .625rem/1.4 Inter,system-ui,sans-serif;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .sw-res-pin.sw-res-drop .sw-res-tag{background:#18365d}
+
+/* View switch + bus cards */
+.staff-wait-page .sw-view{display:flex;gap:4px;padding:4px;margin:4px 0 8px;border-radius:999px;background:#eef2f8}
+.staff-wait-page .sw-view button{flex:1;min-height:34px;border:0;border-radius:999px;background:transparent;color:#516278;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer}
+.staff-wait-page .sw-view button[aria-pressed="true"]{background:#fff;color:#1f4fb8;box-shadow:0 1px 5px rgba(31,79,184,.18)}
+.staff-wait-page .sw-bus-section{margin:0 0 10px}
+.staff-wait-page .sw-bus-icon{background:#e4eeff;color:#2f6fe4}
+.staff-wait-page .sw-bus-list{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:8px}
+.staff-wait-page .sw-bus-card{width:100%;display:grid;gap:5px;text-align:left;padding:10px 12px;border:1px solid #e1e8f3;border-radius:14px;background:#fff;font:inherit;color:#18365d;cursor:pointer}
+.staff-wait-page .sw-bus-card.is-on{border-color:#2f6fe4;box-shadow:0 0 0 2px rgba(47,111,228,.18)}
+.staff-wait-page .sw-bus-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.staff-wait-page .sw-bus-card small{color:#64748b;font-size:.78rem}
+.staff-wait-page .sw-pill{padding:2px 8px;border-radius:999px;font-size:.68rem;font-weight:700;background:#eef1f5;color:#516278}
+.staff-wait-page .sw-pill.is-live{background:#dcf7e6;color:#13703a}
+.staff-wait-page .sw-pill.is-status{background:#e4eeff;color:#1f4fb8}
+.staff-wait-page .sw-bus-chips{display:flex;gap:6px}
+.staff-wait-page .sw-chip{padding:3px 9px;border-radius:999px;background:#fff4dc;color:#8a5a00;font-size:.74rem;font-weight:700}
+.staff-wait-page .sw-chip.is-res{background:#ece8ff;color:#4a32b0}
+.staff-wait-page.sw-view-buses .sw-group,.staff-wait-page.sw-view-buses .sw-route-controls{display:none}
+.staff-wait-page.sw-view-commuters .sw-bus-section{display:none}

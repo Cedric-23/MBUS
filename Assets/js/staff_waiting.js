@@ -19,6 +19,8 @@
     let map = null, layer = null, line = null, routeLayer = null, selected = null, fittedOnce = false;
     let routeKey = '', routeData = null, routeFitKey = '', routeRequest = 0, routeFailure = null;
     let busy = false, refreshing = null;
+    let view = 'both';
+    try { const v = localStorage.getItem('mbusWaitView'); if (['both', 'buses', 'commuters'].includes(v)) view = v; } catch (e) { /* ignore */ }
 
     const num = v => { if (v === null || v === undefined || String(v).trim() === '') return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
     const validPt = (a, b) => num(a) !== null && num(b) !== null && Math.abs(a) <= 90 && Math.abs(b) <= 180;
@@ -320,7 +322,11 @@
         const busText = buses.length ? buses.length + (buses.length === 1 ? ' bus live' : ' buses live') : 'No bus location yet';
         el('busLabel').textContent = busText;
         const summary = el('swSummary');
-        if (summary) summary.textContent = reqs.length + ' pick-up · ' + resRows.length + ' reserved · ' + busText;
+        if (summary) summary.textContent = view === 'buses' ? busText : view === 'commuters' ? reqs.length + ' pick-up · ' + resRows.length + ' reserved' : reqs.length + ' pick-up · ' + resRows.length + ' reserved · ' + busText;
+        document.body.classList.toggle('sw-view-buses', view === 'buses');
+        document.body.classList.toggle('sw-view-commuters', view === 'commuters');
+        document.querySelectorAll('#swView button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === view ? 'true' : 'false'));
+        renderBuses(sel, reqs, resRows);
         empty.hidden = reqs.length > 0 || !ready;
         empty.textContent = ready ? 'No one is waiting for a pick-up.' : 'Waiting is not available yet.';
         renderReservations(sel);
@@ -328,7 +334,7 @@
         if (layer) layer.clearLayers();
         if (line && map) { map.removeLayer(line); line = null; }
         const pts = [];
-        buses.forEach(b => {
+        (view === 'commuters' ? [] : buses).forEach(b => {
             const stale = Date.now() - Date.parse(b.updated_at) > FRESH_MS, p = [+b.latitude, +b.longitude];
             pts.push(p);
             if (layer) L.marker(p, { icon: busIcon(b.bus_number, stale), title: 'Bus ' + b.bus_number, zIndexOffset: 500 }).addTo(layer);
@@ -337,7 +343,7 @@
         reqs.forEach(r => {
             const on = selected === r.request_id;
             const ok = validPt(r.latitude, r.longitude), p = ok ? [+r.latitude, +r.longitude] : null;
-            if (p && map) {
+            if (p && map && view !== 'buses') {
                 pts.push(p);
                 const m = L.marker(p, { icon: personIcon(r.full_name, on, r), title: r.full_name || 'Commuter' }).addTo(layer);
                 bindAvatarFallback(m.getElement() && m.getElement().querySelector('.sw-person img'));
@@ -373,13 +379,57 @@
             list.append(li);
         });
 
-        reservationPins(resRows, pts);
+        reservationPins(view === 'buses' ? [] : resRows, pts);
         updateCompact(reqs);
         if (!fittedOnce && pts.length) { fit(pts); fittedOnce = true; }
         updateStaffRoute();
         if (map) requestAnimationFrame(() => map.invalidateSize({ pan: false }));
         sizeSheet();
     }
+
+    /* ---------- buses (what's about to leave, and who is waiting for it) ---------- */
+    const STATUS = { Scheduled: 'Ready to go', Boarding: 'Boarding', Departed: 'On the road' };
+    const clock = v => { const d = new Date(String(v || '').replace(' ', 'T')); return isNaN(d) ? '' : d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
+    function renderBuses(sel, reqs, resRows) {
+        const ul = el('swBusList'); if (!ul) return;
+        const rows = new Map();
+        schedules.forEach(sc => rows.set(String(sc.schedule_id), { id: String(sc.schedule_id), no: sc.bus_number, sc }));
+        locations.forEach(l => { const k = String(l.schedule_id); if (!rows.has(k)) rows.set(k, { id: k, no: l.bus_number, sc: null }); });
+        reservations.forEach(r => { const k = String(r.schedule_id); if (!rows.has(k)) rows.set(k, { id: k, no: r.bus_number, sc: null }); });
+        let items = Array.from(rows.values());
+        if (sel) items = items.filter(i => i.id === sel);
+        const count = (arr, id) => arr.filter(x => String(x.schedule_id) === id).length;
+        items.forEach(i => {
+            i.pick = count(requests, i.id); i.res = count(reservations, i.id);
+            i.loc = locations.find(l => String(l.schedule_id) === i.id && validPt(l.latitude, l.longitude));
+        });
+        items.sort((a, b) => (b.pick + b.res) - (a.pick + a.res) || String(a.no).localeCompare(String(b.no), undefined, { numeric: true }));
+        el('swBusCount').textContent = String(items.length);
+        el('swBusEmpty').hidden = items.length > 0;
+        ul.replaceChildren();
+        items.forEach(i => {
+            const sc = i.sc || {}, on = sel === i.id;
+            const li = node('li'); const b = node('button', undefined, 'sw-bus-card' + (on ? ' is-on' : '')); b.type = 'button';
+            const top = node('span', undefined, 'sw-bus-top');
+            top.append(node('strong', /^\d+$/.test(String(i.no)) ? 'Bus ' + i.no : String(i.no || 'Bus')));
+            const live = i.loc && Date.now() - Date.parse(i.loc.updated_at) <= FRESH_MS;
+            top.append(node('span', live ? 'Live' : 'No signal', 'sw-pill ' + (live ? 'is-live' : 'is-off')));
+            if (sc.trip_status) top.append(node('span', STATUS[sc.trip_status] || sc.trip_status, 'sw-pill is-status'));
+            const route = [sc.origin_label || sc.origin, sc.destination_label || sc.destination].filter(Boolean).join(' → ');
+            const when = sc.departure_time ? 'Departs ' + clock(sc.departure_time) : '';
+            const sub = node('small', [route, when].filter(Boolean).join(' · ') || 'Trip details unavailable');
+            const chips = node('span', undefined, 'sw-bus-chips');
+            chips.append(node('span', i.pick + ' waiting', 'sw-chip'), node('span', i.res + ' reserved', 'sw-chip is-res'));
+            b.append(top, sub, chips);
+            b.addEventListener('click', () => { filter.value = on ? '' : i.id; selected = null; fittedOnce = false; render(); });
+            li.append(b); ul.append(li);
+        });
+    }
+    document.querySelectorAll('#swView button').forEach(b => b.addEventListener('click', () => {
+        view = b.dataset.view; selected = null; fittedOnce = false;
+        try { localStorage.setItem('mbusWaitView', view); } catch (e) { /* ignore */ }
+        render();
+    }));
 
     /* ---------- reservations (paid seat, not on board yet) ---------- */
     const seatLabel = r => r.seats === 1 ? 'Seat ' + (r.seat_numbers || 1) : r.seats + ' seats';

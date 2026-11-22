@@ -83,10 +83,24 @@ $navItems = $isAdmin
             <h2>Waiting</h2>
             <span class="sw-sheet-sub" id="busLabel"></span>
         </div>
+        <div class="sw-view" id="swView" role="group" aria-label="What to show">
+            <button type="button" data-view="both" aria-pressed="true">Both</button>
+            <button type="button" data-view="buses" aria-pressed="false"><i class="fa fa-bus" aria-hidden="true"></i> Buses</button>
+            <button type="button" data-view="commuters" aria-pressed="false"><i class="fa fa-user-group" aria-hidden="true"></i> Commuters</button>
+        </div>
         <div class="sw-route-controls">
             <p id="staffRouteEstimate" class="sw-route-estimate" role="status" aria-live="polite">Choose a bus to see its route and destination estimate.</p>
         </div>
         <div class="sw-scroll" id="swScroll">
+            <section class="sw-bus-section" aria-labelledby="swBusTitle">
+                <header class="sw-group-head">
+                    <span class="sw-group-icon sw-bus-icon" aria-hidden="true"><i class="fa fa-bus"></i></span>
+                    <div class="sw-group-title"><h3 id="swBusTitle">Buses</h3><small>Tap a bus to see only its riders</small></div>
+                    <span class="sw-group-count" id="swBusCount">0</span>
+                </header>
+                <p id="swBusEmpty" class="sw-empty">No bus trips to show right now.</p>
+                <ul id="swBusList" class="sw-bus-list"></ul>
+            </section>
             <section class="sw-group sw-group-pickup" aria-labelledby="swPickupTitle">
                 <header class="sw-group-head">
                     <span class="sw-group-icon" aria-hidden="true"><i class="fa fa-location-dot"></i></span>
