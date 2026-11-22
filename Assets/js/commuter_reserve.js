@@ -82,7 +82,7 @@ function initReservationMap() {
 .sum-seat-line span{opacity:.7}
 .sum-seat-line strong{overflow-wrap:anywhere}
 .sum-seat-type{align-self:start;padding:4px 10px;border-radius:999px;background:rgba(47,111,228,.12);color:#2f6fe4;font-size:.78rem;font-weight:600;white-space:nowrap}
-@media(max-width:420px){.sum-seat{grid-template-columns:auto minmax(0,1fr)}.sum-seat-body:empty{display:none}.sum-seat-type{justify-self:end}}
+@media(max-width:420px){.sum-seat-body:empty{display:none}}
 `;
     document.head.appendChild(style);
 })();

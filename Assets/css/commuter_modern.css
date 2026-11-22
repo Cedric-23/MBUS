@@ -254,3 +254,5 @@
 /* Trips: centered ticket button */
 .cm .rg-bar:has(.rg-pay:only-child){justify-content:center;padding:0;background:none}
 .cm .rg-bar:has(.rg-pay:only-child) .rg-pay{width:100%;justify-content:center;text-align:center}
+.cm #summaryPanel .sum-seat{grid-template-columns:auto minmax(0,1fr) auto!important}
+.cm #summaryPanel .sum-seat-type{grid-column:auto!important;justify-self:end!important;align-self:center!important}
