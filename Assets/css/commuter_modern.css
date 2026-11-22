@@ -230,3 +230,8 @@
 .cm .notif-list small{color:#6b7a99;font-size:.72rem}
 .cm .notif-empty{margin:4px;color:#6b7a99;font-size:.85rem}
 @media(max-width:768px){.cm.reserve-page .main{padding-bottom:calc(110px + env(safe-area-inset-bottom))}}
+
+/* Booking + payment pages: the profile photo stayed pinned to the screen while the page header scrolled away,
+   so it floated over the trip details (Bus, Departure). The header and photo now scroll away together. */
+.cm.reserve-page .page-header,.cm.payment-page .page-header{position:relative!important}
+.cm.reserve-page .profile-menu-wrap,.cm.payment-page .profile-menu-wrap{position:absolute!important;top:var(--u-top,14px)!important;right:0!important}

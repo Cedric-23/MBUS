@@ -19,7 +19,12 @@ if(!$co){ header("Location: my_reservations.php"); exit(); }
 
 $refError = '';
 $refSent = false;
-if($co['status'] === 'Submitted' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_ref'])){
+// A post bigger than the server limit arrives completely empty: say so instead of silently reloading.
+if($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && !empty($_SERVER['CONTENT_LENGTH'])){
+    $refError = 'That upload was too large. Try again with a smaller screenshot, or without one.';
+}
+// The form is recognised by its reference field (a button disabled while submitting is not sent by the browser).
+if($co['status'] === 'Submitted' && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ref'])){
     $ref = preg_replace('/\D/', '', (string)($_POST['ref'] ?? ''));
     if(!csrf_validate_token()){
         $refError = 'Security check failed. Please try again.';
@@ -142,7 +147,6 @@ a.alt{background:none;color:#5b6b7e;font-weight:600;min-height:40px;margin-top:6
     <div class="row">
         <button type="button" class="cp" data-copy="<?php echo htmlspecialchars($gNum); ?>">Copy number</button>
     </div>
-    <?php if(!$hasRef): ?><div class="wait"><div class="spin sm" aria-hidden="true"></div><span id="waitMsg">Waiting for your payment. Your ticket appears here automatically.</span></div><?php endif; ?>
     <div class="ref">
         <p class="reflabel">Paid already? Enter reference no.</p>
         <?php if(!empty($co['reference_number'])): ?><p class="sent"><strong>Sent.</strong> An operator will confirm reference <?php echo htmlspecialchars($co['reference_number']); ?> shortly.</p><?php endif; ?>
@@ -192,7 +196,8 @@ document.querySelectorAll('.cp[data-copy]').forEach(function(b){b.addEventListen
 var refIn=document.querySelector('.refform input[name=ref]');
 if(refIn)refIn.addEventListener('input',function(){var v=refIn.value.replace(/\D/g,'').slice(0,13);if(v!==refIn.value)refIn.value=v;});
 var rf=document.querySelector('.refform');
-if(rf)rf.addEventListener('submit',function(){var b=rf.querySelector('button[type=submit]');if(b){b.disabled=true;b.textContent='Sending…';}});
+// Disable the button only after the browser has collected the form data; disabling it inside the submit event drops it from the post.
+if(rf)rf.addEventListener('submit',function(){setTimeout(function(){var b=rf.querySelector('button[type=submit]');if(b){b.disabled=true;b.textContent='Sending…';}},0);});
 </script>
 <?php endif; ?>
 </body>
