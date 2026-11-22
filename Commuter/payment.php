@@ -208,7 +208,7 @@ if(isset($_POST['cancel_reservation'])){
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../Assets/css/responsive.css">
 <link rel="stylesheet" href="../Assets/css/commuter_sidebar.css">
-<link rel="stylesheet" href="../Assets/css/commuter_payment.css">
+<link rel="stylesheet" href="../Assets/css/commuter_payment.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_payment.css'); ?>">
 
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css">
@@ -261,8 +261,8 @@ if(isset($_POST['cancel_reservation'])){
 
 <div class="pay-meta">
     <div><span>Bus</span><strong><?php echo htmlspecialchars($reservations[0]['bus_number']); ?></strong></div>
-    <div><span>Departs</span><strong><?php echo date("M j, g:i A", strtotime($reservations[0]['departure_time'])); ?></strong></div>
-    <div><span>Arrives</span><strong><?php echo date("M j, g:i A", strtotime($reservations[0]['arrival_time'])); ?></strong></div>
+    <div><span>Departs</span><strong><?php echo date("M j", strtotime($reservations[0]['departure_time'])); ?><em><?php echo date("g:i A", strtotime($reservations[0]['departure_time'])); ?></em></strong></div>
+    <div><span>Arrives</span><strong><?php echo date("M j", strtotime($reservations[0]['arrival_time'])); ?><em><?php echo date("g:i A", strtotime($reservations[0]['arrival_time'])); ?></em></strong></div>
 </div>
 
 <?php
@@ -275,7 +275,7 @@ if(isset($_POST['cancel_reservation'])){
         <span class="seat-tag">Seat <?php echo htmlspecialchars($sk); ?></span>
         <span class="pay-seat-info">
             <span class="pay-seat-stop"><?php echo htmlspecialchars($stopBySeat[$sk] ?? ''); ?></span>
-            <small class="pay-seat-break"><?php echo htmlspecialchars($ln['type']); ?> &middot; Fare &#8369;<?php echo number_format($ln['base'], 2); ?><?php if($ln['discount'] > 0): ?> &middot; &minus;&#8369;<?php echo number_format($ln['discount'], 2); ?> off<?php endif; ?> &middot; Fee &#8369;<?php echo number_format($ln['fee'], 2); ?></small>
+            <small class="pay-seat-break"><?php echo htmlspecialchars($ln['type']); ?> &middot; &#8369;<?php echo number_format($ln['base'], 2); ?><?php if($ln['discount'] > 0): ?> &minus; &#8369;<?php echo number_format($ln['discount'], 2); ?><?php endif; ?> + &#8369;<?php echo number_format($ln['fee'], 2); ?> fee</small>
         </span>
         <span class="pay-line">&#8369;<?php echo number_format($ln['final'], 2); ?></span>
     </li>
