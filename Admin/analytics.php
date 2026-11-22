@@ -136,6 +136,7 @@ if($recent_activity_query === false){
     <nav class="menu-top" aria-label="Admin menu">
         <a href="admin_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
         <a href="analytics.php" aria-current="page"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a>
+        <a href="reports.php"><i class="fa fa-file-lines" aria-hidden="true"></i> Reports</a>
         <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
         <a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i> Manage Schedules</a>
         <a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Buses</a>

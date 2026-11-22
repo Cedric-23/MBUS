@@ -24,7 +24,8 @@ function mbus_admin_approvals_link($conn): string {
     $badge  = $c['id']    > 0 ? ' <span class="menu-badge">' . $c['id'] . '</span>' : '';
     $obadge = $c['op']    > 0 ? ' <span class="menu-badge">' . $c['op'] . '</span>' : '';
     $gbadge = $c['gcash'] > 0 ? ' <span class="menu-badge">' . $c['gcash'] . '</span>' : '';
-    return '<a href="verifications.php" role="menuitem"><i class="fa fa-id-card" aria-hidden="true"></i> ID approvals' . $badge . '</a>'
+    return '<a href="reports.php" role="menuitem"><i class="fa fa-file-lines" aria-hidden="true"></i> Reports</a>'
+        . '<a href="verifications.php" role="menuitem"><i class="fa fa-id-card" aria-hidden="true"></i> ID approvals' . $badge . '</a>'
         . '<a href="operator_applications.php" role="menuitem"><i class="fa fa-user-check" aria-hidden="true"></i> Operator applications' . $obadge . '</a>'
         . '<a href="gcash_approval.php" role="menuitem"><i class="fa fa-mobile-screen" aria-hidden="true"></i> GCash account' . $gbadge . '</a>';
 }
