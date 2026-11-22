@@ -28,3 +28,10 @@
 .reset-form .reset-input{position:relative;display:block}
 .reset-form .reset-input .input-icon{position:absolute;left:18px;top:50%;transform:translateY(-50%);width:18px;height:18px;pointer-events:none}
 .reset-form .reset-input input{width:100%;box-sizing:border-box}
+
+/* New password page: the lock icon and the show/hide eye belong to the input box.
+   The wrapper had no position, so the eye floated down over the checklist. */
+.reset-form .password-control{position:relative;display:block;width:100%}
+.reset-form .password-control>input{width:100%;box-sizing:border-box;padding-right:52px}
+.reset-form .password-control>.input-icon{position:absolute;left:18px;top:50%;transform:translateY(-50%);width:18px;height:18px;pointer-events:none;z-index:1}
+.reset-form .password-control>.password-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);z-index:2}
