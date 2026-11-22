@@ -1,9 +1,15 @@
 <?php
-/** Resolve one paid ticket to the exact checkout and reservation set that was charged. */
-function mbus_ticket_checkout_data($conn, int $userId, ?int $scheduleId = null, ?int $reservationId = null): ?array
+/**
+ * Resolve paid tickets to the exact checkout and reservation set that was charged.
+ *
+ * One trip can have several paid checkouts for the same rider (for example seat 3 booked on its own,
+ * then seats 4 and 5 booked together). mbus_ticket_checkouts() returns every one of them, newest first;
+ * mbus_ticket_checkout_data() keeps the old "newest only" behaviour for callers that need a single ticket.
+ */
+function mbus_ticket_checkouts($conn, int $userId, ?int $scheduleId = null, ?int $reservationId = null, int $limit = 0): array
 {
     if ($userId <= 0 || (($scheduleId ?? 0) <= 0 && ($reservationId ?? 0) <= 0)) {
-        return null;
+        return [];
     }
 
     if (($reservationId ?? 0) > 0) {
@@ -12,11 +18,11 @@ function mbus_ticket_checkout_data($conn, int $userId, ?int $scheduleId = null, 
             [$reservationId, $userId]);
         $target = $targetQuery === false ? false : mbus_db_fetch_assoc($targetQuery);
         if (!$target) {
-            return null;
+            return [];
         }
         $targetSchedule = (int)$target['schedule_id'];
         if (($scheduleId ?? 0) > 0 && $scheduleId !== $targetSchedule) {
-            return null;
+            return [];
         }
         $scheduleId = $targetSchedule;
     }
@@ -29,9 +35,11 @@ function mbus_ticket_checkout_data($conn, int $userId, ?int $scheduleId = null, 
           AND r.status IN ('Paid', 'Boarded') AND p.payment_status = 'Paid'
         ORDER BY p.payment_id DESC", [$userId, $scheduleId]);
     if ($paymentsQuery === false) {
-        return null;
+        return [];
     }
 
+    $tickets = [];
+    $seen = [];
     while ($paymentRow = mbus_db_fetch_assoc($paymentsQuery)) {
         $checkout = false;
         if (!empty($paymentRow['ticket_code'])) {
@@ -64,6 +72,14 @@ function mbus_ticket_checkout_data($conn, int $userId, ?int $scheduleId = null, 
             $checkout = false;
         }
         if (($reservationId ?? 0) > 0 && !in_array($reservationId, $ids, true)) {
+            continue;
+        }
+
+        // Every payment row of one checkout points at the same set of seats: list that ticket once.
+        $key = $ids;
+        sort($key);
+        $key = implode(',', $key);
+        if (isset($seen[$key])) {
             continue;
         }
 
@@ -104,13 +120,24 @@ function mbus_ticket_checkout_data($conn, int $userId, ?int $scheduleId = null, 
             $ticket['ticket_code'] = $checkout['ticket_code'] ?: $paymentRow['ticket_code'];
         }
 
-        return [
+        $seen[$key] = true;
+        $tickets[] = [
             'schedule_id' => (int)$scheduleId,
             'reservations' => $reservations,
             'payment' => $ticket,
             'lines' => $lines,
         ];
+        if ($limit > 0 && count($tickets) >= $limit) {
+            break;
+        }
     }
 
-    return null;
+    return $tickets;
+}
+
+/** The newest paid ticket of a trip (or the ticket that contains one given reservation). */
+function mbus_ticket_checkout_data($conn, int $userId, ?int $scheduleId = null, ?int $reservationId = null): ?array
+{
+    $all = mbus_ticket_checkouts($conn, $userId, $scheduleId, $reservationId, 1);
+    return $all[0] ?? null;
 }
