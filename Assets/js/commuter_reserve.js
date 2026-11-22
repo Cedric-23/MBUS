@@ -75,14 +75,14 @@ function initReservationMap() {
     const style = document.createElement("style");
     style.textContent = `
 .sum-seats{display:grid;gap:10px;margin:12px 0}
-.sum-seat{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:12px;border:1px solid rgba(127,140,160,.35);border-radius:14px}
-.sum-seat-badge{display:grid;place-items:center;min-width:34px;height:34px;padding:0 6px;border-radius:50%;background:#2f6fe4;color:#fff;font-weight:700;font-size:.9rem}
+.sum-seat{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 12px;border:0;border-radius:14px;background:#f4f8ff}
+.sum-seat-badge{display:inline-grid;place-items:center;padding:4px 11px;border-radius:999px;background:#eaf1ff;color:#1f4fb8;font-weight:700;font-size:.8rem;white-space:nowrap}
 .sum-seat-body{display:grid;gap:4px;min-width:0}
-.sum-seat-line{display:grid;grid-template-columns:84px minmax(0,1fr);gap:8px;align-items:baseline;font-size:.88rem}
+.sum-seat-line{display:grid;grid-template-columns:74px minmax(0,1fr);gap:8px;align-items:baseline;font-size:.88rem}
 .sum-seat-line span{opacity:.7}
 .sum-seat-line strong{overflow-wrap:anywhere}
 .sum-seat-type{align-self:start;padding:4px 10px;border-radius:999px;background:rgba(47,111,228,.12);color:#2f6fe4;font-size:.78rem;font-weight:600;white-space:nowrap}
-@media(max-width:420px){.sum-seat{grid-template-columns:auto minmax(0,1fr)}.sum-seat-type{grid-column:2;justify-self:start}}
+@media(max-width:420px){.sum-seat{grid-template-columns:auto minmax(0,1fr)}.sum-seat-body:empty{display:none}.sum-seat-type{justify-self:end}}
 `;
     document.head.appendChild(style);
 })();
@@ -207,7 +207,7 @@ function renderSeatTripControls() {
         head.className = "seat-trip-head";
         const badge = document.createElement("span");
         badge.className = "seat-trip-badge";
-        badge.textContent = seat;
+        badge.textContent = "Seat " + seat;
         const name = document.createElement("strong");
         name.textContent = "Seat " + seat;
         head.appendChild(badge);
@@ -423,16 +423,13 @@ function renderPassengerTypes() {
 
         const badge = document.createElement("span");
         badge.className = "sum-seat-badge";
-        badge.textContent = seat;
+        badge.textContent = "Seat " + seat;
 
         const body = document.createElement("div");
         body.className = "sum-seat-body";
         if (manyRiders) {
-            body.appendChild(summaryLine("Seat", seat));
             body.appendChild(summaryLine("Pickup", seatPickups[seat]));
             body.appendChild(summaryLine("Destination", seatDestinations[seat]));
-        } else {
-            body.appendChild(summaryLine("Seat", seat));
         }
 
         const pill = document.createElement("span");
