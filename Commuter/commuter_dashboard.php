@@ -35,13 +35,18 @@ $q = mbus_db_prepare($conn, "
       AND s.trip_status IN ('Scheduled','Boarding','Departed')
       AND COALESCE(s.arrival_time, s.departure_time + INTERVAL '4 hours') >= ?
     ORDER BY s.departure_time ASC, r.seat_number ASC", [$user_id, $bounds['now']]);
+$groups = [];
 while($q !== false && ($r = mbus_db_fetch_assoc($q))){
-    if($next === null){ $next = $r; $next['seats'] = []; $next['pending'] = false; }
-    if($r['schedule_id'] != $next['schedule_id']) break;
-    $next['seats'][] = $r['seat_number'];
-    if($r['status'] === 'Pending') $next['pending'] = true;
-    if($r['status'] === 'Boarded') $next['boarded'] = true;
+    $sid = (int)$r['schedule_id'];
+    if(!isset($groups[$sid])){ $groups[$sid] = $r; $groups[$sid]['seats'] = []; $groups[$sid]['pending'] = false; $groups[$sid]['boarded'] = false; $groups[$sid]['stops'] = []; }
+    $groups[$sid]['seats'][] = $r['seat_number'];
+    $groups[$sid]['stops'][(string)($r['pickup_location'] ?: $r['origin']) . '>' . (string)($r['destination'] ?: $r['route_destination'])] = true;
+    if($r['status'] === 'Pending') $groups[$sid]['pending'] = true;
+    if($r['status'] === 'Boarded') $groups[$sid]['boarded'] = true;
 }
+$groups = array_values($groups);
+$next = $groups[0] ?? null;
+$others = array_slice($groups, 1);
 
 /* LEAVING SOON: next few departures that are still open */
 $soon = [];
@@ -128,6 +133,7 @@ function mbus_home_when(string $ts): string {
 
     <?php if($next){
         $route = ($next['pickup_location'] ?: $next['origin']) . ' to ' . ($next['destination'] ?: $next['route_destination']);
+        if(count($next['stops']) > 1) $route .= ' +' . (count($next['stops']) - 1) . ' more stop' . (count($next['stops']) > 2 ? 's' : '');
         $seat_label = count($next['seats']) > 1 ? 'Seats ' : 'Seat ';
         if(!empty($next['boarded'])){ $state = 'On board'; $href = 'ticket.php?schedule_id=' . (int)$next['schedule_id']; $cta = 'View ticket'; }
         elseif($next['pending']){ $state = 'Waiting for payment'; $href = 'payment.php?schedule_id=' . (int)$next['schedule_id']; $cta = 'Pay with GCash'; }
@@ -147,6 +153,35 @@ function mbus_home_when(string $ts): string {
         <p class="next-route">Where to next?</p>
         <p class="next-meta">Pick a bus and reserve your seat in a few taps.</p>
         <a class="next-cta" href="schedule.php">Find a bus</a>
+    </section>
+    <?php } ?>
+
+    <?php if($others){ ?>
+    <section class="home-section" aria-labelledby="mine-h">
+        <div class="home-section-head">
+            <h2 id="mine-h">Your other trips</h2>
+            <a href="my_reservations.php">See all</a>
+        </div>
+        <ul class="soon-list">
+            <?php foreach($others as $o){
+                $oPay = $o['pending'];
+                $oHref = ($oPay ? 'payment.php' : 'ticket.php') . '?schedule_id=' . (int)$o['schedule_id'];
+                $oRoute = ($o['pickup_location'] ?: $o['origin']) . ' to ' . ($o['destination'] ?: $o['route_destination']);
+                if(count($o['stops']) > 1) $oRoute .= ' +' . (count($o['stops']) - 1);
+                $oSeats = count($o['seats']) > 4 ? count($o['seats']) . ' seats' : (count($o['seats']) > 1 ? 'Seats ' : 'Seat ') . implode(', ', $o['seats']);
+            ?>
+            <li>
+                <a href="<?php echo htmlspecialchars($oHref); ?>">
+                    <span class="soon-time"><?php echo date('g:i', strtotime($o['departure_time'])); ?><small><?php echo date('A', strtotime($o['departure_time'])); ?></small></span>
+                    <span class="soon-body">
+                        <strong><?php echo htmlspecialchars($oRoute); ?></strong>
+                        <small><?php echo htmlspecialchars($o['bus_number']); ?> &middot; <?php echo htmlspecialchars($oSeats); ?> &middot; <?php echo htmlspecialchars(mbus_home_when($o['departure_time'])); ?></small>
+                    </span>
+                    <span class="seat-chip <?php echo $oPay ? 'low' : 'ok'; ?>"><?php echo $oPay ? 'Pay now' : ($o['boarded'] ? 'On board' : 'Ticket'); ?></span>
+                </a>
+            </li>
+            <?php } ?>
+        </ul>
     </section>
     <?php } ?>
 
