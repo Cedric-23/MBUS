@@ -24,23 +24,16 @@ if (!$user) {
     die("User data unavailable.");
 }
 
-$ticketData = mbus_ticket_checkout_data($conn, $user_id, $requestedSchedule ?: null, $reservationId ?: null);
-if (!$ticketData) {
+/* One reservation link shows just that ticket. A trip link shows EVERY paid ticket of the trip
+   (a rider can pay for seats in separate checkouts: one seat now, two more later). */
+$tickets = $reservationId
+    ? mbus_ticket_checkouts($conn, $user_id, $requestedSchedule ?: null, $reservationId ?: null, 1)
+    : mbus_ticket_checkouts($conn, $user_id, $requestedSchedule ?: null, null);
+if (!$tickets) {
     die("No paid reservation found.");
 }
-$schedule_id = (int)$ticketData['schedule_id'];
-$reservations = $ticketData['reservations'];
-$payment = $ticketData['payment'];
-$fareLines = $ticketData['lines'];
-$seats = array_map(static fn($row) => (string)$row['seat_number'], $reservations);
-$seat_list = implode(", ", $seats);
+$schedule_id = (int)$tickets[0]['schedule_id'];
 $qr_token = mbus_ticket_token($schedule_id, $user_id);
-
-$payment_method = (string)($payment['payment_method'] ?? '');
-$payment_reference = (string)($payment['payment_reference'] ?? '');
-$payment_date = (string)($payment['payment_date'] ?? '');
-$ticket_code = (string)($payment['ticket_code'] ?? '');
-$amount = $payment['amount'] ?? null;
 
 $schedule_query = mbus_db_prepare($conn, "SELECT buses.bus_number, schedule.departure_time
     FROM schedule JOIN buses ON schedule.bus_id = buses.bus_id WHERE schedule.schedule_id = ?", [$schedule_id]);
@@ -48,6 +41,10 @@ $data = $schedule_query === false ? false : mbus_db_fetch_assoc($schedule_query)
 if (!$data) {
     die("Schedule not found.");
 }
+$ticket_total = count($tickets);
+$seat_total = 0;
+foreach ($tickets as $t) { $seat_total += count($t['reservations']); }
+$bus_label = preg_match('/^bus/i', (string)$data['bus_number']) ? (string)$data['bus_number'] : 'Bus ' . $data['bus_number'];
 ?>
 
 <!DOCTYPE html>
@@ -69,12 +66,16 @@ if (!$data) {
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=2">
     <link rel="stylesheet" href="../Assets/css/commuter_modern.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/commuter_modern.css'); ?>">
+    <style>
+        .ticket-container { display: grid; gap: 16px; }
+        .tk-count { margin: 0 2px; padding: 10px 14px; border-radius: 14px; background: #eaf1fd; color: #1f56bd; font-size: .88rem; font-weight: 600; }
+    </style>
 </head>
 
 <body class="has-bottom-nav ticket-page cm">
 <main class="main" role="main">
 <header class="page-header" role="banner">
-    <div class="page-header-left"><h1>Digital Ticket</h1></div>
+    <div class="page-header-left"><h1>Digital Ticket<?php echo $ticket_total > 1 ? 's' : ''; ?></h1></div>
     <div class="page-header-right"><div class="profile-menu-wrap">
         <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span></button>
         <div class="profile-menu" id="profileMenu" role="menu">
@@ -86,16 +87,30 @@ if (!$data) {
 </header>
 
 <div class="ticket-container">
-    
-    <!-- TICKET CARD -->
+
+    <?php if ($ticket_total > 1): ?>
+    <p class="tk-count" role="status"><?php echo $ticket_total; ?> tickets &middot; <?php echo $seat_total; ?> seats on <?php echo htmlspecialchars($bus_label); ?>. Each one was paid separately.</p>
+    <?php endif; ?>
+
+    <?php foreach ($tickets as $ti => $ticketData):
+        $reservations = $ticketData['reservations'];
+        $payment = $ticketData['payment'];
+        $fareLines = $ticketData['lines'];
+        $payment_method = (string)($payment['payment_method'] ?? '');
+        $payment_reference = (string)($payment['payment_reference'] ?? '');
+        $payment_date = (string)($payment['payment_date'] ?? '');
+        $ticket_code = (string)($payment['ticket_code'] ?? '');
+        $amount = $payment['amount'] ?? null;
+    ?>
+    <!-- TICKET CARD <?php echo $ti + 1; ?> -->
     <div class="ticket card tk">
         <div class="tk-top">
-            <span class="tk-brand"><i class="fa fa-bus" aria-hidden="true"></i> MBUS ticket</span>
+            <span class="tk-brand"><i class="fa fa-bus" aria-hidden="true"></i> MBUS ticket<?php echo $ticket_total > 1 ? ' ' . ($ti + 1) . ' of ' . $ticket_total : ''; ?></span>
             <span class="tk-paid"><i class="fa fa-circle-check" aria-hidden="true"></i> Paid</span>
         </div>
 
         <div class="ticket-qr tk-qr">
-            <div id="ticketQr" class="ticket-qr-box" role="img" aria-label="Boarding QR code" data-token="<?php echo htmlspecialchars($qr_token); ?>"></div>
+            <div class="ticket-qr-box" role="img" aria-label="Boarding QR code" data-token="<?php echo htmlspecialchars($qr_token); ?>"></div>
             <p class="tk-code"><?php echo !empty($ticket_code) ? htmlspecialchars($ticket_code) : "N/A"; ?></p>
             <p class="tk-hint">Show this QR to the operator when you board</p>
         </div>
@@ -126,18 +141,20 @@ if (!$data) {
             </a>
         </div>
     </div>
+    <?php endforeach; ?>
 
 </div>
 
 <script src="../Assets/js/vendor/qrcode.js"></script>
 <script>
 (function(){
-    var box = document.getElementById('ticketQr');
-    if (!box || typeof qrcode === 'undefined') return;
-    var qr = qrcode(0, 'M');
-    qr.addData(box.dataset.token);
-    qr.make();
-    box.innerHTML = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
+    if (typeof qrcode === 'undefined') return;
+    document.querySelectorAll('.ticket-qr-box').forEach(function(box){
+        var qr = qrcode(0, 'M');
+        qr.addData(box.dataset.token);
+        qr.make();
+        box.innerHTML = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
+    });
 })();
 </script>
 <script>
