@@ -23,7 +23,7 @@ if($co['status'] === 'Submitted' && $_SERVER['REQUEST_METHOD'] === 'POST' && iss
     $ref = preg_replace('/\D/', '', (string)($_POST['ref'] ?? ''));
     if(!csrf_validate_token()){
         $refError = 'Security check failed. Please try again.';
-    } elseif(strlen($ref) < 10 || strlen($ref) > 16){
+    } elseif(strlen($ref) !== 13){
         $refError = 'Enter the 13-digit reference number from your GCash receipt.';
     } else {
         $dup = $conn->pdo->prepare("SELECT 1 FROM paymongo_checkout WHERE reference_number = ? AND session_id <> ? AND status IN ('Paid','Submitted') LIMIT 1");
@@ -50,7 +50,7 @@ if($co['status'] === 'Submitted' && $_SERVER['REQUEST_METHOD'] === 'POST' && iss
                     if(!empty($res['ok'])){ header("Location: ticket.php?schedule_id=" . $schedule_id); exit(); }
                     $conn->pdo->prepare("UPDATE incoming_payments SET used_by = NULL WHERE used_by = ?")->execute([$co['session_id']]);
                 }
-                header("Location: my_reservations.php?ref_sent=1"); exit();
+                header("Location: payment_return.php?schedule_id=" . $schedule_id); exit();
             }
         }
     }
@@ -107,7 +107,7 @@ a{display:inline-flex;align-items:center;justify-content:center;min-height:46px;
 p.lbl{margin:0;font-size:.82rem}.amt{margin:2px 0 6px;font-size:2.1rem;font-weight:700;color:#2f6fe4;letter-spacing:-.5px}
 .hint{font-size:.8rem;margin-top:8px}.qr{display:block;width:min(220px,70%);margin:14px auto 6px;border-radius:12px;border:1px solid #e1e7ef}
 .acct{margin:10px 0;display:grid;gap:2px}.acct strong{font-size:.98rem}.acct span{font-size:1.05rem;letter-spacing:.5px}
-.row{display:flex;gap:8px;margin-top:6px}.cp{flex:1;min-height:44px;border:1.5px solid #cfe0fb;border-radius:999px;background:#fff;color:#2f6fe4;font:700 .9rem Inter,system-ui,sans-serif;cursor:pointer}
+.row{display:flex;gap:8px;margin-top:6px}.row .cp:only-child{background:#eaf1ff;border-color:#eaf1ff}.cp{flex:1;min-height:44px;border:1.5px solid #cfe0fb;border-radius:999px;background:#fff;color:#2f6fe4;font:700 .9rem Inter,system-ui,sans-serif;cursor:pointer}
 .wait{display:flex;align-items:center;gap:10px;margin-top:16px;padding:12px;border-radius:12px;background:#f1f5fa;text-align:left;font-size:.85rem;color:#33445c}.spin.sm{width:20px;height:20px;margin:0;border-width:3px;flex:none}
 a.alt{background:none;color:#5b6b7e;font-weight:600;min-height:40px;margin-top:6px}
 /* Reference number + screenshot are always visible (no extra tap to reveal them) */
@@ -115,9 +115,9 @@ a.alt{background:none;color:#5b6b7e;font-weight:600;min-height:40px;margin-top:6
 .ref .reflabel{margin:0;min-height:44px;display:flex;align-items:center;font-weight:600;font-size:.86rem;color:#33445c}
 .refform{display:grid;gap:8px;padding-bottom:12px;min-width:0}.refform input{box-sizing:border-box;width:100%;min-width:0}.row .cp{min-width:0;padding:0 8px}.refform input[type=text]{min-height:44px;padding:0 12px;border:1.5px solid #cfd8e6;border-radius:12px;font:inherit;font-size:.95rem}
 .refform .shot{font-size:.82rem;color:#5b6b7e;display:grid;gap:4px}.refform .shot i{display:none}.refform input[type=file]{font-size:.8rem}
-.refform .cp{flex:none}.ref .sent{margin:0 0 8px;font-size:.84rem;color:#1a7f37}.ref .err{margin:0 0 8px;font-size:.84rem;color:#b42318}
+.refform .cp{flex:none}.refform button.cp{background:#2f6fe4;border-color:#2f6fe4;color:#fff}.refform button.cp:disabled{opacity:.7}.refform input[type=file]::file-selector-button{margin-right:10px;padding:8px 14px;border:0;border-radius:999px;background:#eaf1ff;color:#2f6fe4;font:700 .8rem Inter,system-ui,sans-serif;cursor:pointer}.refform input[type=text]{letter-spacing:1px;text-align:center;font-weight:600}.ref .sent{margin:0 0 8px;font-size:.84rem;color:#1a7f37}.ref .err{margin:0 0 8px;font-size:.84rem;color:#b42318}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
-.approval{text-align:center;padding:6px 0 4px}.approval-ico{width:64px;height:64px;margin:0 auto 10px;border-radius:50%;background:#fff4e0;display:grid;place-items:center;font-size:30px}.approval h1{margin:0 0 6px;font-size:1.3rem;color:#14213d}.approval p{margin:0 0 14px;font-size:.9rem;color:#4a5b78;line-height:1.5}.approval-amt{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:16px;background:#f1f6ff;margin-bottom:14px}.approval-amt span{color:#7a8aa6;font-size:.85rem}.approval-amt strong{font-size:1.2rem;color:#2f6fe4}.approval-btn{display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 13px;border-radius:999px;background:#2f6fe4;color:#fff;font-weight:700;text-decoration:none}details.paydetails{margin-top:14px;border-top:1px solid #e8effb;padding-top:10px}details.paydetails>summary{cursor:pointer;font-weight:600;color:#2f6fe4;font-size:.9rem;margin-bottom:8px}
+.approval{text-align:center;padding:6px 0 4px}.approval-ico{width:72px;height:72px;margin:0 auto 12px;border-radius:50%;background:#eaf1ff;display:grid;place-items:center}.approval-ico .ring{width:34px;height:34px;border:4px solid #cfe0fb;border-top-color:#2f6fe4;border-radius:50%;animation:s .9s linear infinite}.approval h1{margin:0 0 6px;font-size:1.3rem;color:#14213d}.approval p{margin:0 0 14px;font-size:.9rem;color:#4a5b78;line-height:1.5}.approval-amt{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:16px;background:#f1f6ff;margin-bottom:14px}.approval-amt span{color:#7a8aa6;font-size:.85rem}.approval-amt strong{font-size:1.2rem;color:#2f6fe4}.approval-btn{display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 13px;border-radius:999px;background:#2f6fe4;color:#fff;font-weight:700;text-decoration:none}details.paydetails{margin-top:14px;border-top:1px solid #e8effb;padding-top:10px}details.paydetails>summary{cursor:pointer;font-weight:600;color:#2f6fe4;font-size:.9rem;margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -126,7 +126,7 @@ a.alt{background:none;color:#5b6b7e;font-weight:600;min-height:40px;margin-top:6
     <?php $hasRef = !empty($co['reference_number']); ?>
     <?php if($hasRef): ?>
     <div class="approval">
-        <div class="approval-ico" aria-hidden="true">&#8987;</div>
+        <div class="approval-ico" aria-hidden="true"><span class="ring"></span></div>
         <h1>Waiting for approval</h1>
         <p>An operator is checking reference <strong><?php echo htmlspecialchars($co['reference_number']); ?></strong>. Your ticket appears here automatically once it&rsquo;s approved.</p>
         <div class="approval-amt"><span>Amount</span><strong>&#8369;<?php echo number_format((float)$co['amount'], 2); ?></strong></div>
@@ -141,7 +141,6 @@ a.alt{background:none;color:#5b6b7e;font-weight:600;min-height:40px;margin-top:6
     <div class="acct"><strong><?php echo htmlspecialchars($gName); ?></strong><span><?php echo htmlspecialchars($gNum); ?></span></div>
     <div class="row">
         <button type="button" class="cp" data-copy="<?php echo htmlspecialchars($gNum); ?>">Copy number</button>
-        <button type="button" class="cp" data-copy="<?php echo number_format((float)$co['amount'], 2, '.', ''); ?>">Copy amount</button>
     </div>
     <?php if(!$hasRef): ?><div class="wait"><div class="spin sm" aria-hidden="true"></div><span id="waitMsg">Waiting for your payment. Your ticket appears here automatically.</span></div><?php endif; ?>
     <div class="ref">
@@ -150,7 +149,7 @@ a.alt{background:none;color:#5b6b7e;font-weight:600;min-height:40px;margin-top:6
         <?php if($refError !== ''): ?><p class="err" role="alert"><?php echo htmlspecialchars($refError); ?></p><?php endif; ?>
         <form method="POST" enctype="multipart/form-data" class="refform">
             <?php csrf_field(); ?>
-            <input type="text" name="ref" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="13-digit reference no." value="<?php echo htmlspecialchars((string)($co['reference_number'] ?? '')); ?>" aria-label="GCash reference number" required>
+            <input type="text" name="ref" inputmode="numeric" autocomplete="off" maxlength="13" minlength="13" pattern="[0-9]{13}" title="13 digits from your GCash receipt" placeholder="13-digit reference no." value="<?php echo htmlspecialchars((string)($co['reference_number'] ?? '')); ?>" aria-label="GCash reference number" required>
             <label class="shot"><i></i>Add screenshot (optional)<input type="file" name="shot" accept="image/jpeg,image/png"></label>
             <button type="submit" name="send_ref" value="1" class="cp">Submit</button>
         </form>
@@ -179,7 +178,7 @@ a.alt{background:none;color:#5b6b7e;font-weight:600;min-height:40px;margin-top:6
 </main>
 <?php if($state === 'review'): ?>
 <script>
-document.querySelectorAll('.cp').forEach(function(b){b.addEventListener('click',function(){
+document.querySelectorAll('.cp[data-copy]').forEach(function(b){b.addEventListener('click',function(){
     var t=b.dataset.copy,l=b.textContent;
     (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(function(){var i=document.createElement('input');i.value=t;document.body.appendChild(i);i.select();document.execCommand('copy');i.remove();});
     b.textContent='Copied';setTimeout(function(){b.textContent=l;},1500);});});
@@ -190,6 +189,10 @@ document.querySelectorAll('.cp').forEach(function(b){b.addEventListener('click',
         setTimeout(poll,4000);
     }).catch(function(){setTimeout(poll,6000);});
 })();
+var refIn=document.querySelector('.refform input[name=ref]');
+if(refIn)refIn.addEventListener('input',function(){var v=refIn.value.replace(/\D/g,'').slice(0,13);if(v!==refIn.value)refIn.value=v;});
+var rf=document.querySelector('.refform');
+if(rf)rf.addEventListener('submit',function(){var b=rf.querySelector('button[type=submit]');if(b){b.disabled=true;b.textContent='Sending…';}});
 </script>
 <?php endif; ?>
 </body>
