@@ -3,7 +3,8 @@
 :root{--u-pad:26px;--u-top:26px;--u-side:280px;--u-col:720px}
 
 /* ---- Profile icon: same spot on every page, every role ---- */
-.profile-menu-wrap{position:fixed!important;top:var(--u-top);right:var(--u-pad);z-index:60;margin:0!important}
+body{position:relative}
+.profile-menu-wrap{position:absolute!important;top:var(--u-top);right:var(--u-pad);z-index:60;margin:0!important}
 .profile-trigger{width:44px!important;min-width:44px!important;height:44px!important;margin:0!important}
 .profile-avatar{width:32px!important;height:32px!important}
 .profile-menu{top:calc(100% + 8px)!important;right:0!important;left:auto!important}
