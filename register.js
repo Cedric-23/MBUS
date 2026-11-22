@@ -42,13 +42,17 @@ function setUserType(type) {
     const isConductor = type === "conductor";
     const isPassenger = type === "passenger";
 
-    optionBar.classList.toggle("active", isDriver);
-    optionBar.classList.toggle("conductor", isConductor);
-    optionBar.classList.toggle("disabled", isPassenger);
+    // The tab picker is no longer on every page (the page switches with links), so each piece is optional.
+    // Without these checks the script stopped here and the password checklist below never appeared.
+    if (optionBar) {
+        optionBar.classList.toggle("active", isDriver);
+        optionBar.classList.toggle("conductor", isConductor);
+        optionBar.classList.toggle("disabled", isPassenger);
+    }
 
-    optionPassenger.classList.toggle("active", isPassenger);
-    optionConductor.classList.toggle("active", isConductor);
-    optionDriver.classList.toggle("active", isDriver);
+    if (optionPassenger) optionPassenger.classList.toggle("active", isPassenger);
+    if (optionConductor) optionConductor.classList.toggle("active", isConductor);
+    if (optionDriver) optionDriver.classList.toggle("active", isDriver);
 
     passengerForm.classList.toggle("active", !isDriver);
     driverForm.classList.toggle("active", isDriver);
@@ -56,11 +60,11 @@ function setUserType(type) {
     toggleFields(passengerForm, !isDriver);
     toggleFields(driverForm, isDriver);
 
-    if (!isDriver) {
+    if (!isDriver && passengerSubmit && submitMessages[type]) {
         passengerSubmit.textContent = submitMessages[type];
     }
 
-    pickerText.textContent = pickerMessages[type];
+    if (pickerText && pickerMessages[type]) pickerText.textContent = pickerMessages[type];
     userTypeInput.value = type;
 }
 
