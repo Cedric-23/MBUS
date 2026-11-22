@@ -235,3 +235,22 @@
    so it floated over the trip details (Bus, Departure). The header and photo now scroll away together. */
 .cm.reserve-page .page-header,.cm.payment-page .page-header{position:relative!important}
 .cm.reserve-page .profile-menu-wrap,.cm.payment-page .profile-menu-wrap{position:absolute!important;top:var(--u-top,14px)!important;right:0!important}
+
+/* Reservation summary: compact */
+.cm #summaryPanel{padding:16px}
+.cm #summaryPanel .summary-header h2{font-size:1.05rem;margin:0 0 8px;padding-bottom:8px}
+.cm #summaryPanel .summary-details{margin:0 0 8px;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:.86rem}
+.cm #summaryPanel .summary-details dt{margin:0;padding:0;font-size:.8rem;color:#8a98ae}
+.cm #summaryPanel .summary-details dd{margin:0;padding:0;font-size:.86rem;font-weight:600;text-align:right;color:#14213d}
+.cm #summaryPanel .sum-seats{gap:6px;margin:8px 0}
+.cm #summaryPanel .sum-seat{padding:8px 10px;gap:8px;border-radius:12px}
+.cm #summaryPanel .sum-seat-badge{padding:3px 9px;font-size:.74rem}
+.cm #summaryPanel .sum-seat-route{display:block;font-size:.78rem;font-weight:700;line-height:1.3;color:#14213d;overflow-wrap:anywhere}
+.cm #summaryPanel .sum-seat-type{padding:3px 9px;font-size:.7rem}
+.cm #summaryPanel .verify-hint{display:block;margin:6px 0 10px;font-size:.78rem;line-height:1.35}
+.cm #summaryPanel #calculateBtn{min-height:44px;font-size:.9rem;border-radius:999px}
+.cm #summaryPanel .fare-total{font-size:.95rem}
+
+/* Trips: centered ticket button */
+.cm .rg-bar:has(.rg-pay:only-child){justify-content:center;padding:0;background:none}
+.cm .rg-bar:has(.rg-pay:only-child) .rg-pay{width:100%;justify-content:center;text-align:center}

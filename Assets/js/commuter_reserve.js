@@ -430,8 +430,10 @@ function renderPassengerTypes() {
         const body = document.createElement("div");
         body.className = "sum-seat-body";
         if (manyRiders) {
-            body.appendChild(summaryLine("Pickup", seatPickups[seat]));
-            body.appendChild(summaryLine("Destination", seatDestinations[seat]));
+            const route = document.createElement("strong");
+            route.className = "sum-seat-route";
+            route.textContent = seatPickups[seat] + " \u2192 " + seatDestinations[seat];
+            body.appendChild(route);
         }
 
         const pill = document.createElement("span");
