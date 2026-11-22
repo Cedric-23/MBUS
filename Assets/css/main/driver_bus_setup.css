@@ -219,3 +219,34 @@
     .seat-layout-preview .seat-row { grid-template-columns: repeat(2, 40px) 22px repeat(2, 40px); gap: 6px; }
     .seat-builder .seat-cell { min-width: 40px; height: 42px; }
 }
+
+/* ---------- cleaner photo / document upload cards ---------- */
+.bus-photo-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 0 !important; }
+.auth-register .upload-group { margin-bottom: 16px; }
+.auth-register .upload-group .upload-document-group {
+    gap: 14px; padding: 12px 14px !important; border: 1.5px dashed #b8cbea !important; border-radius: 16px !important;
+    background: #f7faff !important; transition: border-color .15s, background .15s;
+}
+.auth-register .upload-group .upload-document-group:hover { border-color: #2f6fe4 !important; background: #f0f6ff !important; }
+.auth-register .upload-group .upload-icon { width: 56px !important; height: 56px !important; border-radius: 14px !important; background-color: #e3edff; }
+.auth-register .upload-group .document-desc .document-name { font-size: 14px; }
+.auth-register .upload-group.is-done .upload-document-group { border-style: solid !important; border-color: #34a770 !important; background: #f3fbf7 !important; }
+.auth-register .upload-group.is-done .document-desc span:last-child { color: #1f8a57; font-weight: 600; }
+.auth-register .upload-group .document-input-button button { min-height: 36px; padding: 0 14px; background: #fff; color: #2f6fe4; border: 1.5px solid #2f6fe4; }
+.auth-register .upload-group.is-done .document-input-button button { border-color: #b8cbea; color: #516278; }
+
+/* ---------- address picker ---------- */
+.addr-picker { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 6px; }
+.addr-picker select, .addr-picker input[type="text"] {
+    width: 100%; min-height: 48px; padding: 0 14px; border: 1.5px solid #dbe5f4; border-radius: 999px; background: #fff;
+    font: inherit; font-size: 15px; color: #14213d; box-sizing: border-box;
+}
+.addr-picker select:disabled { background: #f3f6fb; color: #8a98ae; }
+.addr-picker select:focus, .addr-picker input:focus { outline: none; border-color: #2f6fe4; box-shadow: 0 0 0 3px rgba(47, 111, 228, .15); }
+.addr-picker [hidden] { display: none !important; }
+@media (min-width: 640px) {
+    .addr-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .addr-picker select:first-child, .addr-picker input[data-addr="street"], .addr-picker input[data-addr="manual"], .addr-picker small { grid-column: 1 / -1; }
+}
+.auth-register .upload-group .upload-document-group { flex-wrap: nowrap !important; }
+.auth-register .upload-group .document-desc .document-name { white-space: nowrap; }

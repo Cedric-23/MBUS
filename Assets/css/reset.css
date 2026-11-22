@@ -35,3 +35,9 @@
 .reset-form .password-control>input{width:100%;box-sizing:border-box;padding-right:52px}
 .reset-form .password-control>.input-icon{position:absolute;left:18px;top:50%;transform:translateY(-50%);width:18px;height:18px;pointer-events:none;z-index:1}
 .reset-form .password-control>.password-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);z-index:2}
+
+/* password fields: keep the eye and lock icons inside the input, not under the rules list */
+.password-control{position:relative;width:100%}
+.password-control>input{padding-right:52px}
+.password-control>.input-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);z-index:1}
+.password-control>.password-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:40px;height:40px;display:grid;place-items:center;padding:0;border:0;border-radius:10px;background:transparent;color:#6b7a8d;cursor:pointer;z-index:2}

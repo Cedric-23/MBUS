@@ -449,8 +449,17 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                 <div class="input-group">
                                     <div class="home-address" style="grid-column:1 / -1">
                                         <label>Address</label>
-                                        <input type="text" name="home-address" placeholder="Enter your home address" maxlength="300" value="<?= reg_old('home-address') ?>" required/>
-                                        <i class="input-icon" data-lucide="map-pin-house"></i>
+                                        <div class="addr-picker" id="addressPicker">
+                                            <select disabled aria-label="Country"><option>Philippines</option></select>
+                                            <select data-addr="region" aria-label="Region" required><option value="">Loading regions…</option></select>
+                                            <select data-addr="province" aria-label="Province" disabled required><option value="">Province</option></select>
+                                            <select data-addr="city" aria-label="City or municipality" disabled required><option value="">City / Municipality</option></select>
+                                            <select data-addr="barangay" aria-label="Barangay" disabled required><option value="">Barangay</option></select>
+                                            <input type="text" data-addr="street" placeholder="House no., street, subdivision" maxlength="120" autocomplete="street-address" required/>
+                                            <input type="text" data-addr="manual" placeholder="Full address" maxlength="300" hidden/>
+                                            <small class="field-hint" data-addr="note" hidden></small>
+                                            <input type="hidden" name="home-address" id="home-address" value="<?= reg_old('home-address') ?>"/>
+                                        </div>
                                     <?= mbus_field_error($errors, 'home-address') ?></div>
                                 </div>
                                 <div class="input-group">
@@ -612,7 +621,8 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
         </style>
         <script>window.MBUS_START_STEP = <?= (int)$step_with_error ?>;</script>
         <script src="register.js"></script>
-        <script src="Assets/js/driver_bus_setup.js?v=<?= @filemtime(__DIR__ . '/Assets/js/driver_bus_setup.js') ?>"></script>
+        <script src="Assets/js/ph_address.js?v=1"></script>
+    <script src="Assets/js/driver_bus_setup.js?v=<?= @filemtime(__DIR__ . '/Assets/js/driver_bus_setup.js') ?>"></script>
         <script> if (window.lucide) lucide.createIcons(); </script>
         <script src="Assets/js/password-toggle.js"></script>
         <?php if (!empty($success)): ?><script>try{localStorage.removeItem("mbus_reg_draft_v1")}catch(e){}</script><?php endif; ?>
