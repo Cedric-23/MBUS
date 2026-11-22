@@ -159,7 +159,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     /* ===== Driver / Operator application ===== */
     elseif ($user_type === "driver") {
-        $full_name      = (string)($_POST['full-name'] ?? '');
+        $first_name     = trim((string)($_POST['driver-first-name'] ?? ''));
+        $last_name      = trim((string)($_POST['driver-last-name'] ?? ''));
         $email          = (string)($_POST['email-address'] ?? '');
         $phone_number   = (string)($_POST['phone-number'] ?? '');
         $address        = trim(preg_replace('/\s+/', ' ', (string)($_POST['home-address'] ?? '')));
@@ -170,7 +171,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $vehicle_type   = trim((string)($_POST['vehicle-type'] ?? ''));
         $plate          = (string)($_POST['vehicle-plate'] ?? '');
 
-        if ($e = mbus_check_full_name($full_name)) $errors['full-name'] = $e;
+        /* first and last name are separate fields, saved together as "First Last" like every other account */
+        if ($first_name === '') $errors['driver-first-name'] = 'Enter your first name.';
+        if ($last_name === '')  $errors['driver-last-name']  = 'Enter your last name.';
+        $full_name = trim($first_name . ' ' . $last_name);
+        if ($first_name !== '' && $last_name !== '' && ($e = mbus_check_name($full_name))) $errors['driver-first-name'] = $e;
         if ($e = mbus_check_email($email)) $errors['email-address'] = $e;
         if ($e = mbus_check_phone($phone_number)) $errors['phone-number'] = $e;
         if (mb_strlen($address) < 8) $errors['home-address'] = 'Enter your complete address (at least 8 characters).';
@@ -184,7 +189,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         elseif ($license_expiry > date('Y-m-d', strtotime('+15 years'))) $errors['license-expiry'] = 'That expiry date is too far ahead. Check the year.';
         if (!in_array($vehicle_type, ['Ordinary', 'Aircon'], true)) $errors['vehicle-type'] = 'Choose a bus type (Ordinary or Aircon).';
         if ($e = mbus_check_plate($plate)) $errors['vehicle-plate'] = $e;
-        $_POST['email-address'] = $email; $_POST['phone-number'] = $phone_number; $_POST['full-name'] = $full_name;
+        $_POST['email-address'] = $email; $_POST['phone-number'] = $phone_number;
+        $_POST['driver-first-name'] = $first_name; $_POST['driver-last-name'] = $last_name;
         $_POST['license-number'] = $license_number; $_POST['vehicle-plate'] = $plate; $_POST['home-address'] = $address;
 
         if (!isset($errors['email-address'])) {
@@ -235,7 +241,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if ($errors && $error === '') $error = 'Please fix the highlighted fields.';
     // Driver form is a 3-step wizard: reopen on the first step that has an error
-    $stepOf = ['full-name'=>0,'email-address'=>0,'phone-number'=>0,'home-address'=>0,'driver-password'=>0,'driver-confirm'=>0,
+    $stepOf = ['driver-first-name'=>0,'driver-last-name'=>0,'email-address'=>0,'phone-number'=>0,'home-address'=>0,'driver-password'=>0,'driver-confirm'=>0,
                'license-number'=>1,'license-expiry'=>1,'license_document'=>1,'vehicle-type'=>2,'vehicle-plate'=>2,'vehicle_document'=>2,
                'bus_photo'=>2,'interior_photo'=>2];
     foreach (array_keys($errors) as $k) { if (isset($stepOf[$k])) { $step_with_error = $stepOf[$k]; break; } }
@@ -290,7 +296,6 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
     </head>
     <body class="auth-register">
         <div class="auth-hero-m">
-            <a class="auth-back" href="index.php" aria-label="Back to home"><i data-lucide="arrow-left"></i></a>
             <h1>Create your account</h1>
             <p>Plan your next bus trip in just a few steps.</p>
         </div>
@@ -419,23 +424,30 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                             </div>
                             <div class="form-inputs">
                                 <div class="input-group">
-                                    <div class="full-name">
-                                        <label class="input-label">Full Name (LN, FN, MI)</label>
-                                        <input type="text" name="full-name" placeholder="Enter your full name" maxlength="100" value="<?= reg_old('full-name') ?>" required/>
+                                    <div class="first-name">
+                                        <label class="input-label">First Name</label>
+                                        <input type="text" name="driver-first-name" placeholder="Juan" maxlength="50" autocomplete="given-name" value="<?= reg_old('driver-first-name') ?>" required/>
                                         <i class="input-icon" data-lucide="user"></i>
-                                    <?= mbus_field_error($errors, 'full-name') ?></div>
+                                    <?= mbus_field_error($errors, 'driver-first-name') ?></div>
+                                    <div class="last-name">
+                                        <label class="input-label">Last Name</label>
+                                        <input type="text" name="driver-last-name" placeholder="Dela Cruz" maxlength="50" autocomplete="family-name" value="<?= reg_old('driver-last-name') ?>" required/>
+                                        <i class="input-icon" data-lucide="user"></i>
+                                    <?= mbus_field_error($errors, 'driver-last-name') ?></div>
+                                </div>
+                                <div class="input-group">
                                     <div class="email-address">
                                         <label class="input-label">Email Address</label>
                                         <input type="email" name="email-address" placeholder="Enter your email" maxlength="254" autocapitalize="none" spellcheck="false" value="<?= reg_old('email-address') ?>" required/>
                                         <i class="input-icon" data-lucide="mail"></i>
                                     <?= mbus_field_error($errors, 'email-address') ?></div>
-                                </div>
-                                <div class="input-group">
                                     <div class="phone-number">
                                         <label>Phone Number</label>
                                 <div class="phone-input"><span class="phone-prefix" aria-hidden="true">+63</span><input type="text" name="phone-number" placeholder="9XXXXXXXXX" maxlength="10" minlength="10" inputmode="numeric" pattern="9[0-9]{9}" value="<?= preg_replace('/^0/', '', reg_old('phone-number')) ?>" required/></div>
                                     <?= mbus_field_error($errors, 'phone-number') ?></div>
-                                    <div class="home-address">
+                                </div>
+                                <div class="input-group">
+                                    <div class="home-address" style="grid-column:1 / -1">
                                         <label>Address</label>
                                         <input type="text" name="home-address" placeholder="Enter your home address" maxlength="300" value="<?= reg_old('home-address') ?>" required/>
                                         <i class="input-icon" data-lucide="map-pin-house"></i>
