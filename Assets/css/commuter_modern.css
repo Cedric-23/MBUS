@@ -260,3 +260,9 @@
 /* Date chips: Schedule uses the same size as My Trips */
 .cm.schedule-page .date-filter-btn{min-height:40px;padding:8px 12px;gap:7px;font-size:var(--fs-sm,.875rem);font-weight:var(--fw-medium,500);line-height:1.1}
 .cm.schedule-page .date-filter-btn i{font-size:.82rem}
+
+/* One date-chip style for Schedule and My Trips (same size, spacing and alignment) */
+.cm .date-filter-container,.cm.schedule-page .date-filter-container{width:auto!important;max-width:none!important;margin:0 0 12px!important;padding:6px 0!important}
+.cm .date-filters,.cm.schedule-page .date-filters{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto;margin:0!important;padding:4px 0 8px!important}
+.cm .date-filter-btn,.cm.schedule-page .date-filter-btn{flex:none!important;display:inline-flex!important;align-items:center;justify-content:center;gap:6px!important;min-height:43px!important;padding:0 14px!important;font-size:.925rem!important;font-weight:600!important;line-height:1.1!important;white-space:nowrap}
+.cm .date-filter-btn i,.cm.schedule-page .date-filter-btn i{font-size:.85rem!important}
