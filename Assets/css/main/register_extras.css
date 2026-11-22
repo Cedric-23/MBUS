@@ -1,0 +1,132 @@
+/* Registration extras: tidy upload cards, structured address, and the "submitting" screen. */
+
+/* ---------- upload cards (license, registration, bus photos) ----------
+   One tidy row on every screen size: thumbnail | name + hint | Browse/Change.
+   register.css wrapped these rows on phones, which pushed the button under the name. */
+.auth-register .upload-group .upload-document-group {
+    display: grid !important;
+    grid-template-columns: 52px minmax(0, 1fr) auto;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 12px !important;
+    padding: 12px 14px !important;
+    border: 1.5px dashed #bcd0f0 !important;
+    border-radius: 18px !important;
+    background: #f8fbff !important;
+    transition: border-color .15s ease, background .15s ease;
+}
+
+/* once a file is chosen the card turns solid blue */
+.auth-register .upload-group .upload-document-group:has(.upload-icon.has-thumb) {
+    border-style: solid !important;
+    border-color: #2f6fe4 !important;
+    background: #fff !important;
+}
+
+.auth-register .upload-group .upload-icon {
+    position: relative;
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 14px !important;
+}
+
+.auth-register .upload-group .upload-icon.has-thumb::after {
+    content: "\2713";
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    display: grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #1a7f37;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.auth-register .upload-group .document-desc {
+    flex-basis: auto !important;
+    min-width: 0;
+    padding: 0 !important;
+}
+
+.auth-register .upload-group .document-desc .document-name {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.auth-register .upload-group .document-desc span:last-child {
+    line-height: 1.3;
+}
+
+.auth-register .upload-group .document-input-button { margin: 0 !important; }
+
+.auth-register .upload-group .document-input-button button {
+    min-height: 38px;
+    padding: 0 16px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+@media (max-width: 380px) {
+    .auth-register .upload-group .upload-document-group {
+        grid-template-columns: 44px minmax(0, 1fr) auto;
+        gap: 10px !important;
+        padding: 10px 12px !important;
+    }
+    .auth-register .upload-group .upload-icon { width: 44px !important; height: 44px !important; }
+    .auth-register .upload-group .document-input-button button { padding: 0 12px; }
+}
+
+/* ---------- address ---------- */
+.addr-field { position: relative; min-width: 0; }
+.addr-field select:disabled { background: #f1f5fd; color: #8896ad; cursor: not-allowed; }
+.addr-field[hidden] { display: none !important; }
+.addr-note {
+    margin: -4px 0 14px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #fff7e6;
+    border: 1px solid #f3d9a4;
+    color: #8a5a00;
+    font-size: .82rem;
+    line-height: 1.4;
+}
+.addr-note[hidden] { display: none; }
+
+/* ---------- submitting screen ---------- */
+.mbus-submit-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(20, 33, 61, .55);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+}
+.mbus-submit-card {
+    width: min(340px, 100%);
+    padding: 28px 22px;
+    border-radius: 26px;
+    background: #fff;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(20, 33, 61, .3);
+}
+.mbus-submit-spin {
+    width: 46px;
+    height: 46px;
+    margin: 0 auto 16px;
+    border: 4px solid #dbe5f4;
+    border-top-color: #2f6fe4;
+    border-radius: 50%;
+    animation: mbusSpin 1s linear infinite;
+}
+@keyframes mbusSpin { to { transform: rotate(360deg); } }
+.mbus-submit-card h2 { margin: 0 0 6px; font-size: 1.1rem; color: #14213d; }
+.mbus-submit-card p { margin: 0; color: #5b6b7e; font-size: .9rem; line-height: 1.5; }
+@media (prefers-reduced-motion: reduce) { .mbus-submit-spin { animation: none; } }
