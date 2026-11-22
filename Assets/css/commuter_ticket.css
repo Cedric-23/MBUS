@@ -284,3 +284,28 @@
 /* The avatar scrolls away with the header here, so it never covers the ticket text */
 .ticket-page{position:relative}
 .ticket-page .profile-menu-wrap{position:absolute!important}
+
+/* ---------- Compact ticket ---------- */
+body.ticket-page.cm .ticket-container{padding-top:4px}
+body.ticket-page.cm .ticket.tk{padding:14px 16px 16px;border-radius:22px;max-width:420px;margin:0 auto;box-shadow:0 2px 14px rgba(47,111,228,.12)}
+.tk-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.tk-brand{font-weight:700;color:#1f4fb8;font-size:.9rem}
+.tk-paid{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;background:#dcf7e6;color:#13703a;font-size:.74rem;font-weight:700}
+body.ticket-page.cm .tk-qr{margin:0;padding:6px 0 10px;text-align:center;border-bottom:1px dashed #d6e0ef}
+body.ticket-page.cm .tk-qr .ticket-qr-box{width:168px;height:168px;margin:0 auto}
+.tk-code{margin:6px 0 0;font-weight:700;letter-spacing:1.5px;font-size:.95rem;color:#14213d}
+.tk-hint{margin:2px 0 0;font-size:.74rem;color:#8a98ae}
+.tk-meta{display:grid;grid-template-columns:1.3fr .6fr 1fr;gap:8px;margin:12px 0 4px}
+.tk-meta span{display:block;font-size:.68rem;color:#8a98ae}
+.tk-meta strong{display:block;font-size:.84rem;color:#14213d;line-height:1.25;overflow-wrap:anywhere}
+.tk-seats{list-style:none;margin:8px 0;padding:0;display:grid;gap:6px}
+.tk-seats li{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#f1f6ff;font-size:.8rem;color:#14213d}
+.tk-seats b{flex:none;padding:2px 9px;border-radius:999px;background:#fff;color:#1f4fb8;font-size:.74rem}
+.tk-seats span{min-width:0;overflow-wrap:anywhere}
+.tk-pay{margin:6px 0 12px;padding-top:8px;border-top:1px solid #edf1f7;display:grid;gap:5px}
+.tk-pay>div{display:flex;justify-content:space-between;gap:12px;font-size:.8rem}
+.tk-pay dt{color:#8a98ae}
+.tk-pay dd{margin:0;font-weight:600;color:#14213d;text-align:right;overflow-wrap:anywhere}
+body.ticket-page.cm .tk-actions{margin:0}
+body.ticket-page.cm .tk-actions .btn{min-height:46px;border-radius:999px}
+.tk-seats li em{margin-left:auto;flex:none;font-style:normal;font-weight:700;color:#14213d}
