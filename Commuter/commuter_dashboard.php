@@ -38,8 +38,14 @@ $q = mbus_db_prepare($conn, "
 $groups = [];
 while($q !== false && ($r = mbus_db_fetch_assoc($q))){
     $sid = (int)$r['schedule_id'];
-    if(!isset($groups[$sid])){ $groups[$sid] = $r; $groups[$sid]['seats'] = []; $groups[$sid]['pending'] = false; $groups[$sid]['boarded'] = false; $groups[$sid]['stops'] = []; }
+    if(!isset($groups[$sid])){ $groups[$sid] = $r; $groups[$sid]['seats'] = []; $groups[$sid]['pending'] = false; $groups[$sid]['boarded'] = false; $groups[$sid]['stops'] = []; $groups[$sid]['riders'] = []; }
     $groups[$sid]['seats'][] = $r['seat_number'];
+    /* one entry per seat: its own pickup and drop-off */
+    $groups[$sid]['riders'][] = [
+        'seat' => $r['seat_number'],
+        'pickup' => (string)($r['pickup_location'] ?: $r['origin']),
+        'drop' => (string)($r['destination'] ?: $r['route_destination']),
+    ];
     $groups[$sid]['stops'][(string)($r['pickup_location'] ?: $r['origin']) . '>' . (string)($r['destination'] ?: $r['route_destination'])] = true;
     if($r['status'] === 'Pending') $groups[$sid]['pending'] = true;
     if($r['status'] === 'Boarded') $groups[$sid]['boarded'] = true;
@@ -75,6 +81,11 @@ function mbus_home_when(string $ts): string {
     $label = $day === date('Y-m-d') ? 'Today' : ($day === date('Y-m-d', strtotime('+1 day')) ? 'Tomorrow' : date('D, M j', $t));
     return $label . ' · ' . date('g:i A', $t);
 }
+
+/* "2" on its own reads like a seat count: call it Bus 2 (names like BUS-103 stay as they are) */
+function mbus_home_bus(string $n): string {
+    return preg_match('/^bus/i', $n) ? $n : 'Bus ' . $n;
+}
 ?>
 
 <!DOCTYPE html>
@@ -96,6 +107,16 @@ function mbus_home_when(string $ts): string {
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=2">
     <link rel="stylesheet" href="../Assets/css/commuter_modern.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/commuter_modern.css'); ?>">
+    <style>
+        /* multi reservation: one row per seat with its own pickup and drop-off */
+        .next-riders-head, .next-riders li { display: grid; grid-template-columns: 42px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: center; }
+        .next-riders-head { margin: 12px 0 6px; padding: 0 10px; font-size: .7rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; opacity: .78; }
+        .next-riders { margin: 0 0 2px; padding: 0; list-style: none; display: grid; gap: 6px; }
+        .next-riders li { padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .16); font-size: .8rem; line-height: 1.25; }
+        .next-riders li span { overflow-wrap: anywhere; }
+        .next-riders .nr-seat { display: grid; place-items: center; height: 28px; border-radius: 9px; background: #fff; color: #2f6fe4; font-size: .85rem; font-weight: 700; }
+        .next-riders-more { margin: 6px 0 0; font-size: .8rem; opacity: .85; }
+    </style>
 </head>
 
 <body class="home-page has-bottom-nav cm">
@@ -132,12 +153,18 @@ function mbus_home_when(string $ts): string {
     </header>
 
     <?php if($next){
-        $route = ($next['pickup_location'] ?: $next['origin']) . ' to ' . ($next['destination'] ?: $next['route_destination']);
-        if(count($next['stops']) > 1) $route .= ' +' . (count($next['stops']) - 1) . ' more stop' . (count($next['stops']) > 2 ? 's' : '');
-        $seat_label = count($next['seats']) > 1 ? 'Seats ' : 'Seat ';
-        if(!empty($next['boarded'])){ $state = 'On board'; $href = 'ticket.php?schedule_id=' . (int)$next['schedule_id']; $cta = 'View ticket'; }
+        $seat_count = count($next['seats']);
+        $is_multi = $seat_count > 1; /* one seat = single reservation, 2+ seats = multi reservation */
+        /* single: the rider's own stops. multi: every seat has its own stops, so the headline is the whole trip */
+        $route = $is_multi
+            ? $next['origin'] . ' to ' . $next['route_destination']
+            : ($next['pickup_location'] ?: $next['origin']) . ' to ' . ($next['destination'] ?: $next['route_destination']);
+        $tickets_word = $is_multi ? 'tickets' : 'ticket';
+        if(!empty($next['boarded'])){ $state = 'On board'; $href = 'ticket.php?schedule_id=' . (int)$next['schedule_id']; $cta = 'View ' . $tickets_word; }
         elseif($next['pending']){ $state = 'Waiting for payment'; $href = 'payment.php?schedule_id=' . (int)$next['schedule_id']; $cta = 'Pay with GCash'; }
-        else { $state = 'Ready to board'; $href = 'ticket.php?schedule_id=' . (int)$next['schedule_id']; $cta = 'Show ticket'; }
+        else { $state = 'Ready to board'; $href = 'ticket.php?schedule_id=' . (int)$next['schedule_id']; $cta = 'Show ' . $tickets_word; }
+        if($is_multi && !$next['pending']) $cta .= ' (' . $seat_count . ')';
+        $show_riders = array_slice($next['riders'], 0, 4);
     ?>
     <section class="next-trip" aria-label="Your next trip">
         <div class="next-trip-top">
@@ -145,7 +172,18 @@ function mbus_home_when(string $ts): string {
             <span class="next-when"><?php echo htmlspecialchars(mbus_home_when($next['departure_time'])); ?></span>
         </div>
         <p class="next-route"><?php echo htmlspecialchars($route); ?></p>
-        <p class="next-meta"><?php echo htmlspecialchars($next['bus_number']); ?> &middot; <?php echo count($next['seats']) > 4 ? count($next['seats']) . ' seats' : $seat_label . htmlspecialchars(implode(', ', $next['seats'])); ?></p>
+        <?php if($is_multi){ ?>
+        <p class="next-meta"><?php echo htmlspecialchars(mbus_home_bus($next['bus_number'])); ?> &middot; <?php echo $seat_count; ?> seats reserved</p>
+        <div class="next-riders-head" aria-hidden="true"><span>Seat</span><span>Pickup</span><span>Drop-off</span></div>
+        <ul class="next-riders">
+            <?php foreach($show_riders as $rd){ ?>
+            <li><b class="nr-seat"><?php echo htmlspecialchars((string)$rd['seat']); ?></b><span><?php echo htmlspecialchars($rd['pickup']); ?></span><span><?php echo htmlspecialchars($rd['drop']); ?></span></li>
+            <?php } ?>
+        </ul>
+        <?php if($seat_count > 4){ ?><p class="next-riders-more">+<?php echo $seat_count - 4; ?> more seat<?php echo $seat_count - 4 > 1 ? 's' : ''; ?> on your tickets</p><?php } ?>
+        <?php } else { ?>
+        <p class="next-meta"><?php echo htmlspecialchars(mbus_home_bus($next['bus_number'])); ?> &middot; Seat <?php echo htmlspecialchars((string)$next['seats'][0]); ?></p>
+        <?php } ?>
         <a class="next-cta" href="<?php echo $href; ?>"><?php echo $cta; ?></a>
     </section>
     <?php } else { ?>
@@ -165,19 +203,22 @@ function mbus_home_when(string $ts): string {
         <ul class="soon-list">
             <?php foreach($others as $o){
                 $oPay = $o['pending'];
+                $oMulti = count($o['seats']) > 1;
                 $oHref = ($oPay ? 'payment.php' : 'ticket.php') . '?schedule_id=' . (int)$o['schedule_id'];
-                $oRoute = ($o['pickup_location'] ?: $o['origin']) . ' to ' . ($o['destination'] ?: $o['route_destination']);
-                if(count($o['stops']) > 1) $oRoute .= ' +' . (count($o['stops']) - 1);
-                $oSeats = count($o['seats']) > 4 ? count($o['seats']) . ' seats' : (count($o['seats']) > 1 ? 'Seats ' : 'Seat ') . implode(', ', $o['seats']);
+                $oRoute = $oMulti
+                    ? $o['origin'] . ' to ' . $o['route_destination']
+                    : ($o['pickup_location'] ?: $o['origin']) . ' to ' . ($o['destination'] ?: $o['route_destination']);
+                $oSeats = $oMulti ? count($o['seats']) . ' seats' : 'Seat ' . $o['seats'][0];
+                $oChip = $oPay ? 'Pay now' : ($o['boarded'] ? 'On board' : ($oMulti ? 'Tickets' : 'Ticket'));
             ?>
             <li>
                 <a href="<?php echo htmlspecialchars($oHref); ?>">
                     <span class="soon-time"><?php echo date('g:i', strtotime($o['departure_time'])); ?><small><?php echo date('A', strtotime($o['departure_time'])); ?></small></span>
                     <span class="soon-body">
                         <strong><?php echo htmlspecialchars($oRoute); ?></strong>
-                        <small><?php echo htmlspecialchars($o['bus_number']); ?> &middot; <?php echo htmlspecialchars($oSeats); ?> &middot; <?php echo htmlspecialchars(mbus_home_when($o['departure_time'])); ?></small>
+                        <small><?php echo htmlspecialchars(mbus_home_bus($o['bus_number'])); ?> &middot; <?php echo htmlspecialchars($oSeats); ?> &middot; <?php echo htmlspecialchars(mbus_home_when($o['departure_time'])); ?></small>
                     </span>
-                    <span class="seat-chip <?php echo $oPay ? 'low' : 'ok'; ?>"><?php echo $oPay ? 'Pay now' : ($o['boarded'] ? 'On board' : 'Ticket'); ?></span>
+                    <span class="seat-chip <?php echo $oPay ? 'low' : 'ok'; ?>"><?php echo $oChip; ?></span>
                 </a>
             </li>
             <?php } ?>
@@ -204,7 +245,7 @@ function mbus_home_when(string $ts): string {
                     <span class="soon-time"><?php echo date('g:i', strtotime($s['departure_time'])); ?><small><?php echo date('A', strtotime($s['departure_time'])); ?></small></span>
                     <span class="soon-body">
                         <strong><?php echo htmlspecialchars($s['origin'] . ' to ' . $s['destination']); ?></strong>
-                        <small><?php echo htmlspecialchars($s['bus_number']); ?> &middot; <?php echo date('Y-m-d', strtotime($s['departure_time'])) === date('Y-m-d') ? 'Today' : 'Tomorrow'; ?></small>
+                        <small><?php echo htmlspecialchars(mbus_home_bus($s['bus_number'])); ?> &middot; <?php echo date('Y-m-d', strtotime($s['departure_time'])) === date('Y-m-d') ? 'Today' : 'Tomorrow'; ?></small>
                     </span>
                     <span class="seat-chip <?php echo $cls; ?>"><?php echo $chip; ?></span>
                 </a>
