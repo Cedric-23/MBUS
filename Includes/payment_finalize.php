@@ -58,6 +58,7 @@ function mbus_finalize_payment($conn, string $sessionId, string $paymentRef): ar
     try {
         log_activity($conn, (int)$co['user_id'], ACTION_PAYMENT_SUCCESS, "GCash payment {$paymentRef} for schedule {$co['schedule_id']}, ticket $ticket, total {$co['amount']}");
         mbus_notify($conn, (int)$co['user_id'], "Payment approved. Your ticket $ticket is ready.");
+        mbus_notify_admins($conn, "GCash payment received: ticket $ticket, PHP " . number_format((float)$co['amount'], 2) . ".");
         $u = mbus_db_prepare($conn, 'SELECT email FROM users WHERE user_id = ?', [(int)$co['user_id']]);
         $ur = $u === false ? false : mbus_db_fetch_assoc($u);
         if ($ur && !empty($ur['email'])) {

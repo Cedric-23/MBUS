@@ -167,3 +167,13 @@
 .trip-completion-confirmation[hidden] {
   display: none !important;
 }
+
+/* Multi reservation: same card as a single seat, extra seats folded under "Show more information" */
+.rg-statuses{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.rg-more{margin-top:10px;border-top:1px solid var(--color-border-light,#e4e9f0)}
+.rg-more>summary{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 0 2px;cursor:pointer;list-style:none;color:var(--color-primary,#2f6fe4);font-weight:600;font-size:.875rem}
+.rg-more>summary::-webkit-details-marker{display:none}
+.rg-more .rg-more-close{display:none}
+.rg-more[open] .rg-more-open{display:none}
+.rg-more[open] .rg-more-close{display:inline}
+.rg-more[open] .rg-chev{transform:rotate(180deg)}
