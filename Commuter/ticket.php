@@ -72,8 +72,9 @@ if (!$data) {
 </head>
 
 <body class="has-bottom-nav ticket-page cm">
+<main class="main" role="main">
 <header class="page-header" role="banner">
-    <div class="page-header-left"><h1>Digital Ticket</h1></div>
+    <div class="page-header-left"><a href="my_reservations.php" class="back-btn" aria-label="Back to my trips"><i class="fa fa-arrow-left" aria-hidden="true"></i></a><h1>Digital Ticket</h1></div>
     <div class="page-header-right"><div class="profile-menu-wrap">
         <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span></button>
         <div class="profile-menu" id="profileMenu" role="menu">
@@ -152,6 +153,7 @@ window.addEventListener('load', function() {
 });
 </script>
 
+</main>
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="commuter_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
     <a href="schedule.php" class="bottom-nav-item"><i class="fa fa-calendar" aria-hidden="true"></i><span>Schedule</span></a>

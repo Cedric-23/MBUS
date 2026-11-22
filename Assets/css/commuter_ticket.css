@@ -309,3 +309,5 @@ body.ticket-page.cm .tk-qr .ticket-qr-box{width:168px;height:168px;margin:0 auto
 body.ticket-page.cm .tk-actions{margin:0}
 body.ticket-page.cm .tk-actions .btn{min-height:46px;border-radius:999px}
 .tk-seats li em{margin-left:auto;flex:none;font-style:normal;font-weight:700;color:#14213d}
+body.ticket-page.cm .main{padding-bottom:110px}
+body.ticket-page.cm .ticket-container{margin-top:20px}
