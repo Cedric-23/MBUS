@@ -6,6 +6,7 @@ include "../Includes/email_helper.php";
 include "../Includes/csrf.php";
 include "../Includes/fare.php";
 require_once __DIR__ . '/../Includes/schedule_booking.php';
+require_once __DIR__ . '/../Includes/seat_layout.php';
 
 /* Authenticate and validate submitted bookings before any database mutation. */
 if(!isset($_SESSION['user_id'])){
@@ -60,9 +61,10 @@ $passenger_type=mbus_passenger_type($conn,(int)$user_id);
 
 /* ROUTE
  * Falls back to NULL coordinates if the routes table has no map columns yet
- * (supabase/03_add_map_coordinates.sql not applied), so booking still works without the map. */
+ * (supabase/03_add_map_coordinates.sql not applied), so booking still works without the map.
+ * The bus's own seat layout (the one the operator customised) is read the same safe way. */
 $route_sql = "
-SELECT routes.origin,routes.destination,buses.bus_number,buses.capacity,schedule.departure_time,schedule.arrival_time,schedule.trip_status,schedule.schedule_status,
+SELECT routes.origin,routes.destination,buses.bus_number,buses.capacity,to_jsonb(buses)->>'seat_layout' AS seat_layout,schedule.departure_time,schedule.arrival_time,schedule.trip_status,schedule.schedule_status,
 %s
 FROM schedule
 JOIN routes ON schedule.route_id=routes.route_id
@@ -432,12 +434,15 @@ exit();
 <div class="seat-map" role="grid" aria-label="Bus seat map">
 
 <?php
-$seat=1;
-$seat_rows=(int)ceil($capacity / 4);
-for($r=1;$r<=$seat_rows;$r++){
+/* Same seat layout the operator sees on the Riders page: the bus's own customised layout
+   (gaps where there is no seat), or plain rows of 4 when the bus has no custom layout. */
+foreach(mbus_bus_seat_rows($route_data['seat_layout'] ?? null, $capacity) as $cells){
 echo "<div class='seat-row' role='row'>";
-for($c=1;$c<=4;$c++){
-if($seat<=$capacity){
+foreach($cells as $ci => $seat){
+if($seat === null){
+/* no seat here: an invisible placeholder keeps the columns lined up */
+echo "<div class='seat-cell seat-gap' aria-hidden='true' style='visibility:hidden;pointer-events:none'><span class='seat-btn'>0</span></div>";
+} else {
 $class="seat-btn";
 $disabled="";
 $aria_disabled="false";
@@ -447,9 +452,8 @@ $disabled="disabled";
 $aria_disabled="true";
 }
 echo "<div class='seat-cell' data-seat-cell='$seat'><button type='button' class='$class' data-seat='$seat' role='gridcell' $disabled aria-disabled='$aria_disabled' aria-label='Seat $seat'>$seat</button></div>";
-$seat++;
 }
-if($c==2){echo "<div class='aisle' role='separator' aria-label='Aisle'></div>";}
+if($ci==1){echo "<div class='aisle' role='separator' aria-label='Aisle'></div>";}
 }
 echo "</div>";
 }
