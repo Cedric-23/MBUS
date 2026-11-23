@@ -228,6 +228,18 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
 ?>
 <p style="margin:0 0 14px;color:#7a8aa6;font-size:.9rem;line-height:1.45">Buses come from driver applications: approving a driver adds the bus they submitted, named after their last name. You can rename a bus or give it to another driver.</p>
 
+<?php if($bus_list): $n_ac=0;$n_ord=0;$n_nd=0;$n_nc=0; foreach($bus_list as $x){ if(strtolower($x['bus_type'])==='aircon')$n_ac++; else $n_ord++; if(empty($x['operators']))$n_nd++; if(empty($x['conductor']))$n_nc++; } ?>
+<div class="ad-toolbar op-tools">
+    <label class="ad-search"><i class="fa fa-search" aria-hidden="true"></i><input type="text" id="opSearch" placeholder="Search bus, driver or conductor" autocomplete="off" aria-label="Search buses"></label>
+    <div class="op-chips" role="group" aria-label="Filter buses">
+        <button type="button" class="op-chip on" data-f="all">All <span><?php echo count($bus_list); ?></span></button>
+        <button type="button" class="op-chip" data-f="aircon">Aircon <span><?php echo $n_ac; ?></span></button>
+        <button type="button" class="op-chip" data-f="ordinary">Ordinary <span><?php echo $n_ord; ?></span></button>
+        <button type="button" class="op-chip" data-f="nodriver">No driver <span><?php echo $n_nd; ?></span></button>
+        <button type="button" class="op-chip" data-f="noconductor">No conductor <span><?php echo $n_nc; ?></span></button>
+    </div>
+</div>
+<?php endif; ?>
 <?php if(!$bus_list): ?><div class="ad-empty"><i class="fa fa-bus" aria-hidden="true"></i><p>No buses yet. They appear here once a driver application is approved.</p></div><?php endif; ?>
 <div class="ad-cards">
 <?php foreach($bus_list as $row):
@@ -236,7 +248,7 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
     $label = $needs ? 'Plate ' . $row['bus_number'] : ((ctype_digit((string)$row['bus_number']) ? 'Bus ' : '') . $row['bus_number']);
     $edit = ['bus_id'=>(int)$row['bus_id'],'bus_number'=>$needs ? '' : $row['bus_number'],'prev_bus_number'=>$needs ? '' : $row['bus_number'],'operator_id'=>(int)($row['operator_id'] ?? 0),'prev_operator_id'=>(int)($row['operator_id'] ?? 0),'conductor_id'=>(int)($row['conductor_id'] ?? 0),'prev_conductor_id'=>(int)($row['conductor_id'] ?? 0)];
 ?>
-<article class="ad-card" data-q="<?php echo htmlspecialchars(strtolower('bus '.$row['bus_number'].' '.$row['bus_type'].' '.($row['operators'] ?? '').' '.($row['conductor'] ?? '')), ENT_QUOTES); ?>">
+<article class="ad-card" data-item data-tags="<?php echo ($is_ac ? 'aircon' : 'ordinary') . (empty($row['operators']) ? ' nodriver' : '') . (empty($row['conductor']) ? ' noconductor' : ''); ?>" data-q="<?php echo htmlspecialchars(strtolower('bus '.$row['bus_number'].' '.$row['bus_type'].' '.($row['operators'] ?? '').' '.($row['conductor'] ?? '')), ENT_QUOTES); ?>">
     <header>
         <span class="ad-ico <?php echo $is_ac ? '' : 'green'; ?>"><i class="fa fa-bus" aria-hidden="true"></i></span>
         <div><h3><?php echo htmlspecialchars($label); ?></h3><span class="ad-pill <?php echo $is_ac ? 'info' : 'active'; ?>"><?php echo htmlspecialchars($row['bus_type']); ?></span><?php if($needs): ?> <span class="ad-pill amber">Needs bus number</span><?php endif; ?></div>
@@ -254,6 +266,10 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
 </article>
 <?php endforeach; ?>
 </div>
+<div class="ad-empty" id="opNone" hidden><i class="fa fa-filter" aria-hidden="true"></i><p>No buses match.</p></div>
+<nav class="op-pager" id="opPager" aria-label="Bus pages" hidden>
+    <button type="button" data-d="-1">Previous</button><span id="opPageLabel"></span><button type="button" data-d="1">Next</button>
+</nav>
 
 <dialog class="ad-dialog" id="adDialog" aria-labelledby="adTitle">
     <form method="POST" class="ad-form">
@@ -348,6 +364,37 @@ document.addEventListener('keydown', function(e) {
         <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
 </nav>
+<script>
+/* Filter + search + pages of 4 */
+(function () {
+  var q = document.getElementById('opSearch'); if (!q) return;
+  var PER = 4, rows = [].slice.call(document.querySelectorAll('[data-item]')), page = 0, f = 'all';
+  var pager = document.getElementById('opPager'), label = document.getElementById('opPageLabel'), none = document.getElementById('opNone');
+  var grid = document.querySelector('.ad-cards');
+  function apply() {
+    var term = q.value.trim().toLowerCase();
+    var hit = rows.filter(function (r) { return (f === 'all' || (' ' + r.dataset.tags + ' ').indexOf(' ' + f + ' ') !== -1) && (term === '' || r.dataset.q.indexOf(term) !== -1); });
+    var pages = Math.max(1, Math.ceil(hit.length / PER));
+    page = Math.min(page, pages - 1);
+    rows.forEach(function (r) { r.hidden = true; });
+    hit.slice(page * PER, page * PER + PER).forEach(function (r) { r.hidden = false; });
+    none.hidden = hit.length > 0;
+    pager.hidden = pages < 2;
+    label.textContent = 'Page ' + (page + 1) + ' of ' + pages;
+    pager.querySelector('[data-d="-1"]').disabled = page === 0;
+    pager.querySelector('[data-d="1"]').disabled = page >= pages - 1;
+  }
+  q.addEventListener('input', function () { page = 0; apply(); });
+  document.querySelectorAll('.op-chip').forEach(function (c) {
+    c.addEventListener('click', function () {
+      document.querySelectorAll('.op-chip').forEach(function (x) { x.classList.toggle('on', x === c); });
+      f = c.dataset.f; page = 0; apply();
+    });
+  });
+  pager.addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b || b.disabled) return; page += +b.dataset.d; apply(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  apply();
+})();
+</script>
 <script src="../Assets/js/admin_list.js?v=<?php echo filemtime(__DIR__ . '/../Assets/js/admin_list.js'); ?>"></script>
 <script src="../Assets/js/app-header.js"></script>
 </body>
