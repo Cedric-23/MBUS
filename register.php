@@ -421,8 +421,6 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                             <p>Already have an account? <a style="color: #086FCF; text-decoration: none;" href="login.php">Sign In</a></p>
                             <?php if ($staff_portal && $user_type === 'conductor'): ?>
                             <p>Not a conductor? <a style="color: #086FCF; text-decoration: none;" href="register.php?type=driver">Apply as Driver/Operator</a></p>
-                            <?php elseif (!$staff_portal): ?>
-                            <p>Want to drive with us? <a style="color: #086FCF; text-decoration: none;" href="register.php?type=driver">Apply as Driver/Operator</a></p>
                             <?php endif; ?>
                         </div>
                     </div>
