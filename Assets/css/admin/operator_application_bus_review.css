@@ -18,11 +18,12 @@
     padding: 4px;
 }
 
+/* plain aisle gap, same as the real seat map */
 .oa-seat-row {
     display: grid;
-    grid-template-columns: repeat(2, 38px) 44px repeat(2, 38px);
+    grid-template-columns: repeat(2, 38px) 24px repeat(2, 38px);
     align-items: center;
-    gap: 7px;
+    gap: 8px;
 }
 
 /* seats drawn as seat icons, same look as the commuter and rider seat maps */
@@ -66,4 +67,5 @@
     pointer-events: none;
 }
 .oa-seat-empty { border: 1.5px dashed #c5d0e0; background: #fff; color: #a3aec3; }
-.oa-seat-aisle { color: #a3aec3; font-size: 10px; text-align: center; }
+/* no "Aisle" label: just empty space */
+.oa-seat-aisle { display: block; font-size: 0; color: transparent; overflow: hidden; }
