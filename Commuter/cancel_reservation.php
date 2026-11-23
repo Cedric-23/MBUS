@@ -46,9 +46,10 @@ try {
     }
     $reservationIds = [];
 
-    // A group checkout's amount is fixed for all its seats. Cancelling any one
-    // seat cancels the whole still-pending checkout rather than leaving an
-    // unpayable partial group reservation behind.
+    // A checkout can contain several seats, but a reservation cancellation is
+    // still scoped to the selected reservation. Close the shared checkout so
+    // it cannot later pay a cancelled seat; the remaining pending seats stay
+    // available and can be paid for in a new checkout.
     $checkoutQuery = $pdo->prepare("SELECT session_id, status, reservation_ids
         FROM paymongo_checkout
         WHERE user_id = ? AND schedule_id = ? AND status IN ('Created', 'Submitted')
@@ -60,10 +61,17 @@ try {
             continue;
         }
         $linked = array_values(array_unique(array_filter(array_map('intval', $linked), static fn($id) => $id > 0)));
-        if ($reservationId && !in_array((int)$reservationId, $linked, true)) {
-            continue;
-        }
-        if (!$reservationId || in_array((int)$reservationId, $linked, true)) {
+        if ($reservationId) {
+            if (!in_array((int)$reservationId, $linked, true)) {
+                continue;
+            }
+            if ($checkout['status'] === 'Created' && strpos((string)$checkout['session_id'], 'manual_') !== 0) {
+                $remoteSessions[] = (string)$checkout['session_id'];
+            }
+            $pdo->prepare("UPDATE paymongo_checkout SET status = 'Cancelled'
+                WHERE session_id = ? AND status IN ('Created', 'Submitted')")
+                ->execute([$checkout['session_id']]);
+        } else {
             $reservationIds = array_merge($reservationIds, $linked);
             if ($checkout['status'] === 'Created' && strpos((string)$checkout['session_id'], 'manual_') !== 0) {
                 $remoteSessions[] = (string)$checkout['session_id'];
