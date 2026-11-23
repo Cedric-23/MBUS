@@ -225,16 +225,27 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
 })();
 
-/* Trips page: 5 trips per page (one bundle of seats = one trip, like a single seat) with Previous / Next.
+/* Trips page: 3 trips per page (one bundle of seats = one trip, like a single seat) with Previous / Next.
    The page's own filter (Active / History / Cancelled + day pills) decides which trips match by toggling
    "hidden"; this only hides the matches that belong to other pages, using its own class. */
 (function () {
     if (location.pathname.split('/').pop() !== 'my_reservations.php') return;
     var items = Array.prototype.slice.call(document.querySelectorAll('[data-cat]'));
     if (!items.length) return;
-    var PER = 5, page = 0, lastKey = null;
+    var PER = 3, page = 0, lastKey = null;
     var st = document.createElement('style');
     st.textContent = '.tf-off{display:none!important}' +
+        /* tighter cards so 3 fit comfortably, same details and design */
+        '.rf-card .rf-fold>summary{gap:7px!important;padding:12px 14px 10px!important}' +
+        '.rf-card .rf-route{font-size:.92rem!important}' +
+        '.rf-card .rf-count{padding:6px 10px!important;border-radius:13px!important;gap:4px 8px!important}' +
+        '.rf-card .rf-count>strong{font-size:.85rem!important}' +
+        '.rf-card .rf-chip{min-width:26px!important;padding:1px 7px!important;font-size:.72rem!important}' +
+        '.rf-card .rf-when{font-size:.78rem!important}' +
+        '.rf-card .rf-bar{padding:0 14px 12px!important;gap:8px!important}' +
+        '.rf-card .rf-bar .btn{min-height:40px!important;font-size:.85rem!important}' +
+        '.rf-card .rf-time{padding:6px 10px!important;font-size:.82rem!important}' +
+        '.reservation-group{margin-bottom:8px!important}' +
         '.tf-pager{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 90px}' +
         '.tf-pager[hidden]{display:none}' +
         '.tf-pager span{font-size:.85rem;font-weight:700;color:#6b7a90}' +
