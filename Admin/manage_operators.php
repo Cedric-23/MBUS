@@ -16,56 +16,42 @@ include "../config/db_connect.php";
 include "../Includes/csrf.php";
 include "../Includes/auth_validation.php";
 
-/* ADD OPERATOR */
-if(isset($_POST['add_operator'])){
-    // Validate CSRF token
+/* EDIT OPERATOR (accounts are created through approved applications, so there is no manual "add") */
+if(isset($_POST['update_operator'])){
     if(!csrf_validate_token()){
         $error = "Security validation failed. Please try again.";
     } else {
+        $user_id = (int)($_POST['user_id'] ?? 0);
         $full_name = trim((string)($_POST['full_name'] ?? ''));
         $email = mbus_normalize_email($_POST['email'] ?? '');
         $phone_number = mbus_normalize_phone($_POST['phone_number'] ?? '');
-        $password = (string)($_POST['password'] ?? '');
 
         $name_error = mbus_validate_full_name($full_name);
         $email_error = mbus_validate_email($email);
         $phone_error = mbus_validate_phone($phone_number);
-        $password_error = mbus_validate_password($password, 8);
 
-        if($name_error !== null){
+        if($user_id <= 0){
+            $error = "Operator not found.";
+        } elseif($name_error !== null){
             $error = $name_error;
         } elseif($email_error !== null){
             $error = $email_error;
         } elseif($phone_error !== null){
             $error = $phone_error;
-        } elseif($password_error !== null){
-            $error = $password_error;
         } else {
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-            /* CHECK EMAIL using prepared statement */
-            $check = mbus_db_prepare($conn, "
-SELECT * FROM users WHERE LOWER(email) = LOWER(?)
-", [$email]);
-
-            if($check === false){
+            $dup = mbus_db_prepare($conn, "SELECT 1 FROM users WHERE LOWER(email) = LOWER(?) AND user_id <> ?", [$email, $user_id]);
+            if($dup === false){
                 error_log('Admin operator email lookup failed: ' . mbus_db_error($conn));
                 $error = "We could not check this email address right now. Please try again.";
-            } elseif(mbus_db_num_rows($check) > 0){
-                $error = "This email address is already registered. Use another email.";
+            } elseif(mbus_db_num_rows($dup) > 0){
+                $error = "This email address is already used by another account.";
             } else {
-                $created = mbus_db_prepare($conn, "
-INSERT INTO users
-(full_name, email, phone_number, password, user_type)
-VALUES
-(?, ?, ?, ?, 'driver')
-", [$full_name, $email, $phone_number, $hashed_password]);
-
-                if($created === false){
-                    error_log('Admin operator insert failed: ' . mbus_db_error($conn));
-                    $error = "Operator account could not be created. Please check the details and try again.";
+                $saved = mbus_db_prepare($conn, "UPDATE users SET full_name = ?, email = ?, phone_number = ? WHERE user_id = ? AND LOWER(user_type) IN ('operator', 'driver')", [$full_name, $email, $phone_number, $user_id]);
+                if($saved === false){
+                    error_log('Admin operator update failed: ' . mbus_db_error($conn));
+                    $error = "Operator could not be saved. Please check the details and try again.";
                 } else {
-                    $success = "Operator account created. The operator can now log in with this email and password.";
+                    $success = "Operator details saved.";
                 }
             }
         }
@@ -100,7 +86,7 @@ if(isset($_POST['delete_operator'])){
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
-    <link rel="stylesheet" href="../Assets/css/admin/manage_operators.css">
+    <link rel="stylesheet" href="../Assets/css/admin/manage_operators.css?v=<?php echo (int)filemtime(__DIR__ . "/../Assets/css/admin/manage_operators.css"); ?>">
     <link rel="stylesheet" href="../Assets/css/admin/admin_ui.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/admin/admin_ui.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
@@ -182,8 +168,13 @@ $op_list = [];
 while($oq !== false && ($row = mbus_db_fetch_assoc($oq))){ $op_list[] = $row; }
 $assigned = count(array_filter($op_list, fn($x) => !empty($x['buses'])));
 ?>
-<div class="ad-toolbar">
-    <button type="button" class="ad-btn primary" data-ad-open="add" data-title="Add operator" data-action="add_operator"><i class="fa fa-plus" aria-hidden="true"></i> Add operator</button>
+<div class="ad-toolbar op-tools">
+    <label class="ad-search"><i class="fa fa-search" aria-hidden="true"></i><input type="text" id="opSearch" placeholder="Search name, email or bus" autocomplete="off" aria-label="Search operators"></label>
+    <div class="op-chips" role="group" aria-label="Filter operators">
+        <button type="button" class="op-chip on" data-f="all">All <span><?php echo count($op_list); ?></span></button>
+        <button type="button" class="op-chip" data-f="bus">With bus <span><?php echo $assigned; ?></span></button>
+        <button type="button" class="op-chip" data-f="nobus">No bus <span><?php echo count($op_list) - $assigned; ?></span></button>
+    </div>
 </div>
 
 <?php if(!$op_list): ?><div class="ad-empty"><i class="fa fa-user-gear" aria-hidden="true"></i><p>No operators yet.</p></div><?php endif; ?>
@@ -192,32 +183,35 @@ $assigned = count(array_filter($op_list, fn($x) => !empty($x['buses'])));
     <?php foreach($op_list as $row):
         $initial = strtoupper(mb_substr(trim((string)$row['full_name']) ?: '?', 0, 1));
     ?>
-    <div class="ad-tr" data-q="<?php echo htmlspecialchars(strtolower($row['full_name'].' '.$row['email'].' '.($row['buses'] ?? '')), ENT_QUOTES); ?>">
+    <div class="ad-tr" data-op data-has="<?php echo !empty($row['buses']) ? 'bus' : 'nobus'; ?>" data-q="<?php echo htmlspecialchars(strtolower($row['full_name'].' '.$row['email'].' '.($row['buses'] ?? '')), ENT_QUOTES); ?>">
         <div class="ad-c person"><span class="ad-avatar"><?php echo htmlspecialchars($initial); ?></span><div><b><?php echo htmlspecialchars($row['full_name']); ?></b><small><?php echo htmlspecialchars($row['email']); ?></small></div></div>
         <div class="ad-c phone"><?php echo htmlspecialchars((string)$row['phone_number']); ?></div>
         <div class="ad-c bus"><?php echo !empty($row['buses']) ? '<span class="ad-pill active"><i class="fa fa-bus" aria-hidden="true"></i> Bus '.htmlspecialchars($row['buses']).'</span>' : '<span class="ad-pill muted">No bus</span>'; ?></div>
         <div class="ad-c actions">
+            <button type="button" class="ad-icon" data-ad-open="edit" data-title="Edit operator" data-action="update_operator" data-edit="<?php echo htmlspecialchars(json_encode(['user_id'=>(int)$row['user_id'],'full_name'=>$row['full_name'],'email'=>$row['email'],'phone_number'=>preg_replace('/^0/','',(string)$row['phone_number'])]), ENT_QUOTES); ?>" aria-label="Edit operator"><i class="fa fa-pen" aria-hidden="true"></i></button>
             <form method="POST" data-confirm="Delete this operator?"><?php csrf_field(); ?><input type="hidden" name="user_id" value="<?php echo (int)$row['user_id']; ?>"><button type="submit" name="delete_operator" class="ad-icon danger" aria-label="Delete operator"><i class="fa fa-trash" aria-hidden="true"></i></button></form>
         </div>
     </div>
     <?php endforeach; ?>
 </div>
+<div class="ad-empty" id="opNone" hidden><i class="fa fa-filter" aria-hidden="true"></i><p>No operators match.</p></div>
+<nav class="op-pager" id="opPager" aria-label="Operator pages" hidden>
+    <button type="button" data-d="-1">Previous</button><span id="opPageLabel"></span><button type="button" data-d="1">Next</button>
+</nav>
 
 <dialog class="ad-dialog" id="adDialog" aria-labelledby="adTitle">
     <form method="POST" class="ad-form">
         <?php csrf_field(); ?>
-        <header class="ad-dialog-head"><h2 id="adTitle">Add operator</h2><button type="button" class="ad-x" data-ad-close aria-label="Close"><i class="fa fa-xmark" aria-hidden="true"></i></button></header>
+        <input type="hidden" name="user_id" value="">
+        <header class="ad-dialog-head"><h2 id="adTitle">Edit operator</h2><button type="button" class="ad-x" data-ad-close aria-label="Close"><i class="fa fa-xmark" aria-hidden="true"></i></button></header>
         <div class="ad-dialog-body">
             <label class="ad-field"><span>Full name</span><input type="text" name="full_name" maxlength="100" required></label>
             <label class="ad-field"><span>Email</span><input type="email" name="email" maxlength="100" required></label>
-            <div class="ad-two">
-                <label class="ad-field"><span>Phone</span><div class="phone-input"><span class="phone-prefix" aria-hidden="true">+63</span><input type="tel" name="phone_number" inputmode="numeric" pattern="9[0-9]{9}" minlength="10" maxlength="10" placeholder="9XXXXXXXXX" required></div></label>
-                <label class="ad-field"><span>Password</span><input type="password" name="password" minlength="8" maxlength="128" required placeholder="8+ characters"></label>
-            </div>
+            <label class="ad-field"><span>Phone</span><div class="phone-input"><span class="phone-prefix" aria-hidden="true">+63</span><input type="tel" name="phone_number" inputmode="numeric" pattern="9[0-9]{9}" minlength="10" maxlength="10" placeholder="9XXXXXXXXX" required></div></label>
         </div>
         <footer class="ad-dialog-foot">
             <button type="button" class="ad-btn" data-ad-close>Cancel</button>
-            <button type="submit" class="ad-btn primary" id="adSubmit" name="add_operator" value="1">Save</button>
+            <button type="submit" class="ad-btn primary" id="adSubmit" name="update_operator" value="1">Save changes</button>
         </footer>
     </form>
 </dialog>
@@ -283,6 +277,37 @@ document.addEventListener('keydown', function(e) {
 </nav>
 <script src="../Assets/js/admin_list.js?v=<?php echo filemtime(__DIR__ . '/../Assets/js/admin_list.js'); ?>"></script>
 <script src="../Assets/js/app-header.js"></script>
+<script>
+/* Filter + search + pages of 4 */
+(function () {
+  var PER = 4, rows = [].slice.call(document.querySelectorAll('[data-op]')), page = 0, f = 'all';
+  var q = document.getElementById('opSearch'), pager = document.getElementById('opPager'), label = document.getElementById('opPageLabel'), none = document.getElementById('opNone');
+  var table = document.querySelector('.ad-table.ops');
+  function apply() {
+    var term = q.value.trim().toLowerCase();
+    var hit = rows.filter(function (r) { return (f === 'all' || r.dataset.has === f) && (term === '' || r.dataset.q.indexOf(term) !== -1); });
+    var pages = Math.max(1, Math.ceil(hit.length / PER));
+    page = Math.min(page, pages - 1);
+    rows.forEach(function (r) { r.hidden = true; });
+    hit.slice(page * PER, page * PER + PER).forEach(function (r) { r.hidden = false; });
+    if (table) table.hidden = rows.length > 0 && hit.length === 0;
+    none.hidden = !(rows.length > 0 && hit.length === 0);
+    pager.hidden = pages < 2;
+    label.textContent = 'Page ' + (page + 1) + ' of ' + pages;
+    pager.querySelector('[data-d="-1"]').disabled = page === 0;
+    pager.querySelector('[data-d="1"]').disabled = page >= pages - 1;
+  }
+  q.addEventListener('input', function () { page = 0; apply(); });
+  document.querySelectorAll('.op-chip').forEach(function (c) {
+    c.addEventListener('click', function () {
+      document.querySelectorAll('.op-chip').forEach(function (x) { x.classList.toggle('on', x === c); });
+      f = c.dataset.f; page = 0; apply();
+    });
+  });
+  pager.addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b || b.disabled) return; page += +b.dataset.d; apply(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  apply();
+})();
+</script>
 <script src="../Assets/js/password-toggle.js"></script>
 </body>
 </html>

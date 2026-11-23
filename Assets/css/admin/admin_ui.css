@@ -36,7 +36,7 @@
 .ad-day span{font-size:.78rem;font-weight:500;color:var(--ad-muted)}
 .ad-table{background:var(--ad-bg);border:1px solid var(--ad-line);border-radius:14px;overflow:hidden}
 .ad-th,.ad-tr{display:grid;grid-template-columns:130px minmax(0,1.8fr) 150px 110px 84px;gap:1rem;align-items:center;padding:.75rem 1.1rem}
-.ad-table.ops .ad-th,.ad-table.ops .ad-tr{grid-template-columns:minmax(0,2fr) 150px 150px 56px}
+.ad-table.ops .ad-th,.ad-table.ops .ad-tr{grid-template-columns:minmax(0,2fr) 150px 150px 84px}
 .ad-th{background:var(--ad-soft);font-size:.74rem;font-weight:600;color:var(--ad-muted);text-transform:uppercase;letter-spacing:.04em;padding-top:.6rem;padding-bottom:.6rem}
 .ad-tr{border-top:1px solid var(--ad-line);font-size:.9rem;color:var(--ad-text)}
 .ad-tr:first-of-type{border-top:0}
