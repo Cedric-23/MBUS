@@ -71,7 +71,10 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
                     <span><i class="dot-stale" aria-hidden="true"></i>Last pin</span>
                 </div>
             </div>
-            <div id="trackingMap" class="lv-map" role="region" aria-label="Map of live buses"></div>
+            <div class="lv-map-wrap" id="lvMapWrap">
+                <div id="trackingMap" class="lv-map" role="region" aria-label="Map of live buses"></div>
+                <button type="button" id="lvFullBtn" class="lv-full-btn" aria-pressed="false" aria-label="Full screen map"><i class="fa fa-expand" aria-hidden="true"></i></button>
+            </div>
             <p id="mapMessage" class="lv-map-error" role="status" aria-live="polite" hidden></p>
             <div class="lv-route-card">
                 <span class="lv-route-icon" aria-hidden="true"><i class="fa fa-route"></i></span>
@@ -126,6 +129,7 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="../Assets/js/route_utils.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/route_utils.js'); ?>"></script>
 <script src="../Assets/js/live_schedule_selection.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/live_schedule_selection.js'); ?>"></script>
+<script src="../Assets/js/commuter_live_full.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/commuter_live_full.js'); ?>"></script>
 <script src="../Assets/js/commuter_live.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/commuter_live.js'); ?>"></script>
 <script src="../Assets/js/app-header.js"></script>
 </body>
