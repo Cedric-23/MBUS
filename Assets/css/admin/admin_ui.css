@@ -207,3 +207,9 @@
 .oa-admin-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
 .oa-admin-form input{height:42px;padding:0 12px;border:1px solid var(--ad-line);border-radius:10px;font:inherit;font-size:.9rem;min-width:0}
 .phone-input{display:flex;align-items:stretch;width:100%}.phone-prefix{display:grid;place-items:center;min-width:48px;padding:0 9px;border:1px solid var(--ad-line);border-right:0;border-radius:10px 0 0 10px;background:var(--ad-soft);color:var(--ad-text);font-weight:600}.phone-input input{flex:1;min-width:0;border-radius:0 10px 10px 0 !important}
+
+/* Manage Buses: approved drivers still waiting for a bus */
+.mb-missing { margin: 0 0 16px; padding: 14px; border: 1px solid #f3d9a4; border-radius: 16px; background: #fff8e8; }
+.mb-missing h3 { margin: 0 0 8px; font-size: .95rem; color: #8a5a00; }
+.mb-missing-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; margin: 0; }
+.mb-missing-row small { display: block; color: #8a98ae; }

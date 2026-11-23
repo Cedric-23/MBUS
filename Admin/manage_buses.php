@@ -14,6 +14,7 @@ if(
 
 include "../config/db_connect.php";
 include "../Includes/csrf.php";
+include_once "../Includes/bus_from_application.php";
 
 /* Buses are not added here: approving a driver application creates the bus they submitted (see
    Includes/bus_from_application.php). It arrives with its plate as the number, and the admin gives it the real
@@ -75,6 +76,34 @@ if(isset($_POST['update_bus'])){
                 }
                 if(!isset($error)){ $success = $changed ? "Bus updated: " . implode(", ", $changed) . "." : "Nothing changed."; }
             }
+        }
+    }
+}
+
+/* CREATE A MISSING BUS: an approved driver with no bus gets one from the vehicle they submitted. */
+if(isset($_POST['create_driver_bus'])){
+    if(!csrf_validate_token()){
+        $error = "Security validation failed. Please try again.";
+    } else {
+        $pdo = $conn->pdo;
+        try {
+            $pdo->beginTransaction();
+            $st = $pdo->prepare("SELECT * FROM operator_application WHERE application_id = ? AND application_status::text = 'Approved' AND user_id IS NOT NULL");
+            $st->execute([(int)($_POST['application_id'] ?? 0)]);
+            $app = $st->fetch(PDO::FETCH_ASSOC);
+            $has = $app ? $pdo->prepare("SELECT 1 FROM operator_bus_assignments WHERE operator_id = ?") : null;
+            if($has){ $has->execute([(int)$app['user_id']]); }
+            if(!$app){ $pdo->rollBack(); $error = "That driver application is not approved."; }
+            elseif($has->fetchColumn()){ $pdo->rollBack(); $error = "That driver already has a bus."; }
+            else {
+                $made = mbus_bus_from_application($pdo, $app, (int)$app['user_id']);
+                if($made){ $pdo->commit(); $success = "Bus added for " . $app['full_name'] . ". Give it its bus number below."; }
+                else { $pdo->rollBack(); $error = "Their submission has no usable plate or seat layout, so no bus could be made."; }
+            }
+        } catch(Throwable $e){
+            if($pdo->inTransaction()) $pdo->rollBack();
+            error_log('Create driver bus failed: ' . $e->getMessage());
+            $error = "The bus could not be created: " . $e->getMessage();
         }
     }
 }
@@ -188,6 +217,15 @@ $bq = mbus_db_query($conn, "
 $bus_list = [];
 while($bq !== false && ($row = mbus_db_fetch_assoc($bq))){ $bus_list[] = $row; }
 
+/* approved drivers who have no bus yet (for example the bus could not be created when they were approved) */
+$missing_bus = [];
+$mq = mbus_db_query($conn, "SELECT a.application_id, a.full_name, a.vehicle_plate_number, a.vehicle_type
+    FROM operator_application a
+    WHERE a.application_status::text = 'Approved' AND a.user_id IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM operator_bus_assignments oa WHERE oa.operator_id = a.user_id)
+    ORDER BY a.full_name");
+while($mq !== false && ($mrow = mbus_db_fetch_assoc($mq))){ $missing_bus[] = $mrow; }
+
 /* drivers an admin can give a bus to */
 $opq = mbus_db_query($conn, "SELECT user_id, full_name FROM users WHERE LOWER(user_type) IN ('operator', 'driver') ORDER BY full_name");
 $operator_options = [];
@@ -195,6 +233,20 @@ while($opq !== false && ($orow = mbus_db_fetch_assoc($opq))){ $operator_options[
 $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
 ?>
 <p style="margin:0 0 14px;color:#7a8aa6;font-size:.9rem;line-height:1.45">Buses are added from driver applications: approve a driver and the bus they submitted appears here with its plate. Give it a bus number, and reassign the driver if the usual one can't drive (for example when sick).</p>
+
+<?php if($missing_bus): ?>
+<section class="mb-missing" aria-label="Drivers without a bus">
+    <h3>Approved drivers without a bus</h3>
+    <?php foreach($missing_bus as $m): ?>
+    <form method="POST" class="mb-missing-row" data-confirm="Create a bus from <?php echo htmlspecialchars($m['full_name'], ENT_QUOTES); ?>'s submission?">
+        <?php csrf_field(); ?>
+        <input type="hidden" name="application_id" value="<?php echo (int)$m['application_id']; ?>">
+        <span><strong><?php echo htmlspecialchars($m['full_name']); ?></strong><small><?php echo htmlspecialchars(trim($m['vehicle_type'] . ' · ' . $m['vehicle_plate_number'], ' ·')); ?></small></span>
+        <button type="submit" name="create_driver_bus" value="1" class="ad-btn sm primary">Create bus</button>
+    </form>
+    <?php endforeach; ?>
+</section>
+<?php endif; ?>
 
 <?php if(!$bus_list): ?><div class="ad-empty"><i class="fa fa-bus" aria-hidden="true"></i><p>No buses yet. They appear here once a driver application is approved.</p></div><?php endif; ?>
 <div class="ad-cards">

@@ -36,7 +36,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $st = $pdo->prepare("UPDATE operator_application SET application_status = 'Approved', user_id = ?, reviewed_at = NOW(), reviewed_by = ?, rejection_reason = NULL WHERE application_id = ?");
                 $st->execute([$uid, $admin_id, $id]);
                 // The bus the driver submitted becomes a real bus and is given to this driver.
-                $newBus = mbus_bus_from_application($pdo, $app, $uid);
+                /* in a savepoint: if the bus cannot be created the approval itself still goes through, and we say why */
+                $newBus = null; $busProblem = '';
+                try {
+                    $pdo->exec('SAVEPOINT bus_from_app');
+                    $newBus = mbus_bus_from_application($pdo, $app, $uid);
+                    $pdo->exec('RELEASE SAVEPOINT bus_from_app');
+                    if (!$newBus) $busProblem = 'the submission has no usable plate or seat layout';
+                } catch (Throwable $busError) {
+                    $pdo->exec('ROLLBACK TO SAVEPOINT bus_from_app');
+                    error_log('Bus from application ' . $id . ' failed: ' . $busError->getMessage());
+                    $busProblem = 'the database refused it (' . $busError->getMessage() . ')';
+                }
                 $pdo->commit();
                 $mail = "<h2>Operator application approved</h2><p>Hi " . htmlspecialchars($app['full_name']) . ", your MBUS operator account is ready.</p>"
                     . "<p><strong>Email:</strong> " . htmlspecialchars($app['email']) . "</p>"
@@ -44,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $sent = @send_email_notification($app['email'], 'Your MBUS operator account', $mail);
                 $_SESSION['oa_flash'] = 'Approved ' . $app['full_name'] . '. ' . ($temp !== '' ? 'Temporary password: ' . $temp . ($sent ? ' (also emailed).' : ' (email could not be sent, so give it to them directly).')
                     : 'They can log in now with the password they chose.')
-                    . ($newBus ? ' Bus ' . $newBus['bus_number'] . ' was added from their submission and assigned to them.' : ' Their submission had no usable plate or seat layout, so no bus was created.');
+                    . ($newBus ? ' Bus ' . $newBus['bus_number'] . ' was added from their submission and assigned to them. Open Manage Buses to give it the real bus number.' : ' No bus was created: ' . $busProblem . '. You can create it from Manage Buses.');
             } else {
                 $reason = trim((string)($_POST['rejection_reason'] ?? ''));
                 if ($reason === '' || strlen($reason) > 500) throw new RuntimeException('Give a short reason (up to 500 characters) when rejecting.');
@@ -72,6 +83,7 @@ $where = $f === 'all' ? '' : "WHERE LOWER(application_status::text) = '" . $f . 
 $rows = [];
 $q = mbus_db_prepare($conn, "SELECT application_id, full_name, email, phone_number, address, license_number, license_expiry, vehicle_type, vehicle_plate_number,
     (license_document_b64 IS NOT NULL AND license_document_b64 <> '') AS has_lic, (vehicle_document_b64 IS NOT NULL AND vehicle_document_b64 <> '') AS has_veh,
+    license_document_mime AS lic_mime, vehicle_document_mime AS veh_mime,
     (bus_photo_b64 IS NOT NULL AND bus_photo_b64 <> '') AS has_bus_photo,
     (interior_photo_b64 IS NOT NULL AND interior_photo_b64 <> '') AS has_interior_photo,
     seat_layout, application_status::text AS status, submitted_at, rejection_reason
@@ -190,11 +202,25 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
             <div><dt>Vehicle</dt><dd><?php echo htmlspecialchars($a['vehicle_type']); ?> · <?php echo htmlspecialchars($a['vehicle_plate_number']); ?></dd></div>
             <div><dt>Submitted</dt><dd><?php echo date('M j, Y g:i A', strtotime($a['submitted_at'])); ?></dd></div>
         </dl>
-        <div class="oa-docs">
-            <?php if($yes($a['has_lic'])): ?><a class="ad-btn sm" target="_blank" rel="noopener" href="application_file.php?id=<?php echo (int)$a['application_id']; ?>&doc=license"><i class="fa fa-id-card" aria-hidden="true"></i> License</a><?php else: ?><span class="oa-miss">No license file</span><?php endif; ?>
-            <?php if($yes($a['has_veh'])): ?><a class="ad-btn sm" target="_blank" rel="noopener" href="application_file.php?id=<?php echo (int)$a['application_id']; ?>&doc=vehicle"><i class="fa fa-bus" aria-hidden="true"></i> Vehicle registration</a><?php else: ?><span class="oa-miss">No vehicle file</span><?php endif; ?>
-            <?php if($yes($a['has_bus_photo'])): ?><a class="ad-btn sm" target="_blank" rel="noopener" href="application_file.php?id=<?php echo (int)$a['application_id']; ?>&doc=bus"><i class="fa fa-camera" aria-hidden="true"></i> Bus exterior</a><?php else: ?><span class="oa-miss">No bus exterior photo</span><?php endif; ?>
-            <?php if($yes($a['has_interior_photo'])): ?><a class="ad-btn sm" target="_blank" rel="noopener" href="application_file.php?id=<?php echo (int)$a['application_id']; ?>&doc=interior"><i class="fa fa-camera" aria-hidden="true"></i> Bus interior</a><?php else: ?><span class="oa-miss">No bus interior photo</span><?php endif; ?>
+        <?php
+        $aid = (int)$a['application_id'];
+        $photos = [
+            ['license',  'License',              $yes($a['has_lic']),          (string)($a['lic_mime'] ?? '')],
+            ['vehicle',  'Vehicle registration', $yes($a['has_veh']),          (string)($a['veh_mime'] ?? '')],
+            ['bus',      'Bus exterior',         $yes($a['has_bus_photo']),    'image/jpeg'],
+            ['interior', 'Bus interior',         $yes($a['has_interior_photo']), 'image/jpeg'],
+        ]; ?>
+        <div class="oa-photos" aria-label="Submitted photos and documents">
+            <?php foreach($photos as [$key, $label, $has, $mime]): $url = 'application_file.php?id=' . $aid . '&doc=' . $key; ?>
+                <?php if($has): ?>
+                <button type="button" class="oa-photo" data-photo="<?php echo htmlspecialchars($url, ENT_QUOTES); ?>" data-label="<?php echo htmlspecialchars($label, ENT_QUOTES); ?>" data-pdf="<?php echo $mime === 'application/pdf' ? '1' : '0'; ?>" aria-label="View <?php echo htmlspecialchars($label, ENT_QUOTES); ?> larger">
+                    <?php if($mime === 'application/pdf'): ?><span class="oa-photo-pdf"><i class="fa fa-file-pdf" aria-hidden="true"></i>PDF</span><?php else: ?><img src="<?php echo htmlspecialchars($url, ENT_QUOTES); ?>" alt="" loading="lazy"><?php endif; ?>
+                    <span class="oa-photo-label"><?php echo htmlspecialchars($label); ?></span>
+                </button>
+                <?php else: ?>
+                <div class="oa-photo missing"><span class="oa-photo-pdf"><i class="fa fa-image" aria-hidden="true"></i>None</span><span class="oa-photo-label">No <?php echo strtolower(htmlspecialchars($label)); ?></span></div>
+                <?php endif; ?>
+            <?php endforeach; ?>
         </div>
         <?php if(is_array($layout)): $seatTotal = 0; foreach($layout as $seatRow) if(is_array($seatRow)) foreach($seatRow as $seat) if($seat === true) $seatTotal++; ?>
         <section class="oa-seat-review" aria-label="Submitted bus seat layout">
@@ -226,6 +252,29 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
 </div>
 
 </main>
+<dialog class="oa-viewer" id="oaViewer" aria-labelledby="oaViewerTitle">
+    <div class="oa-viewer-bar"><strong id="oaViewerTitle">Photo</strong>
+        <a id="oaViewerOpen" class="ad-btn sm" target="_blank" rel="noopener">Open full size</a>
+        <button type="button" class="ad-x" id="oaViewerClose" aria-label="Close"><i class="fa fa-xmark" aria-hidden="true"></i></button></div>
+    <div class="oa-viewer-body"><img id="oaViewerImg" alt=""><iframe id="oaViewerPdf" title="Document" hidden></iframe></div>
+</dialog>
+<script>
+(function(){
+  const dlg=document.getElementById('oaViewer'); if(!dlg) return;
+  const img=document.getElementById('oaViewerImg'), pdf=document.getElementById('oaViewerPdf'), title=document.getElementById('oaViewerTitle'), open=document.getElementById('oaViewerOpen');
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('.oa-photo[data-photo]'); if(!b) return;
+    const isPdf=b.dataset.pdf==='1';
+    title.textContent=b.dataset.label; open.href=b.dataset.photo;
+    img.hidden=isPdf; pdf.hidden=!isPdf;
+    if(isPdf){ pdf.src=b.dataset.photo; img.removeAttribute('src'); } else { img.src=b.dataset.photo; img.alt=b.dataset.label; pdf.removeAttribute('src'); }
+    dlg.showModal();
+  });
+  document.getElementById('oaViewerClose').addEventListener('click',()=>dlg.close());
+  dlg.addEventListener('click',e=>{ if(e.target===dlg) dlg.close(); });
+  dlg.addEventListener('close',()=>{ img.removeAttribute('src'); pdf.removeAttribute('src'); });
+})();
+</script>
 
 <script>
 // Toggle sidebar for mobile
