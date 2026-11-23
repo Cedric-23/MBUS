@@ -176,3 +176,10 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
     min-height:237px;
   }
 }
+
+/* Mobile registration: keep the picker hint close to the auth tabs and fields. */
+@media (max-width:900px){
+  body.auth-register .auth-tabs{margin-bottom:12px}
+  body.auth-register .form-header-picker{margin-top:0}
+  body.auth-register .form-header{margin-bottom:8px}
+}
