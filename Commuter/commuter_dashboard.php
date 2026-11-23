@@ -20,10 +20,27 @@ $hour = (int)date('G');
 $greeting = $hour < 12 ? 'Good morning' : ($hour < 18 ? 'Good afternoon' : 'Good evening');
 $passenger_type = mbus_passenger_type($conn, $user_id);
 
+/* Which pending seats are already paid and waiting for an operator to approve them?
+   A GCash checkout with a reference number = waiting for approval; one without = still at the GCash step. */
+$await_by_res = [];
+$await_by_sched = [];
+$cq = mbus_db_prepare($conn, "SELECT schedule_id, reservation_ids, COALESCE(NULLIF(reference_number, ''), '') AS ref
+    FROM paymongo_checkout WHERE user_id = ? AND status = 'Submitted'", [$user_id]);
+while($cq !== false && ($c = mbus_db_fetch_assoc($cq))){
+    $pstate = $c['ref'] !== '' ? 'approval' : 'checkout';
+    $ids = json_decode((string)$c['reservation_ids'], true);
+    if(is_array($ids) && $ids){
+        foreach($ids as $id){ if(is_scalar($id)) $await_by_res[(int)$id] = $pstate; }
+    } else {
+        $csid = (int)$c['schedule_id'];
+        if(!isset($await_by_sched[$csid]) || $pstate === 'approval') $await_by_sched[$csid] = $pstate;
+    }
+}
+
 /* NEXT TRIP: soonest upcoming booking (paid, on board, or a pending one still inside its 10 minutes) */
 $next = null;
 $q = mbus_db_prepare($conn, "
-    SELECT r.schedule_id, r.seat_number, r.status, r.pickup_location, r.destination,
+    SELECT r.reservation_id, r.schedule_id, r.seat_number, r.status, r.pickup_location, r.destination,
            s.departure_time, s.arrival_time, b.bus_number, rt.origin, rt.destination AS route_destination
     FROM reservation r
     JOIN schedule s ON s.schedule_id = r.schedule_id
@@ -38,13 +55,24 @@ $q = mbus_db_prepare($conn, "
 $groups = [];
 while($q !== false && ($r = mbus_db_fetch_assoc($q))){
     $sid = (int)$r['schedule_id'];
-    if(!isset($groups[$sid])){ $groups[$sid] = $r; $groups[$sid]['seats'] = []; $groups[$sid]['pending'] = false; $groups[$sid]['boarded'] = false; $groups[$sid]['stops'] = []; $groups[$sid]['riders'] = []; }
+    if(!isset($groups[$sid])){ $groups[$sid] = $r; $groups[$sid]['seats'] = []; $groups[$sid]['pending'] = false; $groups[$sid]['boarded'] = false; $groups[$sid]['stops'] = []; $groups[$sid]['riders'] = []; $groups[$sid]['n_unpaid'] = 0; $groups[$sid]['n_checkout'] = 0; $groups[$sid]['n_approval'] = 0; }
     $groups[$sid]['seats'][] = $r['seat_number'];
+    /* payment state of this seat: unpaid | checkout (at the GCash step) | approval (paid, waiting for the operator) | paid | boarded */
+    $pay = 'paid';
+    if($r['status'] === 'Pending'){
+        $pay = $await_by_res[(int)$r['reservation_id']] ?? ($await_by_sched[$sid] ?? 'unpaid');
+        if($pay === 'unpaid') $groups[$sid]['n_unpaid']++;
+        elseif($pay === 'checkout') $groups[$sid]['n_checkout']++;
+        else $groups[$sid]['n_approval']++;
+    } elseif($r['status'] === 'Boarded'){
+        $pay = 'boarded';
+    }
     /* one entry per seat: its own pickup and drop-off */
     $groups[$sid]['riders'][] = [
         'seat' => $r['seat_number'],
         'pickup' => (string)($r['pickup_location'] ?: $r['origin']),
         'drop' => (string)($r['destination'] ?: $r['route_destination']),
+        'pay' => $pay,
     ];
     $groups[$sid]['stops'][(string)($r['pickup_location'] ?: $r['origin']) . '>' . (string)($r['destination'] ?: $r['route_destination'])] = true;
     if($r['status'] === 'Pending') $groups[$sid]['pending'] = true;
@@ -84,6 +112,11 @@ function mbus_home_when(string $ts): string {
 function mbus_home_bus(string $n): string {
     return preg_match('/^bus/i', $n) ? $n : 'Bus ' . $n;
 }
+
+/* what to show for one seat's payment state */
+function mbus_home_pay_tag(string $pay): string {
+    return ['approval' => 'Paid, waiting for approval', 'checkout' => 'Finish your GCash payment', 'unpaid' => 'Not paid yet', 'paid' => 'Paid', 'boarded' => 'On board'][$pay] ?? '';
+}
 ?>
 
 <!DOCTYPE html>
@@ -113,6 +146,8 @@ function mbus_home_bus(string $n): string {
         .next-riders li { padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .16); font-size: .8rem; line-height: 1.25; }
         .next-riders li span { overflow-wrap: anywhere; }
         .next-riders .nr-seat { display: grid; place-items: center; height: 28px; border-radius: 9px; background: #fff; color: #2f6fe4; font-size: .85rem; font-weight: 700; }
+        .next-riders .nr-tag { grid-column: 2 / -1; font-style: normal; font-size: .72rem; font-weight: 600; opacity: .92; }
+        .next-riders .nr-tag.is-unpaid { color: #ffe3a3; opacity: 1; }
         .next-riders-more { margin: 6px 0 0; font-size: .8rem; opacity: .85; }
         .next-kind { display: inline-block; margin: 8px 0 0; padding: 3px 10px; border-radius: 999px; background: rgba(255, 255, 255, .2); font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
         .soon-sub { display: flex; align-items: center; gap: 8px; margin: 14px 2px 6px; font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b7a90; }
@@ -161,9 +196,21 @@ function mbus_home_bus(string $n): string {
             ? $next['origin'] . ' to ' . $next['route_destination']
             : ($next['pickup_location'] ?: $next['origin']) . ' to ' . ($next['destination'] ?: $next['route_destination']);
         $tickets_word = $is_multi ? 'tickets' : 'ticket';
-        if(!empty($next['boarded'])){ $state = 'On board'; $href = 'ticket.php?schedule_id=' . (int)$next['schedule_id']; $cta = 'View ' . $tickets_word; }
-        elseif($next['pending']){ $state = 'Waiting for payment'; $href = 'payment.php?schedule_id=' . (int)$next['schedule_id']; $cta = 'Pay with GCash'; }
-        else { $state = 'Ready to board'; $href = 'ticket.php?schedule_id=' . (int)$next['schedule_id']; $cta = 'Show ' . $tickets_word; }
+        $sid_q = (int)$next['schedule_id'];
+        $hint = '';
+        if(!empty($next['boarded'])){ $state = 'On board'; $href = 'ticket.php?schedule_id=' . $sid_q; $cta = 'View ' . $tickets_word; }
+        elseif($next['n_unpaid'] > 0){
+            /* at least one seat still needs paying */
+            $state = 'Waiting for payment'; $href = 'payment.php?schedule_id=' . $sid_q; $cta = 'Pay with GCash';
+            if($next['n_approval'] > 0) $hint = $next['n_approval'] . ' of ' . $seat_count . ' seats already paid and waiting for approval.';
+        }
+        elseif($next['n_checkout'] > 0){ $state = 'Finish your payment'; $href = 'payment_return.php?schedule_id=' . $sid_q; $cta = 'Continue payment'; }
+        elseif($next['n_approval'] > 0){
+            /* everything is paid: the operator just has to approve it */
+            $state = 'Waiting for approval'; $href = 'payment_return.php?schedule_id=' . $sid_q; $cta = 'View payment status';
+            $hint = 'Your payment was sent. Your ' . $tickets_word . ' will appear here once an operator approves it.';
+        }
+        else { $state = 'Ready to board'; $href = 'ticket.php?schedule_id=' . $sid_q; $cta = 'Show ' . $tickets_word; }
         if($is_multi && !$next['pending']) $cta .= ' (' . $seat_count . ')';
         $show_riders = array_slice($next['riders'], 0, 4);
     ?>
@@ -179,13 +226,14 @@ function mbus_home_bus(string $n): string {
         <div class="next-riders-head" aria-hidden="true"><span>Seat</span><span>Pickup</span><span>Drop-off</span></div>
         <ul class="next-riders">
             <?php foreach($show_riders as $rd){ ?>
-            <li><b class="nr-seat"><?php echo htmlspecialchars((string)$rd['seat']); ?></b><span><?php echo htmlspecialchars($rd['pickup']); ?></span><span><?php echo htmlspecialchars($rd['drop']); ?></span></li>
+            <li><b class="nr-seat"><?php echo htmlspecialchars((string)$rd['seat']); ?></b><span><?php echo htmlspecialchars($rd['pickup']); ?></span><span><?php echo htmlspecialchars($rd['drop']); ?></span><?php if($next['pending']){ ?><em class="nr-tag is-<?php echo htmlspecialchars($rd['pay']); ?>"><?php echo htmlspecialchars(mbus_home_pay_tag($rd['pay'])); ?></em><?php } ?></li>
             <?php } ?>
         </ul>
         <?php if($seat_count > 4){ ?><p class="next-riders-more">+<?php echo $seat_count - 4; ?> more seat<?php echo $seat_count - 4 > 1 ? 's' : ''; ?> on your tickets</p><?php } ?>
         <?php } else { ?>
         <p class="next-meta"><?php echo htmlspecialchars(mbus_home_bus($next['bus_number'])); ?> &middot; Seat <?php echo htmlspecialchars((string)$next['seats'][0]); ?></p>
         <?php } ?>
+        <?php if($hint !== ''){ ?><p class="next-meta"><?php echo htmlspecialchars($hint); ?></p><?php } ?>
         <a class="next-cta" href="<?php echo $href; ?>"><?php echo $cta; ?></a>
     </section>
     <?php } else { ?>
@@ -209,14 +257,17 @@ function mbus_home_bus(string $n): string {
         <h3 class="soon-sub"><?php echo $gTitle; ?> <span><?php echo count($group); ?></span></h3>
         <ul class="soon-list">
             <?php foreach($group as $o){
-                $oPay = $o['pending'];
                 $oMulti = count($o['seats']) > 1;
-                $oHref = ($oPay ? 'payment.php' : 'ticket.php') . '?schedule_id=' . (int)$o['schedule_id'];
+                $oSid = (int)$o['schedule_id'];
+                /* where it goes and what the chip says depends on the payment state, not just on "pending" */
+                if($o['n_unpaid'] > 0){ $oHref = 'payment.php?schedule_id=' . $oSid; $oChip = 'Pay now'; $oWait = true; }
+                elseif($o['n_checkout'] > 0){ $oHref = 'payment_return.php?schedule_id=' . $oSid; $oChip = 'Finish payment'; $oWait = true; }
+                elseif($o['n_approval'] > 0){ $oHref = 'payment_return.php?schedule_id=' . $oSid; $oChip = 'Awaiting approval'; $oWait = true; }
+                else { $oHref = 'ticket.php?schedule_id=' . $oSid; $oChip = $o['boarded'] ? 'On board' : ($oMulti ? 'Tickets' : 'Ticket'); $oWait = false; }
                 $oRoute = $oMulti
                     ? $o['origin'] . ' to ' . $o['route_destination']
                     : ($o['pickup_location'] ?: $o['origin']) . ' to ' . ($o['destination'] ?: $o['route_destination']);
                 $oSeats = $oMulti ? count($o['seats']) . ' seats' : 'Seat ' . $o['seats'][0];
-                $oChip = $oPay ? 'Pay now' : ($o['boarded'] ? 'On board' : ($oMulti ? 'Tickets' : 'Ticket'));
             ?>
             <li>
                 <a href="<?php echo htmlspecialchars($oHref); ?>">
@@ -225,7 +276,7 @@ function mbus_home_bus(string $n): string {
                         <strong><?php echo htmlspecialchars($oRoute); ?></strong>
                         <small><?php echo htmlspecialchars(mbus_home_bus($o['bus_number'])); ?> &middot; <?php echo htmlspecialchars($oSeats); ?> &middot; <?php echo htmlspecialchars(mbus_home_when($o['departure_time'])); ?></small>
                     </span>
-                    <span class="seat-chip <?php echo $oPay ? 'low' : 'ok'; ?>"><?php echo $oChip; ?></span>
+                    <span class="seat-chip <?php echo $oWait ? 'low' : 'ok'; ?>"><?php echo $oChip; ?></span>
                 </a>
             </li>
             <?php } ?>
