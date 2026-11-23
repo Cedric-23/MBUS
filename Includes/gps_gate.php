@@ -18,7 +18,7 @@ function mbus_gps_enabled(): bool
 function mbus_role_home(string $role): string
 {
     return match (strtolower($role)) {
-        'operator' => 'Operator/operator_dashboard.php',
+        'driver' => 'Operator/operator_dashboard.php',
         'conductor' => 'Conductor/conductor_dashboard.php',
         'admin' => 'Admin/admin_dashboard.php',
         default => 'Commuter/commuter_dashboard.php',

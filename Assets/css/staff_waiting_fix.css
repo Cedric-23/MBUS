@@ -46,3 +46,5 @@
 .staff-wait-page .sw-chip.is-res{background:#ece8ff;color:#4a32b0}
 .staff-wait-page.sw-view-buses .sw-group,.staff-wait-page.sw-view-buses .sw-route-controls{display:none}
 .staff-wait-page.sw-view-commuters .sw-bus-section{display:none}
+.staff-wait-page.staff-only-commuters .sw-bus-section,
+.staff-wait-page.staff-only-commuters .sw-route-controls{display:none}

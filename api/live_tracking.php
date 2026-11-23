@@ -7,7 +7,7 @@ header('Content-Type: application/json; charset=utf-8'); header('Cache-Control: 
 function mbus_tracking_json(array $body,int $status=200): never { $GLOBALS['mbus_tracking_sent']=true; http_response_code($status); echo json_encode($body,JSON_UNESCAPED_SLASHES|JSON_INVALID_UTF8_SUBSTITUTE); exit; }
 $userInput=$_SESSION['user_id']??null; $roleInput=$_SESSION['user_type']??''; $role=is_string($roleInput)?strtolower($roleInput):'';
 try{$userId=mbus_pickup_positive_id($userInput);}catch(Throwable $e){mbus_tracking_json(['ok'=>false,'message'=>'Please sign in to use live tracking.'],401);}
-if(!in_array($role,['commuter','operator','conductor','admin'],true)) mbus_tracking_json(['ok'=>false,'message'=>'Your account cannot access live tracking.'],403);
+if(!in_array($role,['commuter','driver','conductor','admin'],true)) mbus_tracking_json(['ok'=>false,'message'=>'Your account cannot access live tracking.'],403);
 $method=$_SERVER['REQUEST_METHOD']??'GET'; if(!in_array($method,['GET','POST'],true)){header('Allow: GET, POST');mbus_tracking_json(['ok'=>false,'message'=>'Use GET or POST for this endpoint.'],405);}
 $data=null; if($method==='POST'){try{$data=mbus_tracking_form($_POST,$role);}catch(MbusPickupException $e){mbus_tracking_json(['ok'=>false,'message'=>$e->getMessage()],$e->httpStatus);} if(!csrf_validate_token())mbus_tracking_json(['ok'=>false,'message'=>'Security validation failed. Refresh and try again.'],403);}
 $token=csrf_get_token(); $chosen=null;

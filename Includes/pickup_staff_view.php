@@ -1,13 +1,13 @@
 <?php
-// Shared Waiting board for staff roles. Operator: own buses. Admin: all buses.
-if (!isset($pickupStaffRole) || !in_array($pickupStaffRole, ['admin', 'operator', 'conductor'], true)) {
+// Shared Waiting board for staff roles. Conductor: assigned buses. Admin: all buses.
+if (!isset($pickupStaffRole) || !in_array($pickupStaffRole, ['admin', 'conductor'], true)) {
     http_response_code(403);
     exit('Access denied.');
 }
 $isAdmin = $pickupStaffRole === 'admin';
 $isConductor = $pickupStaffRole === 'conductor';
-$dashboard = $isAdmin ? 'admin_dashboard.php' : ($isConductor ? '../Conductor/conductor_dashboard.php' : 'operator_dashboard.php');
-$roleLabel = $isAdmin ? 'Admin' : ($isConductor ? 'Conductor' : 'Operator');
+$dashboard = $isAdmin ? 'admin_dashboard.php' : '../Conductor/conductor_dashboard.php';
+$roleLabel = $isAdmin ? 'Admin' : 'Conductor';
 $navItems = $isAdmin
     ? [
         ['admin_dashboard.php', 'fa-home', 'Home'],
@@ -15,17 +15,12 @@ $navItems = $isAdmin
         ['manage_buses.php', 'fa-bus', 'Buses'],
         ['manage_operators.php', 'fa-users', 'Operators'],
     ]
-    : ($isConductor ? [
+    : [
         [$dashboard, 'fa-home', 'Home'],
         ['manage_trips.php', 'fa-bus', 'Trips'],
         ['scan.php', 'fa-qrcode', 'Scan'],
-        ['payments.php', 'fa-wallet', 'Payments'],
-    ] : [
-        ['operator_dashboard.php', 'fa-home', 'Home'],
-        ['manage_trips.php', 'fa-bus', 'Trips'],
-        ['scan.php', 'fa-qrcode', 'Scan'],
         ['passengers.php', 'fa-users', 'Riders'],
-    ]);
+    ];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -46,7 +41,7 @@ $navItems = $isAdmin
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/staff_waiting_fix.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_waiting_fix.css'); ?>">
 </head>
-<body class="stf has-bottom-nav staff-wait-page">
+<body class="stf has-bottom-nav staff-wait-page<?php echo $isAdmin ? '' : ' staff-only-commuters'; ?>">
 <main class="main" role="main" id="pickupStaff" data-role="<?php echo $pickupStaffRole; ?>" data-endpoint="../api/pickup.php" data-live-endpoint="../api/live_tracking.php">
 
     <header class="sw-bar">
@@ -70,7 +65,7 @@ $navItems = $isAdmin
                     <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
                     <span class="profile-menu-role"><?php echo $roleLabel; ?> account</span>
                 </div>
-                <?php if ($isConductor): ?><a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a><?php elseif (!$isAdmin): ?><a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a><?php endif; ?>
+                <?php if ($isConductor): ?><a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a><a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a><?php elseif (!$isAdmin): ?><a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a><?php endif; ?>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
         </div>
@@ -89,11 +84,13 @@ $navItems = $isAdmin
             <h2>Waiting</h2>
             <span class="sw-sheet-sub" id="busLabel"></span>
         </div>
-        <div class="sw-view" id="swView" role="group" aria-label="What to show">
+        <?php if ($isAdmin): ?><div class="sw-view" id="swView" role="group" aria-label="What to show">
             <button type="button" data-view="both" aria-pressed="true">Both</button>
             <button type="button" data-view="buses" aria-pressed="false"><i class="fa fa-bus" aria-hidden="true"></i> Buses</button>
             <button type="button" data-view="commuters" aria-pressed="false"><i class="fa fa-user-group" aria-hidden="true"></i> Commuters</button>
-        </div>
+        </div><?php else: ?><div class="sw-view" id="swView" role="group" aria-label="What to show">
+            <button type="button" data-view="commuters" aria-pressed="true"><i class="fa fa-user-group" aria-hidden="true"></i> Commuters</button>
+        </div><?php endif; ?>
         <div class="sw-route-controls">
             <p id="staffRouteEstimate" class="sw-route-estimate" role="status" aria-live="polite">Choose a bus to see its route and destination estimate.</p>
         </div>
@@ -149,6 +146,6 @@ $navItems = $isAdmin
 <script src="../Assets/js/staff_waiting.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/staff_waiting.js'); ?>"></script>
 <script src="../Assets/js/staff_waiting_toggles.js?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/js/staff_waiting_toggles.js'); ?>"></script>
 <script src="../Assets/js/app-header.js"></script>
-<?php if (in_array(strtolower((string)($_SESSION['user_type'] ?? '')), ['operator', 'conductor'], true)) { ?><script src="../Assets/js/operator_tracker.js"></script><?php } ?>
+<?php if (strtolower((string)($_SESSION['user_type'] ?? '')) === 'conductor') { ?><script src="../Assets/js/operator_tracker.js"></script><?php } ?>
 </body>
 </html>

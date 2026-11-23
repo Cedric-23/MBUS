@@ -27,7 +27,7 @@ assert.match(mobileCss, /@media\s*\(min-width:\s*768px\)[\s\S]*?#paymentPageMain
 assert.match(commuterProfile, /profile-avatar[^>]*>[\s\S]*?avatar\.php\?v=/, 'commuter profile header must use the database-backed avatar endpoint');
 assert.match(commuterProfile, /data-fallback=/, 'commuter profile header must retain an initial fallback');
 
-assert.match(operatorProfile, /strtolower\(\$_SESSION\['user_type'\] \?\? ''\) !== 'operator'/, 'operator profile must stay role-protected');
+assert.match(operatorProfile, /in_array\(strtolower\(\(string\)\(\$_SESSION\['user_type'\] \?\? ''\)\), \['driver', 'conductor'\], true\)/, 'staff profile must stay role-protected');
 assert.match(operatorProfile, /csrf_validate_token\(\)/, 'operator profile updates must validate CSRF');
 assert.match(operatorProfile, /mbus_check_full_name\(/);
 assert.match(operatorProfile, /mbus_check_phone\(/);

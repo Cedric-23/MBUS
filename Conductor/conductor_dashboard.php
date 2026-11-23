@@ -85,8 +85,8 @@ $nextTrip = $trips[0] ?? null;
             <a href="conductor_dashboard.php" aria-current="page"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
             <a href="../Operator/manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
             <a href="../Operator/scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
+            <a href="../Operator/passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Riders</a>
             <a href="../Operator/waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
-            <a href="../Operator/payments.php"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments<?php if ($paymentCount > 0): ?><span class="menu-badge"><?php echo $paymentCount > 99 ? '99+' : $paymentCount; ?></span><?php endif; ?></a>
         </nav>
         <div class="menu-bottom">
             <a href="../logout.php" class="logout-btn btn btn-outline btn-block"><i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
@@ -111,7 +111,8 @@ $nextTrip = $trips[0] ?? null;
                             <span class="profile-menu-name"><?php echo htmlspecialchars($fullName); ?></span>
                             <span class="profile-menu-role">Conductor account</span>
                         </div>
-                        <a href="../Operator/payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a>
+                        <a href="../Operator/payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments<?php if ($paymentCount > 0): ?><span class="menu-badge"><?php echo $paymentCount > 99 ? '99+' : $paymentCount; ?></span><?php endif; ?></a>
+                        <a href="../Operator/profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>
                 </div>
@@ -153,8 +154,8 @@ $nextTrip = $trips[0] ?? null;
         <nav class="cond-actions" aria-label="Conductor actions">
             <a href="../Operator/manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i><span>Manage trips</span></a>
             <a href="../Operator/scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan tickets</span></a>
+            <a href="../Operator/passengers.php"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
             <a href="../Operator/waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting riders</span></a>
-            <a href="../Operator/payments.php"><i class="fa fa-wallet" aria-hidden="true"></i><span>GCash payments</span></a>
         </nav>
 
         <section class="home-section" aria-labelledby="todayTripsHeading">
@@ -183,8 +184,8 @@ $nextTrip = $trips[0] ?? null;
         <a href="conductor_dashboard.php" class="bottom-nav-item active" aria-current="page"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
         <a href="../Operator/manage_trips.php" class="bottom-nav-item"><i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span></a>
         <a href="../Operator/scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
+        <a href="../Operator/passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
         <a href="../Operator/waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
-        <a href="../Operator/payments.php" class="bottom-nav-item"><i class="fa fa-wallet" aria-hidden="true"></i><span>Payments</span></a>
     </nav>
     <script src="../Assets/js/app-header.js"></script>
 </body>

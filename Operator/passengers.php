@@ -5,12 +5,14 @@ require_once "../config/mysqli_compat.php";
 require_once "../Includes/csrf.php";
 require_once "../Includes/activity_log.php";
 require_once "../Includes/seat_layout.php";
+require_once "../Includes/staff_assignment_scope.php";
 
-if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'operator'){
+if(!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?? '')) !== 'conductor'){
     header("Location: ../login.php");
     exit();
 }
 
+$staffRole = 'conductor';
 $operator_id = (int)$_SESSION['user_id'];
 $b = mbus_local_bounds(); // app-timezone boundaries (not the DB clock)
 $notice = '';
@@ -67,8 +69,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_boarded'])){
               AND r.status IN ('Paid', 'Confirmed')
               AND r.schedule_id IN (
                   SELECT s.schedule_id FROM schedule s
-                  JOIN operator_bus_assignments oba ON oba.bus_id = s.bus_id
-                  WHERE oba.operator_id = ? AND s.trip_status IN ('Scheduled', 'Boarding', 'Departed')
+                  WHERE " . mbus_staff_assignment_condition($staffRole, 's.bus_id') . " AND s.trip_status IN ('Scheduled', 'Boarding', 'Departed')
               )", [$reservation_id, $operator_id]);
         $ok = $stmt !== false && $conn->affectedRows > 0;
         $_SESSION['riders_flash'] = $ok ? 'Passenger boarded.' : 'Could not board this passenger.';
@@ -88,7 +89,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_walkin'])){
                 to_jsonb(ro)->>'destination_lat' AS destination_lat, to_jsonb(ro)->>'destination_lng' AS destination_lng
             FROM schedule s
             JOIN buses bu ON bu.bus_id = s.bus_id JOIN routes ro ON ro.route_id = s.route_id
-            WHERE s.schedule_id = ? AND s.bus_id IN (SELECT bus_id FROM operator_bus_assignments WHERE operator_id = ?)", [$back_schedule, $operator_id]);
+            WHERE s.schedule_id = ? AND " . mbus_staff_assignment_condition($staffRole, 's.bus_id'), [$back_schedule, $operator_id]);
         $sc = $sq === false ? false : mbus_db_fetch_assoc($sq);
         if(!$sc){ $msg = 'Trip not found.'; break; }
         if(!in_array($sc['trip_status'], ['Scheduled', 'Boarding', 'Departed'], true)){ $msg = 'This trip is closed.'; break; }
@@ -157,7 +158,7 @@ $tq = mbus_db_prepare($conn, "
     FROM schedule s
     JOIN buses bu ON bu.bus_id = s.bus_id
     JOIN routes ro ON ro.route_id = s.route_id
-    WHERE s.bus_id IN (SELECT bus_id FROM operator_bus_assignments WHERE operator_id = ?)
+    WHERE " . mbus_staff_assignment_condition($staffRole, 's.bus_id') . "
     AND s.departure_time >= '$since'
     AND s.trip_status NOT IN ('Arrived', 'Cancelled')
     ORDER BY s.departure_time ASC
@@ -265,7 +266,7 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
-    <title>Riders</title>
+    <title>Riders — MBUS Conductor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../Assets/css/responsive.css">
@@ -285,13 +286,12 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
 
 <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
     <div class="logo-container"><img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo"></div>
-    <h2>Operator</h2>
-    <nav class="menu-top" aria-label="Operator menu">
-        <a href="operator_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+    <h2>Conductor</h2>
+    <nav class="menu-top" aria-label="Conductor menu">
+        <a href="../Conductor/conductor_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
         <a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
         <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
         <a href="passengers.php" aria-current="page"><i class="fa fa-users" aria-hidden="true"></i> Riders</a>
-        <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
         <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
     </nav>
     <div class="menu-bottom">
@@ -310,9 +310,9 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
             <div class="profile-menu" id="profileMenu" role="menu">
                 <div class="profile-menu-header">
                     <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
-                    <span class="profile-menu-role">Operator account</span>
-                </div>
-                <a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
+                <span class="profile-menu-role">Conductor account</span>
+            </div>
+                <a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a>
                 <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
@@ -542,7 +542,7 @@ const TRIP_DEST = <?php echo json_encode(strtoupper((string)$selected['destinati
 <?php } ?>
 
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
-    <a href="operator_dashboard.php" class="bottom-nav-item">
+    <a href="../Conductor/conductor_dashboard.php" class="bottom-nav-item">
         <i class="fa fa-home" aria-hidden="true"></i><span>Home</span>
     </a>
     <a href="manage_trips.php" class="bottom-nav-item">

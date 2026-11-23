@@ -26,8 +26,8 @@ if (!$info || $email === '' || empty($info['email_verified'])) google_fail('fail
 $name = trim((string)($info['name'] ?? '')) ?: strstr($email, '@', true);
 $name = mb_substr($name, 0, 100);
 
-$dashboards = ['commuter' => 'Commuter/commuter_dashboard.php', 'operator' => 'Operator/operator_dashboard.php', 'conductor' => 'Conductor/conductor_dashboard.php'];
-$aliases = ['passenger' => 'commuter', 'driver' => 'operator'];
+$dashboards = ['commuter' => 'Commuter/commuter_dashboard.php', 'driver' => 'Operator/operator_dashboard.php', 'conductor' => 'Conductor/conductor_dashboard.php'];
+$aliases = ['passenger' => 'commuter', 'operator' => 'driver'];
 
 $r = mbus_db_prepare($conn, "SELECT * FROM users WHERE LOWER(email) = ?", [$email]);
 $user = ($r !== false && mbus_db_num_rows($r) > 0) ? mbus_db_fetch_assoc($r) : null;

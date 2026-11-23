@@ -79,7 +79,7 @@ function mbus_pickup_validate_form(array $post, string $role): array
     if (!is_string($action) || !in_array($action, ['wait', 'cancel', 'picked_up', 'quick'], true)) {
         throw new MbusPickupException('Unknown pickup action.');
     }
-    if (($action === 'picked_up' && !in_array($role, ['operator', 'conductor', 'admin'], true))
+    if (($action === 'picked_up' && !in_array($role, ['conductor', 'admin'], true))
         || ($action !== 'picked_up' && $role !== 'commuter')) {
         throw new MbusPickupException('This action is not permitted for your account.', 403);
     }
@@ -109,7 +109,7 @@ function mbus_pickup_ready(PDO $pdo): bool
 /** EXISTS avoids duplicate riders/schedules when assignment rows are duplicated. */
 function mbus_pickup_scope(string $role, int $userId, array &$params, string $scheduleAlias = 's'): string
 {
-    if (in_array($role, ['operator', 'conductor'], true)) {
+    if (in_array($role, ['driver', 'conductor'], true)) {
         $params[] = $userId;
         return ' AND ' . mbus_staff_assignment_condition($role, $scheduleAlias . '.bus_id');
     }
@@ -336,7 +336,7 @@ function mbus_pickup_mutate(PDO $pdo, string $role, int $userId, array $data): a
     }
     // Defense in depth: callers cannot bypass role/form validation.
     $action = $data['action'] ?? '';
-    if (($action === 'picked_up' && !in_array($role, ['operator', 'conductor', 'admin'], true))
+    if (($action === 'picked_up' && !in_array($role, ['conductor', 'admin'], true))
         || (in_array($action, ['wait', 'cancel', 'quick'], true) && $role !== 'commuter')
         || !in_array($action, ['wait', 'cancel', 'picked_up', 'quick'], true)) {
         throw new MbusPickupException('This action is not permitted for your account.', 403);

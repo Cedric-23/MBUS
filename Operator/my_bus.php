@@ -5,7 +5,7 @@ include_once __DIR__ . '/../Includes/csrf.php';
 include_once __DIR__ . '/../Includes/seat_layout.php';
 include_once __DIR__ . '/../Includes/profile_photo.php';
 
-if (!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'operator') {
+if (!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?? '')) !== 'driver') {
     header('Location: ../login.php');
     exit();
 }
@@ -91,13 +91,13 @@ if ($bus) {
     $layout = ($saved !== null && mbus_seat_layout_count($saved) === (int)$bus['capacity']) ? $saved : mbus_seat_layout_default((int)$bus['capacity']);
 }
 $yes = static fn($v) => $v === true || $v === 't' || $v === '1' || $v === 1;
-$name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
+$name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Driver'));
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Bus - Operator</title>
+    <title>My Bus - Driver</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../Assets/css/responsive.css"><link rel="stylesheet" href="../Assets/css/bottom-nav.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/bottom-nav.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css"><link rel="stylesheet" href="../Assets/css/app-header.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/app-header.css'); ?>">
@@ -115,7 +115,7 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
         <div class="page-header-right"><div class="profile-menu-wrap">
             <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span></button>
             <div class="profile-menu" id="profileMenu" role="menu">
-                <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $name; ?></span><span class="profile-menu-role">Operator account</span></div>
+                <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $name; ?></span><span class="profile-menu-role">Driver account</span></div>
                 <a href="my_bus.php" role="menuitem"><i class="fa fa-bus" aria-hidden="true"></i> My Bus</a>
                 <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>

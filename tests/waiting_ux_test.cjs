@@ -1,4 +1,4 @@
-/* Waiting UX: pin flow, status page, staff board and operator-only GPS gate.
+/* Waiting UX: pin flow, status page, staff board and staff GPS gate.
  * Run: node tests/waiting_ux_test.cjs */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -31,13 +31,13 @@ const gateInclude = read('Includes/gps_gate.php');
 const navPages = [
     'Admin/admin_dashboard.php', 'Admin/manage_buses.php', 'Admin/manage_operators.php',
     'Commuter/commuter_dashboard.php', 'Commuter/live.php', 'Commuter/my_reservations.php',
-    'Commuter/schedule.php', 'Operator/operator_dashboard.php', 'Operator/manage_trips.php',
+    'Commuter/schedule.php', 'Conductor/conductor_dashboard.php', 'Operator/manage_trips.php',
     'Operator/scan.php', 'Operator/passengers.php',
 ];
 for (const page of navPages) {
     const html = read(page);
     assert.doesNotMatch(html, />Alerts</, `${page} still labels the tab Alerts`);
-    assert.match(html, /href="waiting\.php"[^>]*class="bottom-nav-item|class="bottom-nav-item"[^>]*href="waiting\.php"/, `${page} has no Waiting tab`);
+    assert.match(html, /href="(?:\.\.\/Operator\/)?waiting\.php"[^>]*class="bottom-nav-item|class="bottom-nav-item"[^>]*href="(?:\.\.\/Operator\/)?waiting\.php"/, `${page} has no Waiting tab`);
     assert.match(html, /<span>Waiting<\/span>/, `${page} Waiting tab label missing`);
 }
 
@@ -143,7 +143,7 @@ assert.doesNotMatch(commuterWaiting, /waitingSchedule|waitBtn|commuter_waiting_a
 // --- 3. Operator riders page is only the seat map; Waiting is its separate navigation page
 assert.doesNotMatch(riders, /riderLive|liveMap|waitingList|pickup_staff\.js|live_tracking\.php|leaflet/i);
 assert.match(riders, /Waiting/);
-assert.match(operatorWaiting, /\$pickupStaffRole = 'operator'/);
+assert.match(operatorWaiting, /\$pickupStaffRole = 'conductor'/);
 assert.match(adminWaiting, /\$pickupStaffRole = 'admin'/);
 assert.match(staffView, /<h1>Waiting<\/h1>/);
 assert.match(staffView, /id="staffMap"/);
@@ -168,7 +168,7 @@ assert.doesNotMatch(commuterLive, /pickupAction|cancel_waiting|commuterLayer|You
 assert.doesNotMatch(commuterLivePage, /dot-commuter|Pickup distance|profileImage/);
 assert.match(tracking, /A commuter must still be able to clear their waiting state after the trip/);
 
-// --- 4. GPS gate is operator-only and precedes the operator dashboard
+// --- 4. GPS gate is limited to Driver and Conductor staff
 assert.match(gate, /Turn on location/);
 assert.match(gate, /id="gateEnable"/);
 assert.match(gate, /navigator\.geolocation\.getCurrentPosition/);
@@ -177,7 +177,7 @@ assert.match(gateInclude, /header\('Location: ' \. \(\$base \?: ''\) \. '\/gps\.
 assert.doesNotMatch(read('Commuter/commuter_dashboard.php'), /mbus_require_gps|gps_gate/);
 assert.doesNotMatch(read('Admin/admin_dashboard.php'), /mbus_require_gps|gps_gate/);
 assert.match(read('Operator/operator_dashboard.php'), /mbus_require_gps\(/);
-assert.match(gate, /if \(\$role !== 'operator'\)/);
+assert.match(gate, /in_array\(\$role, \['driver', 'conductor'\], true\)/);
 assert.match(gate, /So commuters can see your bus/);
 const gateWords = gate.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, ' ')
     .replace(/&[a-z]+;/g, ' ').replace(/\s+/g, ' ').trim().split(' ').length;
@@ -191,4 +191,4 @@ assert.match(read('Commuter/schedule.php'), /\$action === 'pickup' \? 'pickup\.p
 assert.match(read('Commuter/reserve.php'), /Location: pickup\.php\?schedule_id=/);
 assert.doesNotMatch(read('Commuter/live.php'), /Waiting for a bus/);
 
-console.log('PASS commuter Waiting-only map, separate pickup pin flow, staff board and operator-only GPS gate');
+console.log('PASS commuter Waiting-only map, separate pickup pin flow, staff board and staff GPS gate');

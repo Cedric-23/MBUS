@@ -7,15 +7,15 @@ require_once "../Includes/activity_log.php";
 require_once "../Includes/notify.php";
 require_once "../Includes/staff_assignment_scope.php";
 
-if(!isset($_SESSION['user_id']) || !in_array(strtolower((string)($_SESSION['user_type'] ?? '')), ['operator', 'conductor'], true)){
+if(!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?? '')) !== 'conductor'){
     header("Location: ../login.php");
     exit();
 }
 
-$staffRole = strtolower((string)$_SESSION['user_type']);
-$isConductor = $staffRole === 'conductor';
-$staffLabel = $isConductor ? 'Conductor' : 'Operator';
-$homeHref = $isConductor ? '../Conductor/conductor_dashboard.php' : 'operator_dashboard.php';
+$staffRole = 'conductor';
+$isConductor = true;
+$staffLabel = 'Conductor';
+$homeHref = '../Conductor/conductor_dashboard.php';
 $operator_id = (int)$_SESSION['user_id'];
 $success = null;
 $error = null;
@@ -196,10 +196,9 @@ $query = mbus_db_prepare($conn, "
         <a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
         <a href="manage_trips.php" aria-current="page"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
         <?php if($isConductor): ?>
+        <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Riders</a>
         <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
-        <a href="payments.php"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a>
         <?php else: ?>
-        <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
         <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
         <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
         <?php endif; ?>
@@ -420,11 +419,7 @@ document.addEventListener('keydown', function(e) {
         <i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span>
     </a>
     <a href="scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
-    <?php if($isConductor): ?>
-    <a href="payments.php" class="bottom-nav-item"><i class="fa fa-wallet" aria-hidden="true"></i><span>Payments</span></a>
-    <?php else: ?>
-    <a href="passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
-    <?php endif; ?>
+    <?php if($isConductor): ?><a href="passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a><?php else: ?><a href="my_bus.php" class="bottom-nav-item"><i class="fa fa-bus-simple" aria-hidden="true"></i><span>My Bus</span></a><?php endif; ?>
     <a href="waiting.php" class="bottom-nav-item">
         <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>

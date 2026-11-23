@@ -58,7 +58,7 @@ SELECT * FROM users WHERE LOWER(email) = LOWER(?)
 INSERT INTO users
 (full_name, email, phone_number, password, user_type)
 VALUES
-(?, ?, ?, ?, 'operator')
+(?, ?, ?, ?, 'driver')
 ", [$full_name, $email, $phone_number, $hashed_password]);
 
                 if($created === false){

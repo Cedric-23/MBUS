@@ -2,10 +2,10 @@
 session_start();
 require_once "../config/db_connect.php";
 $role = strtolower($_SESSION['user_type'] ?? '');
-if (!isset($_SESSION['user_id']) || !in_array($role, ['operator', 'admin'], true)) { http_response_code(403); exit; }
+if (!isset($_SESSION['user_id']) || !in_array($role, ['driver', 'admin'], true)) { http_response_code(403); exit; }
 $bus_id = (int)($_GET['bus_id'] ?? 0);
 $col = ($_GET['type'] ?? '') === 'interior' ? 'interior_photo' : 'bus_photo';
-if ($role === 'operator') {
+if ($role === 'driver') {
     $ok = mbus_db_prepare($conn, "SELECT 1 FROM operator_bus_assignments WHERE bus_id = ? AND operator_id = ?", [$bus_id, (int)$_SESSION['user_id']]);
     if ($ok === false || mbus_db_num_rows($ok) < 1) { http_response_code(404); exit; }
 }

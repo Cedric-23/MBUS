@@ -4,7 +4,7 @@ require_once '../config/db_connect.php';
 require_once '../config/mysqli_compat.php';
 require_once '../Includes/csrf.php';
 header('Content-Type: application/json; charset=utf-8');
-if (!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'operator') { http_response_code(403); echo json_encode(['error'=>'Unauthorized']); exit; }
+if (!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'driver') { http_response_code(403); echo json_encode(['error'=>'Unauthorized']); exit; }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !csrf_validate_token()) { http_response_code(403); echo json_encode(['error'=>'Invalid request']); exit; }
 $lat = filter_var($_POST['latitude'] ?? null, FILTER_VALIDATE_FLOAT);
 $lng = filter_var($_POST['longitude'] ?? null, FILTER_VALIDATE_FLOAT);

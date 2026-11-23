@@ -10,7 +10,7 @@ function mbus_staff_assignment_condition(string $role, string $busExpression = '
     }
 
     return match (strtolower($role)) {
-        'operator' => "EXISTS (SELECT 1 FROM public.operator_bus_assignments staff_assignment WHERE staff_assignment.bus_id = {$busExpression} AND staff_assignment.operator_id = ?)",
+        'driver' => "EXISTS (SELECT 1 FROM public.operator_bus_assignments staff_assignment WHERE staff_assignment.bus_id = {$busExpression} AND staff_assignment.operator_id = ?)",
         'conductor' => "EXISTS (SELECT 1 FROM public.conductor_bus_assignments staff_assignment WHERE staff_assignment.bus_id = {$busExpression} AND staff_assignment.conductor_id = ?)",
         default => 'FALSE',
     };

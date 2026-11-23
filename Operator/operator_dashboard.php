@@ -3,7 +3,7 @@ session_start();
 
 if(
     !isset($_SESSION['user_type']) ||
-    strtolower($_SESSION['user_type']) != 'operator'
+    strtolower((string)$_SESSION['user_type']) !== 'driver'
 ){
     header("Location: ../login.php");
     exit();
@@ -56,7 +56,7 @@ $my_buses = 0;
 $mq = mbus_db_prepare($conn, "SELECT COUNT(*) AS n FROM operator_bus_assignments WHERE operator_id = ?", [$operator_id]);
 if ($mq !== false && ($mrow = mbus_db_fetch_assoc($mq))) $my_buses = (int)$mrow['n'];
 
-/* Shared avatar rendering; Driver/Operator accounts do not receive GCash controls. */
+/* Shared avatar rendering; Driver accounts do not receive Conductor GCash controls. */
 require_once dirname(__DIR__) . '/Includes/header_avatar.php';
 
 $state_label = ['Scheduled' => 'Up next', 'Boarding' => 'Boarding now', 'Departed' => 'On the road'];
@@ -78,7 +78,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
     <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
     <link rel="shortcut icon" href="../Assets/images/mbus_icon.png">
 
-    <title>Operator Dashboard</title>
+    <title>Driver Dashboard</title>
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css">
     <link rel="stylesheet" href="../Assets/css/app-header.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/app-header.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/bottom-nav.css'); ?>">
@@ -100,15 +100,11 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo">
         </div>
 
-        <h2>Operator</h2>
+        <h2>Driver</h2>
 
-        <nav class="menu-top" aria-label="Operator menu">
+        <nav class="menu-top" aria-label="Driver menu">
             <a href="operator_dashboard.php" aria-current="page"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
-            <a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
-            <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
-            <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
-        <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
-            <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
+            <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
 
         </nav>
 
@@ -138,7 +134,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
                     <div class="profile-menu" id="profileMenu" role="menu">
                         <div class="profile-menu-header">
                             <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
-                            <span class="profile-menu-role">Operator account</span>
+                            <span class="profile-menu-role">Driver account</span>
                         </div>
                 <a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
                         <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
@@ -149,7 +145,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
         </header>
 
         <div class="tracking-sr-only" aria-live="polite" role="status">
-            <span id="operatorTrackingStatus">Operator location sharing is active.</span>
+            <span id="operatorTrackingStatus">Driver location sharing is active.</span>
             <select id="operatorTrackingTrip" aria-label="Active trip"></select>
         </div>
 
@@ -166,22 +162,19 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <div class="home-section-head"><h2 id="manage-h">Manage</h2></div>
             <ul class="manage-list">
                 <li><a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i>My Bus<span class="count"><?php echo $my_buses; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
-                <li><a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i>Trips<span class="count"><?php echo $stat['trips']; ?> today</span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
-                <li><a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i>Riders<span class="count"><?php echo $stat['booked']; ?> booked</span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
-                <li><a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i>Waiting<span class="count"><?php echo $stat['pending']; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
             </ul>
         </section>
 
         <section class="home-section" aria-labelledby="today-h">
-            <div class="home-section-head"><h2 id="today-h">Trips today</h2><a href="manage_trips.php">All trips</a></div>
+            <div class="home-section-head"><h2 id="today-h">Trips today</h2></div>
             <?php if($todays_trips){ ?>
             <ul class="soon-list">
                 <?php foreach($todays_trips as $t){ $full = (int)$t['booked'] >= (int)$t['capacity']; $bus_label = ctype_digit((string)$t['bus_number']) ? 'Bus ' . $t['bus_number'] : $t['bus_number']; ?>
-                <li><a href="passengers.php?schedule_id=<?php echo (int)$t['schedule_id']; ?>">
+                <li>
                     <span class="soon-time"><?php echo date('g:i', strtotime($t['departure_time'])); ?><small><?php echo date('A', strtotime($t['departure_time'])); ?></small></span>
                     <span class="soon-body"><strong><?php echo htmlspecialchars($t['origin'] . ' to ' . $t['destination']); ?></strong><small><?php echo htmlspecialchars($bus_label . ' · ' . ($state_label[$t['trip_status']] ?? 'Up next') . ' · ' . (int)$t['boarded'] . ' of ' . (int)$t['booked'] . ' boarded'); ?></small></span>
                     <span class="seat-chip <?php echo $full ? 'full' : 'ok'; ?>"><?php echo (int)$t['booked']; ?>/<?php echo (int)$t['capacity']; ?></span>
-                </a></li>
+                </li>
                 <?php } ?>
             </ul>
             <?php } else { ?>
@@ -199,15 +192,8 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
     <a href="operator_dashboard.php" class="bottom-nav-item active" aria-current="page">
         <i class="fa fa-home" aria-hidden="true"></i><span>Home</span>
     </a>
-    <a href="manage_trips.php" class="bottom-nav-item">
-        <i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span>
-    </a>
-    <a href="scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
-    <a href="passengers.php" class="bottom-nav-item">
-        <i class="fa fa-users" aria-hidden="true"></i><span>Riders</span>
-    </a>
-    <a href="waiting.php" class="bottom-nav-item">
-        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
+    <a href="my_bus.php" class="bottom-nav-item">
+        <i class="fa fa-bus-simple" aria-hidden="true"></i><span>My Bus</span>
     </a>
 </nav>
 <script src="../Assets/js/operator_tracker.js"></script>

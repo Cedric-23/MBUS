@@ -46,6 +46,8 @@ assert.doesNotMatch(script, /riderFeed/);
 
 // Staff Waiting has live buses, rider photos, road estimates and a view toggle.
 assert.match(waitingBoard, /data-role="<\?php echo \$pickupStaffRole; \?>"/);
+assert.match(waitingBoard, /<\?php else: \?><div class="sw-view" id="swView"[\s\S]*data-view="commuters" aria-pressed="true"[\s\S]*>[^<]*<\/button>\s*<\/div><\?php endif; \?>/);
+assert.match(waitingBoardScript, /let view = isAdmin \? 'both' : 'commuters'/);
 assert.doesNotMatch(waitingBoard, /id="staffRouteView"/);
 assert.doesNotMatch(waitingBoardScript, /routeViewMode/);
 assert.doesNotMatch(waitingBoardScript, /toggleStaffRoute/);

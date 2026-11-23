@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Applicants choose their own password when they apply; older applications get a temporary one.
                 $temp = empty($app['password_hash']) ? oa_temp_password() : '';
                 $hashToStore = $temp !== '' ? password_hash($temp, PASSWORD_DEFAULT) : $app['password_hash'];
-                $st = $pdo->prepare("INSERT INTO users (full_name, email, phone_number, password, user_type) VALUES (?, ?, ?, ?, 'operator') RETURNING user_id");
+                $st = $pdo->prepare("INSERT INTO users (full_name, email, phone_number, password, user_type) VALUES (?, ?, ?, ?, 'driver') RETURNING user_id");
                 $st->execute([$app['full_name'], $app['email'], $app['phone_number'], $hashToStore]);
                 $uid = (int)$st->fetchColumn();
                 $st = $pdo->prepare("UPDATE operator_application SET application_status = 'Approved', user_id = ?, reviewed_at = NOW(), reviewed_by = ?, rejection_reason = NULL WHERE application_id = ?");

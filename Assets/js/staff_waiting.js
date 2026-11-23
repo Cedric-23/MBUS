@@ -19,8 +19,11 @@
     let map = null, layer = null, line = null, routeLayer = null, selected = null, fittedOnce = false;
     let routeKey = '', routeData = null, routeFitKey = '', routeRequest = 0, routeFailure = null;
     let busy = false, refreshing = null;
-    let view = 'both';
-    try { const v = localStorage.getItem('mbusWaitView'); if (['both', 'buses', 'commuters'].includes(v)) view = v; } catch (e) { /* ignore */ }
+    const isAdmin = root.dataset.role === 'admin';
+    let view = isAdmin ? 'both' : 'commuters';
+    if (isAdmin) {
+        try { const v = localStorage.getItem('mbusWaitView'); if (['both', 'buses', 'commuters'].includes(v)) view = v; } catch (e) { /* ignore */ }
+    }
 
     const num = v => { if (v === null || v === undefined || String(v).trim() === '') return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
     const validPt = (a, b) => num(a) !== null && num(b) !== null && Math.abs(a) <= 90 && Math.abs(b) <= 180;
@@ -78,7 +81,6 @@
     const FALLBACK_AVATAR = '../Assets/images/mbus_icon.png';
     const busIcon = (no, stale) => L.divIcon({ className: '', iconSize: [84, 28], iconAnchor: [42, 14],
         html: '<span class="sw-bus' + (stale ? ' is-stale' : '') + '"><i class="fa fa-bus" aria-hidden="true"></i>' + String(no || 'Bus').replace(/[<>&"]/g, '') + '</span>' });
-    const isAdmin = root.dataset.role === 'admin';
     const photoOf = r => r && r.has_pic ? '../avatar.php?u=' + encodeURIComponent(r.user_id) + '&v=' + encodeURIComponent(r.pic_v || '') : avatarUrl(r && r.profile_picture);
     const avatarUrl = picture => {
         const filename = String(picture || '').replace(/\\/g, '/').split('/').pop();
@@ -580,7 +582,7 @@
         reservations.forEach(r => add(r.schedule_id, 'Bus ' + r.bus_number));
         if (!cur && seen.size === 1) cur = Array.from(seen)[0];
         if ([...filter.options].some(o => o.value === cur)) filter.value = cur;
-        filter.parentElement.hidden = seen.size < 2 && root.dataset.role === 'operator';
+        filter.parentElement.hidden = seen.size < 2 && root.dataset.role !== 'admin';
     }
 
     /* ---------- network ---------- */

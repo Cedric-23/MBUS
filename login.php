@@ -15,17 +15,19 @@ function login_e($v): string {
 
 /*
  * Account types are normalised to the names your dashboards already use.
- * register.php calls them "passenger"/"driver"; the rest of the system uses
- * "commuter"/"operator".
+ * register.php calls them "passenger"/"driver"; the application uses
+ * "commuter", "driver", and "conductor".
  */
 $type_aliases = [
     'passenger' => 'commuter',
-    'driver'    => 'operator',
+    'driver'    => 'driver',
+    // Legacy accounts are treated as Drivers after the role rename.
+    'operator'  => 'driver',
 ];
 
 $dashboards = [
     'commuter'  => 'Commuter/commuter_dashboard.php',
-    'operator'  => 'Operator/operator_dashboard.php',
+    'driver'    => 'Operator/operator_dashboard.php',
     'admin'     => 'Admin/admin_dashboard.php',
     'conductor' => 'Conductor/conductor_dashboard.php',
 ];
@@ -77,8 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $type = strtolower(trim($user['user_type'] ?? ''));
                     $type = $type_aliases[$type] ?? $type;
 
-                    if ($staff_portal && !in_array($type, ['operator', 'conductor'], true)) {
-                        $login_error = 'This portal is for approved driver, operator, and conductor accounts.';
+                    if ($staff_portal && !in_array($type, ['driver', 'conductor'], true)) {
+                        $login_error = 'This portal is for approved driver and conductor accounts.';
                     } elseif ($type === 'commuter' && empty($user['email_verified_at'])) {
                         $login_error = 'Please verify your email address before signing in. Check your inbox for the 6-digit code.';
                     } elseif (!isset($dashboards[$type])) {

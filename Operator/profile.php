@@ -6,12 +6,14 @@ include_once __DIR__ . '/../Includes/validation.php';
 include_once __DIR__ . '/../Includes/csrf.php';
 include_once __DIR__ . '/../Includes/phone_unique.php';
 
-if (!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'operator') {
+if (!isset($_SESSION['user_id']) || !in_array(strtolower((string)($_SESSION['user_type'] ?? '')), ['driver', 'conductor'], true)) {
     header('Location: ../login.php');
     exit();
 }
 
 $userId = (int)$_SESSION['user_id'];
+$isConductor = strtolower((string)$_SESSION['user_type']) === 'conductor';
+$staffLabel = $isConductor ? 'Conductor' : 'Driver';
 $loadProfile = static function () use ($conn, $userId) {
     $query = mbus_db_prepare($conn, "SELECT full_name, email, phone_number FROM users WHERE user_id = ?", [$userId]);
     return $query === false ? false : mbus_db_fetch_assoc($query);
@@ -19,7 +21,7 @@ $loadProfile = static function () use ($conn, $userId) {
 $profile = $loadProfile();
 if (!$profile) {
     http_response_code(404);
-    exit('Operator account not found.');
+    exit($staffLabel . ' account not found.');
 }
 
 [$photoOk, $photoErr] = mbus_photo_handle($conn, $userId);
@@ -93,13 +95,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['update_pro
     }
 }
 
-$name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
+$name = htmlspecialchars((string)($_SESSION['full_name'] ?? $staffLabel));
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Profile - Operator</title>
+    <title>My Profile - <?php echo $staffLabel; ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../Assets/css/responsive.css"><link rel="stylesheet" href="../Assets/css/bottom-nav.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/bottom-nav.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/sidebar-footer-nav.css"><link rel="stylesheet" href="../Assets/css/app-header.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/app-header.css'); ?>">
@@ -116,21 +118,21 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
         <div class="page-header-right"><div class="profile-menu-wrap">
             <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span></button>
             <div class="profile-menu" id="profileMenu" role="menu">
-                <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $name; ?></span><span class="profile-menu-role">Operator account</span></div>
-                <a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
+                <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $name; ?></span><span class="profile-menu-role"><?php echo $staffLabel; ?> account</span></div>
+                <?php if ($isConductor): ?><a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a><?php else: ?><a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a><?php endif; ?>
                 <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
         </div></div>
     </header>
 
-    <?php mbus_photo_card($conn, $userId, (string)($_SESSION['full_name'] ?? 'Operator'), 'Operator account', $photoOk, $photoErr); ?>
+    <?php mbus_photo_card($conn, $userId, (string)($_SESSION['full_name'] ?? $staffLabel), $staffLabel . ' account', $photoOk, $photoErr); ?>
     <?php if ($profileSuccess !== ''): ?><div class="alert alert-success" role="status" style="max-width:720px;margin:0 auto 12px;"><?php echo htmlspecialchars($profileSuccess); ?></div><?php endif; ?>
     <?php if (isset($profileErrors['form'])): ?><div class="alert alert-error" role="alert" style="max-width:720px;margin:0 auto 12px;"><?php echo htmlspecialchars($profileErrors['form']); ?></div><?php endif; ?>
 
     <section class="card pf-form" style="max-width:720px;margin:0 auto 16px;">
         <h2><i class="fa fa-user-pen" aria-hidden="true"></i> Account details</h2>
-        <p class="form-hint">Update the details used for your operator account and future sign-ins.</p>
+        <p class="form-hint">Update the details used for your <?php echo strtolower($staffLabel); ?> account and future sign-ins.</p>
         <form method="POST" id="operatorProfileForm">
             <?php csrf_field(); ?>
             <input type="hidden" name="update_profile" value="1">
@@ -157,11 +159,15 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
     </section>
 </main>
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
-    <a href="operator_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
+    <a href="<?php echo $isConductor ? '../Conductor/conductor_dashboard.php' : 'operator_dashboard.php'; ?>" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
+    <?php if($isConductor): ?>
     <a href="manage_trips.php" class="bottom-nav-item"><i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span></a>
     <a href="scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
     <a href="passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
     <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
+    <?php else: ?>
+    <a href="my_bus.php" class="bottom-nav-item"><i class="fa fa-bus-simple" aria-hidden="true"></i><span>My Bus</span></a>
+    <?php endif; ?>
 </nav>
 <script src="../Assets/js/app-header.js"></script>
 <script src="../Assets/js/operator_tracker.js"></script>

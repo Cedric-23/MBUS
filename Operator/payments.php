@@ -143,8 +143,8 @@ $gPending = mbus_gcash_pending($conn);
         <a href="../Conductor/conductor_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
         <a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
         <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
+        <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Riders</a>
         <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
-        <a href="payments.php" aria-current="page"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a>
     </nav>
     <div class="menu-bottom">
         <a href="../logout.php" class="logout-btn btn btn-outline btn-block"><i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
@@ -164,6 +164,8 @@ $gPending = mbus_gcash_pending($conn);
                     <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
                         <span class="profile-menu-role">Conductor account</span>
                     </div>
+                <a href="payments.php" role="menuitem" aria-current="page"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a>
+                <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
         </div>
@@ -245,8 +247,8 @@ $gPending = mbus_gcash_pending($conn);
     <a href="../Conductor/conductor_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
     <a href="manage_trips.php" class="bottom-nav-item"><i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span></a>
     <a href="scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
+    <a href="passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
     <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
-    <a href="payments.php" class="bottom-nav-item active" aria-current="page"><i class="fa fa-wallet" aria-hidden="true"></i><span>Payments</span></a>
 </nav>
 <script src="../Assets/js/app-header.js"></script>
 </body>
