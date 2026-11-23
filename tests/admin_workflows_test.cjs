@@ -18,6 +18,7 @@ assert.match(conductorApplications, /href="operator_applications\.php"/, 'Driver
 assert.match(conductorApplications, /class="on" aria-current="page">Conductors/, 'Conductors should be the active first queue');
 
 assert.match(menu, /href="gcash_approval\.php"/, 'Admin account menu must expose GCash account management');
+assert.match(dashboard, /href="gcash_approval\.php"/, 'Admin dashboard must expose GCash account management directly');
 assert.match(gcash, /mbus_gcash_pending\(\$conn\)/, 'Admin GCash page must read pending Conductor changes');
 assert.match(gcash, /name="approve"/, 'Admin GCash page must provide approval');
 assert.match(gcash, /name="reject"/, 'Admin GCash page must provide rejection');

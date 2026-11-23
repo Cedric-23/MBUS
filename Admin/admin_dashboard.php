@@ -19,6 +19,7 @@ include "../config/db_connect.php";
 include_once "../Includes/csrf.php";
 
 include_once "../Includes/admin_menu.php";
+require_once "../Includes/gcash_manual.php";
 include_once "../config/app.php";
 $bd = mbus_local_bounds();
 $one = function($sql, $params = []) use ($conn) {
@@ -36,6 +37,7 @@ $counts = [
 ];
 $counts['Staff'] = $counts['Drivers'] + $counts['Conductors'];
 $pending = $one("SELECT COUNT(*) AS n FROM commuter_verification WHERE verification_status = 'Pending'");
+$gcash_pending = mbus_gcash_pending($conn) ? 1 : 0;
 $trips_today = $one("SELECT COUNT(*) AS n FROM schedule WHERE departure_time >= ? AND departure_time < ?", [$bd['today'], $bd['tomorrow']]);
 $riders_today = $one("SELECT COUNT(*) AS n FROM reservation r JOIN schedule s ON s.schedule_id = r.schedule_id
     WHERE r.status IN ('Paid','Confirmed','Boarded') AND s.departure_time >= ? AND s.departure_time < ?", [$bd['today'], $bd['tomorrow']]);
@@ -151,6 +153,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
                 <li><a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i>Schedules<span class="count"><?php echo $counts['Schedules']; ?> upcoming</span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
                 <li><a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i>Buses<span class="count"><?php echo $counts['Buses']; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
                 <li><a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i>Staff<span class="count"><?php echo $counts['Staff']; ?> (<?php echo $counts['Drivers']; ?> drivers · <?php echo $counts['Conductors']; ?> conductors)</span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
+                <li><a href="gcash_approval.php"><i class="fa fa-mobile-screen" aria-hidden="true"></i>GCash account<span class="count"><?php echo $gcash_pending ? 'Change waiting' : 'Manage account'; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
                 <li><a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i>Routes<span class="count"><?php echo $counts['Routes']; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
             </ul>
         </section>

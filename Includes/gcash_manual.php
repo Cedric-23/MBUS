@@ -14,7 +14,14 @@ function mbus_set_setting($conn, string $key, string $value): void {
 function mbus_gcash_pending($conn): ?array {
     $j = mbus_setting($conn, 'gcash_pending');
     $d = $j === '' ? null : json_decode($j, true);
-    return is_array($d) && !empty($d['number']) ? $d : null;
+    if (!is_array($d)) return null;
+    $name = trim((string)($d['name'] ?? ''));
+    $number = preg_replace('/\s+/', '', (string)($d['number'] ?? ''));
+    if ($name === '' || strlen($name) > 80 || !preg_match('/^09\d{9}$/', $number)) return null;
+    $d['name'] = $name;
+    $d['number'] = $number;
+    $d['qr'] = (string)($d['qr'] ?? '');
+    return $d;
 }
 
 /** Server-side checkout payload (ids, per-seat price lines, total) shared by the PayMongo and receipt flows. */
