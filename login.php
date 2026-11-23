@@ -161,7 +161,9 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
         </style>
     </head>
     <body class="auth-login">
-        <div class="auth-hero-m">
+        <div class="auth-hero-m auth-hero-brand">
+            <img class="auth-hero-logo" src="Assets/images/mbus_logo.png" alt="MBUS">
+            <img class="auth-hero-art" src="Assets/images/auth_bus.svg" alt="" aria-hidden="true">
             <h1>Welcome back</h1>
             <p>Sign in to manage your trips and bookings.</p>
         </div>

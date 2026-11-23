@@ -117,3 +117,14 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
   .auth-hero-m h1,.auth-hero-m p{max-width:100%}
   .auth-hero-m .auth-back{position:absolute;left:24px;top:20px;margin:0}
 }
+
+/* login only: bring the MBUS logo and bus illustration into the phone header */
+@media(max-width:900px){
+  .auth-hero-m.auth-hero-brand{height:auto;min-height:270px;padding:20px 24px 78px;justify-content:flex-end}
+  .auth-hero-m.auth-hero-brand .auth-hero-logo{position:absolute;left:24px;top:20px;height:34px;width:auto;z-index:2}
+  .auth-hero-m.auth-hero-brand .auth-hero-art{position:absolute;right:0;bottom:46px;width:min(190px,46%);height:auto;z-index:1;pointer-events:none}
+  .auth-hero-m.auth-hero-brand h1{font-size:1.5rem;white-space:nowrap}
+  .auth-hero-m.auth-hero-brand h1,
+  .auth-hero-m.auth-hero-brand p{max-width:58%}
+  .auth-hero-m.auth-hero-brand p{font-size:.85rem}
+}
