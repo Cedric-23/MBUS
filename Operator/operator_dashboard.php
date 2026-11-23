@@ -79,6 +79,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -101,6 +102,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
     <link rel="stylesheet" href="../Assets/css/unify.css?v=3">
     <link rel="stylesheet" href="../Assets/css/operator_dashboard_extras.css?v=1">
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/notif_bell.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/notif_bell.css'); ?>">
 </head>
 
 <body class="stf has-sidebar staff-home">
@@ -136,6 +138,10 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
                 <h1><?php echo htmlspecialchars($first_name); ?></h1>
             </div>
             <div class="page-header-right">
+                <div class="notif-wrap">
+                    <button class="notif-btn" type="button" id="notifBtn" aria-expanded="false" aria-controls="notifPanel" aria-label="Notifications"><i class="fa fa-bell" aria-hidden="true"></i><span class="notif-dot" id="notifDot" hidden>0</span></button>
+                    <div class="notif-panel" id="notifPanel" hidden><h2>Notifications</h2><ul id="notifList" class="notif-list"></ul></div>
+                </div>
                 <div class="profile-menu-wrap">
                     <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
                         <span class="profile-avatar" aria-hidden="true"><?php echo mbus_header_avatar('../'); ?></span>
@@ -167,11 +173,6 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <div><b><?php echo $my_buses; ?></b><span><?php echo $my_buses === 1 ? 'Bus' : 'Buses'; ?></span></div>
         </div>
 
-        <a class="attn<?php echo $waitingCount ? '' : ' is-clear'; ?>" href="waiting.php">
-            <span><strong><?php echo $waitingCount ? $waitingCount . ' commuter' . ($waitingCount === 1 ? '' : 's') . ' waiting' : 'No commuters waiting'; ?></strong><small><?php echo $waitingCount ? 'Open Waiting to see pickup locations for your buses.' : 'Your assigned-bus Waiting board is clear.'; ?></small></span>
-            <span class="attn-go">Open Waiting</span>
-        </a>
-
         <section class="home-section" aria-labelledby="today-h">
             <div class="home-section-head"><h2 id="today-h">Trips today</h2></div>
             <?php if($todays_trips){ ?>
@@ -193,6 +194,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
 
 
 <script src="../Assets/js/app-header.js"></script>
+<script src="../Assets/js/notifications.js"></script>
 <script>window.OPERATOR_CSRF_TOKEN = <?php echo json_encode(csrf_get_token()); ?>; window.MBUS_GPS_ENABLED = true;</script>
 
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">

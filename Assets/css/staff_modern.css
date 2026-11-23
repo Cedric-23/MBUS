@@ -19,6 +19,8 @@
 .stf .sidebar .logo{filter:brightness(0) saturate(100%) invert(37%) sepia(88%) saturate(2200%) hue-rotate(206deg) brightness(94%)}
 .stf .sidebar h2,.stf .sidebar .menu-label,.stf .sidebar .menu-section{color:#8a9bb8!important;-webkit-text-fill-color:#8a9bb8;background:none;border:0}
 .stf .sidebar a{color:#4a5b78;border-radius:16px;font-weight:600;border-left:0!important}
+.stf .sidebar .menu-top a{box-sizing:border-box;min-height:48px;height:48px;display:flex;align-items:center;white-space:nowrap}
+.stf .sidebar .menu-top a i{flex:0 0 1.5rem;width:1.5rem;text-align:center}
 .stf .sidebar a i{color:#8a9bb8}
 .stf .sidebar a:hover{background:#eef4ff;color:#2f6fe4}
 .stf .sidebar a:hover i{color:#2f6fe4}
@@ -91,6 +93,7 @@
 @media(max-width:768px){
   .stf .bottom-nav{left:14px;right:14px;bottom:calc(12px + env(safe-area-inset-bottom));padding:8px;min-height:68px;border:0;border-radius:30px;background:rgba(255,255,255,.96);box-shadow:0 14px 36px rgba(47,111,228,.22);backdrop-filter:blur(10px)}
   .stf .bottom-nav-item{border-radius:22px;color:#7a8aa6}
+  .stf .bottom-nav-item{min-height:52px;height:52px;flex:1;display:flex;align-items:center;justify-content:center}
   .stf .bottom-nav-item.active,.stf .bottom-nav-item:hover{background:#2f6fe4;color:#fff;box-shadow:0 8px 18px rgba(47,111,228,.35)}
   .stf .bottom-nav-item.active::after{display:none}
 }

@@ -47,12 +47,13 @@
       li.appendChild(m); li.appendChild(t); list.appendChild(li);
     });
   }
-  function load() { return fetch('notifications.php', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(render).catch(function () {}); }
+  var endpoint = window.MBUS_NOTIFICATIONS_ENDPOINT || 'notifications.php';
+  function load() { return fetch(endpoint, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(render).catch(function () {}); }
   btn.addEventListener('click', function (e) {
     e.stopPropagation();
     var open = panel.hidden; panel.hidden = !open; btn.setAttribute('aria-expanded', String(open));
     if (open) load().then(function () {
-      if (!dot.hidden) fetch('notifications.php', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'csrf_token=' + encodeURIComponent(token) })
+      if (!dot.hidden) fetch(endpoint, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'csrf_token=' + encodeURIComponent(token) })
         .then(function () { setTimeout(function () { dot.hidden = true; }, 1500); });
     });
   });

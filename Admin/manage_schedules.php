@@ -194,7 +194,7 @@ $route_options = function() use ($route_rows){ $o='<option value="">Select route
 <section class="ad-group" data-group>
     <h2 class="ad-day"><?php echo date('l, M j', strtotime($day)); ?> <span><?php echo count($rows); ?> trip<?php echo count($rows)===1?'':'s'; ?></span></h2>
     <div class="ad-table">
-        <div class="ad-th"><span>Departure</span><span>Route</span><span>Bus</span><span>Seats</span><span>Status</span><span></span></div>
+        <div class="ad-th"><span>Departure</span><span>Route</span><span>Seats</span><span>Status</span><span></span></div>
         <?php foreach($rows as $row):
             $sid=(int)$row['schedule_id']; $status=(string)$row['schedule_status'];
             $dep=strtotime($row['departure_time']); $arr=strtotime($row['arrival_time']);
@@ -205,7 +205,6 @@ $route_options = function() use ($route_rows){ $o='<option value="">Select route
         <div class="ad-tr" data-q="<?php echo htmlspecialchars(strtolower($row['origin'].' '.$row['destination'].' bus '.$bn.' '.date('M j l', $dep).' '.$status), ENT_QUOTES); ?>">
             <div class="ad-c time"><b><?php echo date('g:i A', $dep); ?></b><small>to <?php echo date('g:i A', $arr); ?></small></div>
             <div class="ad-c route"><span class="ad-dir <?php echo $row['route_type']; ?>"></span><span><?php echo htmlspecialchars($row['origin']); ?> <i class="fa fa-arrow-right" aria-hidden="true"></i> <?php echo htmlspecialchars($row['destination']); ?></span></div>
-            <div class="ad-c bus"><i class="fa fa-bus" aria-hidden="true"></i> Bus <?php echo htmlspecialchars((string)$bn); ?></div>
             <div class="ad-c seats"><div class="ad-bar"><i style="width:<?php echo $pct; ?>%"></i></div><small><?php echo $taken; ?>/<?php echo $cap; ?></small></div>
             <div class="ad-c status"><span class="ad-pill <?php echo strtolower($status); ?>"><?php echo htmlspecialchars($status); ?></span></div>
             <div class="ad-c actions">

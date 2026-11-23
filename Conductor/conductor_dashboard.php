@@ -7,6 +7,7 @@ if (!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?
 
 require_once __DIR__ . '/../config/db_connect.php';
 require_once __DIR__ . '/../config/mysqli_compat.php';
+require_once __DIR__ . '/../Includes/csrf.php';
 require_once __DIR__ . '/../Includes/header_avatar.php';
 
 $conductorId = (int)$_SESSION['user_id'];
@@ -70,6 +71,7 @@ $nextTrip = $trips[0] ?? null;
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
     <title>Conductor Dashboard — MBUS</title>
     <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -86,6 +88,7 @@ $nextTrip = $trips[0] ?? null;
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=3">
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/notif_bell.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/notif_bell.css'); ?>">
 </head>
 <body class="stf has-sidebar has-bottom-nav staff-home conductor-home">
     <aside class="sidebar" id="sidebar" role="navigation" aria-label="Conductor navigation">
@@ -110,6 +113,10 @@ $nextTrip = $trips[0] ?? null;
                 <h1><?php echo htmlspecialchars($firstName); ?></h1>
             </div>
             <div class="page-header-right">
+                <div class="notif-wrap">
+                    <button class="notif-btn" type="button" id="notifBtn" aria-expanded="false" aria-controls="notifPanel" aria-label="Notifications"><i class="fa fa-bell" aria-hidden="true"></i><span class="notif-dot" id="notifDot" hidden>0</span></button>
+                    <div class="notif-panel" id="notifPanel" hidden><h2>Notifications</h2><ul id="notifList" class="notif-list"></ul></div>
+                </div>
                 <div class="profile-menu-wrap">
                     <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
                         <span class="profile-avatar" aria-hidden="true"><?php echo mbus_header_avatar('../'); ?></span>
@@ -196,5 +203,7 @@ $nextTrip = $trips[0] ?? null;
         <a href="../Operator/waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
     </nav>
     <script src="../Assets/js/app-header.js"></script>
+    <script>window.MBUS_NOTIFICATIONS_ENDPOINT = '../Operator/notifications.php';</script>
+    <script src="../Assets/js/notifications.js"></script>
 </body>
 </html>
