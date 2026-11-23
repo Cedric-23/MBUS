@@ -177,6 +177,7 @@ function seatCovered(seat, i) {
 function idUploadField(seat) {
     const up = document.createElement("label");
     up.className = "pt-upload";
+    up.dataset.seat = String(seat);
     const img = document.createElement("img");
     img.alt = "ID preview";
     img.hidden = !seatIds[seat];
@@ -333,6 +334,28 @@ function firstIncompleteSeat() {
     return null;
 }
 
+/* Discounted seats for other riders must have an ID photo before review. */
+function firstMissingDiscountPhoto() {
+    for (let i = 0; i < selectedSeats.length; i++) {
+        const seat = selectedSeats[i];
+        const type = seatType(seat, i);
+        if (type !== "Regular" && !seatCovered(seat, i) && !seatIds[seat]) {
+            return { seat: seat, type: type };
+        }
+    }
+    return null;
+}
+
+function discountPhotoError(show) {
+    const missing = firstMissingDiscountPhoto();
+    if (!missing) return false;
+    show("Seat " + missing.seat + " is a " + missing.type + " ticket: upload the ID photo before reviewing.");
+    const upload = Array.from(document.querySelectorAll(".pt-upload"))
+        .find(el => el.dataset.seat === String(missing.seat));
+    if (upload) upload.scrollIntoView({ behavior: "smooth", block: "center" });
+    return true;
+}
+
 /* Tell the rider which seat still needs what, and jump to that dropdown. */
 function tripError(missing, show) {
     show(missing.field === "pickup"
@@ -374,6 +397,7 @@ document.getElementById("doneBtn")
         document.getElementById("reservationMap").scrollIntoView({behavior:"smooth",block:"center"});
         return;
     }
+    if (discountPhotoError(showTopError)) return;
 
     reviewed = true;
     document.getElementById("summaryPanel").hidden = false;
