@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
         d.querySelectorAll('.countdown,.timer-value,script,style').forEach(function (e) { e.remove(); });
         return d.innerHTML.replace(/\s+/g, ' ');
     }
-    var last = sig(parts(box)), busy = false;
+    var last = null, busy = false; /* baseline = what the server sent last time (the page itself may be changed by its own scripts) */
     function idle() {
         if (document.hidden) return false;
         var a = document.activeElement;
@@ -210,6 +210,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 var nbox = nh ? nh.parentNode : doc.querySelector('main');
                 if (!nbox) return;
                 var next = parts(nbox), s = sig(next);
+                if (last === null) { last = s; return; }
                 if (s === last || !idle()) return;
                 last = s;
                 if (mode === 'reload') { location.reload(); return; }
@@ -219,6 +220,57 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(function () {})
             .then(function () { busy = false; });
     }
+    check();
     setInterval(check, 5000);
     document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
+})();
+
+/* Trips page: 5 trips per page (one bundle of seats = one trip, like a single seat) with Previous / Next.
+   The page's own filter (Active / History / Cancelled + day pills) decides which trips match by toggling
+   "hidden"; this only hides the matches that belong to other pages, using its own class. */
+(function () {
+    if (location.pathname.split('/').pop() !== 'my_reservations.php') return;
+    var items = Array.prototype.slice.call(document.querySelectorAll('[data-cat]'));
+    if (!items.length) return;
+    var PER = 5, page = 0, lastKey = null;
+    var st = document.createElement('style');
+    st.textContent = '.tf-off{display:none!important}' +
+        '.tf-pager{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 90px}' +
+        '.tf-pager[hidden]{display:none}' +
+        '.tf-pager span{font-size:.85rem;font-weight:700;color:#6b7a90}' +
+        '.tf-pager button{min-height:40px;padding:0 18px;border:0;border-radius:999px;background:#eaf1fd;color:#2f6fe4;font:inherit;font-size:.85rem;font-weight:700;cursor:pointer}' +
+        '.tf-pager button:disabled{opacity:.4;cursor:default}';
+    document.head.appendChild(st);
+    var pager = document.createElement('div');
+    pager.className = 'tf-pager'; pager.hidden = true;
+    pager.innerHTML = '<button type="button" data-d="-1">Previous</button><span></span><button type="button" data-d="1">Next</button>';
+    items[items.length - 1].parentNode.insertBefore(pager, items[items.length - 1].nextSibling);
+    function tab() { var t = document.querySelector('.trip-status .dir-tab.on'); return t ? t.getAttribute('data-filter') : ''; }
+    function run() {
+        var matching = items.filter(function (el) { return !el.hidden; });
+        var key = tab() + '|' + document.querySelectorAll('.date-filter-btn.active').length + (document.querySelector('.date-filter-btn.active') || { dataset: {} }).dataset.range + '|' + matching.length;
+        if (key !== lastKey) {
+            var restore = lastKey === null ? parseInt(sessionStorage.getItem('mbusTripPage:' + tab()) || '0', 10) : 0;
+            page = restore || 0; lastKey = key;
+        }
+        var pages = Math.max(1, Math.ceil(matching.length / PER));
+        page = Math.min(Math.max(page, 0), pages - 1);
+        items.forEach(function (el) { el.classList.remove('tf-off'); });
+        matching.forEach(function (el, i) { if (i < page * PER || i >= page * PER + PER) el.classList.add('tf-off'); });
+        pager.hidden = pages < 2;
+        pager.querySelector('span').textContent = (page + 1) + ' / ' + pages;
+        pager.querySelector('[data-d="-1"]').disabled = page === 0;
+        pager.querySelector('[data-d="1"]').disabled = page >= pages - 1;
+        try { sessionStorage.setItem('mbusTripPage:' + tab(), String(page)); } catch (e) { /* ignore */ }
+    }
+    pager.addEventListener('click', function (e) {
+        var b = e.target.closest('button'); if (!b || b.disabled) return;
+        page += Number(b.getAttribute('data-d')); run();
+        var t = document.querySelector('.trip-status');
+        if (t) window.scrollTo({ top: Math.max(0, t.getBoundingClientRect().top + window.scrollY - 90), behavior: 'smooth' });
+    });
+    var obs = new MutationObserver(run);
+    items.forEach(function (el) { obs.observe(el, { attributes: true, attributeFilter: ['hidden'] }); });
+    document.querySelectorAll('.trip-status .dir-tab, .date-filter-btn').forEach(function (b) { b.addEventListener('click', function () { setTimeout(run, 0); }); });
+    run();
 })();
