@@ -90,7 +90,7 @@
 
   var form = root.closest('form');
   if (form) form.addEventListener('submit', function (e) {
-    if (!hidden.value && !root.classList.contains('is-manual')) {
+    if (!hidden.disabled && !hidden.value && !root.classList.contains('is-manual')) {
       e.preventDefault();
       var missing = [region, province, city, brgy, street].find(function (s) { return !s.disabled && !s.value; }) || street;
       missing.focus(); note.textContent = 'Complete your address: pick each dropdown and add your street.'; note.hidden = false;

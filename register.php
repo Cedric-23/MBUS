@@ -621,7 +621,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
         </style>
         <script>window.MBUS_START_STEP = <?= (int)$step_with_error ?>;</script>
         <script src="register.js"></script>
-        <script src="Assets/js/ph_address.js?v=1"></script>
+        <script src="Assets/js/ph_address.js?v=2"></script>
     <script src="Assets/js/driver_bus_setup.js?v=<?= @filemtime(__DIR__ . '/Assets/js/driver_bus_setup.js') ?>"></script>
         <script> if (window.lucide) lucide.createIcons(); </script>
         <script src="Assets/js/password-toggle.js"></script>
