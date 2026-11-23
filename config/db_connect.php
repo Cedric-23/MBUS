@@ -120,6 +120,8 @@ function mbus_run_schema_upgrades(PDO $pdo): void {
           "interior_photo_b64 TEXT",
           "interior_photo_mime VARCHAR(50)",
           "seat_layout TEXT",
+          "last_name VARCHAR(100)",
+          "vehicle_registration_expiry DATE",
       ] as $col) {
           $pdo->exec('ALTER TABLE operator_application ADD COLUMN IF NOT EXISTS ' . $col);
       }

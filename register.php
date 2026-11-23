@@ -170,6 +170,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $license_expiry = trim((string)($_POST['license-expiry'] ?? ''));
         $vehicle_type   = trim((string)($_POST['vehicle-type'] ?? ''));
         $plate          = (string)($_POST['vehicle-plate'] ?? '');
+        $vehicle_expiry = trim((string)($_POST['vehicle-expiry'] ?? ''));
 
         /* first and last name are separate fields, saved together as "First Last" like every other account */
         if ($first_name === '') $errors['driver-first-name'] = 'Enter your first name.';
@@ -189,6 +190,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         elseif ($license_expiry > date('Y-m-d', strtotime('+15 years'))) $errors['license-expiry'] = 'That expiry date is too far ahead. Check the year.';
         if (!in_array($vehicle_type, ['Ordinary', 'Aircon'], true)) $errors['vehicle-type'] = 'Choose a bus type (Ordinary or Aircon).';
         if ($e = mbus_check_plate($plate)) $errors['vehicle-plate'] = $e;
+        /* registration expiry is optional: only documents that show one */
+        if ($vehicle_expiry !== '') {
+            $vd = DateTime::createFromFormat('Y-m-d', $vehicle_expiry);
+            if (!$vd || $vd->format('Y-m-d') !== $vehicle_expiry) $errors['vehicle-expiry'] = 'Enter a valid registration expiry date, or leave it empty.';
+            elseif ($vehicle_expiry < date('Y-m-d')) $errors['vehicle-expiry'] = 'This vehicle registration has expired. Renew it before applying.';
+            elseif ($vehicle_expiry > date('Y-m-d', strtotime('+15 years'))) $errors['vehicle-expiry'] = 'That expiry date is too far ahead. Check the year.';
+        }
         $_POST['email-address'] = $email; $_POST['phone-number'] = $phone_number;
         $_POST['driver-first-name'] = $first_name; $_POST['driver-last-name'] = $last_name;
         $_POST['license-number'] = $license_number; $_POST['vehicle-plate'] = $plate; $_POST['home-address'] = $address;
@@ -226,11 +234,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 "INSERT INTO operator_application
                     (full_name, email, phone_number, address, license_number, license_expiry, vehicle_type, vehicle_plate_number,
                      license_document_b64, license_document_mime, vehicle_document_b64, vehicle_document_mime, password_hash,
-                     bus_photo_b64, bus_photo_mime, interior_photo_b64, interior_photo_mime, application_status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')",
+                     bus_photo_b64, bus_photo_mime, interior_photo_b64, interior_photo_mime, last_name, vehicle_registration_expiry, application_status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')",
                 [$full_name, $email, $phone_number, $address, $license_number, $license_expiry, $vehicle_type, $plate,
                  $lic['b64'], $lic['mime'], $veh['b64'], $veh['mime'], password_hash($password, PASSWORD_DEFAULT),
-                 $busPhoto['b64'], $busPhoto['mime'], $interiorPhoto['b64'], $interiorPhoto['mime']]);
+                 $busPhoto['b64'], $busPhoto['mime'], $interiorPhoto['b64'], $interiorPhoto['mime'],
+                 $last_name, $vehicle_expiry !== '' ? $vehicle_expiry : null]);
             if ($ok === false) { $error = 'We could not save your application. Please try again.'; }
             else {
                 $_SESSION['register_flash'] = 'Application submitted. An admin will review it. Once approved, log in with ' . $email . ' and the password you chose.';
@@ -242,7 +251,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if ($errors && $error === '') $error = 'Please fix the highlighted fields.';
     // Driver form is a 3-step wizard: reopen on the first step that has an error
     $stepOf = ['driver-first-name'=>0,'driver-last-name'=>0,'email-address'=>0,'phone-number'=>0,'home-address'=>0,'driver-password'=>0,'driver-confirm'=>0,
-               'license-number'=>1,'license-expiry'=>1,'license_document'=>1,'vehicle-type'=>2,'vehicle-plate'=>2,'vehicle_document'=>2,
+               'license-number'=>1,'license-expiry'=>1,'license_document'=>1,'vehicle-type'=>2,'vehicle-plate'=>2,'vehicle-expiry'=>2,'vehicle_document'=>2,
                'bus_photo'=>2,'interior_photo'=>2];
     foreach (array_keys($errors) as $k) { if (isset($stepOf[$k])) { $step_with_error = $stepOf[$k]; break; } }
 }
@@ -543,6 +552,10 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         <input type="text" name="vehicle-plate" placeholder="Enter vehicle plate number" maxlength="12" value="<?= reg_old('vehicle-plate') ?>" required/>
                                         <i class="input-icon" data-lucide="user"></i>
                                     <?= mbus_field_error($errors, 'vehicle-plate') ?></div>
+                                    <div class="vehicle-expiry">
+                                        <label class="input-label">Registration Expiry Date <small style="font-weight:500;color:#8a98ae">(if your document shows one)</small></label>
+                                        <input type="date" name="vehicle-expiry" min="<?= date('Y-m-d') ?>" value="<?= reg_old('vehicle-expiry') ?>"/>
+                                    <?= mbus_field_error($errors, 'vehicle-expiry') ?></div>
                                 </div>
                                 <div class="upload-group">
                                     <label class="input-label">Upload Vehicle Registration Document</label>

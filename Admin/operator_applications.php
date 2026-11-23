@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->exec('SAVEPOINT bus_from_app');
                     $newBus = mbus_bus_from_application($pdo, $app, $uid);
                     $pdo->exec('RELEASE SAVEPOINT bus_from_app');
-                    if (!$newBus) $busProblem = 'the submission has no usable plate or seat layout';
+                    if (!$newBus) $busProblem = 'the submission has no usable seat layout';
                 } catch (Throwable $busError) {
                     $pdo->exec('ROLLBACK TO SAVEPOINT bus_from_app');
                     error_log('Bus from application ' . $id . ' failed: ' . $busError->getMessage());
@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $sent = @send_email_notification($app['email'], 'Your MBUS operator account', $mail);
                 $_SESSION['oa_flash'] = 'Approved ' . $app['full_name'] . '. ' . ($temp !== '' ? 'Temporary password: ' . $temp . ($sent ? ' (also emailed).' : ' (email could not be sent, so give it to them directly).')
                     : 'They can log in now with the password they chose.')
-                    . ($newBus ? ' Bus ' . $newBus['bus_number'] . ' was added from their submission and assigned to them. Open Manage Buses to give it the real bus number.' : ' No bus was created: ' . $busProblem . '. You can create it from Manage Buses.');
+                    . ($newBus ? ' Bus ' . $newBus['bus_number'] . ' was added from their submission and assigned to them. You can rename it in Manage Buses.' : ' No bus was created: ' . $busProblem . '. The driver can set up their bus from My Bus.');
             } else {
                 $reason = trim((string)($_POST['rejection_reason'] ?? ''));
                 if ($reason === '' || strlen($reason) > 500) throw new RuntimeException('Give a short reason (up to 500 characters) when rejecting.');
@@ -83,7 +83,7 @@ $where = $f === 'all' ? '' : "WHERE LOWER(application_status::text) = '" . $f . 
 $rows = [];
 $q = mbus_db_prepare($conn, "SELECT application_id, full_name, email, phone_number, address, license_number, license_expiry, vehicle_type, vehicle_plate_number,
     (license_document_b64 IS NOT NULL AND license_document_b64 <> '') AS has_lic, (vehicle_document_b64 IS NOT NULL AND vehicle_document_b64 <> '') AS has_veh,
-    license_document_mime AS lic_mime, vehicle_document_mime AS veh_mime,
+    vehicle_registration_expiry, license_document_mime AS lic_mime, vehicle_document_mime AS veh_mime,
     (bus_photo_b64 IS NOT NULL AND bus_photo_b64 <> '') AS has_bus_photo,
     (interior_photo_b64 IS NOT NULL AND interior_photo_b64 <> '') AS has_interior_photo,
     seat_layout, application_status::text AS status, submitted_at, rejection_reason
@@ -200,6 +200,9 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
             <div><dt>Address</dt><dd><?php echo htmlspecialchars($a['address']); ?></dd></div>
             <div><dt>License</dt><dd><?php echo htmlspecialchars($a['license_number']); ?> · <span class="<?php echo $expired ? 'oa-bad' : ''; ?>"><?php echo $expired ? 'Expired ' : 'Valid until '; echo date('M j, Y', strtotime($a['license_expiry'])); ?></span></dd></div>
             <div><dt>Vehicle</dt><dd><?php echo htmlspecialchars($a['vehicle_type']); ?> · <?php echo htmlspecialchars($a['vehicle_plate_number']); ?></dd></div>
+            <?php if(!empty($a['vehicle_registration_expiry'])): $regExpired = strtotime($a['vehicle_registration_expiry']) < strtotime('today'); ?>
+            <div><dt>Vehicle registration</dt><dd><span class="<?php echo $regExpired ? 'oa-bad' : ''; ?>"><?php echo $regExpired ? 'Expired ' : 'Valid until '; echo date('M j, Y', strtotime($a['vehicle_registration_expiry'])); ?></span></dd></div>
+            <?php endif; ?>
             <div><dt>Submitted</dt><dd><?php echo date('M j, Y g:i A', strtotime($a['submitted_at'])); ?></dd></div>
         </dl>
         <?php
