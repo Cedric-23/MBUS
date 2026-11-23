@@ -45,7 +45,7 @@ assert.doesNotMatch(apache, /Alias \/register\.php/);
 assert.match(login, /defined\('MBUS_STAFF_PORTAL'\) && MBUS_STAFF_PORTAL === true/);
 assert.match(login, /!in_array\(\$type, \['operator', 'conductor'\], true\)/);
 const footer = login.match(/<div class="footer">([\s\S]*?)<\/div>/)?.[1] ?? '';
-assert.match(footer, /if \(\$staff_portal\):[\s\S]*?Apply as Driver\/Operator[\s\S]*?apply as Conductor/);
+assert.doesNotMatch(footer, /Apply as Driver\/Operator|apply as Conductor|New to MBUS staff/);
 
 assert.match(registration, /\$allowed_types\s*=\s*\$staff_portal \? \["conductor", "driver"\] : \["passenger"\]/);
 assert.match(registration, /mbus-registrations\.onrender\.com\/register\.php\?type=/);
