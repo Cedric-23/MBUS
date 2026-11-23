@@ -51,6 +51,7 @@ assert.match(registration, /\$allowed_types\s*=\s*\$staff_portal \? \["conductor
 assert.match(registration, /mbus-registrations\.onrender\.com\/register\.php\?type=/);
 assert.match(registration, /elseif \(\$invalid_type\)/);
 assert.match(registration, /staff-registration/);
+assert.doesNotMatch(registration, /Not a conductor\?\s*<a[^>]*>Apply as Driver\/Operator<\/a>/);
 assert.match(registration, /if \(!\$staff_portal\):[\s\S]*?href="register\.php" class="on" role="tab">Register/);
 assert.match(registration, /if \(!\$staff_portal\):[\s\S]*?else:[\s\S]*?register\.php\?type=conductor[\s\S]*?register\.php\?type=driver/);
 
