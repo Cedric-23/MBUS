@@ -190,7 +190,7 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
             <div class="form-container">
                 <div class="auth-tabs" role="tablist">
                     <a href="login.php" class="on" role="tab">Login</a>
-                    <a href="register.php?type=<?php echo $staff_portal ? 'driver' : 'passenger'; ?>" class="" role="tab">Register</a>
+                    <a href="register.php?type=<?php echo $staff_portal ? 'conductor' : 'passenger'; ?>" class="" role="tab">Register</a>
                 </div>
                 <div class="form-header">
                     <div class="form-header-text">

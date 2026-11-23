@@ -44,6 +44,7 @@ assert.doesNotMatch(apache, /Alias \/register\.php/);
 
 assert.match(login, /defined\('MBUS_STAFF_PORTAL'\) && MBUS_STAFF_PORTAL === true/);
 assert.match(login, /!in_array\(\$type, \['operator', 'conductor'\], true\)/);
+assert.match(login, /href="register\.php\?type=<\?php echo \$staff_portal \? 'conductor' : 'passenger'; \?>" class="" role="tab">Register/);
 const footer = login.match(/<div class="footer">([\s\S]*?)<\/div>/)?.[1] ?? '';
 assert.doesNotMatch(footer, /Apply as Driver\/Operator|apply as Conductor|New to MBUS staff/);
 
