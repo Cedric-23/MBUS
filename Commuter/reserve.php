@@ -199,13 +199,24 @@ foreach($seats as $seat_no){
 $types_in = json_decode((string)($_POST['types'] ?? '{}'), true); if(!is_array($types_in)) $types_in = [];
 $ids_in = json_decode((string)($_POST['ids'] ?? '{}'), true); if(!is_array($ids_in)) $ids_in = [];
 $seat_info = [];
+$self_used = false;
 foreach($seats as $i => $seat_no){
     $t = (string)($types_in[(string)$seat_no] ?? 'Regular');
-    if(!in_array($t, MBUS_PASSENGER_TYPES, true)) $t = 'Regular';
-    if($i === 0) $t = $passenger_type; // the first seat always follows the account's own status
+    $uses_account = ($t === 'Self');
+    if($uses_account){
+        if($self_used){
+            http_response_code(422);
+            echo "Your account can only be used on one seat.";
+            exit();
+        }
+        $self_used = true;
+        $t = $passenger_type; // the account's own (verified) status
+    } elseif(!in_array($t, MBUS_PASSENGER_TYPES, true)){
+        $t = 'Regular';
+    }
     $info = ['type' => $t, 'status' => 'None', 'b64' => null, 'mime' => null];
     if($t !== 'Regular'){
-        if($i === 0){
+        if($uses_account){
             $info['status'] = 'Approved';
         } else {
             $d = (string)($ids_in[(string)$seat_no] ?? '');

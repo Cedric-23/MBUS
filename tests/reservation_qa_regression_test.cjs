@@ -26,6 +26,7 @@ assert.match(reserveJs, /"pickup_" \+ seat/, 'each seat gets its own pickup drop
 assert.match(reserveJs, /"destination_" \+ seat/, 'each seat gets its own destination dropdown');
 assert.match(reserveJs, /Choose a destination for seat/);
 assert.match(reserveJs, /Choose a pickup for seat/);
+assert.match(reserveJs, /"Self", "My account"/, "classification offers My account plus the four fare types");
 assert.match(reserveJs, /formData\.append\("pickups", JSON\.stringify\(seatPickups\)\)/);
 assert.match(reserveJs, /formData\.append\("destinations", JSON\.stringify\(seatDestinations\)\)/);
 assert.match(reservePhp, /\$destination_by_seat\[\$seat_no\]/, 'server must retain the destination per seat');

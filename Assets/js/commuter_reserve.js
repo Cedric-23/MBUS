@@ -8,6 +8,7 @@ const seatPins = {};
 const seatTypes = {};
 const seatIds = {};
 const PASSENGER_TYPE_OPTIONS = [
+    ["Self", "My account"],
     ["Regular", "Regular (Standard)"],
     ["Student", "Student"],
     ["Senior", "Senior Citizen"],
@@ -162,15 +163,38 @@ function seatTripField(labelText, select) {
     return field;
 }
 
-/* Passenger classification of a seat. The first selected seat is the account holder's own and follows the account status. */
-function seatType(seat, i) {
-    if (i === 0) return passengerType;
-    if (!seatTypes[seat]) seatTypes[seat] = "Regular";
+/* Passenger classification of a seat. Every seat chooses one of five options: "My account" (the signed-in rider's own
+   status, usable on only one seat) or Regular, Student, Senior Citizen, PWD. Nothing is locked: the first seat just
+   starts on "My account" and can be changed. */
+function ensureSeatChoices() {
+    let selfSeat = null;
+    selectedSeats.forEach(seat => {
+        if (seatTypes[seat] === "Self") {
+            if (selfSeat === null) selfSeat = seat; else seatTypes[seat] = "Regular";
+        }
+    });
+    selectedSeats.forEach((seat, i) => {
+        if (!seatTypes[seat]) {
+            if (i === 0 && selfSeat === null) { seatTypes[seat] = "Self"; selfSeat = seat; }
+            else seatTypes[seat] = "Regular";
+        }
+    });
+}
+
+function seatChoice(seat) {
+    ensureSeatChoices();
     return seatTypes[seat];
 }
 
+/* effective fare type of a seat */
+function seatType(seat, i) {
+    const choice = seatChoice(seat);
+    return choice === "Self" ? passengerType : choice;
+}
+
+/* the seat that uses the signed-in account: its discount is already verified, so no ID photo is needed */
 function seatCovered(seat, i) {
-    return i === 0;
+    return seatChoice(seat) === "Self";
 }
 
 /* ID photo upload for a discounted seat that is not the account holder's own */
@@ -209,10 +233,7 @@ function renderSeatTripControls() {
         const badge = document.createElement("span");
         badge.className = "seat-trip-badge";
         badge.textContent = "Seat " + seat;
-        const name = document.createElement("strong");
-        name.textContent = "Seat " + seat;
         head.appendChild(badge);
-        head.appendChild(name);
 
         const pickupSelect = document.createElement("select");
         pickupSelect.id = "pickup_" + seat;
@@ -239,7 +260,9 @@ function renderSeatTripControls() {
         });
 
         /* passenger classification: Regular (Standard), Student, Senior Citizen, PWD */
+        const choice = seatChoice(seat);
         const type = seatType(seat, i);
+        const accountTaken = selectedSeats.some(other => String(other) !== String(seat) && seatChoice(other) === "Self");
         const typeSelect = document.createElement("select");
         typeSelect.id = "type_" + seat;
         typeSelect.className = "form-control";
@@ -247,17 +270,14 @@ function renderSeatTripControls() {
         PASSENGER_TYPE_OPTIONS.forEach(pair => {
             const option = document.createElement("option");
             option.value = pair[0];
-            option.textContent = pair[1];
-            if (pair[0] === type) option.selected = true;
+            option.textContent = pair[0] === "Self" ? "My account (" + (PASSENGER_TYPE_SHORT[passengerType] || passengerType) + ")" : pair[1];
+            if (pair[0] === "Self" && accountTaken) { option.disabled = true; option.textContent += " \u2013 used on another seat"; }
+            if (pair[0] === choice) option.selected = true;
             typeSelect.appendChild(option);
         });
-        if (i === 0) {
-            typeSelect.disabled = true;
-            typeSelect.title = "Your own seat follows your account status";
-        }
         typeSelect.addEventListener("change", () => {
             seatTypes[seat] = typeSelect.value;
-            if (typeSelect.value === "Regular") delete seatIds[seat];
+            if (typeSelect.value === "Regular" || typeSelect.value === "Self") delete seatIds[seat];
             hideReview();
             renderSeatTripControls();
         });
@@ -270,7 +290,7 @@ function renderSeatTripControls() {
 
         card.appendChild(head);
         card.appendChild(fields);
-        if (i > 0 && type !== "Regular") card.appendChild(idUploadField(seat));
+        if (type !== "Regular" && choice !== "Self") card.appendChild(idUploadField(seat));
         box.appendChild(card);
     });
 }
@@ -462,7 +482,7 @@ function renderPassengerTypes() {
 
         const pill = document.createElement("span");
         pill.className = "sum-seat-type";
-        pill.textContent = (PASSENGER_TYPE_SHORT[type] || type) + (i > 0 && type !== "Regular" && seatIds[seat] ? " · ID attached" : "");
+        pill.textContent = (seatCovered(seat, i) ? "Your account \u00b7 " : "") + (PASSENGER_TYPE_SHORT[type] || type) + (!seatCovered(seat, i) && type !== "Regular" && seatIds[seat] ? " · ID attached" : "");
 
         row.appendChild(badge);
         row.appendChild(body);
@@ -575,8 +595,8 @@ async function reserveSeats() {
     formData.append("seats", selectedSeats.join(","));
     const types = {}, ids = {};
     selectedSeats.forEach((seat, i) => {
-        types[seat] = seatType(seat, i);
-        if (types[seat] !== "Regular" && !seatCovered(seat, i)) ids[seat] = seatIds[seat];
+        types[seat] = seatChoice(seat);
+        if (seatType(seat, i) !== "Regular" && !seatCovered(seat, i)) ids[seat] = seatIds[seat];
     });
     formData.append("types", JSON.stringify(types));
     formData.append("ids", JSON.stringify(ids));
