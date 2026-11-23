@@ -1,5 +1,5 @@
 <?php
-/* Account-menu entries for ID approvals, operator applications and the GCash account,
+/* Account-menu entries for ID approvals, staff applications and the GCash account,
  * plus the red dot on the profile icon when any of them is waiting for the admin. */
 
 /* How many items are waiting in each approval queue. Counted once per request. */
@@ -8,7 +8,9 @@ function mbus_admin_pending_counts($conn): array {
     if ($counts !== null) return $counts;
     $q = mbus_db_prepare($conn, "SELECT COUNT(*) AS c FROM commuter_verification WHERE verification_status = 'Pending'", []);
     $row = $q === false ? false : mbus_db_fetch_assoc($q);
-    $oq = mbus_db_prepare($conn, "SELECT COUNT(*) AS c FROM operator_application WHERE application_status::text = 'Pending'", []);
+    $oq = mbus_db_prepare($conn, "SELECT
+            (SELECT COUNT(*) FROM operator_application WHERE application_status::text = 'Pending')
+          + (SELECT COUNT(*) FROM conductor_application WHERE application_status::text = 'Pending') AS c", []);
     $orow = $oq === false ? false : mbus_db_fetch_assoc($oq);
     require_once dirname(__DIR__) . '/Includes/gcash_manual.php';
     $counts = [
@@ -26,7 +28,7 @@ function mbus_admin_approvals_link($conn): string {
     $gbadge = $c['gcash'] > 0 ? ' <span class="menu-badge">' . $c['gcash'] . '</span>' : '';
     return '<a href="reports.php" role="menuitem"><i class="fa fa-file-lines" aria-hidden="true"></i> Reports</a>'
         . '<a href="verifications.php" role="menuitem"><i class="fa fa-id-card" aria-hidden="true"></i> ID approvals' . $badge . '</a>'
-        . '<a href="operator_applications.php" role="menuitem"><i class="fa fa-user-check" aria-hidden="true"></i> Operator applications' . $obadge . '</a>'
+        . '<a href="conductor_applications.php" role="menuitem"><i class="fa fa-user-check" aria-hidden="true"></i> Staff applications' . $obadge . '</a>'
         . '<a href="gcash_approval.php" role="menuitem"><i class="fa fa-mobile-screen" aria-hidden="true"></i> GCash account' . $gbadge . '</a>';
 }
 

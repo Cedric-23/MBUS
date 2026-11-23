@@ -28,10 +28,13 @@ $one = function($sql, $params = []) use ($conn) {
 };
 $counts = [
     'Buses' => $one("SELECT COUNT(*) AS n FROM buses"),
-    'Operators' => $one("SELECT COUNT(*) AS n FROM users WHERE LOWER(user_type) IN ('operator', 'driver')"),
+    'Drivers' => $one("SELECT COUNT(*) AS n FROM users WHERE LOWER(user_type) IN ('operator', 'driver')"),
+    'Conductors' => $one("SELECT COUNT(*) AS n FROM users WHERE LOWER(user_type) = 'conductor'"),
+    'Staff' => 0,
     'Routes' => $one("SELECT COUNT(*) AS n FROM routes"),
     'Schedules' => $one("SELECT COUNT(*) AS n FROM schedule WHERE departure_time >= ?", [$bd['today']]),
 ];
+$counts['Staff'] = $counts['Drivers'] + $counts['Conductors'];
 $pending = $one("SELECT COUNT(*) AS n FROM commuter_verification WHERE verification_status = 'Pending'");
 $trips_today = $one("SELECT COUNT(*) AS n FROM schedule WHERE departure_time >= ? AND departure_time < ?", [$bd['today'], $bd['tomorrow']]);
 $riders_today = $one("SELECT COUNT(*) AS n FROM reservation r JOIN schedule s ON s.schedule_id = r.schedule_id
@@ -147,7 +150,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <ul class="manage-list">
                 <li><a href="manage_schedules.php"><i class="fa fa-calendar" aria-hidden="true"></i>Schedules<span class="count"><?php echo $counts['Schedules']; ?> upcoming</span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
                 <li><a href="manage_buses.php"><i class="fa fa-bus" aria-hidden="true"></i>Buses<span class="count"><?php echo $counts['Buses']; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
-                <li><a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i>Operators<span class="count"><?php echo $counts['Operators']; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
+                <li><a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i>Staff<span class="count"><?php echo $counts['Staff']; ?> (<?php echo $counts['Drivers']; ?> drivers · <?php echo $counts['Conductors']; ?> conductors)</span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
                 <li><a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i>Routes<span class="count"><?php echo $counts['Routes']; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
             </ul>
         </section>

@@ -10,7 +10,7 @@ assert.doesNotMatch(menu, /GCash payments|payment_verifications|paymongo_checkou
     'shared Admin account menu must not expose or query the retired payment-verification console');
 assert.match(menu, /gcash_approval\.php/, 'Admin menu links the GCash account approval page');
 assert.match(menu, /verifications\.php/, 'ID approvals remain in the Admin account menu');
-assert.match(menu, /operator_applications\.php/, 'operator applications remain in the Admin account menu');
+assert.match(menu, /conductor_applications\.php/, 'staff applications open on the Conductor queue in the Admin account menu');
 
 for (const file of ['Admin/payment_verifications.php', 'Admin/payment_receipt.php']) {
     const page = read(file);
