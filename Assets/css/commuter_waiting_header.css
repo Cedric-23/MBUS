@@ -1,0 +1,9 @@
+/* Waiting header: the profile icon sits in the same spot as every other commuter page
+   (top 14px, right 16px, 44px button, 40px photo; the values come from unify.css).
+   Waiting does not load unify.css, so the icon was part of the flex row instead.
+   Loaded last on Waiting only. */
+.cm .cwb-header{align-items:flex-start;gap:10px;min-height:0;padding:var(--u-top,14px) 70px 8px var(--u-pad,16px)}
+.cm .cwb-header .profile-menu-wrap{position:absolute!important;top:var(--u-top,14px)!important;right:var(--u-pad,16px)!important;left:auto!important;bottom:auto!important;margin:0!important;z-index:60}
+.cm .cwb-header .profile-trigger{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important}
+.cm .cwb-header .cwb-icon-button{width:44px;height:44px}
+.cm .cwb-header .profile-menu{top:calc(100% + 8px)!important;right:0!important;left:auto!important}
