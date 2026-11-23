@@ -175,12 +175,11 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
         <section class="home-section" aria-labelledby="manage-h">
             <div class="home-section-head"><h2 id="manage-h">Manage</h2></div>
             <ul class="manage-list">
-                <li><a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i>Scan tickets<i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
+                <li><a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i>My Bus<span class="count"><?php echo $my_buses; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
                 <li><a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i>Trips<span class="count"><?php echo $stat['trips']; ?> today</span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
                 <li><a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i>Riders<span class="count"><?php echo $stat['booked']; ?> booked</span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
                 <li><a href="payments.php"><i class="fa fa-wallet" aria-hidden="true"></i>Payments<span class="count"><?php echo $pay_pending > 0 ? $pay_pending . ' to check' : ''; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
                 <li><a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i>Waiting<span class="count"><?php echo $stat['pending']; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
-                <li><a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i>My Bus<span class="count"><?php echo $my_buses; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
             </ul>
         </section>
 

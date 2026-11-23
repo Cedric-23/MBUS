@@ -141,7 +141,7 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Operator'));
             <section class="seat-builder" data-seat-builder aria-labelledby="seat-builder-title">
                 <div class="seat-builder-head">
                     <div><h3 id="seat-builder-title">Seat layout</h3><p>Tap a seat to add or remove it. The aisle sits between the two seats on each side.</p></div>
-                    <div class="seat-builder-actions"><button type="button" class="seat-layout-button" data-seat-add-row>Add row</button><button type="button" class="seat-layout-button" data-seat-reset>Reset</button></div>
+                    <div class="seat-builder-actions"><button type="button" class="seat-layout-button" data-seat-add-row>Add Row</button><button type="button" class="seat-layout-button" data-seat-minus-row>Minus Row</button><button type="button" class="seat-layout-button" data-seat-reset>Reset</button></div>
                 </div>
                 <div class="seat-builder-meta"><span data-seat-count aria-live="polite"><?php echo (int)$bus['capacity']; ?> seats selected</span><span>1–100 seats</span></div>
                 <div class="seat-layout-preview" data-seat-grid role="grid" aria-label="Bus seat layout"></div>

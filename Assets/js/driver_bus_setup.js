@@ -56,6 +56,7 @@
     const dataInput = builder.querySelector('[data-seat-layout]');
     const countLabel = builder.querySelector('[data-seat-count]');
     const addRow = builder.querySelector('[data-seat-add-row]');
+    const minusRow = builder.querySelector('[data-seat-minus-row]');
     const reset = builder.querySelector('[data-seat-reset]');
     const form = builder.closest('form');
     let layout;
@@ -151,6 +152,7 @@
         countLabel.textContent = `${total} seat${total === 1 ? '' : 's'} selected`;
         dataInput.value = JSON.stringify(layout);
         addRow.disabled = layout.length >= 25;
+        minusRow.disabled = layout.length <= 1;
     }
 
     addRow.addEventListener('click', () => {
@@ -158,6 +160,13 @@
             layout.push([true, true, true, true]);
             render();
             grid.lastElementChild?.scrollIntoView({ block: 'nearest' });
+        }
+    });
+
+    minusRow.addEventListener('click', () => {
+        if (layout.length > 1) {
+            layout.pop();
+            render();
         }
     });
 
