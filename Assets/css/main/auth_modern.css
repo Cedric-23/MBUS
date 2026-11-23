@@ -120,11 +120,11 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
 
 /* login only: heading top-left, logo top-right, bus illustration below the text */
 @media(max-width:900px){
-  .auth-hero-m.auth-hero-brand{height:auto;min-height:310px;padding:24px 24px 0;justify-content:flex-start}
+  .auth-hero-m.auth-hero-brand{height:auto;min-height:264px;padding:24px 24px 0;justify-content:flex-start}
   .auth-hero-m.auth-hero-brand .auth-hero-logo{position:absolute;right:24px;left:auto;top:20px;height:34px;width:auto;z-index:2}
   .auth-hero-m.auth-hero-brand h1{font-size:1.5rem;white-space:nowrap;margin:0 0 6px}
   .auth-hero-m.auth-hero-brand h1,
   .auth-hero-m.auth-hero-brand p{max-width:62%}
   .auth-hero-m.auth-hero-brand p{font-size:.85rem}
-  .auth-hero-m.auth-hero-brand .auth-hero-art{position:absolute;left:50%;right:auto;bottom:46px;transform:translateX(-50%);width:min(210px,60%);height:auto;z-index:1;pointer-events:none}
+  .auth-hero-m.auth-hero-brand .auth-hero-art{position:absolute;left:50%;right:auto;bottom:44px;transform:translateX(-50%);width:min(160px,46%);height:auto;z-index:1;pointer-events:none}
 }
