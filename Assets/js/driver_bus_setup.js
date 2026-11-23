@@ -35,6 +35,23 @@
     const builder = document.querySelector('[data-seat-builder]');
     if (!builder) return;
 
+    /* The driver / door / aisle styles ship with this script, so the layout can never break
+       when the stylesheet is an older cached copy. */
+    if (!document.getElementById('mbus-seat-builder-style')) {
+        const style = document.createElement('style');
+        style.id = 'mbus-seat-builder-style';
+        style.textContent = [
+            '.seat-layout-preview::before{content:"FRONT OF BUS";text-align:center;color:#8a98ae;font-size:11px;font-weight:700;letter-spacing:.14em}',
+            '.seat-aisle{display:block;position:relative;align-self:stretch}',
+            '.seat-layout-preview .seat-aisle::before{content:"";position:absolute;top:-4px;bottom:-4px;left:50%;border-left:2px dashed #c3d5f5;transform:translateX(-1px)}',
+            '.seat-builder .seat-driver{grid-column:1 / 3;box-sizing:border-box;height:48px;display:flex;align-items:center;justify-content:center;border-radius:14px;background:#14213d;color:#fff;font:inherit;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}',
+            '.seat-builder .seat-door{box-sizing:border-box;height:48px;padding:0;border:1.5px solid #d3def2;border-radius:12px;background:repeating-linear-gradient(135deg,#eef3fb 0 6px,#e3ebf8 6px 12px);color:#6b7a99;font:inherit;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}',
+            '.seat-builder .seat-door:hover{border-color:#2f6fe4;color:#2f6fe4}',
+            '@media (max-width:640px){.seat-builder .seat-driver,.seat-builder .seat-door{height:44px}}'
+        ].join('\n');
+        document.head.append(style);
+    }
+
     const grid = builder.querySelector('[data-seat-grid]');
     const dataInput = builder.querySelector('[data-seat-layout]');
     const countLabel = builder.querySelector('[data-seat-count]');
@@ -84,6 +101,7 @@
                 if (rowIndex === 0 && start === 0) {
                     const driver = document.createElement('span');
                     driver.className = 'seat-driver';
+                    driver.style.gridColumn = '1 / 3';
                     driver.setAttribute('role', 'gridcell');
                     driver.setAttribute('aria-label', 'Driver seat');
                     driver.textContent = 'Driver';
