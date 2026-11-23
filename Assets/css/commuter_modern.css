@@ -273,14 +273,20 @@
 .cm .date-filter-btn,.cm.schedule-page .date-filter-btn{flex:none!important;display:inline-flex!important;align-items:center;justify-content:center;gap:6px!important;min-height:43px!important;padding:0 14px!important;font-size:.925rem!important;font-weight:600!important;line-height:1.1!important;white-space:nowrap}
 .cm .date-filter-btn i,.cm.schedule-page .date-filter-btn i{font-size:.85rem!important}
 
-/* ---- Profile icon (and bell) pinned to ONE spot on every commuter page (phones) ----
+/* ---- Profile icon (and bell) in ONE spot on every commuter page (phones) ----
    Same spot as Waiting: 14px from the top, 16px from the right, bell just to its left.
-   Fixed to the screen, so no page header or card can move it. This file is linked with a
-   file-time version, so a change here always reaches the phone (unify.css is cached for an hour). */
+   Placed from the screen corner, so no page header or card can move it, and it rides up with the
+   page when you scroll (it is not stuck on screen). This file is linked with a file-time version,
+   so a change here always reaches the phone (unify.css is cached for an hour). */
+@keyframes mbusIconRide{from{transform:translateY(0)}to{transform:translateY(-120px)}}
 @media(max-width:768px){
   body.cm.cm.cm.cm .profile-menu-wrap,
   body.cm.cm.cm.cm.reserve-page .profile-menu-wrap,
   body.cm.cm.cm.cm.payment-page .profile-menu-wrap{position:fixed!important;top:14px!important;right:16px!important;left:auto!important;bottom:auto!important;margin:0!important;z-index:700}
   body.cm.cm.cm.cm .notif-wrap{position:fixed!important;top:14px!important;right:72px!important;left:auto!important;bottom:auto!important;margin:0!important;z-index:701}
   body.cm.cm.cm.cm .notif-btn{width:44px;height:44px}
+  @supports (animation-timeline:scroll()){
+    body.cm.cm.cm.cm:not(.commuter-waiting-board) .profile-menu-wrap,
+    body.cm.cm.cm.cm:not(.commuter-waiting-board) .notif-wrap{animation:mbusIconRide linear both;animation-timeline:scroll(root block);animation-range:0px 120px}
+  }
 }
