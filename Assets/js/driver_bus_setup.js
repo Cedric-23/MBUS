@@ -43,11 +43,21 @@
     const form = builder.closest('form');
     let layout;
 
+    /* The first row, left pair (the two cells in front of seats 3 and 4) is always the driver: never a seat. */
+    function defaultLayout() {
+        return Array.from({ length: 10 }, (_, i) => (i === 0 ? [false, false, true, true] : [true, true, true, true]));
+    }
+    function lockDriver() {
+        layout[0][0] = false;
+        layout[0][1] = false;
+    }
+
     try { layout = JSON.parse(dataInput.value); } catch (_) { layout = null; }
     if (!Array.isArray(layout) || !layout.length || !layout.every(row => Array.isArray(row) && row.length === 4 && row.every(v => typeof v === 'boolean'))) {
-        layout = Array.from({ length: 10 }, () => [true, true, true, true]);
+        layout = defaultLayout();
     }
     layout = layout.slice(0, 25);
+    lockDriver();
 
     function seatTotal() {
         return layout.reduce((total, row) => total + row.filter(Boolean).length, 0);
@@ -60,27 +70,62 @@
             const rowElement = document.createElement('div');
             rowElement.className = 'seat-row';
             rowElement.setAttribute('role', 'row');
-            row.forEach((active, seatIndex) => {
-                if (seatIndex === 2) {
-                    /* plain gap, exactly like the aisle on the real seat map (no label) */
+
+            [0, 2].forEach(start => {
+                if (start === 2) {
+                    /* the aisle: a visible dashed lane down the middle of the bus */
                     const aisle = document.createElement('span');
                     aisle.className = 'seat-aisle';
                     aisle.setAttribute('aria-hidden', 'true');
                     rowElement.append(aisle);
                 }
-                if (active) number++;
-                const button = document.createElement('button');
-                button.type = 'button';
-                button.className = `seat-cell ${active ? 'is-open' : 'is-removed'}`;
-                button.setAttribute('role', 'gridcell');
-                button.setAttribute('aria-pressed', String(active));
-                button.setAttribute('aria-label', `Row ${rowIndex + 1}, seat ${seatIndex + 1}: ${active ? `included as seat ${number}` : 'removed'}`);
-                button.textContent = active ? String(number) : '—';
-                button.addEventListener('click', () => {
-                    layout[rowIndex][seatIndex] = !layout[rowIndex][seatIndex];
-                    render();
+
+                /* driver seat: always first row, left side. Not tappable. */
+                if (rowIndex === 0 && start === 0) {
+                    const driver = document.createElement('span');
+                    driver.className = 'seat-driver';
+                    driver.setAttribute('role', 'gridcell');
+                    driver.setAttribute('aria-label', 'Driver seat');
+                    driver.textContent = 'Driver';
+                    rowElement.append(driver);
+                    return;
+                }
+
+                /* two seats side by side both removed: the pair is cleared automatically and shown as a door */
+                if (!row[start] && !row[start + 1]) {
+                    const door = document.createElement('button');
+                    door.type = 'button';
+                    door.className = 'seat-door';
+                    door.style.gridColumn = start === 0 ? '1 / 3' : '4 / 6';
+                    door.setAttribute('role', 'gridcell');
+                    door.setAttribute('aria-label', `Row ${rowIndex + 1}: door, no seats. Tap to add the two seats back`);
+                    door.textContent = 'Door';
+                    door.addEventListener('click', () => {
+                        layout[rowIndex][start] = true;
+                        layout[rowIndex][start + 1] = true;
+                        render();
+                    });
+                    rowElement.append(door);
+                    return;
+                }
+
+                [start, start + 1].forEach(seatIndex => {
+                    const active = row[seatIndex];
+                    if (active) number++;
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = `seat-cell ${active ? 'is-open' : 'is-removed'}`;
+                    button.setAttribute('role', 'gridcell');
+                    button.setAttribute('aria-pressed', String(active));
+                    button.setAttribute('aria-label', `Row ${rowIndex + 1}, seat ${seatIndex + 1}: ${active ? `included as seat ${number}` : 'removed'}`);
+                    button.textContent = active ? String(number) : '—';
+                    button.addEventListener('click', () => {
+                        layout[rowIndex][seatIndex] = !layout[rowIndex][seatIndex];
+                        lockDriver();
+                        render();
+                    });
+                    rowElement.append(button);
                 });
-                rowElement.append(button);
             });
             grid.append(rowElement);
         });
@@ -99,7 +144,7 @@
     });
 
     reset.addEventListener('click', () => {
-        layout = Array.from({ length: 10 }, () => [true, true, true, true]);
+        layout = defaultLayout();
         render();
     });
 
