@@ -218,7 +218,7 @@
 }
 @media(max-width:768px){
   @supports (animation-timeline:scroll()){
-    body.stf.staff-home .profile-menu-wrap,
-    body.stf.staff-home .notif-wrap{animation:stfIconRide linear both;animation-timeline:scroll(root block);animation-range:0px 120px}
+    body.stf:not(.staff-wait-page) .profile-menu-wrap,
+    body.stf:not(.staff-wait-page) .notif-wrap{animation:stfIconRide linear both;animation-timeline:scroll(root block);animation-range:0px 120px}
   }
 }
