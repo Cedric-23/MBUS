@@ -102,7 +102,7 @@
 /* ---------- Staff dashboard mobile density ---------- */
 @media(max-width:768px){
   .stf.staff-home .main{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
-  .stf.staff-home .home-wrap{max-width:none;padding-left:14px;padding-right:14px;padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+  .stf.staff-home .home-wrap{max-width:none;padding-left:0;padding-right:0;padding-bottom:calc(96px + env(safe-area-inset-bottom))}
   .stf.staff-home .home-top{margin-bottom:10px}
   .stf.staff-home .home-hello{font-size:.84rem}
   .stf.staff-home .home-top h1{font-size:1.5rem;line-height:1.08}
