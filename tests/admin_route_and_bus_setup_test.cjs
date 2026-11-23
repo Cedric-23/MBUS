@@ -47,7 +47,7 @@ assert.match(setupJs, /total > 100/,
     'the client must enforce the maximum seating capacity');
 
 const applications = read('Admin/operator_applications.php');
-for (const field of ['has_bus_photo', 'has_interior_photo', 'seat_layout', 'doc=bus', 'doc=interior']) {
+for (const field of ['has_bus_photo', 'has_interior_photo', 'seat_layout', "['bus',      'Bus exterior'", "['interior', 'Bus interior'"]) {
     assert.ok(applications.includes(field), `Admin review should expose ${field}`);
 }
 assert.match(applications, /Submitted seat layout/);
