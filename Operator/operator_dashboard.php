@@ -21,7 +21,7 @@ $operator_id = $_SESSION['user_id'];
 /* App-timezone day boundaries, not the DB clock */
 $b = mbus_local_bounds();
 
-/* NEXT TRIP + REST OF TODAY (this operator's buses, still open) */
+/* TODAY'S OPEN TRIPS (this operator's buses): running first, then by departure time */
 $trips = [];
 $tq = mbus_db_prepare($conn, "
 SELECT s.schedule_id, s.departure_time, s.trip_status, b.bus_number, b.capacity,
@@ -38,9 +38,9 @@ AND s.trip_status IN ('Scheduled','Boarding','Departed')
 AND s.departure_time >= ? AND s.departure_time < ?
 ORDER BY (s.trip_status = 'Departed') DESC, (s.trip_status = 'Boarding') DESC, s.departure_time ASC", [$operator_id, $b['today'], $b['tomorrow']]);
 while($tq !== false && ($r = mbus_db_fetch_assoc($tq))) $trips[] = $r;
-$current = $trips[0] ?? null;
+$todays_trips = array_slice($trips, 0, 5);
 
-/* TODAY STATS + MY BUSES */
+/* TODAY STATS */
 $stat = ['trips' => 0, 'booked' => 0, 'boarded' => 0, 'pending' => 0];
 $sq = mbus_db_prepare($conn, "SELECT COUNT(DISTINCT s.schedule_id) AS trips,
     COUNT(CASE WHEN r.status IN ('Paid','Confirmed','Boarded') THEN 1 END) AS booked,
@@ -51,7 +51,16 @@ $sq = mbus_db_prepare($conn, "SELECT COUNT(DISTINCT s.schedule_id) AS trips,
   WHERE oba.operator_id = ? AND s.schedule_status = 'Active' AND s.departure_time >= ? AND s.departure_time < ?", [$operator_id, $b['today'], $b['tomorrow']]);
 if ($sq !== false && ($row = mbus_db_fetch_assoc($sq))) $stat = array_map('intval', $row);
 
-$rest = array_slice($trips, 1, 4);
+/* MY BUSES */
+$my_buses = 0;
+$mq = mbus_db_prepare($conn, "SELECT COUNT(*) AS n FROM operator_bus_assignments WHERE operator_id = ?", [$operator_id]);
+if ($mq !== false && ($mrow = mbus_db_fetch_assoc($mq))) $my_buses = (int)$mrow['n'];
+
+/* GCash payments waiting for a check (same count as the red dot on the profile icon) */
+require_once dirname(__DIR__) . '/Includes/header_avatar.php';
+$pay_pending = mbus_pending_payments_count();
+
+$state_label = ['Scheduled' => 'Up next', 'Boarding' => 'Boarding now', 'Departed' => 'On the road'];
 $greeting = (int)date('G') < 12 ? 'Good morning' : ((int)date('G') < 18 ? 'Good afternoon' : 'Good evening');
 $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
 ?>
@@ -124,7 +133,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <div class="page-header-right">
                 <div class="profile-menu-wrap">
                     <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
-                        <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span><?php echo mbus_payment_dot(); ?>
+                        <span class="profile-avatar" aria-hidden="true"><?php echo mbus_header_avatar('../'); ?></span><?php echo mbus_payment_dot(); ?>
                         <span class="profile-trigger-label"><?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
                         <i class="fa fa-chevron-down" aria-hidden="true"></i>
                     </button>
@@ -147,59 +156,50 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <select id="operatorTrackingTrip" aria-label="Active trip"></select>
         </div>
 
-        <?php if($current){
-            $label = ['Scheduled' => 'Up next', 'Boarding' => 'Boarding now', 'Departed' => 'On the road'][$current['trip_status']] ?? 'Up next';
-        ?>
-        <section class="next-trip" aria-label="Current trip">
-            <div class="next-trip-top">
-                <span class="next-state"><?php echo $label; ?></span>
-                <span class="next-when"><?php echo date('g:i A', strtotime($current['departure_time'])); ?></span>
-            </div>
-            <p class="next-route"><?php echo htmlspecialchars($current['origin'] . ' to ' . $current['destination']); ?></p>
-            <p class="next-meta"><?php echo htmlspecialchars(ctype_digit((string)$current['bus_number']) ? 'Bus ' . $current['bus_number'] : $current['bus_number']); ?> &middot; <?php echo (int)$current['boarded']; ?> of <?php echo (int)$current['booked']; ?> boarded</p>
-            <div class="next-actions">
-                <a class="next-cta" href="scan.php">Scan tickets</a>
-                <a class="next-cta is-ghost" href="passengers.php?schedule_id=<?php echo (int)$current['schedule_id']; ?>">Seat map</a>
-            </div>
-        </section>
+        <?php if($pay_pending > 0){ ?>
+        <a class="attn" href="payments.php">
+            <span><strong><?php echo $pay_pending; ?> GCash <?php echo $pay_pending === 1 ? 'payment' : 'payments'; ?> to check</strong><small>Riders are waiting for their tickets until you approve.</small></span>
+            <span class="attn-go">Review</span>
+        </a>
         <?php } else { ?>
-        <section class="next-trip is-empty" aria-label="No trips">
-            <p class="next-route">No trips left today</p>
-            <p class="next-meta">Nothing else is assigned to your buses. Check upcoming trips.</p>
-            <a class="next-cta" href="manage_trips.php">View trips</a>
-        </section>
+        <p class="attn is-clear"><span><strong>All caught up</strong><small>No payments waiting.</small></span></p>
         <?php } ?>
 
-        <section class="od-stats" aria-label="Today at a glance">
-            <div><strong><?php echo $stat['trips']; ?></strong><span>Trips today</span></div>
-            <div><strong><?php echo $stat['booked']; ?></strong><span>Seats booked</span></div>
-            <div><strong><?php echo $stat['boarded']; ?></strong><span>Boarded</span></div>
-            <a href="waiting.php"><strong><?php echo $stat['pending']; ?></strong><span>Waiting</span></a>
+        <div class="today-strip" aria-label="Today">
+            <div><b><?php echo $stat['trips']; ?></b><span>Trips today</span></div>
+            <div><b><?php echo $stat['booked']; ?></b><span>Booked riders today</span></div>
+            <div><b><?php echo $stat['boarded']; ?></b><span>Boarded</span></div>
+            <div><b><?php echo $my_buses; ?></b><span><?php echo $my_buses === 1 ? 'Bus' : 'Buses'; ?></span></div>
+        </div>
+
+        <section class="home-section" aria-labelledby="manage-h">
+            <div class="home-section-head"><h2 id="manage-h">Manage</h2></div>
+            <ul class="manage-list">
+                <li><a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i>Scan tickets<i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
+                <li><a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i>Trips<span class="count"><?php echo $stat['trips']; ?> today</span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
+                <li><a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i>Riders<span class="count"><?php echo $stat['booked']; ?> booked</span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
+                <li><a href="payments.php"><i class="fa fa-wallet" aria-hidden="true"></i>Payments<span class="count"><?php echo $pay_pending > 0 ? $pay_pending . ' to check' : ''; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
+                <li><a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i>Waiting<span class="count"><?php echo $stat['pending']; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
+                <li><a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i>My Bus<span class="count"><?php echo $my_buses; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
+            </ul>
         </section>
 
-        <nav class="od-actions" aria-label="Quick actions">
-            <a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
-            <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span></a>
-            <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
-            <a href="payments.php"><i class="fa fa-wallet" aria-hidden="true"></i><span>Payments</span></a>
-            <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
-            <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i><span>My Bus</span></a>
-        </nav>
-
-        <?php if($rest){ ?>
-        <section class="home-section" aria-labelledby="later-h">
-            <div class="home-section-head"><h2 id="later-h">Later today</h2><a href="manage_trips.php">All trips</a></div>
+        <section class="home-section" aria-labelledby="today-h">
+            <div class="home-section-head"><h2 id="today-h">Trips today</h2><a href="manage_trips.php">All trips</a></div>
+            <?php if($todays_trips){ ?>
             <ul class="soon-list">
-                <?php foreach($rest as $t){ $full = (int)$t['booked'] >= (int)$t['capacity']; ?>
+                <?php foreach($todays_trips as $t){ $full = (int)$t['booked'] >= (int)$t['capacity']; $bus_label = ctype_digit((string)$t['bus_number']) ? 'Bus ' . $t['bus_number'] : $t['bus_number']; ?>
                 <li><a href="passengers.php?schedule_id=<?php echo (int)$t['schedule_id']; ?>">
                     <span class="soon-time"><?php echo date('g:i', strtotime($t['departure_time'])); ?><small><?php echo date('A', strtotime($t['departure_time'])); ?></small></span>
-                    <span class="soon-body"><strong><?php echo htmlspecialchars($t['origin'] . ' to ' . $t['destination']); ?></strong><small><?php echo htmlspecialchars(ctype_digit((string)$t['bus_number']) ? 'Bus ' . $t['bus_number'] : $t['bus_number']); ?></small></span>
+                    <span class="soon-body"><strong><?php echo htmlspecialchars($t['origin'] . ' to ' . $t['destination']); ?></strong><small><?php echo htmlspecialchars($bus_label . ' · ' . ($state_label[$t['trip_status']] ?? 'Up next') . ' · ' . (int)$t['boarded'] . ' of ' . (int)$t['booked'] . ' boarded'); ?></small></span>
                     <span class="seat-chip <?php echo $full ? 'full' : 'ok'; ?>"><?php echo (int)$t['booked']; ?>/<?php echo (int)$t['capacity']; ?></span>
                 </a></li>
                 <?php } ?>
             </ul>
+            <?php } else { ?>
+            <p class="attn is-clear"><span><strong>No trips left today</strong><small>Nothing else is assigned to your buses. Check upcoming trips.</small></span></p>
+            <?php } ?>
         </section>
-        <?php } ?>
 
     </div></main>
 
