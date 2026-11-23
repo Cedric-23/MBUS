@@ -132,37 +132,37 @@
     font-weight: 700;
 }
 
-/* same look as the commuter seat map: soft canvas, seats drawn as seat icons */
+/* same size and spacing as the real seat map when reserving: 48px seats, 8px gaps, a plain 24px aisle (no label) */
 .seat-layout-preview {
     display: grid;
     justify-content: center;
-    gap: 10px;
+    gap: 8px;
     max-height: 280px;
     overflow: auto;
     padding: 16px 12px;
     border: 1.5px solid #dde7f8;
-    border-radius: 24px;
+    border-radius: 28px;
     background: #f6f9ff;
 }
 
 .seat-layout-preview .seat-row {
     display: grid;
-    grid-template-columns: repeat(2, 46px) 26px repeat(2, 46px);
+    grid-template-columns: repeat(2, 48px) 24px repeat(2, 48px);
     align-items: center;
     gap: 8px;
 }
 
 .seat-builder .seat-cell {
     position: relative;
-    min-width: 46px;
-    height: 46px;
-    padding: 0 0 8px;
+    min-width: 48px;
+    height: 48px;
+    padding: 0 0 10px;
     border: 1.5px solid #bfe8cf;
-    border-radius: 14px 14px 10px 10px;
+    border-radius: 16px 16px 10px 10px;
     background: #e8f7ee;
     color: #17703f;
     font: inherit;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     cursor: pointer;
 }
@@ -170,9 +170,9 @@
 .seat-builder .seat-cell::before {
     content: "";
     position: absolute;
-    left: -3px;
-    right: -3px;
-    bottom: 4px;
+    left: -4px;
+    right: -4px;
+    bottom: 5px;
     height: 42%;
     border: 1.5px solid currentColor;
     border-top-color: transparent;
@@ -186,7 +186,7 @@
     position: absolute;
     left: 18%;
     right: 18%;
-    bottom: 3px;
+    bottom: 4px;
     height: 4px;
     border-radius: 4px;
     background: currentColor;
@@ -203,21 +203,15 @@
 .seat-builder .seat-cell.is-removed::before,
 .seat-builder .seat-cell.is-removed::after { display: none; }
 
-.seat-aisle {
-    display: grid;
-    place-items: center;
-    color: #a3aec3;
-    font-size: 10px;
-    letter-spacing: .08em;
-    writing-mode: vertical-rl;
-}
+/* the aisle is just empty space, like on the real seat map */
+.seat-aisle { display: block; }
 
 @media (max-width: 640px) {
     .bus-photo-grid { grid-template-columns: minmax(0, 1fr); }
     .seat-builder { padding: 14px; }
     .seat-builder-head { align-items: flex-start; flex-direction: column; }
-    .seat-layout-preview .seat-row { grid-template-columns: repeat(2, 40px) 22px repeat(2, 40px); gap: 6px; }
-    .seat-builder .seat-cell { min-width: 40px; height: 42px; }
+    .seat-layout-preview .seat-row { grid-template-columns: repeat(2, 44px) 16px repeat(2, 44px); gap: 6px; }
+    .seat-builder .seat-cell { min-width: 44px; height: 44px; font-size: 13px; }
 }
 
 /* ---------- cleaner photo / document upload cards ---------- */
