@@ -29,7 +29,6 @@ body:not(:has(.sidebar)):not(.commuter-waiting-board):not(.staff-wait-page) .pro
   :root{--u-pad:16px;--u-top:14px}
   body:not(.commuter-waiting-board):not(.staff-wait-page) main{margin:0!important;padding:var(--u-top) var(--u-pad) 104px!important;max-width:none!important}
   .profile-menu-wrap,body:not(:has(.sidebar)) .profile-menu-wrap{right:var(--u-pad)}
-  .page-header h1{font-size:1.35rem!important}
 }
 
 /* Staff map toolbar: keep one account control in the flex row so it cannot overlap the refresh/filter controls. */
@@ -59,3 +58,11 @@ html body .profile-trigger.profile-trigger.profile-trigger.profile-trigger.profi
 html body .profile-avatar.profile-avatar.profile-avatar.profile-avatar.profile-avatar{width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;display:grid!important;place-items:center;border-radius:50%;overflow:hidden}
 html body .profile-avatar.profile-avatar.profile-avatar.profile-avatar.profile-avatar img{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;border-radius:50%;object-fit:cover}
 html body .notif-btn.notif-btn.notif-btn.notif-btn.notif-btn{width:44px!important;height:44px!important}
+
+/* ---- Commuter phones: profile icon (and bell) pinned to one spot on EVERY page ----
+   Same spot as the Waiting page: 14px from the top, 16px from the right, bell just to its left.
+   Fixed to the screen, so it no longer depends on each page's header or card layout. */
+@media (max-width:768px){
+  body.cm.cm.cm.cm .profile-menu-wrap{position:fixed!important;top:var(--u-top,14px)!important;right:var(--u-pad,16px)!important;left:auto!important;bottom:auto!important;margin:0!important;z-index:700}
+  body.cm.cm.cm.cm .notif-wrap{position:fixed!important;top:var(--u-top,14px)!important;right:calc(var(--u-pad,16px) + 56px)!important;left:auto!important;bottom:auto!important;margin:0!important;z-index:701}
+}
