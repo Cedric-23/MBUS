@@ -4,6 +4,7 @@ session_start();
 include __DIR__ . "/config/db_connect.php";
 include_once __DIR__ . "/Includes/validation.php";
 require_once __DIR__ . "/Includes/seat_layout.php";
+require_once __DIR__ . "/Includes/notify.php";
 include __DIR__ . "/Includes/activity_log.php";
 require_once __DIR__ . "/Includes/csrf.php";
 require_once __DIR__ . '/Includes/reset_mailer.php';
@@ -146,6 +147,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             [$full_name, $email, $phone, $hash]);
                         if ($ok === false) { $error = 'We could not save your application. Please try again.'; }
                         else {
+                            mbus_notify_admins($conn, 'New conductor application from ' . $full_name . '. Review it in Staff applications.');
                             $_SESSION['register_flash'] = 'Application submitted. An admin will review it. Once approved, log in with ' . $email . ' and the password you chose.';
                             header('Location: register.php?type=conductor'); exit();
                         }
@@ -260,6 +262,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                  $last_name, $vehicle_expiry !== '' ? $vehicle_expiry : null, json_encode(mbus_seat_layout_default($seats))]);
             if ($ok === false) { $error = 'We could not save your application. Please try again.'; }
             else {
+                mbus_notify_admins($conn, 'New driver/operator application from ' . $full_name . '. Review it in Staff applications.');
                 $_SESSION['register_flash'] = 'Application submitted. An admin will review it. Once approved, log in with ' . $email . ' and the password you chose.';
                 header('Location: register.php?type=driver'); exit();
             }
