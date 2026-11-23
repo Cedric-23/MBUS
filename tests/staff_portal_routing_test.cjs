@@ -19,6 +19,7 @@ assert.match(dockerfile, /docker\/staff-portal\.conf/);
 assert.match(apache, /DocumentRoot \/var\/www\/html\/StaffPortal/);
 assert.match(staffLogin, /define\('MBUS_STAFF_PORTAL', true\)/);
 assert.match(staffRegistration, /define\('MBUS_STAFF_PORTAL', true\)/);
+assert.match(staffRegistration, /if \(!isset\(\$_GET\['type'\]\).*?\$_GET\['type'\] = 'conductor';/s);
 assert.match(staffHealth, /http_response_code\(200\)/);
 
 const aliases = [...apache.matchAll(/^\s*Alias\s+(\S+)\s+(\S+)\s*$/gm)];
