@@ -264,7 +264,9 @@
         } finally { clearTimeout(timeoutId); }
     }
     function showEmpty() {
-        el('cwbEmpty').hidden = false;
+        const onboard = el('cwbOnboard');
+        el('cwbEmpty').hidden = !!onboard;
+        if (onboard) onboard.hidden = false;
         el('cwbMap').hidden = true;
         el('cwbLocationPill').hidden = true;
         el('cwbSheet').hidden = true;
@@ -277,6 +279,7 @@
         if (!myRequest || myRequest.status !== 'Waiting') { showEmpty(); return; }
         const trip = requestTrip();
         el('cwbEmpty').hidden = true;
+        if (el('cwbOnboard')) el('cwbOnboard').hidden = true;
         el('cwbMap').hidden = false;
         el('cwbSheet').hidden = false;
         if (!map) initMap();

@@ -75,3 +75,8 @@ body.commuter-waiting-board .bottom-nav { border-color: #edf0f4; background: #ff
   .cwb-route-view { padding: 0 10px; }
 }
 @media (prefers-reduced-motion: reduce) { .cwb-icon-button, .cwb-cancel { scroll-behavior: auto; } }
+
+/* On board: replaces the "not waiting yet" card */
+.cwb-onboard-icon { background: #e6f6ec; color: #1f8a4c; }
+.cwb-onboard .cwb-onboard-note { margin-top: 6px; font-size: .84rem; }
+.cwb-onboard[hidden] { display: none; }

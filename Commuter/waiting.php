@@ -17,6 +17,15 @@ $hasDbPic = !empty($pr['has_pic']) && $pr['has_pic'] !== 'f';
 $profileImage = $hasDbPic ? '../avatar.php?v=' . rawurlencode((string)$pr['pic_v']) : (($avatar !== '' && strtolower($avatar) !== 'default.png' && is_file($avatarPath))
     ? '../Assets/profile_pictures/' . rawurlencode($avatar) . '?v=' . rawurlencode((string)filemtime($avatarPath))
     : '../Assets/images/mbus_icon.png');
+
+/* Already on a bus? Then Waiting should say so instead of inviting them to find another one. */
+$onboard = null;
+$ob = mbus_db_prepare($conn, "SELECT b.bus_number, rt.origin, rt.destination, s.departure_time
+    FROM reservation r JOIN schedule s ON s.schedule_id = r.schedule_id
+    JOIN buses b ON b.bus_id = s.bus_id JOIN routes rt ON rt.route_id = s.route_id
+    WHERE r.user_id = ? AND r.status = 'Boarded' AND COALESCE(s.trip_status::text,'') <> 'Arrived' AND COALESCE(s.schedule_status::text,'') <> 'Completed'
+    ORDER BY s.departure_time DESC LIMIT 1", [(int)$_SESSION['user_id']]);
+if ($ob !== false) { $onboard = mbus_db_fetch_assoc($ob) ?: null; }
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -69,6 +78,16 @@ $profileImage = $hasDbPic ? '../avatar.php?v=' . rawurlencode((string)$pr['pic_v
         <a href="schedule.php" class="cwb-empty-action">Choose a bus</a>
     </div>
 
+    <?php if ($onboard): ?>
+    <div id="cwbOnboard" class="cwb-empty cwb-onboard" hidden>
+        <span class="cwb-empty-icon cwb-onboard-icon"><i class="fa fa-bus" aria-hidden="true"></i></span>
+        <h2>You’re already on board</h2>
+        <p>Bus <?php echo htmlspecialchars((string)$onboard['bus_number'], ENT_QUOTES); ?> · <?php echo htmlspecialchars((string)$onboard['origin'], ENT_QUOTES); ?> → <?php echo htmlspecialchars((string)$onboard['destination'], ENT_QUOTES); ?></p>
+        <p class="cwb-onboard-note">Enjoy the ride. You can look for another bus once you arrive.</p>
+        <a href="live.php" class="cwb-empty-action">Track my bus</a>
+    </div>
+    <?php endif; ?>
+
     <div id="cwbMap" class="cwb-map" role="region" aria-label="Map showing your waiting bus and pickup spot" hidden></div>
     <div id="cwbLocationPill" class="cwb-location-pill" hidden><span class="cwb-status-dot"></span><span id="cwbLocationText"></span></div>
     <p id="cwbMapError" class="cwb-map-error" role="status" hidden>Map tiles are unavailable right now. Your bus status is still shown below.</p>
@@ -102,7 +121,7 @@ $profileImage = $hasDbPic ? '../avatar.php?v=' . rawurlencode((string)$pr['pic_v
     <a href="waiting.php" class="bottom-nav-item active" aria-current="page"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
 </nav>
 
-<script>window.mbusWaitingBoard = <?php echo json_encode(['csrfToken' => csrf_get_token(), 'profileImage' => $profileImage], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
+<script>window.mbusWaitingBoard = <?php echo json_encode(['csrfToken' => csrf_get_token(), 'onboard' => (bool)$onboard, 'profileImage' => $profileImage], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="../Assets/js/route_utils.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/route_utils.js'); ?>"></script>
 <script src="../Assets/js/commuter_waiting_board.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/commuter_waiting_board.js'); ?>"></script>
