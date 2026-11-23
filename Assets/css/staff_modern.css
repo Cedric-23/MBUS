@@ -96,6 +96,31 @@
 }
 .stf.has-bottom-nav .main{padding-bottom:calc(110px + env(safe-area-inset-bottom))}
 
+/* ---------- Staff dashboard mobile density ---------- */
+@media(max-width:768px){
+  .stf.staff-home .main{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+  .stf.staff-home .home-wrap{max-width:none;padding-left:14px;padding-right:14px;padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+  .stf.staff-home .home-top{margin-bottom:10px}
+  .stf.staff-home .home-hello{font-size:.84rem}
+  .stf.staff-home .home-top h1{font-size:1.5rem;line-height:1.08}
+  .stf.staff-home .today-strip{gap:8px!important;margin-top:10px}
+  .stf.staff-home .today-strip>div{min-height:78px;padding:12px!important;border-radius:16px!important}
+  .stf.staff-home .today-strip b{font-size:1.5rem}
+  .stf.staff-home .today-strip span{font-size:.75rem;line-height:1.2}
+  .stf.staff-home .attn{gap:8px;margin-top:10px;padding:12px 13px;border-radius:16px!important}
+  .stf.staff-home .attn strong{font-size:.9rem;line-height:1.2}
+  .stf.staff-home .attn small{font-size:.75rem;line-height:1.25}
+  .stf.staff-home .attn .attn-go{padding:7px 11px;font-size:.76rem}
+  .stf.staff-home .home-section{margin-top:18px}
+  .stf.staff-home .home-section-head{margin-bottom:9px}
+  .stf.staff-home .home-section-head h2{font-size:1rem}
+  .stf.staff-home .soon-list{gap:8px}
+  .stf.staff-home .soon-list a{min-height:58px;padding:9px 11px;border-radius:16px;gap:9px}
+  .stf.staff-home .soon-time{font-size:1rem}
+  .stf.staff-home .soon-body strong{font-size:.86rem}
+  .stf.staff-home .soon-body small{font-size:.74rem}
+}
+
 /* ---------- Operator pages ---------- */
 .stf.scan-page .scan-card,.stf.scan-page .card{border-radius:26px}
 .stf.riders-page .rider,.stf.riders-page .card{border-radius:22px}
