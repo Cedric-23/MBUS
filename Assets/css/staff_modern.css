@@ -174,10 +174,10 @@
 .stf.staff-wait-page .sw-bar .profile-avatar{width:40px!important;height:40px!important}
 .stf.staff-wait-page .sw-bar .profile-trigger{width:44px!important;height:44px!important}
 
-/* ---- Profile icon (and bell) pinned to ONE spot on every admin / operator / driver page (phones) ----
-   Same spot as the commuter pages: 14px from the top, 16px from the right, bell just to its left.
-   Fixed to the screen, so no page header or card can move it. This file is linked with a
-   file-time version, so a change here always reaches the phone (unify.css is cached for an hour). */
+/* ---- Admin / operator dashboard profile icon and bell (phones) ----
+   Start in the same top-right position as Commuter, then ride upward and offscreen as the page
+   scrolls. The file-time URL ensures this mobile correction reaches the phone. */
+@keyframes stfIconRide{from{transform:translateY(0)}to{transform:translateY(-120px)}}
 @media(max-width:768px){
   body.stf.stf.stf.stf .profile-menu-wrap{position:fixed!important;top:14px!important;right:16px!important;left:auto!important;bottom:auto!important;margin:0!important;z-index:700}
   body.stf.stf.stf.stf .notif-wrap{position:fixed!important;top:14px!important;right:72px!important;left:auto!important;bottom:auto!important;margin:0!important;z-index:701}
@@ -187,4 +187,10 @@
   body.stf.stf.stf .page-header{padding-right:64px!important}
   /* waiting board: the refresh button sits where the bell is on other pages */
   body.stf.stf.stf.staff-wait-page .sw-bar{padding-top:14px!important;padding-right:72px!important;box-sizing:border-box}
+}
+@media(max-width:768px){
+  @supports (animation-timeline:scroll()){
+    body.stf.staff-home .profile-menu-wrap,
+    body.stf.staff-home .notif-wrap{animation:stfIconRide linear both;animation-timeline:scroll(root block);animation-range:0px 120px}
+  }
 }
