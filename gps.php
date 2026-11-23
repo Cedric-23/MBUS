@@ -52,7 +52,7 @@ if (mbus_gps_enabled()) {
         <p id="gateStatus" class="gate-status" role="status" aria-live="polite">Required for operator location sharing</p>
     </section>
 
-    <p class="gate-foot">You can turn location off anytime in your browser.</p>
+    <p class="gate-foot">You can turn location off anytime in your browser. <a href="logout.php">Log out</a></p>
 </main>
 
 <script>
@@ -101,18 +101,26 @@ if (mbus_gps_enabled()) {
         button.classList.add('is-busy');
         say('Getting your location…');
 
-        navigator.geolocation.getCurrentPosition(function (position) {
+        function ok(position) {
             store(position.coords.latitude, position.coords.longitude);
             unlock();
-        }, function (error) {
+        }
+        function bad(error) {
             if (error && error.code === 1) {
                 fail('Location is blocked. Allow it in your browser, then tap again.');
             } else if (error && error.code === 2) {
-                fail('No location signal yet. Move near a window and tap again.');
+                fail('No location signal yet. Check your device location is on, then tap again.');
             } else {
                 fail('Location timed out. Tap again to retry.');
             }
-        }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+        }
+        // Phones answer with GPS; desktops have none and only know their rough (Wi-Fi/IP) position,
+        // so a GPS-only request times out there. Try precise first, then settle for approximate.
+        navigator.geolocation.getCurrentPosition(ok, function (error) {
+            if (error && error.code === 1) { bad(error); return; }
+            say('Trying approximate location…');
+            navigator.geolocation.getCurrentPosition(ok, bad, { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 });
+        }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
     });
 })();
 </script>
