@@ -46,10 +46,10 @@ try {
     }
     $reservationIds = [];
 
-    // A checkout can contain several seats, but a reservation cancellation is
-    // still scoped to the selected reservation. Close the shared checkout so
-    // it cannot later pay a cancelled seat; the remaining pending seats stay
-    // available and can be paid for in a new checkout.
+    // Cancellation is scoped to the selected checkout transaction. A
+    // transaction can contain several seats, so cancel all of its linked
+    // pending reservations, but never touch another transaction for the same
+    // schedule.
     $checkoutQuery = $pdo->prepare("SELECT session_id, status, reservation_ids
         FROM paymongo_checkout
         WHERE user_id = ? AND schedule_id = ? AND status IN ('Created', 'Submitted')
@@ -65,6 +65,7 @@ try {
             if (!in_array((int)$reservationId, $linked, true)) {
                 continue;
             }
+            $reservationIds = array_merge($reservationIds, $linked);
             if ($checkout['status'] === 'Created' && strpos((string)$checkout['session_id'], 'manual_') !== 0) {
                 $remoteSessions[] = (string)$checkout['session_id'];
             }
@@ -84,15 +85,17 @@ try {
 
     // Recheck and lock pending rows only after checkout locks are held.
     if ($reservationId) {
+        $reservationIds[] = (int)$reservationId;
+        $reservationIds = array_values(array_unique(array_filter(array_map('intval', $reservationIds), static fn($id) => $id > 0)));
+        $placeholders = implode(',', array_fill(0, count($reservationIds), '?'));
         $pending = $pdo->prepare("SELECT reservation_id FROM reservation
-            WHERE reservation_id = ? AND user_id = ? AND schedule_id = ? AND status = 'Pending' FOR UPDATE");
-        $pending->execute([$reservationId, $userId, $scheduleId]);
+            WHERE user_id = ? AND schedule_id = ? AND reservation_id IN ($placeholders) AND status = 'Pending' FOR UPDATE");
+        $pending->execute(array_merge([$userId, $scheduleId], $reservationIds));
         if (!$pending->fetchColumn()) {
             $pdo->rollBack();
             http_response_code(409);
             exit('reservation_not_pending');
         }
-        $reservationIds[] = (int)$reservationId;
     } else {
         $pending = $pdo->prepare("SELECT reservation_id FROM reservation
             WHERE schedule_id = ? AND user_id = ? AND status = 'Pending'

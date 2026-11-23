@@ -22,13 +22,32 @@ if(!isset($_GET['schedule_id'])){
 }
 
 $schedule_id = mbus_db_escape($conn, $_GET['schedule_id']);
+$requested_reservation_id = filter_var($_GET['reservation_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+$reservation_filter = '';
+$reservation_filter_params = [];
+if($requested_reservation_id){
+    $transaction_lookup = $conn->pdo->prepare("SELECT reservation_ids FROM paymongo_checkout
+        WHERE user_id = ? AND schedule_id = ? AND status IN ('Created', 'Submitted')
+        ORDER BY created_at DESC");
+    $transaction_lookup->execute([$user_id, $schedule_id]);
+    $transaction_ids = [(int)$requested_reservation_id];
+    foreach($transaction_lookup->fetchAll(PDO::FETCH_COLUMN) as $ids_json){
+        $linked = json_decode((string)$ids_json, true);
+        if(is_array($linked) && in_array((int)$requested_reservation_id, array_map('intval', $linked), true)){
+            $transaction_ids = array_values(array_unique(array_filter(array_map('intval', $linked), static fn($id) => $id > 0)));
+            break;
+        }
+    }
+    $reservation_filter = ' AND reservation.reservation_id IN (' . implode(',', array_fill(0, count($transaction_ids), '?')) . ')';
+    $reservation_filter_params = $transaction_ids;
+}
 
 // Authorization check - verify user has pending reservations for this schedule
-$auth_check = mbus_db_prepare($conn,"
+$auth_check = mbus_db_prepare($conn, "
     SELECT COUNT(*) as count
     FROM reservation
-    WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'
-", [$user_id, $schedule_id]);
+    WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'" . $reservation_filter . "
+", array_merge([$user_id, $schedule_id], $reservation_filter_params));
 
 $auth_result = mbus_db_fetch_assoc($auth_check);
 
@@ -47,9 +66,9 @@ JOIN routes ON schedule.route_id = routes.route_id
 JOIN buses ON schedule.bus_id = buses.bus_id
 WHERE reservation.user_id = ?
 AND reservation.schedule_id = ?
-AND reservation.status = 'Pending'
-ORDER BY reservation.reservation_id
-", [$user_id, $schedule_id]);
+    AND reservation.status = 'Pending'" . $reservation_filter . "
+    ORDER BY reservation.reservation_id
+    ", array_merge([$user_id, $schedule_id], $reservation_filter_params));
 
 if(mbus_db_num_rows($res_query) <= 0){
     die("No pending reservation found.");
@@ -78,10 +97,19 @@ $expired = time() >= $expiry;
 
 $error = "";
 
-// A receipt is already waiting for an admin: no second payment screen.
-$sub = $conn->pdo->prepare("SELECT 1 FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? AND status = 'Submitted' LIMIT 1");
+// A receipt for this transaction is already waiting for an admin: no second payment screen.
+$submittedForSelection = false;
+$sub = $conn->pdo->prepare("SELECT reservation_ids FROM paymongo_checkout
+    WHERE user_id = ? AND schedule_id = ? AND status = 'Submitted'");
 $sub->execute([$user_id, $schedule_id]);
-if($sub->fetchColumn()){ header("Location: payment_return.php?schedule_id=" . (int)$schedule_id); exit(); }
+foreach($sub->fetchAll(PDO::FETCH_COLUMN) as $ids_json){
+    $linked = json_decode((string)$ids_json, true);
+    if(!$requested_reservation_id || (is_array($linked) && in_array((int)$requested_reservation_id, array_map('intval', $linked), true))){
+        $submittedForSelection = true;
+        break;
+    }
+}
+if($submittedForSelection){ header("Location: payment_return.php?schedule_id=" . (int)$schedule_id); exit(); }
 
 
 /* PAY WITH GCASH (PayMongo redirect) */
@@ -173,25 +201,50 @@ if(isset($_POST['cancel_reservation'])){
     if(!csrf_validate_token()){
         $error = "Security validation failed. Please try again.";
     } else {
-        mbus_db_prepare($conn, "
-        UPDATE reservation
-        SET status='Cancelled'
-        WHERE user_id=?
-        AND schedule_id=?
-        AND status='Pending'
-        ", [$user_id, $schedule_id]);
-
-        if(paymongo_enabled()){
-            $open = mbus_db_prepare($conn, "SELECT session_id FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? AND status = 'Created'", [$user_id, $schedule_id]);
-            while($open !== false && ($o = mbus_db_fetch_assoc($open))){ paymongo_expire_session($o['session_id']); }
+        $cancelId = filter_var($_POST['reservation_id'] ?? ($reservations[0]['reservation_id'] ?? null), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $cancelIds = $cancelId ? [(int)$cancelId] : [];
+        $remoteSessions = [];
+        try {
+            $conn->pdo->beginTransaction();
+            $checkoutQuery = $conn->pdo->prepare("SELECT session_id, status, reservation_ids
+                FROM paymongo_checkout
+                WHERE user_id = ? AND schedule_id = ? AND status IN ('Created', 'Submitted')
+                ORDER BY created_at DESC FOR UPDATE");
+            $checkoutQuery->execute([$user_id, $schedule_id]);
+            foreach($checkoutQuery->fetchAll(PDO::FETCH_ASSOC) as $checkout){
+                $linked = json_decode((string)$checkout['reservation_ids'], true);
+                if(!is_array($linked)) continue;
+                $linked = array_values(array_unique(array_filter(array_map('intval', $linked), static fn($id) => $id > 0)));
+                if(!$cancelId || !in_array((int)$cancelId, $linked, true)) continue;
+                $cancelIds = array_merge($cancelIds, $linked);
+                if($checkout['status'] === 'Created' && strpos((string)$checkout['session_id'], 'manual_') !== 0){
+                    $remoteSessions[] = (string)$checkout['session_id'];
+                }
+                $conn->pdo->prepare("UPDATE paymongo_checkout SET status = 'Cancelled'
+                    WHERE session_id = ? AND status IN ('Created', 'Submitted')")
+                    ->execute([$checkout['session_id']]);
+                break;
+            }
+            $cancelIds = array_values(array_unique(array_filter(array_map('intval', $cancelIds), static fn($id) => $id > 0)));
+            $placeholders = implode(',', array_fill(0, count($cancelIds), '?'));
+            $update = $conn->pdo->prepare("UPDATE reservation SET status = 'Cancelled'
+                WHERE user_id = ? AND schedule_id = ? AND reservation_id IN ($placeholders) AND status = 'Pending'");
+            $update->execute(array_merge([$user_id, $schedule_id], $cancelIds));
+            if($update->rowCount() < 1) throw new RuntimeException('reservation_not_pending');
+            $conn->pdo->commit();
+        } catch(Throwable $e){
+            if($conn->pdo->inTransaction()) $conn->pdo->rollBack();
+            $error = $e instanceof RuntimeException && $e->getMessage() === 'reservation_not_pending'
+                ? 'This reservation is no longer pending.' : 'Could not cancel this reservation. Please try again.';
         }
-        // Free any open payment so its exact amount can be reused and nothing is matched to a cancelled booking.
-        mbus_db_prepare($conn, "UPDATE paymongo_checkout SET status = 'Cancelled' WHERE user_id = ? AND schedule_id = ? AND status IN ('Created','Submitted')", [$user_id, $schedule_id]);
-        // Log cancellation
-        log_activity($conn, $user_id, ACTION_RESERVATION_CANCEL, "Cancelled pending reservation for schedule $schedule_id");
-        
-        header("Location: schedule.php?cancelled=1");
-        exit();
+        foreach(array_unique($remoteSessions) as $sessionId){
+            try { paymongo_expire_session($sessionId); } catch(Throwable $e){ error_log('Could not expire PayMongo checkout: ' . $e->getMessage()); }
+        }
+        if($error === ''){
+            log_activity($conn, $user_id, ACTION_RESERVATION_CANCEL, "Cancelled transaction for schedule $schedule_id");
+            header("Location: schedule.php?cancelled=1");
+            exit();
+        }
     }
 }
 ?>
@@ -331,6 +384,7 @@ if(isset($_POST['cancel_reservation'])){
 
 <form method="POST" class="cancel-form" onsubmit="return confirm('Cancel this reservation and release your seats?');">
     <?php csrf_field(); ?>
+    <input type="hidden" name="reservation_id" value="<?php echo (int)($reservations[0]['reservation_id'] ?? 0); ?>">
     <button type="submit" name="cancel_reservation" value="1" class="btn btn-block btn-cancel-reservation">Cancel reservation</button>
 </form>
 

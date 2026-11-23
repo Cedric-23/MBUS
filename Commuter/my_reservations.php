@@ -102,14 +102,41 @@ $sql = mbus_db_prepare($conn, "
 <?php
 $all = [];
 while($sql !== false && ($r0 = mbus_db_fetch_assoc($sql))) $all[] = $r0;
-/* one entry per trip; keeps the newest-first order */
-/* Split each schedule into status-homogeneous cards. A cancelled seat must
-   never share the Active card with another seat from the same schedule. */
-$scheduleGroups = [];
-foreach($all as $r0){ $scheduleGroups[(int)$r0['schedule_id']][] = $r0; }
+/* Map each reservation to its newest checkout transaction. Reservations that
+   predate checkout tracking fall back to their own reservation ID. */
+$reservationTransaction = [];
+$reservationAwaiting = [];
+$checkoutRows = mbus_db_prepare($conn, "SELECT session_id, status, reference_number, reservation_ids
+    FROM paymongo_checkout WHERE user_id = ? ORDER BY created_at DESC, session_id DESC", [$user_id]);
+while($checkoutRows !== false && ($checkout = mbus_db_fetch_assoc($checkoutRows))){
+    $linked = json_decode((string)$checkout['reservation_ids'], true);
+    if(!is_array($linked)) continue;
+    foreach($linked as $linkedId){
+        $linkedId = (int)$linkedId;
+        if($linkedId > 0 && !isset($reservationTransaction[$linkedId])){
+            $reservationTransaction[$linkedId] = (string)$checkout['session_id'];
+            if((string)$checkout['status'] === 'Submitted'){
+                $reservationAwaiting[$linkedId] = !empty($checkout['reference_number']) ? 'approval' : 'payment';
+            }
+        }
+    }
+}
+
+/* Split each schedule into transaction- and status-homogeneous cards. A
+   cancelled transaction must never share a card with another transaction. */
+$transactionGroups = [];
+foreach($all as $r0){
+    $sid = (int)$r0['schedule_id'];
+    $rid = (int)$r0['reservation_id'];
+    $transactionKey = $reservationTransaction[$rid] ?? ('reservation-' . $rid);
+    $transactionGroups[$sid . '|' . $transactionKey][] = $r0;
+}
 $groups = []; $cats = []; $catCount = ['active' => 0, 'history' => 0, 'cancelled' => 0];
-foreach($scheduleGroups as $scheduleId => $rows0){
+foreach($transactionGroups as $transactionKey => $rows0){
+    /* one entry per trip transaction; keeps the newest-first order */
     $f0 = $rows0[0];
+    $scheduleId = (int)$f0['schedule_id'];
+    /* Split each transaction into status-homogeneous cards. */
     $ended = in_array((string)($f0['trip_status'] ?? ''), ['Arrived', 'Completed'], true)
         || in_array((string)($f0['schedule_status'] ?? ''), ['Completed', 'Cancelled'], true)
         || strtotime((string)$f0['arrival_time']) < time() - 3 * 3600;
@@ -123,14 +150,13 @@ foreach($scheduleGroups as $scheduleId => $rows0){
     }
     foreach($buckets as $cat => $bucketRows){
         if(!$bucketRows) continue;
-        $groupKey = $scheduleId . ':' . $cat;
+        $groupKey = $transactionKey . '|' . $cat;
         $groups[$groupKey] = $bucketRows;
         $cats[$groupKey] = $cat;
         $catCount[$cat]++;
     }
 }
 
-$aw_stmt = $conn->pdo->prepare("SELECT COALESCE(NULLIF(reference_number, ''), '') AS ref FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? AND status = 'Submitted' LIMIT 1");
 $seat_actions = function($row, $awaiting, $remaining){ ?>
     <?php if($row['status'] === "Pending" && $awaiting){ ?>
     <div class="reservation-actions btn-group">
@@ -140,7 +166,7 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
     <?php } elseif($row['status'] === "Pending"){ ?>
     <div class="reservation-timer"><span class="timer-label">Time Remaining:</span> <span class="timer-value countdown" data-seconds="<?php echo $remaining; ?>"><?php echo gmdate("i:s", $remaining); ?></span></div>
     <div class="reservation-actions btn-group">
-        <a class="btn btn-primary" href="payment.php?schedule_id=<?php echo (int)$row['schedule_id']; ?>"><i class="fa fa-credit-card" aria-hidden="true"></i> Pay Now</a>
+        <a class="btn btn-primary" href="payment.php?schedule_id=<?php echo (int)$row['schedule_id']; ?>&amp;reservation_id=<?php echo (int)$row['reservation_id']; ?>"><i class="fa fa-credit-card" aria-hidden="true"></i> Pay Now</a>
         <button type="button" class="btn btn-outline cancel-btn" onclick="cancelReservation(<?php echo (int)$row['reservation_id']; ?>, this)" aria-label="Cancel reservation for seat <?php echo htmlspecialchars($row['seat_number']); ?>"><i class="fa fa-times" aria-hidden="true"></i> Cancel</button>
     </div>
     <?php } elseif($row['status'] === "Paid"){ ?>
@@ -186,9 +212,7 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
             $remaining = 0; $awaiting = false;
             if($row['status'] === "Pending"){
                 $remaining = max(0, strtotime((string)$row['expires_at']) - time());
-                $aw_stmt->execute([$_SESSION['user_id'], $row['schedule_id']]);
-                $aw_row = $aw_stmt->fetch(PDO::FETCH_ASSOC);
-                $awaiting = $aw_row === false ? false : ($aw_row['ref'] !== '' ? 'approval' : 'payment');
+                $awaiting = $reservationAwaiting[(int)$row['reservation_id']] ?? false;
             }
             $info[$k] = [$remaining, $awaiting];
         }
@@ -244,7 +268,7 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
                 <a class="rg-pill rg-wait" href="payment_return.php?schedule_id=<?php echo $scheduleId; ?>"><i class="fa fa-hourglass-half" aria-hidden="true"></i> <?php echo $grpAwait === 'approval' ? 'Waiting for approval' : 'Waiting for GCash payment'; ?></a>
             <?php } else { ?>
                 <span class="rg-time"><i class="fa fa-clock" aria-hidden="true"></i> <span class="countdown" data-seconds="<?php echo $grpRemaining; ?>"><?php echo gmdate("i:s", $grpRemaining); ?></span> left</span>
-                <a class="btn btn-primary rg-pay" href="payment.php?schedule_id=<?php echo $scheduleId; ?>"><i class="fa fa-credit-card" aria-hidden="true"></i> Pay now</a>
+                <a class="btn btn-primary rg-pay" href="payment.php?schedule_id=<?php echo $scheduleId; ?>&amp;reservation_id=<?php echo (int)$first['reservation_id']; ?>"><i class="fa fa-credit-card" aria-hidden="true"></i> Pay now</a>
             <?php } ?>
         </div>
         <?php } ?>
