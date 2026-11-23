@@ -56,6 +56,17 @@ $my_buses = 0;
 $mq = mbus_db_prepare($conn, "SELECT COUNT(*) AS n FROM operator_bus_assignments WHERE operator_id = ?", [$operator_id]);
 if ($mq !== false && ($mrow = mbus_db_fetch_assoc($mq))) $my_buses = (int)$mrow['n'];
 
+/* CURRENT WAITING RIDERS (the signal a driver needs most while on the road) */
+$waitingCount = 0;
+$wq = mbus_db_prepare($conn, "SELECT COUNT(*) AS n
+    FROM pickup_requests p
+    JOIN schedule s ON s.schedule_id = p.schedule_id
+    JOIN operator_bus_assignments oba ON oba.bus_id = s.bus_id
+    WHERE oba.operator_id = ? AND p.status = 'Waiting' AND p.expires_at > NOW()
+      AND s.schedule_status = 'Active' AND s.trip_status IN ('Scheduled', 'Boarding', 'Departed')
+      AND s.departure_time >= ? AND s.departure_time < ?", [$operator_id, $b['today'], $b['tomorrow']]);
+if ($wq !== false && ($wrow = mbus_db_fetch_assoc($wq))) $waitingCount = (int)$wrow['n'];
+
 /* Shared avatar rendering; Driver accounts do not receive Conductor GCash controls. */
 require_once dirname(__DIR__) . '/Includes/header_avatar.php';
 
@@ -105,7 +116,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
         <nav class="menu-top" aria-label="Driver menu">
             <a href="operator_dashboard.php" aria-current="page"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
             <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
-
+            <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
         </nav>
 
         <div class="menu-bottom">
@@ -149,8 +160,6 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <select id="operatorTrackingTrip" aria-label="Active trip"></select>
         </div>
 
-        <p class="attn is-clear"><span><strong>Bus operations ready</strong><small>Trip status and live location tools are available from your dashboard.</small></span></p>
-
         <div class="today-strip" aria-label="Today">
             <div><b><?php echo $stat['trips']; ?></b><span>Trips today</span></div>
             <div><b><?php echo $stat['booked']; ?></b><span>Booked riders today</span></div>
@@ -158,12 +167,10 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <div><b><?php echo $my_buses; ?></b><span><?php echo $my_buses === 1 ? 'Bus' : 'Buses'; ?></span></div>
         </div>
 
-        <section class="home-section" aria-labelledby="manage-h">
-            <div class="home-section-head"><h2 id="manage-h">Manage</h2></div>
-            <ul class="manage-list">
-                <li><a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i>My Bus<span class="count"><?php echo $my_buses; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
-            </ul>
-        </section>
+        <a class="attn<?php echo $waitingCount ? '' : ' is-clear'; ?>" href="waiting.php">
+            <span><strong><?php echo $waitingCount ? $waitingCount . ' commuter' . ($waitingCount === 1 ? '' : 's') . ' waiting' : 'No commuters waiting'; ?></strong><small><?php echo $waitingCount ? 'Open Waiting to see pickup locations for your buses.' : 'Your assigned-bus Waiting board is clear.'; ?></small></span>
+            <span class="attn-go">Open Waiting</span>
+        </a>
 
         <section class="home-section" aria-labelledby="today-h">
             <div class="home-section-head"><h2 id="today-h">Trips today</h2></div>
@@ -194,6 +201,9 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
     </a>
     <a href="my_bus.php" class="bottom-nav-item">
         <i class="fa fa-bus-simple" aria-hidden="true"></i><span>My Bus</span>
+    </a>
+    <a href="waiting.php" class="bottom-nav-item">
+        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
 </nav>
 <script src="../Assets/js/operator_tracker.js"></script>

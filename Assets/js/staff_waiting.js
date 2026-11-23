@@ -1,5 +1,5 @@
-/* Staff waiting map: your bus and the riders waiting for it, with distance (same idea as the
-   commuter pick up page). Operator sees own buses, admin sees all. */
+/* Staff waiting map: assigned buses and the riders waiting for them. Drivers and Conductors
+   see their own buses; Admin sees all. Only Conductors can confirm a pick-up. */
 (() => {
     'use strict';
     const root = document.getElementById('pickupStaff');
@@ -20,6 +20,7 @@
     let routeKey = '', routeData = null, routeFitKey = '', routeRequest = 0, routeFailure = null;
     let busy = false, refreshing = null;
     const isAdmin = root.dataset.role === 'admin';
+    const isConductor = root.dataset.role === 'conductor';
     let view = isAdmin ? 'both' : 'commuters';
     if (isAdmin) {
         try { const v = localStorage.getItem('mbusWaitView'); if (['both', 'buses', 'commuters'].includes(v)) view = v; } catch (e) { /* ignore */ }
@@ -368,7 +369,7 @@
             open.append(txt);
             if (r._km !== null) open.append(node('span', dist(r._km), 'sw-dist'));
             open.addEventListener('click', () => choose(r));
-            if (isAdmin) {
+            if (isAdmin || !isConductor) {
                 const more = node('button', 'Details', 'sw-done sw-details'); more.type = 'button';
                 more.addEventListener('click', () => showDetails(r));
                 li.append(open, more);
@@ -553,7 +554,7 @@
         const close = node('button', 'Close', 'sw-card-close'); close.type = 'button';
         card.append(head, dl);
         let pk = null;
-        if (!isAdmin) { pk = node('button', 'Picked up', 'sw-card-pick'); pk.type = 'button'; card.append(pk); }
+        if (isConductor) { pk = node('button', 'Picked up', 'sw-card-pick'); pk.type = 'button'; card.append(pk); }
         card.append(close); back.append(card); document.body.append(back);
         const shut = () => { back.remove(); document.removeEventListener('keydown', esc); };
         if (pk) pk.addEventListener('click', async () => { await pickedUp(r, pk); shut(); });

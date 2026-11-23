@@ -156,9 +156,7 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Driver'));
 </main>
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="operator_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
-    <a href="manage_trips.php" class="bottom-nav-item"><i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span></a>
-    <a href="scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
-    <a href="passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
+    <a href="my_bus.php" class="bottom-nav-item active" aria-current="page"><i class="fa fa-bus-simple" aria-hidden="true"></i><span>My Bus</span></a>
     <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
 </nav>
 <script src="../Assets/js/app-header.js"></script>

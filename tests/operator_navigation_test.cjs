@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
-const driverExpected = ['Home', 'My Bus'];
+const driverExpected = ['Home', 'My Bus', 'Waiting'];
 const conductorOperatorExpected = ['Home', 'Trips', 'Scan', 'Riders', 'Waiting'];
 const conductorHomeExpected = ['Home', 'Trips', 'Scan', 'Riders', 'Waiting'];
 
@@ -19,7 +19,7 @@ function bottomNav(html, page, role) {
 
 assert.deepEqual(bottomNav(read('Operator/operator_dashboard.php'), 'Operator/operator_dashboard.php', 'driver'), driverExpected,
     'Driver dashboard navigation should expose only Driver tools');
-for (const page of ['Operator/profile.php']) {
+for (const page of ['Operator/profile.php', 'Operator/my_bus.php']) {
     const html = read(page);
     assert.deepEqual(bottomNav(html, page, 'driver'), driverExpected,
         `${page} Driver navigation should expose only Driver tools`);
@@ -46,7 +46,11 @@ for (const page of ['Conductor/conductor_dashboard.php', 'Operator/manage_trips.
 const waiting = read('Includes/pickup_staff_view.php');
 assert.match(waiting, /\['scan\.php', 'fa-qrcode', 'Scan'\]/);
 assert.match(waiting, /\['passengers\.php', 'fa-users', 'Riders'\]/);
-assert.doesNotMatch(waiting, /\['my_bus\\.php', 'fa-bus-simple', 'My Bus'\]/);
+assert.match(waiting, /\['my_bus\.php', 'fa-bus-simple', 'My Bus'\]/);
+assert.match(waiting, /\['passengers\.php', 'fa-users', 'Riders'\]/);
+assert.match(read('Operator/waiting.php'), /\['driver', 'conductor'\]/);
+assert.match(read('Assets/js/staff_waiting.js'), /const isConductor = root\.dataset\.role === 'conductor'/);
+assert.match(read('Assets/js/staff_waiting.js'), /if \(isConductor\) \{ pk = node\('button', 'Picked up'/);
 assert.match(waiting, /<span>Waiting<\/span>/);
 
 const scan = read('Operator/scan.php');

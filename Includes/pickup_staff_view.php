@@ -1,13 +1,15 @@
 <?php
-// Shared Waiting board for staff roles. Conductor: assigned buses. Admin: all buses.
-if (!isset($pickupStaffRole) || !in_array($pickupStaffRole, ['admin', 'conductor'], true)) {
+require_once __DIR__ . '/csrf.php';
+// Shared Waiting board for staff roles. Driver/Conductor: assigned buses. Admin: all buses.
+if (!isset($pickupStaffRole) || !in_array($pickupStaffRole, ['admin', 'driver', 'conductor'], true)) {
     http_response_code(403);
     exit('Access denied.');
 }
 $isAdmin = $pickupStaffRole === 'admin';
 $isConductor = $pickupStaffRole === 'conductor';
-$dashboard = $isAdmin ? 'admin_dashboard.php' : '../Conductor/conductor_dashboard.php';
-$roleLabel = $isAdmin ? 'Admin' : 'Conductor';
+$isDriver = $pickupStaffRole === 'driver';
+$dashboard = $isAdmin ? 'admin_dashboard.php' : ($isDriver ? 'operator_dashboard.php' : '../Conductor/conductor_dashboard.php');
+$roleLabel = $isAdmin ? 'Admin' : ($isDriver ? 'Driver' : 'Conductor');
 $navItems = $isAdmin
     ? [
         ['admin_dashboard.php', 'fa-home', 'Home'],
@@ -15,12 +17,17 @@ $navItems = $isAdmin
         ['manage_buses.php', 'fa-bus', 'Buses'],
         ['manage_operators.php', 'fa-users', 'Operators'],
     ]
+    : ($isDriver
+        ? [
+        [$dashboard, 'fa-home', 'Home'],
+        ['my_bus.php', 'fa-bus-simple', 'My Bus'],
+    ]
     : [
         [$dashboard, 'fa-home', 'Home'],
         ['manage_trips.php', 'fa-bus', 'Trips'],
         ['scan.php', 'fa-qrcode', 'Scan'],
         ['passengers.php', 'fa-users', 'Riders'],
-    ];
+    ]);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -146,6 +153,7 @@ $navItems = $isAdmin
 <script src="../Assets/js/staff_waiting.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/staff_waiting.js'); ?>"></script>
 <script src="../Assets/js/staff_waiting_toggles.js?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/js/staff_waiting_toggles.js'); ?>"></script>
 <script src="../Assets/js/app-header.js"></script>
-<?php if (strtolower((string)($_SESSION['user_type'] ?? '')) === 'conductor') { ?><script src="../Assets/js/operator_tracker.js"></script><?php } ?>
+<?php if ($isDriver || $isConductor) { ?><script>window.OPERATOR_CSRF_TOKEN = <?php echo json_encode(csrf_get_token()); ?>;</script><?php } ?>
+<?php if (in_array(strtolower((string)($_SESSION['user_type'] ?? '')), ['driver', 'conductor'], true)) { ?><script src="../Assets/js/operator_tracker.js"></script><?php } ?>
 </body>
 </html>

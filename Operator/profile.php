@@ -167,6 +167,7 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? $staffLabel));
     <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
     <?php else: ?>
     <a href="my_bus.php" class="bottom-nav-item"><i class="fa fa-bus-simple" aria-hidden="true"></i><span>My Bus</span></a>
+    <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
     <?php endif; ?>
 </nav>
 <script src="../Assets/js/app-header.js"></script>

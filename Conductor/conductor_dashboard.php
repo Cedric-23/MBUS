@@ -38,6 +38,16 @@ $paymentQuery = mbus_db_prepare($conn, "SELECT COUNT(*) AS n
     WHERE cba.conductor_id = ? AND pc.session_id LIKE 'manual\\_%' AND LOWER(pc.status) = 'submitted'", [$conductorId]);
 if ($paymentQuery !== false && ($paymentRow = mbus_db_fetch_assoc($paymentQuery))) $paymentCount = (int)$paymentRow['n'];
 
+$waitingCount = 0;
+$waitingQuery = mbus_db_prepare($conn, "SELECT COUNT(*) AS n
+    FROM pickup_requests p
+    JOIN schedule s ON s.schedule_id = p.schedule_id
+    JOIN conductor_bus_assignments cba ON cba.bus_id = s.bus_id
+    WHERE cba.conductor_id = ? AND p.status = 'Waiting' AND p.expires_at > NOW()
+      AND s.schedule_status = 'Active' AND s.trip_status IN ('Scheduled', 'Boarding', 'Departed')
+      AND s.departure_time >= ? AND s.departure_time < ?", [$conductorId, $bounds['today'], $bounds['tomorrow']]);
+if ($waitingQuery !== false && ($waitingRow = mbus_db_fetch_assoc($waitingQuery))) $waitingCount = (int)$waitingRow['n'];
+
 $trips = [];
 $tripQuery = mbus_db_prepare($conn, "SELECT s.schedule_id, s.departure_time, s.arrival_time, s.trip_status,
         b.bus_number, b.capacity, r.origin, r.destination,
@@ -151,12 +161,10 @@ $nextTrip = $trips[0] ?? null;
             <div><b><?php echo $paymentCount; ?></b><span>GCash to review</span></div>
         </div>
 
-        <nav class="cond-actions" aria-label="Conductor actions">
-            <a href="../Operator/manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i><span>Manage trips</span></a>
-            <a href="../Operator/scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan tickets</span></a>
-            <a href="../Operator/passengers.php"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
-            <a href="../Operator/waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting riders</span></a>
-        </nav>
+        <a class="attn<?php echo $waitingCount ? '' : ' is-clear'; ?>" href="../Operator/waiting.php">
+            <span><strong><?php echo $waitingCount ? $waitingCount . ' commuter' . ($waitingCount === 1 ? '' : 's') . ' waiting' : 'No commuters waiting'; ?></strong><small><?php echo $waitingCount ? 'Open Waiting to see pickup locations for your assigned buses.' : 'Your assigned-bus Waiting board is clear.'; ?></small></span>
+            <span class="attn-go">Open Waiting</span>
+        </a>
 
         <section class="home-section" aria-labelledby="todayTripsHeading">
             <div class="home-section-head"><h2 id="todayTripsHeading">Trips today</h2><a href="../Operator/manage_trips.php">All trips</a></div>

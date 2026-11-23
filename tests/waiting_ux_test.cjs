@@ -31,7 +31,7 @@ const gateInclude = read('Includes/gps_gate.php');
 const navPages = [
     'Admin/admin_dashboard.php', 'Admin/manage_buses.php', 'Admin/manage_operators.php',
     'Commuter/commuter_dashboard.php', 'Commuter/live.php', 'Commuter/my_reservations.php',
-    'Commuter/schedule.php', 'Conductor/conductor_dashboard.php', 'Operator/manage_trips.php',
+    'Commuter/schedule.php', 'Conductor/conductor_dashboard.php', 'Operator/operator_dashboard.php', 'Operator/my_bus.php', 'Operator/manage_trips.php',
     'Operator/scan.php', 'Operator/passengers.php',
 ];
 for (const page of navPages) {
@@ -143,7 +143,8 @@ assert.doesNotMatch(commuterWaiting, /waitingSchedule|waitBtn|commuter_waiting_a
 // --- 3. Operator riders page is only the seat map; Waiting is its separate navigation page
 assert.doesNotMatch(riders, /riderLive|liveMap|waitingList|pickup_staff\.js|live_tracking\.php|leaflet/i);
 assert.match(riders, /Waiting/);
-assert.match(operatorWaiting, /\$pickupStaffRole = 'conductor'/);
+assert.match(operatorWaiting, /\$pickupStaffRole = strtolower\(\(string\)\$_SESSION\['user_type'\]\)/);
+assert.match(staffView, /\['my_bus\.php', 'fa-bus-simple', 'My Bus'\]/);
 assert.match(adminWaiting, /\$pickupStaffRole = 'admin'/);
 assert.match(staffView, /<h1>Waiting<\/h1>/);
 assert.match(staffView, /id="staffMap"/);
