@@ -155,6 +155,8 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
 /* Keep the login and registration sheets starting at the same vertical position. */
 @media (min-width:901px){
   .right-container{align-items:flex-start}
+  /* Center the tall primary registration against the viewport using a shared offset. */
+  .right-container{padding-top:max(40px, calc((100vh - 806px) / 2))}
   .form-container{margin:0 auto}
 }
 
