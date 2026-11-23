@@ -7,11 +7,38 @@
     if (s < 60) return 'Just now'; if (s < 3600) return Math.floor(s / 60) + ' min ago';
     if (s < 86400) return Math.floor(s / 3600) + ' hr ago'; return Math.floor(s / 86400) + ' d ago';
   }
+  /* Pages instead of a scrolling list: PER items at a time with Previous / Next. */
+  var PER = 5, page = 0, items = [];
+  var st = document.createElement('style');
+  st.textContent = '.notif-panel{overflow:visible!important;max-height:none!important}' +
+    '.notif-pager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}' +
+    '.notif-pager[hidden]{display:none}' +
+    '.notif-pager span{font-size:.78rem;color:#6b7a90;font-weight:600}' +
+    '.notif-pager button{min-height:36px;padding:0 14px;border:0;border-radius:999px;background:#eaf1fd;color:#2f6fe4;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer}' +
+    '.notif-pager button:disabled{opacity:.4;cursor:default}';
+  document.head.appendChild(st);
+  var pager = document.createElement('div'); pager.className = 'notif-pager'; pager.hidden = true;
+  pager.innerHTML = '<button type="button" data-d="-1">Previous</button><span></span><button type="button" data-d="1">Next</button>';
+  list.parentNode.insertBefore(pager, list.nextSibling);
+  pager.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var b = e.target.closest('button'); if (!b || b.disabled) return;
+    page += +b.dataset.d; draw();
+  });
   function render(d) {
     dot.hidden = !d.unread; dot.textContent = d.unread > 9 ? '9+' : d.unread;
+    items = d.items || []; page = 0; draw();
+  }
+  function draw() {
     list.innerHTML = '';
-    if (!d.items.length) { var e = document.createElement('p'); e.className = 'notif-empty'; e.textContent = 'No notifications yet. Payment, ID and bus updates show up here.'; list.appendChild(e); return; }
-    d.items.forEach(function (n) {
+    var pages = Math.max(1, Math.ceil(items.length / PER));
+    page = Math.min(Math.max(page, 0), pages - 1);
+    pager.hidden = pages < 2;
+    pager.querySelector('span').textContent = (page + 1) + ' / ' + pages;
+    pager.querySelector('[data-d="-1"]').disabled = page === 0;
+    pager.querySelector('[data-d="1"]').disabled = page >= pages - 1;
+    if (!items.length) { var e = document.createElement('p'); e.className = 'notif-empty'; e.textContent = 'No notifications yet. Payment, ID and bus updates show up here.'; list.appendChild(e); return; }
+    items.slice(page * PER, page * PER + PER).forEach(function (n) {
       var li = document.createElement('li'); if (n.unread) li.className = 'is-new';
       var m = document.createElement('span'); m.textContent = n.message;
       var t = document.createElement('small'); t.textContent = ago(n.at);
