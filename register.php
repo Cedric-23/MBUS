@@ -3,6 +3,7 @@
 session_start();
 include "config/db_connect.php";
 include_once "Includes/validation.php";
+require_once __DIR__ . "/Includes/seat_layout.php";
 include "Includes/activity_log.php";
 require_once "Includes/csrf.php";
 require_once __DIR__ . '/Includes/reset_mailer.php';
@@ -170,6 +171,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $license_expiry = trim((string)($_POST['license-expiry'] ?? ''));
         $vehicle_type   = trim((string)($_POST['vehicle-type'] ?? ''));
         $plate          = (string)($_POST['vehicle-plate'] ?? '');
+        $seatsRaw       = trim((string)($_POST['bus-seats'] ?? ''));
         $vehicle_expiry = trim((string)($_POST['vehicle-expiry'] ?? ''));
 
         /* first and last name are separate fields, saved together as "First Last" like every other account */
@@ -192,6 +194,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         elseif ($license_expiry > date('Y-m-d', strtotime('+15 years'))) $errors['license-expiry'] = 'That expiry date is too far ahead. Check the year.';
         if (!in_array($vehicle_type, ['Ordinary', 'Aircon'], true)) $errors['vehicle-type'] = 'Choose a bus type (Ordinary or Aircon).';
         if ($e = mbus_check_plate($plate)) $errors['vehicle-plate'] = $e;
+        $seats = ctype_digit($seatsRaw) ? (int)$seatsRaw : 0;
+        if ($seats < 10 || $seats > 100) $errors['bus-seats'] = 'Enter how many seats your bus has (10 to 100).';
         /* registration expiry is optional: only documents that show one */
         if ($vehicle_expiry !== '') {
             $vd = DateTime::createFromFormat('Y-m-d', $vehicle_expiry);
@@ -236,12 +240,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 "INSERT INTO operator_application
                     (full_name, email, phone_number, address, license_number, license_expiry, vehicle_type, vehicle_plate_number,
                      license_document_b64, license_document_mime, vehicle_document_b64, vehicle_document_mime, password_hash,
-                     bus_photo_b64, bus_photo_mime, interior_photo_b64, interior_photo_mime, last_name, vehicle_registration_expiry, application_status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')",
+                     bus_photo_b64, bus_photo_mime, interior_photo_b64, interior_photo_mime, last_name, vehicle_registration_expiry, seat_layout, application_status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')",
                 [$full_name, $email, $phone_number, $address, $license_number, ($license_expiry === "" ? null : $license_expiry), $vehicle_type, $plate,
                  $lic['b64'], $lic['mime'], $veh['b64'], $veh['mime'], password_hash($password, PASSWORD_DEFAULT),
                  $busPhoto['b64'], $busPhoto['mime'], $interiorPhoto['b64'], $interiorPhoto['mime'],
-                 $last_name, $vehicle_expiry !== '' ? $vehicle_expiry : null]);
+                 $last_name, $vehicle_expiry !== '' ? $vehicle_expiry : null, json_encode(mbus_seat_layout_default($seats))]);
             if ($ok === false) { $error = 'We could not save your application. Please try again.'; }
             else {
                 $_SESSION['register_flash'] = 'Application submitted. An admin will review it. Once approved, log in with ' . $email . ' and the password you chose.';
@@ -253,7 +257,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if ($errors && $error === '') $error = 'Please fix the highlighted fields.';
     // Driver form is a 3-step wizard: reopen on the first step that has an error
     $stepOf = ['driver-first-name'=>0,'driver-last-name'=>0,'email-address'=>0,'phone-number'=>0,'home-address'=>0,'driver-password'=>0,'driver-confirm'=>0,
-               'license-number'=>1,'license-expiry'=>1,'license_document'=>1,'vehicle-type'=>2,'vehicle-plate'=>2,'vehicle-expiry'=>2,'vehicle_document'=>2,
+               'license-number'=>1,'license-expiry'=>1,'license_document'=>1,'vehicle-type'=>2,'vehicle-plate'=>2,'bus-seats'=>2,'vehicle-expiry'=>2,'vehicle_document'=>2,
                'bus_photo'=>2,'interior_photo'=>2];
     foreach (array_keys($errors) as $k) { if (isset($stepOf[$k])) { $step_with_error = $stepOf[$k]; break; } }
 }
@@ -554,6 +558,11 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         <input type="text" name="vehicle-plate" placeholder="Enter vehicle plate number" maxlength="12" value="<?= reg_old('vehicle-plate') ?>" required/>
                                         <i class="input-icon" data-lucide="user"></i>
                                     <?= mbus_field_error($errors, 'vehicle-plate') ?></div>
+                                    <div class="bus-seats">
+                                        <label class="input-label">Number of Seats</label>
+                                        <input type="number" name="bus-seats" inputmode="numeric" min="10" max="100" placeholder="e.g. 45" value="<?= reg_old('bus-seats') ?>" required/>
+                                        <i class="input-icon" data-lucide="armchair"></i>
+                                    <?= mbus_field_error($errors, 'bus-seats') ?></div>
                                     <div class="vehicle-expiry">
                                         <label class="input-label">Registration Expiry Date <small style="font-weight:500;color:#8a98ae">(if your document shows one)</small></label>
                                         <input type="date" name="vehicle-expiry" min="<?= date('Y-m-d') ?>" value="<?= reg_old('vehicle-expiry') ?>"/>
