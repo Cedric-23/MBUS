@@ -1,0 +1,246 @@
+/* ---------- simple upload rows (license, registration, bus photos) ---------- */
+.auth-register .upload-group .upload-document-group {
+    display: flex !important;
+    align-items: center;
+    gap: 12px;
+    min-height: 0 !important;
+    padding: 10px 12px !important;
+    border: 1.5px dashed #c9d8ee !important;
+    border-radius: 14px !important;
+    background: #fff !important;
+}
+
+.auth-register .upload-group .upload-icon {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 46px !important;
+    height: 46px !important;
+    border-radius: 12px !important;
+    background: #eaf1ff center / cover no-repeat;
+    color: #2f6fe4;
+    overflow: hidden;
+}
+
+.auth-register .upload-group .upload-icon.has-thumb svg,
+.auth-register .upload-group .upload-icon.has-thumb i { display: none; }
+
+.auth-register .upload-group .document-desc {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex !important;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.auth-register .upload-group .document-desc .document-name {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #14213d;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.auth-register .upload-group .document-desc span:last-child {
+    color: #7a8aa6;
+    font-size: 12px;
+}
+
+.auth-register .upload-group .document-input-button { flex: none; width: auto !important; }
+
+.auth-register .upload-group .document-input-button button {
+    width: auto !important;
+    min-height: 38px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 999px;
+    background: #2f6fe4;
+    color: #fff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* the big preview box is gone: the photo shows as a small thumbnail in the row instead */
+.auth-register .upload-group .document-preview,
+.auth-register .upload-group .document-preview.active { display: none !important; }
+
+.bus-photo-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+/* ---------- seat builder ---------- */
+.seat-builder {
+    margin-top: 20px;
+    padding: 18px;
+    border: 1px solid #dde7f8;
+    border-radius: 24px;
+    background: #f8fbff;
+}
+
+.seat-builder-head,
+.seat-builder-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.seat-builder-head p {
+    margin: 5px 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.seat-builder-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.seat-layout-button {
+    min-height: 40px;
+    padding: 8px 14px;
+    border: 1.5px solid #cfe0fb;
+    border-radius: 999px;
+    background: #fff;
+    color: #2f6fe4;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.seat-layout-button:hover { background: #eef4ff; }
+.seat-layout-button:disabled { opacity: .5; cursor: not-allowed; }
+.seat-layout-button:focus-visible,
+.seat-builder .seat-cell:focus-visible { outline: 3px solid rgba(47, 111, 228, .4); outline-offset: 2px; }
+
+.seat-builder-meta {
+    margin: 14px 0 9px;
+    color: #53657b;
+    font-size: 13px;
+}
+
+.seat-builder-meta [data-seat-count] {
+    color: #14213d;
+    font-weight: 700;
+}
+
+/* same size and spacing as the real seat map when reserving: 48px seats, 8px gaps, a plain 24px aisle (no label) */
+.seat-layout-preview {
+    display: grid;
+    justify-content: center;
+    gap: 8px;
+    max-height: 280px;
+    overflow: auto;
+    padding: 16px 12px;
+    border: 1.5px solid #dde7f8;
+    border-radius: 28px;
+    background: #f6f9ff;
+}
+
+.seat-layout-preview .seat-row {
+    display: grid;
+    grid-template-columns: repeat(2, 48px) 24px repeat(2, 48px);
+    align-items: center;
+    gap: 8px;
+}
+
+.seat-builder .seat-cell {
+    position: relative;
+    min-width: 48px;
+    height: 48px;
+    padding: 0 0 10px;
+    border: 1.5px solid #bfe8cf;
+    border-radius: 16px 16px 10px 10px;
+    background: #e8f7ee;
+    color: #17703f;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.seat-builder .seat-cell::before {
+    content: "";
+    position: absolute;
+    left: -4px;
+    right: -4px;
+    bottom: 5px;
+    height: 42%;
+    border: 1.5px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 8px;
+    opacity: .28;
+    pointer-events: none;
+}
+
+.seat-builder .seat-cell::after {
+    content: "";
+    position: absolute;
+    left: 18%;
+    right: 18%;
+    bottom: 4px;
+    height: 4px;
+    border-radius: 4px;
+    background: currentColor;
+    opacity: .35;
+    pointer-events: none;
+}
+
+.seat-builder .seat-cell.is-removed {
+    border: 1.5px dashed #c5d0e0;
+    background: #fff;
+    color: #a3aec3;
+}
+
+.seat-builder .seat-cell.is-removed::before,
+.seat-builder .seat-cell.is-removed::after { display: none; }
+
+/* the aisle is just empty space, like on the real seat map */
+.seat-aisle { display: block; }
+
+@media (max-width: 640px) {
+    .bus-photo-grid { grid-template-columns: minmax(0, 1fr); }
+    .seat-builder { padding: 14px; }
+    .seat-builder-head { align-items: flex-start; flex-direction: column; }
+    .seat-layout-preview .seat-row { grid-template-columns: repeat(2, 44px) 16px repeat(2, 44px); gap: 6px; }
+    .seat-builder .seat-cell { min-width: 44px; height: 44px; font-size: 13px; }
+}
+
+/* ---------- cleaner photo / document upload cards ---------- */
+.bus-photo-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 0 !important; }
+.auth-register .upload-group { margin-bottom: 16px; }
+.auth-register .upload-group .upload-document-group {
+    gap: 14px; padding: 12px 14px !important; border: 1.5px dashed #b8cbea !important; border-radius: 16px !important;
+    background: #f7faff !important; transition: border-color .15s, background .15s;
+}
+.auth-register .upload-group .upload-document-group:hover { border-color: #2f6fe4 !important; background: #f0f6ff !important; }
+.auth-register .upload-group .upload-icon { width: 56px !important; height: 56px !important; border-radius: 14px !important; background-color: #e3edff; }
+.auth-register .upload-group .document-desc .document-name { font-size: 14px; }
+.auth-register .upload-group.is-done .upload-document-group { border-style: solid !important; border-color: #34a770 !important; background: #f3fbf7 !important; }
+.auth-register .upload-group.is-done .document-desc span:last-child { color: #1f8a57; font-weight: 600; }
+.auth-register .upload-group .document-input-button button { min-height: 36px; padding: 0 14px; background: #fff; color: #2f6fe4; border: 1.5px solid #2f6fe4; }
+.auth-register .upload-group.is-done .document-input-button button { border-color: #b8cbea; color: #516278; }
+
+/* ---------- address picker ---------- */
+.addr-picker { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 6px; }
+.addr-picker select, .addr-picker input[type="text"] {
+    width: 100%; min-height: 48px; padding: 0 14px; border: 1.5px solid #dbe5f4; border-radius: 999px; background: #fff;
+    font: inherit; font-size: 15px; color: #14213d; box-sizing: border-box;
+}
+.addr-picker select:disabled { background: #f3f6fb; color: #8a98ae; }
+.addr-picker select:focus, .addr-picker input:focus { outline: none; border-color: #2f6fe4; box-shadow: 0 0 0 3px rgba(47, 111, 228, .15); }
+.addr-picker [hidden] { display: none !important; }
+@media (min-width: 640px) {
+    .addr-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .addr-picker select:first-child, .addr-picker input[data-addr="street"], .addr-picker input[data-addr="manual"], .addr-picker small { grid-column: 1 / -1; }
+}
+.auth-register .upload-group .upload-document-group { flex-wrap: nowrap !important; }
+.auth-register .upload-group .document-desc .document-name { white-space: nowrap; }

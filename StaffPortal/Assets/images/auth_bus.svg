@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 230" fill="none">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e3edff"/></linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b9bff"/><stop offset="1" stop-color="#2f6fe4"/></linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <ellipse cx="180" cy="120" rx="170" ry="105" fill="url(#glow)"/>
+  <ellipse cx="180" cy="208" rx="120" ry="12" fill="#1b4fb8" opacity=".25"/>
+  <!-- bus body -->
+  <rect x="62" y="38" width="236" height="150" rx="34" fill="url(#body)"/>
+  <rect x="62" y="150" width="236" height="22" fill="#ffc83d"/>
+  <rect x="62" y="150" width="236" height="6" fill="#f5b014"/>
+  <!-- roof sign -->
+  <rect x="132" y="22" width="96" height="22" rx="11" fill="#2f6fe4"/>
+  <circle cx="152" cy="33" r="3" fill="#fff"/><circle cx="164" cy="33" r="3" fill="#fff" opacity=".7"/><circle cx="176" cy="33" r="3" fill="#fff" opacity=".4"/>
+  <!-- windshield -->
+  <rect x="84" y="60" width="192" height="76" rx="20" fill="url(#glass)"/>
+  <path d="M100 70 L150 70 L126 126 L100 126 Z" fill="#fff" opacity=".16"/>
+  <path d="M176 70 L196 70 L172 126 L152 126 Z" fill="#fff" opacity=".1"/>
+  <!-- lights -->
+  <circle cx="100" cy="162" r="9" fill="#fff"/><circle cx="260" cy="162" r="9" fill="#fff"/>
+  <circle cx="100" cy="162" r="4" fill="#ffd66b"/><circle cx="260" cy="162" r="4" fill="#ffd66b"/>
+  <rect x="150" y="158" width="60" height="8" rx="4" fill="#cfdcf5"/>
+  <!-- mirrors -->
+  <rect x="46" y="72" width="12" height="34" rx="6" fill="#2358c0"/><rect x="302" y="72" width="12" height="34" rx="6" fill="#2358c0"/>
+  <!-- wheels -->
+  <rect x="82" y="180" width="38" height="24" rx="10" fill="#14305e"/><rect x="240" y="180" width="38" height="24" rx="10" fill="#14305e"/>
+  <!-- sparkles -->
+  <circle cx="40" cy="48" r="5" fill="#fff" opacity=".7"/><circle cx="326" cy="40" r="7" fill="#fff" opacity=".5"/><circle cx="332" cy="150" r="4" fill="#fff" opacity=".7"/><circle cx="26" cy="140" r="6" fill="#fff" opacity=".45"/>
+</svg>

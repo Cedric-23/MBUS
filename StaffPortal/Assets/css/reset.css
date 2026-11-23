@@ -1,0 +1,43 @@
+/* Password reset uses register.css/auth.css for the shared shell and tokens. */
+.reset-form .form-field { margin-bottom: 16px; }
+.reset-form .form-field > label { display:block; margin:0 0 6px 2px; font-size:.85rem; font-weight:600; color:#344054; }
+.reset-form .form-field input { padding-left:42px; }
+.reset-form .form-field input.code-input { letter-spacing:.28em; font-weight:700; text-align:center; padding-left:18px; }
+.reset-form .form-field input.code-input::placeholder { letter-spacing:normal; font-weight:400; }
+.reset-form .form-field .input-icon { top:39px; }
+.reset-form .form-field .field-error { margin-top:6px; }
+.reset-note { margin:-8px 0 18px; color:var(--muted); font-size:.82rem; line-height:1.5; }
+.reset-actions { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:2px 0 16px; font-size:.84rem; }
+.reset-actions a,.reset-actions button { color:var(--blue); background:none; border:0; padding:0; font:inherit; font-weight:600; cursor:pointer; text-decoration:none; }
+.reset-actions button:disabled { color:#98a2b3; cursor:wait; }
+.reset-timer { color:var(--muted); }
+.reset-footer { margin-top:22px; padding-top:18px; border-top:1px solid #eaecf0; text-align:center; color:var(--muted); font-size:.86rem; }
+.reset-footer p { margin:0 0 8px; }
+.reset-footer a { color:var(--blue); text-decoration:none; font-weight:600; }
+.password-requirements { margin:7px 2px 0; padding:0; list-style:none; display:grid; gap:3px; color:var(--muted); font-size:.78rem; }
+.password-requirements li::before { content:'•'; display:inline-block; width:16px; color:#98a2b3; }
+.password-requirements li.met { color:var(--ok); }
+.password-requirements li.met::before { content:'✓'; font-weight:700; }
+.reset-form .password-input,.reset-form .confirm-password-input { position:relative; }
+.reset-form .password-input > input,.reset-form .confirm-password-input > input,.reset-form .pw-wrap > input { padding-right:52px; }
+.reset-form .password-input .pw-wrap,.reset-form .confirm-password-input .pw-wrap { position:relative; display:block; width:100%; }
+.reset-form .password-toggle,.reset-form .pw-eye { position:absolute; right:4px; top:50%; transform:translateY(-50%); z-index:2; }
+@media(max-width:480px){ .reset-actions { align-items:flex-start; flex-direction:column; gap:8px; } }
+
+/* icon sits inside the input box, centered, whatever the label/error heights are */
+.reset-form .reset-input{position:relative;display:block}
+.reset-form .reset-input .input-icon{position:absolute;left:18px;top:50%;transform:translateY(-50%);width:18px;height:18px;pointer-events:none}
+.reset-form .reset-input input{width:100%;box-sizing:border-box}
+
+/* New password page: the lock icon and the show/hide eye belong to the input box.
+   The wrapper had no position, so the eye floated down over the checklist. */
+.reset-form .password-control{position:relative;display:block;width:100%}
+.reset-form .password-control>input{width:100%;box-sizing:border-box;padding-right:52px}
+.reset-form .password-control>.input-icon{position:absolute;left:18px;top:50%;transform:translateY(-50%);width:18px;height:18px;pointer-events:none;z-index:1}
+.reset-form .password-control>.password-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);z-index:2}
+
+/* password fields: keep the eye and lock icons inside the input, not under the rules list */
+.password-control{position:relative;width:100%}
+.password-control>input{padding-right:52px}
+.password-control>.input-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);z-index:1}
+.password-control>.password-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:40px;height:40px;display:grid;place-items:center;padding:0;border:0;border-radius:10px;background:transparent;color:#6b7a8d;cursor:pointer;z-index:2}

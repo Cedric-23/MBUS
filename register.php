@@ -1,14 +1,16 @@
 <?php
 
 session_start();
-include "config/db_connect.php";
-include_once "Includes/validation.php";
+include __DIR__ . "/config/db_connect.php";
+include_once __DIR__ . "/Includes/validation.php";
 require_once __DIR__ . "/Includes/seat_layout.php";
-include "Includes/activity_log.php";
-require_once "Includes/csrf.php";
+include __DIR__ . "/Includes/activity_log.php";
+require_once __DIR__ . "/Includes/csrf.php";
 require_once __DIR__ . '/Includes/reset_mailer.php';
 require_once __DIR__ . '/Includes/registration_security.php';
 require_once __DIR__ . '/Includes/phone_unique.php';
+
+$staff_portal = defined('MBUS_STAFF_PORTAL') && MBUS_STAFF_PORTAL === true;
 
 /*
  * Conductor accounts:
@@ -55,9 +57,9 @@ function mbus_application_photo(string $field, &$error): ?array {
 
 /* ---------- user type ---------- */
 
-$allowed_types  = ["passenger", "conductor", "driver"];
-$requested_type = $_GET['type'] ?? 'passenger';
-$user_type      = in_array($requested_type, $allowed_types, true) ? $requested_type : 'passenger';
+$allowed_types  = $staff_portal ? ["conductor", "driver"] : ["passenger"];
+$requested_type = $_GET['type'] ?? ($staff_portal ? 'driver' : 'passenger');
+$user_type      = in_array($requested_type, $allowed_types, true) ? $requested_type : ($staff_portal ? 'driver' : 'passenger');
 
 $error   = '';
 $success = '';
@@ -76,7 +78,7 @@ $step_with_error = 0;
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $posted_type = $_POST["user_type"] ?? "passenger";
-    $user_type   = in_array($posted_type, $allowed_types, true) ? $posted_type : "passenger";
+    $user_type   = in_array($posted_type, $allowed_types, true) ? $posted_type : ($staff_portal ? 'driver' : 'passenger');
 
     if (!csrf_validate_token()) {
         $error = 'Security validation failed. Please reload the page and try again.';
@@ -336,7 +338,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
         <div class="right-container">
             <div class="form-container">
                 <div class="auth-tabs" role="tablist">
-                    <?php if ($user_type === 'passenger'): ?>
+                    <?php if (!$staff_portal): ?>
                     <a href="login.php" role="tab">Login</a>
                     <a href="register.php" class="on" role="tab">Register</a>
                     <?php else: ?>
@@ -417,9 +419,9 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                         
                         <div class="footer">
                             <p>Already have an account? <a style="color: #086FCF; text-decoration: none;" href="login.php">Sign In</a></p>
-                            <?php if ($user_type === 'conductor'): ?>
-                            <p>Not a conductor? <a style="color: #086FCF; text-decoration: none;" href="register.php?type=passenger">Register as a passenger</a></p>
-                            <?php else: ?>
+                            <?php if ($staff_portal && $user_type === 'conductor'): ?>
+                            <p>Not a conductor? <a style="color: #086FCF; text-decoration: none;" href="register.php?type=driver">Apply as Driver/Operator</a></p>
+                            <?php elseif (!$staff_portal): ?>
                             <p>Want to drive with us? <a style="color: #086FCF; text-decoration: none;" href="register.php?type=driver">Apply as Driver/Operator</a></p>
                             <?php endif; ?>
                         </div>
@@ -626,7 +628,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                             <div class="redirect-footer">
                                 <div class="accounts-redirect">
                                     <p>Already have an account? <a style="color: #0877DF;" href="login.php">Login here</a></p>
-                                    <p>Want to book a ride? <a style="color: #0877DF;" href="register.php?type=passenger"> Register as Commuter </a> </p>
+                                    <?php if (!$staff_portal): ?><p>Want to book a ride? <a style="color: #0877DF;" href="register.php?type=passenger"> Register as Commuter </a> </p><?php endif; ?>
                                 </div>
                                 <div class="contacts">
                                     
