@@ -251,9 +251,7 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
 
                         
 
-                        <div class="footer">
-                            <?php if ($staff_portal): ?><p>Need a staff account? <a style="color: #086FCF; text-decoration: none;" href="register.php?type=driver">Apply as Driver/Operator</a></p><?php endif; ?>
-                        </div>
+                        <div class="footer"></div>
                     </div>
                 </form>
             </div>
