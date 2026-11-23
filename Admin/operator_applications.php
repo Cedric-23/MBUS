@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->exec('SAVEPOINT bus_from_app');
                     $newBus = mbus_bus_from_application($pdo, $app, $uid);
                     $pdo->exec('RELEASE SAVEPOINT bus_from_app');
-                    if (!$newBus) $busProblem = 'the submission has no usable seat layout';
+                    if (!$newBus) $busProblem = 'the submission has no usable bus details';
                 } catch (Throwable $busError) {
                     $pdo->exec('ROLLBACK TO SAVEPOINT bus_from_app');
                     error_log('Bus from application ' . $id . ' failed: ' . $busError->getMessage());
@@ -198,7 +198,7 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
         </div>
         <dl class="oa-facts">
             <div><dt>Address</dt><dd><?php echo htmlspecialchars($a['address']); ?></dd></div>
-            <div><dt>License</dt><dd><?php echo htmlspecialchars($a['license_number']); ?> · <span class="<?php echo $expired ? 'oa-bad' : ''; ?>"><?php echo $expired ? 'Expired ' : 'Valid until '; echo date('M j, Y', strtotime($a['license_expiry'])); ?></span></dd></div>
+            <div><dt>License</dt><dd><?php echo htmlspecialchars($a['license_number']); ?> · <?php if (!empty($a['license_expiry'])): ?><span class="<?php echo $expired ? 'oa-bad' : ''; ?>"><?php echo $expired ? 'Expired ' : 'Valid until '; echo date('M j, Y', strtotime($a['license_expiry'])); ?></span><?php else: ?><span>No expiry</span><?php endif; ?></dd></div>
             <div><dt>Vehicle</dt><dd><?php echo htmlspecialchars($a['vehicle_type']); ?> · <?php echo htmlspecialchars($a['vehicle_plate_number']); ?></dd></div>
             <?php if(!empty($a['vehicle_registration_expiry'])): $regExpired = strtotime($a['vehicle_registration_expiry']) < strtotime('today'); ?>
             <div><dt>Vehicle registration</dt><dd><span class="<?php echo $regExpired ? 'oa-bad' : ''; ?>"><?php echo $regExpired ? 'Expired ' : 'Valid until '; echo date('M j, Y', strtotime($a['vehicle_registration_expiry'])); ?></span></dd></div>

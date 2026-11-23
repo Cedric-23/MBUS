@@ -184,8 +184,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if ($e = mbus_check_password($password)) $errors['driver-password'] = $e;
         elseif ($password !== $confirm) $errors['driver-confirm'] = 'Passwords do not match.';
         if ($e = mbus_check_license_number($license_number)) $errors['license-number'] = $e;
+        /* Expiry is optional: some licenses have none. When given it must be a real, unexpired date. */
         $d = DateTime::createFromFormat('Y-m-d', $license_expiry);
-        if (!$d || $d->format('Y-m-d') !== $license_expiry) $errors['license-expiry'] = 'Enter the license expiry date.';
+        if ($license_expiry === '') { /* nothing to check */ }
+        elseif (!$d || $d->format('Y-m-d') !== $license_expiry) $errors['license-expiry'] = 'Enter a valid expiry date or leave it blank.';
         elseif ($license_expiry < date('Y-m-d')) $errors['license-expiry'] = 'This license has expired. Apply again with a valid license.';
         elseif ($license_expiry > date('Y-m-d', strtotime('+15 years'))) $errors['license-expiry'] = 'That expiry date is too far ahead. Check the year.';
         if (!in_array($vehicle_type, ['Ordinary', 'Aircon'], true)) $errors['vehicle-type'] = 'Choose a bus type (Ordinary or Aircon).';
@@ -236,7 +238,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                      license_document_b64, license_document_mime, vehicle_document_b64, vehicle_document_mime, password_hash,
                      bus_photo_b64, bus_photo_mime, interior_photo_b64, interior_photo_mime, last_name, vehicle_registration_expiry, application_status)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')",
-                [$full_name, $email, $phone_number, $address, $license_number, $license_expiry, $vehicle_type, $plate,
+                [$full_name, $email, $phone_number, $address, $license_number, ($license_expiry === "" ? null : $license_expiry), $vehicle_type, $plate,
                  $lic['b64'], $lic['mime'], $veh['b64'], $veh['mime'], password_hash($password, PASSWORD_DEFAULT),
                  $busPhoto['b64'], $busPhoto['mime'], $interiorPhoto['b64'], $interiorPhoto['mime'],
                  $last_name, $vehicle_expiry !== '' ? $vehicle_expiry : null]);
@@ -501,8 +503,8 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         <i class="input-icon" data-lucide="user"></i>
                                     <?= mbus_field_error($errors, 'license-number') ?></div>
                                     <div class="license-expiry">
-                                        <label class="input-label">License Expiry Date</label>
-                                        <input type="date" name="license-expiry" min="<?= date('Y-m-d') ?>" value="<?= reg_old('license-expiry') ?>" required/>
+                                        <label class="input-label">License Expiry Date <span class="optional-tag">(if applicable)</span></label>
+                                        <input type="date" name="license-expiry" min="<?= date('Y-m-d') ?>" value="<?= reg_old('license-expiry') ?>"/>
                                         <i class="input-icon" data-lucide="calendar"></i>
                                     <?= mbus_field_error($errors, 'license-expiry') ?></div>
                                 </div>

@@ -131,3 +131,4 @@ body{display:flex;min-height:100vh;background:#fff}
 .form-body .form-tos-check a,.form-body .terms-conditions a{color:#2f6fe4;font-weight:600;text-decoration:none}
 .form-body .form-tos-check a:hover,.form-body .terms-conditions a:hover{text-decoration:underline}
 .form-body .form-tos-check label,.form-body .terms-conditions p{font-size:inherit}
+.optional-tag{font-weight:400;color:#8a97ab;font-size:.85em}

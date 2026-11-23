@@ -19,12 +19,14 @@ function mbus_driver_last_name(array $app): string {
 /* Create the bus from one application row and give it to $operatorId.
    Returns ['bus_id' => int, 'bus_number' => string], or null when the submission has no usable bus (no usable seat layout). */
 function mbus_bus_from_application(PDO $pdo, array $app, int $operatorId): ?array {
-    $layout = mbus_seat_layout_parse((string)($app['seat_layout'] ?? ''));
     $plate = trim((string)($app['vehicle_plate_number'] ?? ''));
-    if ($layout === null) return null;
-    $count = mbus_seat_layout_count($layout);
-    if ($count < 1) return null;
     $type = stripos((string)($app['vehicle_type'] ?? ''), 'air') !== false ? 'Aircon' : 'Ordinary';
+    /* Applicants only pick the bus type; the seat layout is set later in My Bus. Until then use a standard one. */
+    $layout = mbus_seat_layout_parse((string)($app['seat_layout'] ?? ''));
+    if ($layout === null || mbus_seat_layout_count($layout) < 1) {
+        $layout = mbus_seat_layout_default($type === 'Aircon' ? 40 : 50);
+    }
+    $count = mbus_seat_layout_count($layout);
 
     /* The bus starts out named after the driver's last name (the admin can rename it); if that name is taken, add -2, -3 ... */
     $base = mbus_driver_last_name($app);
