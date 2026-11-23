@@ -103,22 +103,31 @@ $sql = mbus_db_prepare($conn, "
 $all = [];
 while($sql !== false && ($r0 = mbus_db_fetch_assoc($sql))) $all[] = $r0;
 /* one entry per trip; keeps the newest-first order */
-$groups = [];
-foreach($all as $r0){ $groups[(int)$r0['schedule_id']][] = $r0; }
-
-/* Sort every trip into Active / History / Cancelled so the rider can filter instead of scrolling through old trips. */
-$cats = []; $catCount = ['active' => 0, 'history' => 0, 'cancelled' => 0];
-foreach($groups as $sid => $rows0){
+/* Split each schedule into status-homogeneous cards. A cancelled seat must
+   never share the Active card with another seat from the same schedule. */
+$scheduleGroups = [];
+foreach($all as $r0){ $scheduleGroups[(int)$r0['schedule_id']][] = $r0; }
+$groups = []; $cats = []; $catCount = ['active' => 0, 'history' => 0, 'cancelled' => 0];
+foreach($scheduleGroups as $scheduleId => $rows0){
     $f0 = $rows0[0];
-    $sts = array_column($rows0, 'status');
     $ended = in_array((string)($f0['trip_status'] ?? ''), ['Arrived', 'Completed'], true)
         || in_array((string)($f0['schedule_status'] ?? ''), ['Completed', 'Cancelled'], true)
         || strtotime((string)$f0['arrival_time']) < time() - 3 * 3600;
-    if(!array_diff($sts, ['Cancelled'])) $cat = 'cancelled';
-    elseif($ended) $cat = 'history';
-    elseif(array_intersect($sts, ['Pending', 'Paid', 'Boarded'])) $cat = 'active';
-    else $cat = 'history';
-    $cats[$sid] = $cat; $catCount[$cat]++;
+    $buckets = ['active' => [], 'history' => [], 'cancelled' => []];
+    foreach($rows0 as $row0){
+        if((string)$row0['status'] === 'Cancelled') $cat = 'cancelled';
+        elseif($ended) $cat = 'history';
+        elseif(in_array((string)$row0['status'], ['Pending', 'Paid', 'Boarded'], true)) $cat = 'active';
+        else $cat = 'history';
+        $buckets[$cat][] = $row0;
+    }
+    foreach($buckets as $cat => $bucketRows){
+        if(!$bucketRows) continue;
+        $groupKey = $scheduleId . ':' . $cat;
+        $groups[$groupKey] = $bucketRows;
+        $cats[$groupKey] = $cat;
+        $catCount[$cat]++;
+    }
 }
 
 $aw_stmt = $conn->pdo->prepare("SELECT COALESCE(NULLIF(reference_number, ''), '') AS ref FROM paymongo_checkout WHERE user_id = ? AND schedule_id = ? AND status = 'Submitted' LIMIT 1");
@@ -165,9 +174,10 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
         <i class="fa fa-ticket" aria-hidden="true" style="font-size: var(--fs-3xl); color: var(--color-text-muted); margin-bottom: var(--space-4);"></i>
         <h3 id="tfEmptyText">No trips here.</h3>
     </div>
-    <?php foreach($groups as $sid => $rows){
+    <?php foreach($groups as $groupKey => $rows){
         $first = $rows[0];
-        $cat = $cats[$sid];
+        $scheduleId = (int)$first['schedule_id'];
+        $cat = $cats[$groupKey];
         $tripDate = date('Y-m-d', strtotime((string)$first['departure_time']));
         $tripIsCompleted = (in_array((string)($first['trip_status'] ?? ''), ['Arrived'], true) || (string)($first['schedule_status'] ?? '') === 'Completed')
             && in_array('Boarded', array_column($rows, 'status'), true);
@@ -206,7 +216,7 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
         $summary = [];
         foreach($counts as $st => $n) $summary[] = $n . ' ' . strtolower($st);
         $seatNums = array_column($rows, 'seat_number'); $seatList = count($seatNums) > 6 ? implode(', ', array_slice($seatNums, 0, 6)) . '…' : implode(', ', $seatNums); ?>
-    <div class="reservation-group" data-cat="<?php echo $cat; ?>" data-date="<?php echo $tripDate; ?>" data-schedule-id="<?php echo (int)$sid; ?>">
+    <div class="reservation-group" data-cat="<?php echo $cat; ?>" data-date="<?php echo $tripDate; ?>" data-schedule-id="<?php echo $scheduleId; ?>">
     <div class="trip-completion-confirmation" data-trip-completion role="status" aria-live="polite"<?php echo $tripIsCompleted ? '' : ' hidden'; ?>>
         <i class="fa fa-circle-check" aria-hidden="true"></i>
         <span><strong>Trip completed.</strong> Thank you for riding with MBUS.</span>
@@ -231,15 +241,15 @@ $seat_actions = function($row, $awaiting, $remaining){ ?>
         <?php if($pendingRows){ ?>
         <div class="rg-bar">
             <?php if($grpAwait){ ?>
-                <a class="rg-pill rg-wait" href="payment_return.php?schedule_id=<?php echo (int)$sid; ?>"><i class="fa fa-hourglass-half" aria-hidden="true"></i> <?php echo $grpAwait === 'approval' ? 'Waiting for approval' : 'Waiting for GCash payment'; ?></a>
+                <a class="rg-pill rg-wait" href="payment_return.php?schedule_id=<?php echo $scheduleId; ?>"><i class="fa fa-hourglass-half" aria-hidden="true"></i> <?php echo $grpAwait === 'approval' ? 'Waiting for approval' : 'Waiting for GCash payment'; ?></a>
             <?php } else { ?>
                 <span class="rg-time"><i class="fa fa-clock" aria-hidden="true"></i> <span class="countdown" data-seconds="<?php echo $grpRemaining; ?>"><?php echo gmdate("i:s", $grpRemaining); ?></span> left</span>
-                <a class="btn btn-primary rg-pay" href="payment.php?schedule_id=<?php echo (int)$sid; ?>"><i class="fa fa-credit-card" aria-hidden="true"></i> Pay now</a>
+                <a class="btn btn-primary rg-pay" href="payment.php?schedule_id=<?php echo $scheduleId; ?>"><i class="fa fa-credit-card" aria-hidden="true"></i> Pay now</a>
             <?php } ?>
         </div>
         <?php } ?>
         <?php if($paidCount){ ?>
-        <div class="rg-bar"><a class="btn btn-success rg-pay" href="ticket.php?schedule_id=<?php echo (int)$sid; ?>"><i class="fa fa-ticket" aria-hidden="true"></i> Show ticket<?php echo $paidCount > 1 ? 's' : ''; ?></a></div>
+        <div class="rg-bar"><a class="btn btn-success rg-pay" href="ticket.php?schedule_id=<?php echo $scheduleId; ?>"><i class="fa fa-ticket" aria-hidden="true"></i> Show ticket<?php echo $paidCount > 1 ? 's' : ''; ?></a></div>
         <?php } ?>
         <details class="rg-more">
             <summary><span class="rg-more-open">Show more information</span><span class="rg-more-close">Hide information</span><i class="fa fa-chevron-down rg-chev" aria-hidden="true"></i></summary>
