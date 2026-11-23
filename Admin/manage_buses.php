@@ -226,8 +226,6 @@ $conductor_options = [];
 while($cq !== false && ($crow = mbus_db_fetch_assoc($cq))){ $conductor_options[] = $crow; }
 $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
 ?>
-<p style="margin:0 0 14px;color:#7a8aa6;font-size:.9rem;line-height:1.45">Buses come from driver applications: approving a driver adds the bus they submitted, named after their last name. You can rename a bus or give it to another driver.</p>
-
 <?php if($bus_list): $n_ac=0;$n_ord=0;$n_nd=0;$n_nc=0; foreach($bus_list as $x){ if(strtolower($x['bus_type'])==='aircon')$n_ac++; else $n_ord++; if(empty($x['operators']))$n_nd++; if(empty($x['conductor']))$n_nc++; } ?>
 <div class="ad-toolbar op-tools">
     <label class="ad-search"><i class="fa fa-search" aria-hidden="true"></i><input type="text" id="opSearch" placeholder="Search bus, driver or conductor" autocomplete="off" aria-label="Search buses"></label>
