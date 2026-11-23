@@ -11,6 +11,28 @@ COPY docker/staff-portal.conf /etc/apache2/sites-available/000-default.conf
 
 RUN chown -R www-data:www-data /var/www/html
 
+# Staff dashboards live outside StaffPortal/, so expose only the staff-facing folders and scripts.
+# (Admin, Commuter and everything else stay unreachable on this site.)
+RUN printf '%s\n' \
+ 'Alias /Assets /var/www/html/Assets' \
+ 'Alias /Operator /var/www/html/Operator' \
+ 'Alias /Conductor /var/www/html/Conductor' \
+ 'Alias /api /var/www/html/api' \
+ 'Alias /gps.php /var/www/html/gps.php' \
+ 'Alias /logout.php /var/www/html/logout.php' \
+ 'Alias /avatar.php /var/www/html/avatar.php' \
+ 'Alias /id_image.php /var/www/html/id_image.php' \
+ '<DirectoryMatch "^/var/www/html/(Assets|Operator|Conductor|api)/">' \
+ '    Options -Indexes' \
+ '    AllowOverride All' \
+ '    Require all granted' \
+ '</DirectoryMatch>' \
+ '<FilesMatch "^(gps|logout|avatar|id_image)\.php$">' \
+ '    Require all granted' \
+ '</FilesMatch>' \
+ > /etc/apache2/conf-available/staff-aliases.conf \
+ && a2enconf staff-aliases
+
 COPY docker/start.sh /start.sh
 RUN chmod +x /start.sh
 
