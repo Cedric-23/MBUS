@@ -4,6 +4,7 @@ if (strtolower((string)($_SESSION['user_type'] ?? '')) !== 'admin') { header('Lo
 include "../config/db_connect.php";
 include "../Includes/csrf.php";
 include_once "../Includes/email_helper.php";
+include_once "../Includes/bus_from_application.php";
 
 $success = $_SESSION['oa_flash'] ?? ''; $error = ''; unset($_SESSION['oa_flash']);
 $admin_id = (int)$_SESSION['user_id'];
@@ -34,13 +35,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $uid = (int)$st->fetchColumn();
                 $st = $pdo->prepare("UPDATE operator_application SET application_status = 'Approved', user_id = ?, reviewed_at = NOW(), reviewed_by = ?, rejection_reason = NULL WHERE application_id = ?");
                 $st->execute([$uid, $admin_id, $id]);
+                // The bus the driver submitted becomes a real bus and is given to this driver.
+                $newBus = mbus_bus_from_application($pdo, $app, $uid);
                 $pdo->commit();
                 $mail = "<h2>Operator application approved</h2><p>Hi " . htmlspecialchars($app['full_name']) . ", your MBUS operator account is ready.</p>"
                     . "<p><strong>Email:</strong> " . htmlspecialchars($app['email']) . "</p>"
                     . ($temp !== '' ? "<p><strong>Temporary password:</strong> " . htmlspecialchars($temp) . "<br>Log in and change it from your profile.</p>" : "<p>Log in with the password you chose when you applied.</p>");
                 $sent = @send_email_notification($app['email'], 'Your MBUS operator account', $mail);
                 $_SESSION['oa_flash'] = 'Approved ' . $app['full_name'] . '. ' . ($temp !== '' ? 'Temporary password: ' . $temp . ($sent ? ' (also emailed).' : ' (email could not be sent, so give it to them directly).')
-                    : 'They can log in now with the password they chose.');
+                    : 'They can log in now with the password they chose.')
+                    . ($newBus ? ' Bus ' . $newBus['bus_number'] . ' was added from their submission and assigned to them.' : ' Their submission had no usable plate or seat layout, so no bus was created.');
             } else {
                 $reason = trim((string)($_POST['rejection_reason'] ?? ''));
                 if ($reason === '' || strlen($reason) > 500) throw new RuntimeException('Give a short reason (up to 500 characters) when rejecting.');
@@ -210,7 +214,7 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
         <form method="POST" class="oa-actions">
             <?php csrf_field(); ?>
             <input type="hidden" name="application_id" value="<?php echo (int)$a['application_id']; ?>">
-            <button type="submit" name="approve" value="1" class="ad-btn sm primary" <?php echo $expired ? 'disabled title="License expired"' : ''; ?> onclick="return confirm('Create an operator account for <?php echo htmlspecialchars(addslashes($a['full_name']), ENT_QUOTES); ?>?');">Approve</button>
+            <button type="submit" name="approve" value="1" class="ad-btn sm primary" <?php echo $expired ? 'disabled title="License expired"' : ''; ?> onclick="return confirm('Create an operator account and add their bus for <?php echo htmlspecialchars(addslashes($a['full_name']), ENT_QUOTES); ?>?');">Approve</button>
             <details class="oa-reject"><summary class="ad-btn sm">Reject</summary>
                 <textarea name="rejection_reason" rows="2" maxlength="500" placeholder="Reason shown to the applicant"></textarea>
                 <button type="submit" name="reject" value="1" class="ad-btn sm">Send rejection</button>
