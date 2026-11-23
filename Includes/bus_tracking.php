@@ -11,7 +11,7 @@ function mbus_tracking_form(array $post, string $role): array
     if (!is_string($action) || !in_array($action, ['update_location', 'mark_waiting', 'cancel_waiting'], true)) {
         throw new MbusPickupException('Unknown live tracking action.', 400);
     }
-    if (($action === 'update_location' && $role !== 'operator') || ($action !== 'update_location' && $role !== 'commuter')) {
+    if (($action === 'update_location' && !in_array($role, ['operator', 'conductor'], true)) || ($action !== 'update_location' && $role !== 'commuter')) {
         throw new MbusPickupException('This action is not permitted for your account.', 403);
     }
     $data = ['action' => $action, 'schedule_id' => mbus_pickup_positive_id($post['schedule_id'] ?? null)];
@@ -46,8 +46,8 @@ function mbus_tracking_schedule(PDO $pdo, int $scheduleId, string $role, int $us
         WHERE s.schedule_id = ? AND s.schedule_status = 'Active'
             AND s.trip_status IN ('Boarding', 'Departed') AND s.departure_time >= ?";
     $params = [$scheduleId, date('Y-m-d 00:00:00')];
-    if ($role === 'operator') {
-        $sql .= ' AND EXISTS (SELECT 1 FROM public.operator_bus_assignments oba WHERE oba.bus_id = s.bus_id AND oba.operator_id = ?)';
+    if (in_array($role, ['operator', 'conductor'], true)) {
+        $sql .= ' AND ' . mbus_staff_assignment_condition($role, 's.bus_id');
         $params[] = $userId;
     }
     $stmt = $pdo->prepare($sql);
@@ -71,8 +71,8 @@ function mbus_tracking_feed(PDO $pdo, string $role, int $userId, ?int $chosen): 
     $sql = "SELECT DISTINCT s.schedule_id FROM public.schedule s
         WHERE s.schedule_status = 'Active' AND s.trip_status IN ('Boarding', 'Departed') AND s.departure_time >= ?";
     $params = [date('Y-m-d 00:00:00')];
-    if ($role === 'operator') {
-        $sql .= ' AND EXISTS (SELECT 1 FROM public.operator_bus_assignments oba WHERE oba.bus_id = s.bus_id AND oba.operator_id = ?)';
+    if (in_array($role, ['operator', 'conductor'], true)) {
+        $sql .= ' AND ' . mbus_staff_assignment_condition($role, 's.bus_id');
         $params[] = $userId;
     }
     $sql .= ' ORDER BY s.schedule_id';
@@ -98,8 +98,8 @@ function mbus_tracking_feed(PDO $pdo, string $role, int $userId, ?int $chosen): 
         JOIN public.schedule s ON s.schedule_id = t.schedule_id
         WHERE s.schedule_status = 'Active' AND s.trip_status IN ('Boarding', 'Departed') AND s.departure_time >= ?";
     $locationParams = [date('Y-m-d 00:00:00')];
-    if ($role === 'operator') {
-        $locationSql .= ' AND EXISTS (SELECT 1 FROM public.operator_bus_assignments oba WHERE oba.bus_id = s.bus_id AND oba.operator_id = ?)';
+    if (in_array($role, ['operator', 'conductor'], true)) {
+        $locationSql .= ' AND ' . mbus_staff_assignment_condition($role, 's.bus_id');
         $locationParams[] = $userId;
     }
     $stmt = $pdo->prepare($locationSql);

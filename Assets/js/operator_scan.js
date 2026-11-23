@@ -50,7 +50,8 @@
         $('rPickup').textContent = t.pickup;
         $('rDestination').textContent = t.destination;
         $('rPaid').textContent = t.amount ? '₱' + t.amount : 'Paid';
-        $('rRef').textContent = t.reference || '-';
+        var ref = $('rRef');
+        if (ref) ref.textContent = t.reference || '-';
         var st = $('rState');
         st.textContent = t.state === 'Boarded' ? 'Already boarded' : 'Paid';
         st.className = 'scan-state ' + (t.state === 'Boarded' ? 'warn' : 'ok');

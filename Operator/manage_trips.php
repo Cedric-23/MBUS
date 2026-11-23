@@ -5,12 +5,17 @@ require_once "../config/mysqli_compat.php";
 require_once "../Includes/csrf.php";
 require_once "../Includes/activity_log.php";
 require_once "../Includes/notify.php";
+require_once "../Includes/staff_assignment_scope.php";
 
-if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type']) !== 'operator'){
+if(!isset($_SESSION['user_id']) || !in_array(strtolower((string)($_SESSION['user_type'] ?? '')), ['operator', 'conductor'], true)){
     header("Location: ../login.php");
     exit();
 }
 
+$staffRole = strtolower((string)$_SESSION['user_type']);
+$isConductor = $staffRole === 'conductor';
+$staffLabel = $isConductor ? 'Conductor' : 'Operator';
+$homeHref = $isConductor ? '../Conductor/conductor_dashboard.php' : 'operator_dashboard.php';
 $operator_id = (int)$_SESSION['user_id'];
 $success = null;
 $error = null;
@@ -21,7 +26,7 @@ $archive_table_row = $archive_table_check !== false ? mbus_db_fetch_assoc($archi
 $archive_table_ready = is_array($archive_table_row) && !empty($archive_table_row['archive_table']);
 
 // Archive terminal trips per operator; this never deletes operational records.
-if($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['archive_trip']) || isset($_POST['clear_history']))){
+if(!$isConductor && $_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['archive_trip']) || isset($_POST['clear_history']))){
     if(!csrf_validate_token()) $error = "Invalid CSRF token.";
     elseif(!$archive_table_ready) $error = "Trip history is not enabled yet. Run supabase/09_operator_trip_history.sql first.";
     elseif(isset($_POST['archive_trip'])){
@@ -65,7 +70,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])){
         $trip_status = (string)$_POST['trip_status'];
         $allowed_statuses = ['Scheduled','Boarding','Departed','Arrived','Cancelled'];
         if(in_array($trip_status, $allowed_statuses)){
-            $stmt = mbus_db_prepare($conn, "UPDATE schedule SET trip_status=? WHERE schedule_id=? AND bus_id IN (SELECT bus_id FROM operator_bus_assignments WHERE operator_id=?)", [$trip_status, $schedule_id, $operator_id]);
+            $assignment = mbus_staff_assignment_condition($staffRole, 'assigned_schedule.bus_id');
+            $stmt = mbus_db_prepare($conn, "UPDATE schedule SET trip_status=? WHERE schedule_id=? AND EXISTS (SELECT 1 FROM schedule assigned_schedule WHERE assigned_schedule.schedule_id = schedule.schedule_id AND $assignment)", [$trip_status, $schedule_id, $operator_id]);
             if($stmt !== false && $conn->affectedRows > 0){
                 $success = "Trip status updated";
                 $departed_now = ($trip_status === 'Departed');
@@ -90,13 +96,13 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_boarded'])){
             $reservation_id = 0;
         } else {
         $reservation_id = (int)$_POST['reservation_id'];
+        $assignment = mbus_staff_assignment_condition($staffRole, 's.bus_id');
         $stmt = mbus_db_prepare($conn, "UPDATE reservation r SET status='Boarded'
             WHERE r.reservation_id = ?
               AND r.status = 'Paid'
               AND r.schedule_id IN (
                   SELECT s.schedule_id FROM schedule s
-                  JOIN operator_bus_assignments oba ON oba.bus_id = s.bus_id
-                  WHERE oba.operator_id = ? AND s.trip_status IN ('Scheduled', 'Boarding')
+                  WHERE $assignment AND s.trip_status IN ('Scheduled', 'Boarding')
               )", [$reservation_id, $operator_id]);
         if($stmt !== false && $conn->affectedRows > 0){
             $success = "Passenger marked as boarded";
@@ -108,14 +114,15 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_boarded'])){
 }
 
 // Filters
-$allowed_filters = ['upcoming','active','today','tomorrow','this_week','next_week','history','all'];
+$allowed_filters = ['upcoming','active','today','tomorrow','this_week','next_week','all'];
+if (!$isConductor) $allowed_filters[] = 'history';
 $filter = isset($_GET['filter']) && is_scalar($_GET['filter']) ? (string)$_GET['filter'] : 'upcoming';
 if(!in_array($filter, $allowed_filters, true)) $filter='upcoming';
 $open_schedule_input = $_POST['open_schedule'] ?? $_GET['open_schedule'] ?? null;
 $open_schedule = is_scalar($open_schedule_input) && filter_var($open_schedule_input, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false ? (int)$open_schedule_input : null;
-$where = "WHERE oba.operator_id = ?";
+$where = 'WHERE ' . mbus_staff_assignment_condition($staffRole, 's.bus_id');
 $params = [(int)$operator_id];
-if($archive_table_ready) $where .= " AND NOT EXISTS (SELECT 1 FROM operator_trip_archives ota WHERE ota.operator_id=oba.operator_id AND ota.schedule_id=s.schedule_id)";
+if($archive_table_ready && !$isConductor){ $where .= " AND NOT EXISTS (SELECT 1 FROM operator_trip_archives ota WHERE ota.operator_id=? AND ota.schedule_id=s.schedule_id)"; $params[] = (int)$operator_id; }
 $b = mbus_local_bounds();
 $live_since = $b['today']; // Keep today's departed trip visible so its operator GPS watch can continue.
 switch($filter){
@@ -134,7 +141,6 @@ $query = mbus_db_prepare($conn, "
     FROM schedule s
     JOIN buses b ON s.bus_id=b.bus_id
     JOIN routes r ON s.route_id=r.route_id
-    JOIN operator_bus_assignments oba ON oba.bus_id=s.bus_id
     $where
     ORDER BY s.departure_time ASC
 ", $params);
@@ -183,15 +189,20 @@ $query = mbus_db_prepare($conn, "
         <img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo">
     </div>
 
-    <h2>Operator</h2>
+    <h2><?php echo $staffLabel; ?></h2>
 
-    <nav class="menu-top" aria-label="Operator menu">
-        <a href="operator_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+    <nav class="menu-top" aria-label="<?php echo $staffLabel; ?> menu">
+        <a href="<?php echo $homeHref; ?>"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
         <a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
         <a href="manage_trips.php" aria-current="page"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
+        <?php if($isConductor): ?>
+        <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
+        <a href="payments.php"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a>
+        <?php else: ?>
         <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
-        <a href="payments.php"><i class="fa fa-wallet" aria-hidden="true"></i> Payments</a>
         <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
+        <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
+        <?php endif; ?>
     </nav>
 
     <div class="menu-bottom">
@@ -209,15 +220,14 @@ $query = mbus_db_prepare($conn, "
             <div class="page-header-right">
                 <div class="profile-menu-wrap">
                     <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
-                        <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span><?php echo mbus_payment_dot(); ?>
+                        <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span>
                     </button>
                     <div class="profile-menu" id="profileMenu" role="menu">
                         <div class="profile-menu-header">
                             <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
-                            <span class="profile-menu-role">Operator account</span>
-                        </div>
-                <a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
-                        <a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> Payments<?php echo mbus_payment_pill(); ?></a>
+                        <span class="profile-menu-role"><?php echo $staffLabel; ?> account</span>
+                    </div>
+                        <?php if($isConductor): ?><a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a><?php else: ?><a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a><?php endif; ?>
                         <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>
@@ -247,10 +257,10 @@ $query = mbus_db_prepare($conn, "
 <a href="?filter=upcoming" class="date-filter-btn <?php echo $filter==='upcoming' ? 'active' : ''; ?>">Upcoming</a>
 <a href="?filter=active" class="date-filter-btn <?php echo $filter==='active' ? 'active' : ''; ?>">Active</a>
 <a href="?filter=today" class="date-filter-btn <?php echo $filter==='today' ? 'active' : ''; ?>">Today</a>
-<a href="?filter=history" class="date-filter-btn <?php echo $filter==='history' ? 'active' : ''; ?>">History</a>
+<?php if(!$isConductor): ?><a href="?filter=history" class="date-filter-btn <?php echo $filter==='history' ? 'active' : ''; ?>">History</a><?php endif; ?>
 </nav>
 </div>
-<?php if($filter==='history'): ?>
+<?php if(!$isConductor && $filter==='history'): ?>
 <div class="card" style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap;">
     <span>History is preserved for audit records; clearing only hides terminal trips from this workspace.</span>
     <form method="POST" onsubmit="return confirm('Archive completed and cancelled trips from your workspace? Records will not be deleted.');">
@@ -305,7 +315,7 @@ while($tr = mbus_db_fetch_assoc($query)) $trip_rows[] = $tr;
             <i class="fa fa-chevron-down tc-chev" aria-hidden="true"></i>
         </button>
     </div>
-    <?php if($archive_table_ready && ($row['trip_status']==='Arrived' || $row['trip_status']==='Cancelled' || $row['schedule_status']==='Completed' || $row['schedule_status']==='Cancelled')): ?>
+    <?php if(!$isConductor && $archive_table_ready && ($row['trip_status']==='Arrived' || $row['trip_status']==='Cancelled' || $row['schedule_status']==='Completed' || $row['schedule_status']==='Cancelled')): ?>
     <form method="POST" class="action-form" onsubmit="return confirm('Archive this completed trip? Records will not be deleted.');">
         <?php csrf_field(); ?>
         <input type="hidden" name="schedule_id" value="<?php echo $sid; ?>">
@@ -403,16 +413,18 @@ document.addEventListener('keydown', function(e) {
 
 
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
-    <a href="operator_dashboard.php" class="bottom-nav-item">
+    <a href="<?php echo $homeHref; ?>" class="bottom-nav-item">
         <i class="fa fa-home" aria-hidden="true"></i><span>Home</span>
     </a>
     <a href="manage_trips.php" class="bottom-nav-item active" aria-current="page">
         <i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span>
     </a>
     <a href="scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
-    <a href="passengers.php" class="bottom-nav-item">
-        <i class="fa fa-users" aria-hidden="true"></i><span>Riders</span>
-    </a>
+    <?php if($isConductor): ?>
+    <a href="payments.php" class="bottom-nav-item"><i class="fa fa-wallet" aria-hidden="true"></i><span>Payments</span></a>
+    <?php else: ?>
+    <a href="passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
+    <?php endif; ?>
     <a href="waiting.php" class="bottom-nav-item">
         <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>

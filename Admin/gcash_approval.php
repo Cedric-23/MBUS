@@ -33,6 +33,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $pending = mbus_gcash_pending($conn);
 $cName = mbus_setting($conn, 'gcash_name'); $cNum = mbus_setting($conn, 'gcash_number'); $cQr = mbus_setting($conn, 'gcash_qr');
+$smsToken = mbus_sms_token($conn);
+$https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+$smsUrl = ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/Admin/gcash_approval.php')), '/') . '/api/gcash_sms_webhook.php?token=' . rawurlencode($smsToken);
+$lastQ = mbus_db_prepare($conn, "SELECT EXTRACT(EPOCH FROM (NOW() - MAX(received_at))) AS secs FROM incoming_payments", []);
+$lastRow = $lastQ === false ? false : mbus_db_fetch_assoc($lastQ);
+$lastSecs = ($lastRow && $lastRow['secs'] !== null) ? (int)$lastRow['secs'] : null;
+$phoneOk = $lastSecs !== null && $lastSecs < 86400 * 2;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -131,7 +138,7 @@ $cName = mbus_setting($conn, 'gcash_name'); $cNum = mbus_setting($conn, 'gcash_n
     <div class="gc-body">
         <?php if(!empty($pending['qr'])): ?><img class="gc-qr" src="<?php echo htmlspecialchars($pending['qr'], ENT_QUOTES); ?>" alt="Requested GCash QR"><?php endif; ?>
         <div><p class="gc-name"><?php echo htmlspecialchars($pending['name']); ?></p><p class="gc-num"><?php echo htmlspecialchars($pending['number']); ?></p>
-        <p class="gc-meta">From <?php echo htmlspecialchars($pending['by_name'] ?? 'an operator'); ?>, <?php echo htmlspecialchars(date('M j, g:i A', strtotime($pending['at'] ?? 'now'))); ?></p></div>
+        <p class="gc-meta">From <?php echo htmlspecialchars($pending['by_name'] ?? 'a conductor'); ?>, <?php echo htmlspecialchars(date('M j, g:i A', strtotime($pending['at'] ?? 'now'))); ?></p></div>
     </div>
     <form method="POST" class="gc-actions">
         <?php csrf_field(); ?>
@@ -141,6 +148,16 @@ $cName = mbus_setting($conn, 'gcash_name'); $cNum = mbus_setting($conn, 'gcash_n
     <?php else: ?><p class="gc-empty">No changes waiting.</p><?php endif; ?>
 </section>
 </div>
+
+<section class="gc-card" aria-labelledby="gcAuto">
+    <div class="gc-top"><h2 id="gcAuto">SMS auto-confirm</h2><span class="pay-dot <?php echo $phoneOk ? 'on' : 'off'; ?>"><?php echo $phoneOk ? 'Phone connected' : ($lastSecs === null ? 'Not set up' : 'Phone quiet'); ?></span></div>
+    <ol class="pay-steps">
+        <li>On the phone with the GCash SIM, install an SMS forwarder app.</li>
+        <li>Forward GCash received messages to this Admin-only webhook address:</li>
+    </ol>
+    <div class="pay-copy"><code id="smsUrl"><?php echo htmlspecialchars($smsUrl); ?></code><button type="button" class="pay-btn" id="copyUrl">Copy</button></div>
+    <p class="pay-note"><?php echo $lastSecs === null ? 'No GCash SMS received yet.' : 'Last message ' . ($lastSecs < 3600 ? max(1, (int)round($lastSecs / 60)) . ' min' : ($lastSecs < 86400 ? (int)round($lastSecs / 3600) . ' h' : (int)round($lastSecs / 86400) . ' d')) . ' ago.'; ?></p>
+</section>
 
 </main>
 
@@ -182,6 +199,13 @@ document.addEventListener('keydown', function(e) {
     if (sidebar.classList.contains('open') && e.key === 'Escape') {
         toggleSidebar();
     }
+});
+document.getElementById('copyUrl')?.addEventListener('click', function () {
+    var button = this, value = document.getElementById('smsUrl').textContent, label = button.textContent;
+    (navigator.clipboard ? navigator.clipboard.writeText(value) : Promise.reject()).catch(function () {
+        var input = document.createElement('input'); input.value = value; document.body.appendChild(input); input.select(); document.execCommand('copy'); input.remove();
+    });
+    button.textContent = 'Copied'; setTimeout(function () { button.textContent = label; }, 1500);
 });
 </script>
 

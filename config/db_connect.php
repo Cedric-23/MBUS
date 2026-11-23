@@ -150,6 +150,18 @@ function mbus_run_schema_upgrades(PDO $pdo): void {
   } catch (PDOException $schema_error) {
       error_log('Conductor application schema check failed: ' . $schema_error->getMessage());
   }
+  try {
+      $pdo->exec("CREATE TABLE IF NOT EXISTS conductor_bus_assignments (
+          assignment_id SERIAL PRIMARY KEY,
+          conductor_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+          bus_id INTEGER NOT NULL UNIQUE REFERENCES buses(bus_id) ON DELETE CASCADE,
+          assigned_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp())");
+      $pdo->exec('CREATE INDEX IF NOT EXISTS idx_conductor_bus_assignments_conductor ON conductor_bus_assignments(conductor_id, bus_id)');
+      $pdo->exec('ALTER TABLE conductor_bus_assignments ENABLE ROW LEVEL SECURITY');
+      $pdo->exec('REVOKE ALL ON TABLE conductor_bus_assignments FROM PUBLIC, anon, authenticated');
+  } catch (PDOException $schema_error) {
+      error_log('Conductor bus assignment schema check failed: ' . $schema_error->getMessage());
+  }
 }
 
 // connect_timeout: never hang forever if the database is unreachable.
@@ -167,7 +179,7 @@ try {
     if ($pdo->inTransaction()) { try { $pdo->rollBack(); } catch (Throwable $e) { $pdo->exec('ROLLBACK'); } }
     $pdo->exec("SET TIME ZONE '" . str_replace("'", "''", mbus_timezone()) . "'");
     // Schema upgrades are ~35 extra round trips to the database. Run them once per version, not on every page.
-    $schemaVersion = '2026-11-23a';
+    $schemaVersion = '2026-11-24a';
     $schemaFlag = sys_get_temp_dir() . '/mbus_schema_' . md5($host . $database . $schemaVersion) . '.ok';
     if (!is_file($schemaFlag)) {
         $done = false;

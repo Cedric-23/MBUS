@@ -7,16 +7,19 @@ require_once "../Includes/fare.php";
 require_once "../Includes/payment_finalize.php";
 require_once "../Includes/notify.php";
 require_once "../Includes/gcash_manual.php";
+require_once "../Includes/staff_assignment_scope.php";
 
-if (!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'operator') {
-    header("Location: ../login.php");
-    exit();
+if (!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?? '')) !== 'conductor') {
+    http_response_code(403);
+    exit('GCash payment review is available to assigned Conductors only.');
 }
 
 $operator_id = (int)$_SESSION['user_id'];
-$success = $_SESSION['op_pay_flash'] ?? '';
+$assignment = mbus_staff_assignment_condition('conductor', 'assigned_schedule.bus_id');
+$assignmentForDuplicates = mbus_staff_assignment_condition('conductor', 'duplicate_schedule.bus_id');
+$success = $_SESSION['conductor_pay_flash'] ?? '';
 $error = '';
-unset($_SESSION['op_pay_flash']);
+unset($_SESSION['conductor_pay_flash']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_validate_token()) {
@@ -36,17 +39,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($error === '') {
                 mbus_set_setting($conn, 'gcash_pending', json_encode([
                     'name' => $name, 'number' => $num, 'qr' => $qr,
-                    'by' => $operator_id, 'by_name' => (string)($_SESSION['full_name'] ?? 'Operator'), 'at' => date('c'),
+                    'by' => $operator_id, 'by_name' => (string)($_SESSION['full_name'] ?? 'Conductor'), 'at' => date('c'),
                 ]));
                 include_once "../Includes/activity_log.php";
-                log_activity($conn, $operator_id, 'GCash account change submitted', 'Awaiting admin approval');
+                log_activity($conn, $operator_id, 'Conductor GCash account change submitted', 'Awaiting admin approval');
             }
-            if ($error === '') { $_SESSION['op_pay_flash'] = 'Sent to admin for approval. Commuters keep seeing the current account until it is approved.'; header('Location: payments.php'); exit(); }
+            if ($error === '') { $_SESSION['conductor_pay_flash'] = 'Sent to admin for approval. Commuters keep seeing the current account until it is approved.'; header('Location: payments.php'); exit(); }
         }
     } elseif (isset($_POST['approve']) || isset($_POST['reject'])) {
         $sid = (string)($_POST['session_id'] ?? '');
-        $st = $conn->pdo->prepare("SELECT * FROM paymongo_checkout WHERE session_id = ? AND status = 'Submitted' AND session_id LIKE 'manual\\_%'");
-        $st->execute([$sid]);
+        $st = $conn->pdo->prepare("SELECT c.* FROM paymongo_checkout c WHERE c.session_id = ? AND c.status = 'Submitted' AND c.session_id LIKE 'manual\\_%'
+            AND EXISTS (SELECT 1 FROM schedule assigned_schedule WHERE assigned_schedule.schedule_id = c.schedule_id AND $assignment)");
+        $st->execute([$sid, $operator_id]);
         $co = $st->fetch(PDO::FETCH_ASSOC);
         if (!$co) {
             $error = 'That payment was already handled.';
@@ -54,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $res = mbus_finalize_payment($conn, $sid, (string)($co['reference_number'] ?: 'OP-' . substr($sid, 7, 8)));
             if (!empty($res['ok'])) {
                 $conn->pdo->prepare("UPDATE paymongo_checkout SET reviewed_by = ?, reviewed_at = NOW() WHERE session_id = ?")->execute([$operator_id, $sid]);
-                $_SESSION['op_pay_flash'] = 'Approved. Ticket ' . ($res['ticket'] ?? '') . ' issued.';
+                $_SESSION['conductor_pay_flash'] = 'Approved. Ticket ' . ($res['ticket'] ?? '') . ' issued.';
                 header('Location: payments.php'); exit();
             }
             $error = $res['message'] ?? 'Could not approve this payment.';
@@ -72,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $conn->pdo->commit();
                 mbus_notify($conn, (int)$co['user_id'], 'Payment rejected: ' . $reason . ' Your seats were released.');
-                $_SESSION['op_pay_flash'] = 'Rejected. Seats released.';
+                $_SESSION['conductor_pay_flash'] = 'Rejected. Seats released.';
                 header('Location: payments.php?status=rejected'); exit();
             }
         }
@@ -86,16 +90,21 @@ $f = $_GET['status'] ?? 'submitted';
 if (!isset($opts[$f])) $f = 'submitted';
 
 $counts = array_fill_keys(array_keys($opts), 0);
-$cq = mbus_db_prepare($conn, "SELECT LOWER(status) AS s, COUNT(*) AS c FROM paymongo_checkout WHERE session_id LIKE 'manual\\_%' GROUP BY 1", []);
+$cq = mbus_db_prepare($conn, "SELECT LOWER(c.status) AS s, COUNT(*) AS c FROM paymongo_checkout c
+    WHERE c.session_id LIKE 'manual\\_%' AND EXISTS (SELECT 1 FROM schedule assigned_schedule
+        WHERE assigned_schedule.schedule_id = c.schedule_id AND $assignment) GROUP BY 1", [$operator_id]);
 while ($cq !== false && ($r = mbus_db_fetch_assoc($cq))) if (isset($counts[$r['s']])) $counts[$r['s']] = (int)$r['c'];
 
 $rows = [];
 $q = mbus_db_prepare($conn, "SELECT (c.receipt_b64 IS NOT NULL AND c.receipt_b64 <> '') AS has_receipt, c.session_id, c.amount, c.reference_number, c.submitted_at, c.status, c.reject_reason, c.lines, u.full_name,
-    (SELECT COUNT(*) FROM paymongo_checkout d WHERE d.reference_number = c.reference_number AND d.session_id <> c.session_id) AS dups,
+    (SELECT COUNT(*) FROM paymongo_checkout d WHERE d.reference_number = c.reference_number AND d.session_id <> c.session_id
+        AND EXISTS (SELECT 1 FROM schedule duplicate_schedule WHERE duplicate_schedule.schedule_id = d.schedule_id AND $assignmentForDuplicates)) AS dups,
     (SELECT r.origin || ' → ' || r.destination FROM schedule s JOIN routes r ON r.route_id = s.route_id WHERE s.schedule_id = c.schedule_id) AS route,
     (SELECT s.departure_time FROM schedule s WHERE s.schedule_id = c.schedule_id) AS departure
     FROM paymongo_checkout c JOIN users u ON u.user_id = c.user_id
-    WHERE c.session_id LIKE 'manual\\_%' AND LOWER(c.status) = ? ORDER BY c.submitted_at DESC LIMIT 100", [$f]);
+    WHERE c.session_id LIKE 'manual\\_%' AND LOWER(c.status) = ?
+      AND EXISTS (SELECT 1 FROM schedule assigned_schedule WHERE assigned_schedule.schedule_id = c.schedule_id AND $assignment)
+    ORDER BY c.submitted_at DESC LIMIT 100", [$operator_id, $f, $operator_id]);
 while ($q !== false && ($r = mbus_db_fetch_assoc($q))) $rows[] = $r;
 
 $gName = mbus_setting($conn, 'gcash_name');
@@ -103,13 +112,6 @@ $gNum = mbus_setting($conn, 'gcash_number');
 $gQr = mbus_setting($conn, 'gcash_qr');
 $gPending = mbus_gcash_pending($conn);
 
-$smsToken = mbus_sms_token($conn);
-$https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
-$smsUrl = ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/Operator/payments.php')), '/') . '/api/gcash_sms_webhook.php?token=' . $smsToken;
-$lastQ = mbus_db_prepare($conn, "SELECT EXTRACT(EPOCH FROM (NOW() - MAX(received_at))) AS secs FROM incoming_payments", []);
-$lastRow = $lastQ === false ? false : mbus_db_fetch_assoc($lastQ);
-$lastSecs = ($lastRow && $lastRow['secs'] !== null) ? (int)$lastRow['secs'] : null;
-$phoneOk = $lastSecs !== null && $lastSecs < 86400 * 2;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -117,7 +119,7 @@ $phoneOk = $lastSecs !== null && $lastSecs < 86400 * 2;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
-    <title>Payments</title>
+    <title>GCash payments — MBUS Conductor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../Assets/css/responsive.css">
@@ -136,14 +138,13 @@ $phoneOk = $lastSecs !== null && $lastSecs < 86400 * 2;
 
 <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
     <div class="logo-container"><img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo"></div>
-    <h2>Operator</h2>
-    <nav class="menu-top" aria-label="Operator menu">
-        <a href="operator_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+    <h2>Conductor</h2>
+    <nav class="menu-top" aria-label="Conductor menu">
+        <a href="../Conductor/conductor_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
         <a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
         <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
-        <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Riders</a>
-        <a href="payments.php" aria-current="page"><i class="fa fa-wallet" aria-hidden="true"></i> Payments</a>
         <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
+        <a href="payments.php" aria-current="page"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a>
     </nav>
     <div class="menu-bottom">
         <a href="../logout.php" class="logout-btn btn btn-outline btn-block"><i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
@@ -152,7 +153,7 @@ $phoneOk = $lastSecs !== null && $lastSecs < 86400 * 2;
 
 <main class="main" role="main">
 <header class="page-header">
-    <h1>Payments</h1>
+    <h1>GCash payments</h1>
     <div class="page-header-right">
         <div class="profile-menu-wrap">
             <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
@@ -161,9 +162,8 @@ $phoneOk = $lastSecs !== null && $lastSecs < 86400 * 2;
             <div class="profile-menu" id="profileMenu" role="menu">
                 <div class="profile-menu-header">
                     <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
-                    <span class="profile-menu-role">Operator account</span>
-                </div>
-                <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                        <span class="profile-menu-role">Conductor account</span>
+                    </div>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
         </div>
@@ -238,35 +238,16 @@ $phoneOk = $lastSecs !== null && $lastSecs < 86400 * 2;
     </form>
 </details>
 
-<details class="pay-panel">
-    <summary><i class="fa fa-bolt" aria-hidden="true"></i> Auto-confirm <span class="pay-dot <?php echo $phoneOk ? 'on' : 'off'; ?>"><?php echo $phoneOk ? 'Phone connected' : ($lastSecs === null ? 'Not set up' : 'Phone quiet'); ?></span></summary>
-    <ol class="pay-steps">
-        <li>On the phone with the GCash SIM, install an SMS forwarder app.</li>
-        <li>Forward GCash &ldquo;received&rdquo; messages to this address:</li>
-    </ol>
-    <div class="pay-copy"><code id="smsUrl"><?php echo htmlspecialchars($smsUrl); ?></code><button type="button" class="pay-btn" id="copyUrl">Copy</button></div>
-    <p class="pay-note"><?php echo $lastSecs === null ? 'No message received yet. Send a small amount to test.' : 'Last message ' . ($lastSecs < 3600 ? max(1, (int)round($lastSecs / 60)) . ' min' : ($lastSecs < 86400 ? (int)round($lastSecs / 3600) . ' h' : (int)round($lastSecs / 86400) . ' d')) . ' ago.'; ?></p>
-</details>
-
 </div>
 </main>
 
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
-    <a href="operator_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
+    <a href="../Conductor/conductor_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
     <a href="manage_trips.php" class="bottom-nav-item"><i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span></a>
     <a href="scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
-    <a href="passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
     <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
+    <a href="payments.php" class="bottom-nav-item active" aria-current="page"><i class="fa fa-wallet" aria-hidden="true"></i><span>Payments</span></a>
 </nav>
-<script>
-document.getElementById('copyUrl')?.addEventListener('click', function () {
-    var b = this, t = document.getElementById('smsUrl').textContent, l = b.textContent;
-    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).catch(function () {
-        var i = document.createElement('input'); i.value = t; document.body.appendChild(i); i.select(); document.execCommand('copy'); i.remove();
-    });
-    b.textContent = 'Copied'; setTimeout(function () { b.textContent = l; }, 1500);
-});
-</script>
 <script src="../Assets/js/app-header.js"></script>
 </body>
 </html>

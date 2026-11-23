@@ -19,6 +19,7 @@ function mbus_role_home(string $role): string
 {
     return match (strtolower($role)) {
         'operator' => 'Operator/operator_dashboard.php',
+        'conductor' => 'Conductor/conductor_dashboard.php',
         'admin' => 'Admin/admin_dashboard.php',
         default => 'Commuter/commuter_dashboard.php',
     };
@@ -28,7 +29,7 @@ function mbus_role_home(string $role): string
 function mbus_safe_next(?string $next, string $role): string
 {
     $next = is_string($next) ? trim($next) : '';
-    if ($next !== '' && preg_match('#^(Commuter|Operator|Admin)/[A-Za-z0-9_\-]+\.php(\?[A-Za-z0-9_=&%\-]*)?$#', $next)) {
+    if ($next !== '' && preg_match('#^(Commuter|Operator|Conductor|Admin)/[A-Za-z0-9_\-]+\.php(\?[A-Za-z0-9_=&%\-]*)?$#', $next)) {
         return $next;
     }
     return mbus_role_home($role);
@@ -41,7 +42,7 @@ function mbus_require_gps(string $next): void
         return;
     }
     $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/index.php');
-    $base = preg_replace('#/(Commuter|Operator|Admin)/[^/]*$#', '', $script);
+    $base = preg_replace('#/(Commuter|Operator|Conductor|Admin)/[^/]*$#', '', $script);
     header('Location: ' . ($base ?: '') . '/gps.php?next=' . rawurlencode($next));
     exit();
 }

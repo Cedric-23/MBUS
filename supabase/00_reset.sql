@@ -4,6 +4,7 @@ DROP TABLE IF EXISTS reservation CASCADE;
 DROP TABLE IF EXISTS emergency_report CASCADE;
 DROP TABLE IF EXISTS feedback CASCADE;
 DROP TABLE IF EXISTS notification CASCADE;
+DROP TABLE IF EXISTS conductor_bus_assignments CASCADE;
 DROP TABLE IF EXISTS operator_bus_assignments CASCADE;
 DROP TABLE IF EXISTS operator_application CASCADE;
 DROP TABLE IF EXISTS schedule CASCADE;

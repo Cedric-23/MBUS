@@ -202,10 +202,7 @@ if($selected){
                u.full_name, u.phone_number,
                (SELECT p.amount FROM payment p WHERE p.reservation_id = r.reservation_id OR p.reservation_id IN
                     (SELECT reservation_id FROM reservation WHERE user_id = r.user_id AND schedule_id = r.schedule_id)
-                    ORDER BY p.payment_id DESC LIMIT 1) AS amount,
-               (SELECT p.payment_reference FROM payment p WHERE p.reservation_id = r.reservation_id OR p.reservation_id IN
-                    (SELECT reservation_id FROM reservation WHERE user_id = r.user_id AND schedule_id = r.schedule_id)
-                    ORDER BY p.payment_id DESC LIMIT 1) AS reference
+                    ORDER BY p.payment_id DESC LIMIT 1) AS amount
         FROM reservation r
         LEFT JOIN users u ON u.user_id = r.user_id
         WHERE r.schedule_id = ?
@@ -226,7 +223,6 @@ if($selected){
             'destination' => $r['destination'],
             'code' => $r['ticket_code'],
             'amount' => $r['amount'] !== null ? number_format((float)$r['amount'], 2) : null,
-            'reference' => $r['reference'],
         ];
     }
     $pq = mbus_db_prepare($conn, "SELECT p.request_id, p.pickup_label, p.destination, p.latitude, p.longitude, p.updated_at, u.user_id, u.full_name, u.phone_number,
@@ -295,7 +291,6 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
         <a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
         <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
         <a href="passengers.php" aria-current="page"><i class="fa fa-users" aria-hidden="true"></i> Riders</a>
-        <a href="payments.php"><i class="fa fa-wallet" aria-hidden="true"></i> Payments</a>
         <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
         <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
     </nav>
@@ -310,7 +305,7 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
     <div class="page-header-right">
         <div class="profile-menu-wrap">
             <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
-                <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span><?php echo mbus_payment_dot(); ?>
+                <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span>
             </button>
             <div class="profile-menu" id="profileMenu" role="menu">
                 <div class="profile-menu-header">
@@ -318,7 +313,6 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
                     <span class="profile-menu-role">Operator account</span>
                 </div>
                 <a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
-                <a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> Payments<?php echo mbus_payment_pill(); ?></a>
                 <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
@@ -490,7 +484,6 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
         <dt>Phone</dt><dd id="rdPhone"></dd>
         <dt>Ticket</dt><dd id="rdCode"></dd>
         <dt>Paid</dt><dd id="rdAmount"></dd>
-        <dt>Reference</dt><dd id="rdRef"></dd>
     </dl>
     <form method="POST" id="boardForm">
         <?php csrf_field(); ?>

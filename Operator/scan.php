@@ -5,8 +5,9 @@ require_once "../config/mysqli_compat.php";
 require_once "../Includes/csrf.php";
 require_once "../Includes/activity_log.php";
 require_once "../Includes/ticket_qr.php";
+require_once "../Includes/staff_assignment_scope.php";
 
-if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'operator'){
+if(!isset($_SESSION['user_id']) || !in_array(strtolower((string)($_SESSION['user_type'] ?? '')), ['operator', 'conductor'], true)){
     if($_SERVER['REQUEST_METHOD'] === 'POST'){
         http_response_code(401);
         header('Content-Type: application/json');
@@ -17,6 +18,10 @@ if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 
     exit();
 }
 
+$staffRole = strtolower((string)$_SESSION['user_type']);
+$isConductor = $staffRole === 'conductor';
+$staffLabel = $isConductor ? 'Conductor' : 'Operator';
+$homeHref = $isConductor ? '../Conductor/conductor_dashboard.php' : 'operator_dashboard.php';
 $operator_id = (int)$_SESSION['user_id'];
 
 function scan_json(array $data, int $status = 200): void
@@ -59,18 +64,18 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
     $schedule_id = $ref['schedule_id'];
     $user_id = $ref['user_id'];
 
-    // The ticket must be for a bus assigned to this operator.
+    // The ticket must belong to a bus assigned to this staff member.
+    $assignment = mbus_staff_assignment_condition($staffRole, 's.bus_id');
     $sq = mbus_db_prepare($conn, "
         SELECT s.schedule_id, s.departure_time, s.trip_status, b.bus_number, ro.origin, ro.destination AS route_destination
         FROM schedule s
         JOIN buses b ON b.bus_id = s.bus_id
         JOIN routes ro ON ro.route_id = s.route_id
-        WHERE s.schedule_id = ?
-        AND s.bus_id IN (SELECT bus_id FROM operator_bus_assignments WHERE operator_id = ?)
+        WHERE s.schedule_id = ? AND $assignment
     ", [$schedule_id, $operator_id]);
     $trip = $sq === false ? false : mbus_db_fetch_assoc($sq);
     if(!$trip){
-        scan_json(['ok' => false, 'error' => 'This ticket is for a bus that is not assigned to you.']);
+        scan_json(['ok' => false, 'error' => 'This ticket is for a bus that is not assigned to your account.']);
     }
 
     if($action === 'board'){
@@ -147,8 +152,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         'can_board' => $can_board,
         'note' => $note,
         'amount' => $pay ? number_format((float)$pay['amount'], 2) : null,
-        'method' => $pay['payment_method'] ?? null,
-        'reference' => $pay['payment_reference'] ?? null,
+        'method' => $isConductor ? ($pay['payment_method'] ?? null) : null,
+        'reference' => $isConductor ? ($pay['payment_reference'] ?? null) : null,
         'ticket_code' => $pay['ticket_code'] ?? null,
         'people' => $people,
         'owed' => $owed > 0 ? number_format($owed, 2) : null,
@@ -179,15 +184,19 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
 
 <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
     <div class="logo-container"><img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo"></div>
-    <h2>Operator</h2>
-    <nav class="menu-top" aria-label="Operator menu">
-        <a href="operator_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
+    <h2><?php echo $staffLabel; ?></h2>
+    <nav class="menu-top" aria-label="<?php echo $staffLabel; ?> menu">
+        <a href="<?php echo $homeHref; ?>"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
         <a href="scan.php" aria-current="page"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
         <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
+        <?php if($isConductor): ?>
+        <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
+        <a href="payments.php"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a>
+        <?php else: ?>
         <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
-        <a href="payments.php"><i class="fa fa-wallet" aria-hidden="true"></i> Payments</a>
         <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
         <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
+        <?php endif; ?>
     </nav>
     <div class="menu-bottom">
         <a href="../logout.php" class="logout-btn btn btn-outline btn-block"><i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
@@ -200,16 +209,14 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         <div class="page-header-right">
             <div class="profile-menu-wrap">
                 <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
-                    <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span><?php echo mbus_payment_dot(); ?>
+                    <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span>
                 </button>
                 <div class="profile-menu" id="profileMenu" role="menu">
                     <div class="profile-menu-header">
                         <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
-                        <span class="profile-menu-role">Operator account</span>
+                        <span class="profile-menu-role"><?php echo $staffLabel; ?> account</span>
                     </div>
-                <a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
-                    <a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> Payments<?php echo mbus_payment_pill(); ?></a>
-                    <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                    <?php if($isConductor): ?><a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a><?php else: ?><a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a><a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a><?php endif; ?>
                     <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                 </div>
             </div>
@@ -255,7 +262,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
                 <dt>Pickup</dt><dd id="rPickup"></dd>
                 <dt>Destination</dt><dd id="rDestination"></dd>
                 <dt>Paid</dt><dd id="rPaid"></dd>
-                <dt>GCash ref</dt><dd id="rRef"></dd>
+                <?php if($isConductor): ?><dt>GCash ref</dt><dd id="rRef"></dd><?php endif; ?>
             </dl>
             <div class="scan-people" id="rPeople" hidden></div>
             <p class="scan-note" id="rNote" hidden></p>
@@ -272,10 +279,10 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
 </main>
 
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
-    <a href="operator_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
+    <a href="<?php echo $homeHref; ?>" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
     <a href="manage_trips.php" class="bottom-nav-item"><i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span></a>
     <a href="scan.php" class="bottom-nav-item active" aria-current="page"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
-    <a href="passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
+    <?php if($isConductor): ?><a href="payments.php" class="bottom-nav-item"><i class="fa fa-wallet" aria-hidden="true"></i><span>Payments</span></a><?php else: ?><a href="passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a><?php endif; ?>
     <a href="waiting.php" class="bottom-nav-item">
         <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>

@@ -108,7 +108,17 @@ CREATE TABLE operator_bus_assignments (
     bus_id INT NOT NULL
 );
 
+CREATE TABLE conductor_bus_assignments (
+    assignment_id SERIAL PRIMARY KEY,
+    conductor_id INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    bus_id INT NOT NULL UNIQUE REFERENCES buses(bus_id) ON DELETE CASCADE,
+    assigned_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+ALTER TABLE conductor_bus_assignments ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE conductor_bus_assignments FROM PUBLIC, anon, authenticated;
+
 CREATE INDEX idx_buses_driver ON buses(driver_id);
+CREATE INDEX idx_conductor_bus_assignments_conductor ON conductor_bus_assignments(conductor_id, bus_id);
 CREATE INDEX idx_schedule_bus ON schedule(bus_id);
 CREATE INDEX idx_schedule_route ON schedule(route_id);
 CREATE INDEX idx_reservation_user ON reservation(user_id);

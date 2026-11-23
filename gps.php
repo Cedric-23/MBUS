@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_id'])) {
 require_once __DIR__ . '/Includes/gps_gate.php';
 
 $role = strtolower((string)($_SESSION['user_type'] ?? ''));
-if ($role !== 'operator') {
+if (!in_array($role, ['operator', 'conductor'], true)) {
     header('Location: ' . mbus_role_home($role));
     exit;
 }
@@ -49,7 +49,7 @@ if (mbus_gps_enabled()) {
             <span>Enable location</span>
         </button>
 
-        <p id="gateStatus" class="gate-status" role="status" aria-live="polite">Required for operator location sharing</p>
+        <p id="gateStatus" class="gate-status" role="status" aria-live="polite">Required for staff bus location sharing</p>
     </section>
 
     <p class="gate-foot">You can turn location off anytime in your browser. <a href="logout.php">Log out</a></p>

@@ -26,7 +26,6 @@
         } else { ph.textContent = '-'; }
         $('rdCode').textContent = r.code || '-';
         $('rdAmount').textContent = r.amount ? '₱' + r.amount : '-';
-        $('rdRef').textContent = r.reference || '-';
         $('rdId').value = r.id;
 
         var canBoard = (r.status === 'Paid' || r.status === 'Confirmed') && TRIP_OPEN;

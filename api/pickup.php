@@ -24,7 +24,7 @@ try {
 } catch (MbusPickupException $error) {
     mbus_pickup_json(['ok' => false, 'message' => 'Please sign in to use live pickup.'], 401);
 }
-if (!in_array($role, ['commuter', 'operator', 'admin'], true)) {
+if (!in_array($role, ['commuter', 'operator', 'conductor', 'admin'], true)) {
     mbus_pickup_json(['ok' => false, 'message' => 'Your account cannot access live pickup.'], 403);
 }
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';

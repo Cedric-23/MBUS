@@ -56,9 +56,8 @@ $my_buses = 0;
 $mq = mbus_db_prepare($conn, "SELECT COUNT(*) AS n FROM operator_bus_assignments WHERE operator_id = ?", [$operator_id]);
 if ($mq !== false && ($mrow = mbus_db_fetch_assoc($mq))) $my_buses = (int)$mrow['n'];
 
-/* GCash payments waiting for a check (same count as the red dot on the profile icon) */
+/* Shared avatar rendering; Driver/Operator accounts do not receive GCash controls. */
 require_once dirname(__DIR__) . '/Includes/header_avatar.php';
-$pay_pending = mbus_pending_payments_count();
 
 $state_label = ['Scheduled' => 'Up next', 'Boarding' => 'Boarding now', 'Departed' => 'On the road'];
 $greeting = (int)date('G') < 12 ? 'Good morning' : ((int)date('G') < 18 ? 'Good afternoon' : 'Good evening');
@@ -108,7 +107,6 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
             <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
             <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Passenger List</a>
-            <a href="payments.php"><i class="fa fa-wallet" aria-hidden="true"></i> Payments</a>
         <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
             <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
 
@@ -133,7 +131,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <div class="page-header-right">
                 <div class="profile-menu-wrap">
                     <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
-                        <span class="profile-avatar" aria-hidden="true"><?php echo mbus_header_avatar('../'); ?></span><?php echo mbus_payment_dot(); ?>
+                        <span class="profile-avatar" aria-hidden="true"><?php echo mbus_header_avatar('../'); ?></span>
                         <span class="profile-trigger-label"><?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
                         <i class="fa fa-chevron-down" aria-hidden="true"></i>
                     </button>
@@ -143,7 +141,6 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
                             <span class="profile-menu-role">Operator account</span>
                         </div>
                 <a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
-                        <a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> Payments<?php echo mbus_payment_pill(); ?></a>
                         <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>
@@ -156,14 +153,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <select id="operatorTrackingTrip" aria-label="Active trip"></select>
         </div>
 
-        <?php if($pay_pending > 0){ ?>
-        <a class="attn" href="payments.php">
-            <span><strong><?php echo $pay_pending; ?> GCash <?php echo $pay_pending === 1 ? 'payment' : 'payments'; ?> to check</strong><small>Riders are waiting for their tickets until you approve.</small></span>
-            <span class="attn-go">Review</span>
-        </a>
-        <?php } else { ?>
-        <p class="attn is-clear"><span><strong>All caught up</strong><small>No payments waiting.</small></span></p>
-        <?php } ?>
+        <p class="attn is-clear"><span><strong>Bus operations ready</strong><small>Trip status and live location tools are available from your dashboard.</small></span></p>
 
         <div class="today-strip" aria-label="Today">
             <div><b><?php echo $stat['trips']; ?></b><span>Trips today</span></div>
@@ -178,7 +168,6 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
                 <li><a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i>My Bus<span class="count"><?php echo $my_buses; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
                 <li><a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i>Trips<span class="count"><?php echo $stat['trips']; ?> today</span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
                 <li><a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i>Riders<span class="count"><?php echo $stat['booked']; ?> booked</span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
-                <li><a href="payments.php"><i class="fa fa-wallet" aria-hidden="true"></i>Payments<span class="count"><?php echo $pay_pending > 0 ? $pay_pending . ' to check' : ''; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
                 <li><a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i>Waiting<span class="count"><?php echo $stat['pending']; ?></span><i class="fa fa-chevron-right" aria-hidden="true"></i></a></li>
             </ul>
         </section>

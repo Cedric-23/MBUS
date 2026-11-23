@@ -1,12 +1,13 @@
 <?php
 // Shared Waiting board for staff roles. Operator: own buses. Admin: all buses.
-if (!isset($pickupStaffRole) || !in_array($pickupStaffRole, ['admin', 'operator'], true)) {
+if (!isset($pickupStaffRole) || !in_array($pickupStaffRole, ['admin', 'operator', 'conductor'], true)) {
     http_response_code(403);
     exit('Access denied.');
 }
 $isAdmin = $pickupStaffRole === 'admin';
-$dashboard = $isAdmin ? 'admin_dashboard.php' : 'operator_dashboard.php';
-$roleLabel = $isAdmin ? 'Admin' : 'Operator';
+$isConductor = $pickupStaffRole === 'conductor';
+$dashboard = $isAdmin ? 'admin_dashboard.php' : ($isConductor ? '../Conductor/conductor_dashboard.php' : 'operator_dashboard.php');
+$roleLabel = $isAdmin ? 'Admin' : ($isConductor ? 'Conductor' : 'Operator');
 $navItems = $isAdmin
     ? [
         ['admin_dashboard.php', 'fa-home', 'Home'],
@@ -14,12 +15,17 @@ $navItems = $isAdmin
         ['manage_buses.php', 'fa-bus', 'Buses'],
         ['manage_operators.php', 'fa-users', 'Operators'],
     ]
-    : [
+    : ($isConductor ? [
+        [$dashboard, 'fa-home', 'Home'],
+        ['manage_trips.php', 'fa-bus', 'Trips'],
+        ['scan.php', 'fa-qrcode', 'Scan'],
+        ['payments.php', 'fa-wallet', 'Payments'],
+    ] : [
         ['operator_dashboard.php', 'fa-home', 'Home'],
         ['manage_trips.php', 'fa-bus', 'Trips'],
         ['scan.php', 'fa-qrcode', 'Scan'],
         ['passengers.php', 'fa-users', 'Riders'],
-    ];
+    ]);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -64,7 +70,7 @@ $navItems = $isAdmin
                     <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
                     <span class="profile-menu-role"><?php echo $roleLabel; ?> account</span>
                 </div>
-                <?php if (!$isAdmin): ?><a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> Payments</a><a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a><?php endif; ?>
+                <?php if ($isConductor): ?><a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a><?php elseif (!$isAdmin): ?><a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a><?php endif; ?>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
         </div>
@@ -143,6 +149,6 @@ $navItems = $isAdmin
 <script src="../Assets/js/staff_waiting.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/staff_waiting.js'); ?>"></script>
 <script src="../Assets/js/staff_waiting_toggles.js?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/js/staff_waiting_toggles.js'); ?>"></script>
 <script src="../Assets/js/app-header.js"></script>
-<?php if (strtolower((string)($_SESSION['user_type'] ?? '')) === 'operator') { ?><script src="../Assets/js/operator_tracker.js"></script><?php } ?>
+<?php if (in_array(strtolower((string)($_SESSION['user_type'] ?? '')), ['operator', 'conductor'], true)) { ?><script src="../Assets/js/operator_tracker.js"></script><?php } ?>
 </body>
 </html>

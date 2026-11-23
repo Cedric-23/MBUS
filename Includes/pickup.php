@@ -2,6 +2,7 @@
 /** Live pickup is a location signal only: no reservation, seat allocation or payment. */
 require_once __DIR__ . '/schedule_booking.php';
 require_once __DIR__ . '/route_locations.php';
+require_once __DIR__ . '/staff_assignment_scope.php';
 
 const MBUS_PICKUP_SETUP_MESSAGE = 'Live pickup is not enabled yet. Ask an administrator to deploy supabase/10_live_pickup.sql before using this feature.';
 
@@ -78,7 +79,7 @@ function mbus_pickup_validate_form(array $post, string $role): array
     if (!is_string($action) || !in_array($action, ['wait', 'cancel', 'picked_up', 'quick'], true)) {
         throw new MbusPickupException('Unknown pickup action.');
     }
-    if (($action === 'picked_up' && !in_array($role, ['operator', 'admin'], true))
+    if (($action === 'picked_up' && !in_array($role, ['operator', 'conductor', 'admin'], true))
         || ($action !== 'picked_up' && $role !== 'commuter')) {
         throw new MbusPickupException('This action is not permitted for your account.', 403);
     }
@@ -108,9 +109,9 @@ function mbus_pickup_ready(PDO $pdo): bool
 /** EXISTS avoids duplicate riders/schedules when assignment rows are duplicated. */
 function mbus_pickup_scope(string $role, int $userId, array &$params, string $scheduleAlias = 's'): string
 {
-    if ($role === 'operator') {
+    if (in_array($role, ['operator', 'conductor'], true)) {
         $params[] = $userId;
-        return " AND EXISTS (SELECT 1 FROM public.operator_bus_assignments oba WHERE oba.bus_id = {$scheduleAlias}.bus_id AND oba.operator_id = ?)";
+        return ' AND ' . mbus_staff_assignment_condition($role, $scheduleAlias . '.bus_id');
     }
     return '';
 }
@@ -335,7 +336,7 @@ function mbus_pickup_mutate(PDO $pdo, string $role, int $userId, array $data): a
     }
     // Defense in depth: callers cannot bypass role/form validation.
     $action = $data['action'] ?? '';
-    if (($action === 'picked_up' && !in_array($role, ['operator', 'admin'], true))
+    if (($action === 'picked_up' && !in_array($role, ['operator', 'conductor', 'admin'], true))
         || (in_array($action, ['wait', 'cancel', 'quick'], true) && $role !== 'commuter')
         || !in_array($action, ['wait', 'cancel', 'picked_up', 'quick'], true)) {
         throw new MbusPickupException('This action is not permitted for your account.', 403);

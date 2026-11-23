@@ -43,6 +43,28 @@ function mbus_set_bus_operator($conn, int $bus_id, int $operator_id): bool {
     }
 }
 
+function mbus_set_bus_conductor($conn, int $bus_id, int $conductor_id): bool {
+    $pdo = $conn->pdo;
+    try {
+        $pdo->beginTransaction();
+        if($conductor_id > 0){
+            $chk = $pdo->prepare("SELECT 1 FROM users WHERE user_id = ? AND LOWER(user_type) = 'conductor'");
+            $chk->execute([$conductor_id]);
+            if(!$chk->fetchColumn()){ $pdo->rollBack(); return false; }
+        }
+        $pdo->prepare("DELETE FROM conductor_bus_assignments WHERE bus_id = ?")->execute([$bus_id]);
+        if($conductor_id > 0){
+            $pdo->prepare("INSERT INTO conductor_bus_assignments (conductor_id, bus_id) VALUES (?, ?)")->execute([$conductor_id, $bus_id]);
+        }
+        $pdo->commit();
+        return true;
+    } catch(Throwable $e){
+        if($pdo->inTransaction()) $pdo->rollBack();
+        error_log('Bus conductor assignment failed: ' . $e->getMessage());
+        return false;
+    }
+}
+
 /* EDIT BUS: the admin gives the bus number and can reassign the driver (for example when the usual driver
    is sick). Type, seats and photos stay as the driver submitted them. */
 if(isset($_POST['update_bus'])){
@@ -54,6 +76,8 @@ if(isset($_POST['update_bus'])){
         $prev_bus_number = trim((string)($_POST['prev_bus_number'] ?? ''));
         $operator_id = (int)($_POST['operator_id'] ?? 0);
         $prev_operator_id = (int)($_POST['prev_operator_id'] ?? 0);
+        $conductor_id = (int)($_POST['conductor_id'] ?? 0);
+        $prev_conductor_id = (int)($_POST['prev_conductor_id'] ?? 0);
         $exists = $bus_id > 0 ? mbus_db_prepare($conn, "SELECT 1 FROM buses WHERE bus_id = ?", [$bus_id]) : false;
         if($exists === false || mbus_db_num_rows($exists) < 1){
             $error = "That bus no longer exists.";
@@ -73,6 +97,10 @@ if(isset($_POST['update_bus'])){
                     if(mbus_set_bus_operator($conn, $bus_id, $operator_id)){ $changed[] = $operator_id > 0 ? "driver reassigned" : "driver removed"; }
                     else { $error = "The driver could not be assigned. Please try again."; }
                 }
+                if(!isset($error) && $conductor_id !== $prev_conductor_id){
+                    if(mbus_set_bus_conductor($conn, $bus_id, $conductor_id)){ $changed[] = $conductor_id > 0 ? "conductor assigned" : "conductor removed"; }
+                    else { $error = "The conductor could not be assigned. Please try again."; }
+                }
                 if(!isset($error)){ $success = $changed ? "Bus updated: " . implode(", ", $changed) . "." : "Nothing changed."; }
             }
         }
@@ -85,6 +113,7 @@ if(isset($_POST['delete_bus'])){
         $error = "Security validation failed. Please try again.";
     } else {
         $bus_id = (int)$_POST['bus_id'];
+        mbus_db_prepare($conn, "DELETE FROM conductor_bus_assignments WHERE bus_id = ?", [$bus_id]);
         mbus_db_prepare($conn, "DELETE FROM operator_bus_assignments WHERE bus_id = ?", [$bus_id]);
         mbus_db_prepare($conn, "DELETE FROM buses WHERE bus_id = ?", [$bus_id]);
         $success = "Bus deleted successfully";
@@ -181,7 +210,9 @@ $bq = mbus_db_query($conn, "
     SELECT b.bus_id, b.bus_number, b.bus_type, b.capacity,
       (SELECT COUNT(*) FROM schedule sc WHERE sc.bus_id=b.bus_id AND sc.departure_time >= NOW() AND sc.schedule_status='Active') AS upcoming,
       (SELECT string_agg(u.full_name, ', ') FROM operator_bus_assignments oa JOIN users u ON u.user_id=oa.operator_id WHERE oa.bus_id=b.bus_id) AS operators,
-      (SELECT oa.operator_id FROM operator_bus_assignments oa WHERE oa.bus_id=b.bus_id ORDER BY oa.assignment_id LIMIT 1) AS operator_id
+      (SELECT oa.operator_id FROM operator_bus_assignments oa WHERE oa.bus_id=b.bus_id ORDER BY oa.assignment_id LIMIT 1) AS operator_id,
+      (SELECT u.full_name FROM conductor_bus_assignments ca JOIN users u ON u.user_id=ca.conductor_id WHERE ca.bus_id=b.bus_id LIMIT 1) AS conductor,
+      (SELECT ca.conductor_id FROM conductor_bus_assignments ca WHERE ca.bus_id=b.bus_id LIMIT 1) AS conductor_id
     FROM buses b ORDER BY b.bus_number");
 $bus_list = [];
 while($bq !== false && ($row = mbus_db_fetch_assoc($bq))){ $bus_list[] = $row; }
@@ -190,6 +221,9 @@ while($bq !== false && ($row = mbus_db_fetch_assoc($bq))){ $bus_list[] = $row; }
 $opq = mbus_db_query($conn, "SELECT user_id, full_name FROM users WHERE LOWER(user_type) IN ('operator', 'driver') ORDER BY full_name");
 $operator_options = [];
 while($opq !== false && ($orow = mbus_db_fetch_assoc($opq))){ $operator_options[] = $orow; }
+$cq = mbus_db_query($conn, "SELECT user_id, full_name FROM users WHERE LOWER(user_type) = 'conductor' ORDER BY full_name");
+$conductor_options = [];
+while($cq !== false && ($crow = mbus_db_fetch_assoc($cq))){ $conductor_options[] = $crow; }
 $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
 ?>
 <p style="margin:0 0 14px;color:#7a8aa6;font-size:.9rem;line-height:1.45">Buses come from driver applications: approving a driver adds the bus they submitted, named after their last name. You can rename a bus or give it to another driver.</p>
@@ -200,9 +234,9 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
     $is_ac = strtolower($row['bus_type']) === 'aircon';
     $needs = false;
     $label = $needs ? 'Plate ' . $row['bus_number'] : ((ctype_digit((string)$row['bus_number']) ? 'Bus ' : '') . $row['bus_number']);
-    $edit = ['bus_id'=>(int)$row['bus_id'],'bus_number'=>$needs ? '' : $row['bus_number'],'prev_bus_number'=>$needs ? '' : $row['bus_number'],'operator_id'=>(int)($row['operator_id'] ?? 0),'prev_operator_id'=>(int)($row['operator_id'] ?? 0)];
+    $edit = ['bus_id'=>(int)$row['bus_id'],'bus_number'=>$needs ? '' : $row['bus_number'],'prev_bus_number'=>$needs ? '' : $row['bus_number'],'operator_id'=>(int)($row['operator_id'] ?? 0),'prev_operator_id'=>(int)($row['operator_id'] ?? 0),'conductor_id'=>(int)($row['conductor_id'] ?? 0),'prev_conductor_id'=>(int)($row['conductor_id'] ?? 0)];
 ?>
-<article class="ad-card" data-q="<?php echo htmlspecialchars(strtolower('bus '.$row['bus_number'].' '.$row['bus_type'].' '.($row['operators'] ?? '')), ENT_QUOTES); ?>">
+<article class="ad-card" data-q="<?php echo htmlspecialchars(strtolower('bus '.$row['bus_number'].' '.$row['bus_type'].' '.($row['operators'] ?? '').' '.($row['conductor'] ?? '')), ENT_QUOTES); ?>">
     <header>
         <span class="ad-ico <?php echo $is_ac ? '' : 'green'; ?>"><i class="fa fa-bus" aria-hidden="true"></i></span>
         <div><h3><?php echo htmlspecialchars($label); ?></h3><span class="ad-pill <?php echo $is_ac ? 'info' : 'active'; ?>"><?php echo htmlspecialchars($row['bus_type']); ?></span><?php if($needs): ?> <span class="ad-pill amber">Needs bus number</span><?php endif; ?></div>
@@ -211,9 +245,10 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
         <div><dt>Capacity</dt><dd><?php echo (int)$row['capacity']; ?> seats</dd></div>
         <div><dt>Upcoming</dt><dd><?php echo (int)$row['upcoming']; ?> trip<?php echo (int)$row['upcoming']===1?'':'s'; ?></dd></div>
         <div><dt>Driver</dt><dd><?php echo !empty($row['operators']) ? htmlspecialchars($row['operators']) : '<span class="muted">Unassigned</span>'; ?></dd></div>
+        <div><dt>Conductor</dt><dd><?php echo !empty($row['conductor']) ? htmlspecialchars($row['conductor']) : '<span class="muted">Unassigned</span>'; ?></dd></div>
     </dl>
     <footer>
-        <button type="button" class="ad-btn sm" data-ad-open="edit" data-title="<?php echo $needs ? 'Give bus number' : 'Edit bus'; ?>" data-action="update_bus" data-edit="<?php echo htmlspecialchars(json_encode($edit), ENT_QUOTES); ?>"><i class="fa fa-pen" aria-hidden="true"></i> <?php echo $needs ? 'Give bus number' : 'Number / driver'; ?></button>
+        <button type="button" class="ad-btn sm" data-ad-open="edit" data-title="<?php echo $needs ? 'Give bus number' : 'Edit bus'; ?>" data-action="update_bus" data-edit="<?php echo htmlspecialchars(json_encode($edit), ENT_QUOTES); ?>"><i class="fa fa-pen" aria-hidden="true"></i> <?php echo $needs ? 'Give bus number' : 'Number / staff'; ?></button>
         <form method="POST" data-confirm="Delete this bus?"><?php csrf_field(); ?><input type="hidden" name="bus_id" value="<?php echo (int)$row['bus_id']; ?>"><button type="submit" name="delete_bus" class="ad-icon danger" aria-label="Delete bus"><i class="fa fa-trash" aria-hidden="true"></i></button></form>
     </footer>
 </article>
@@ -228,12 +263,21 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
             <input type="hidden" name="bus_id">
             <input type="hidden" name="prev_bus_number" value="">
             <input type="hidden" name="prev_operator_id" value="0">
+            <input type="hidden" name="prev_conductor_id" value="0">
             <label class="ad-field"><span>Bus number</span><input type="text" name="bus_number" required maxlength="30" placeholder="e.g. BUS-05"></label>
             <label class="ad-field"><span>Driver</span>
                 <select name="operator_id">
                     <option value="0">Unassigned</option>
                     <?php foreach($operator_options as $op): ?>
                     <option value="<?php echo (int)$op['user_id']; ?>"><?php echo htmlspecialchars($op['full_name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label class="ad-field"><span>Conductor</span>
+                <select name="conductor_id">
+                    <option value="0">Unassigned</option>
+                    <?php foreach($conductor_options as $co): ?>
+                    <option value="<?php echo (int)$co['user_id']; ?>"><?php echo htmlspecialchars($co['full_name']); ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
