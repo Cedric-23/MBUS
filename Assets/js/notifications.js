@@ -8,13 +8,15 @@
     if (s < 86400) return Math.floor(s / 3600) + ' hr ago'; return Math.floor(s / 86400) + ' d ago';
   }
   /* Pages instead of a scrolling list: PER items at a time with Previous / Next. */
-  var PER = 5, page = 0, items = [];
+  var PER = 3, page = 0, items = [];
   var st = document.createElement('style');
-  st.textContent = '.notif-panel{overflow:visible!important;max-height:none!important}' +
+  st.textContent = '.notif-panel{overflow:visible!important;max-height:none!important;width:min(280px,calc(100vw - 32px))!important;padding:10px!important;border-radius:16px!important}' +
+    '.notif-panel h2{font-size:.82rem!important;margin:0 2px 6px!important}' +
+    '.notif-list{gap:4px!important}.notif-list li{padding:7px 10px!important;font-size:.76rem!important;line-height:1.3!important;border-radius:12px!important}.notif-list small{font-size:.66rem!important}' +
     '.notif-pager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}' +
     '.notif-pager[hidden]{display:none}' +
     '.notif-pager span{font-size:.78rem;color:#6b7a90;font-weight:600}' +
-    '.notif-pager button{min-height:36px;padding:0 14px;border:0;border-radius:999px;background:#eaf1fd;color:#2f6fe4;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer}' +
+    '.notif-pager button{min-height:30px;padding:0 12px;border:0;border-radius:999px;background:#eaf1fd;color:#2f6fe4;font:inherit;font-size:.74rem;font-weight:700;cursor:pointer}' +
     '.notif-pager button:disabled{opacity:.4;cursor:default}';
   document.head.appendChild(st);
   var pager = document.createElement('div'); pager.className = 'notif-pager'; pager.hidden = true;
@@ -27,7 +29,7 @@
   });
   function render(d) {
     dot.hidden = !d.unread; dot.textContent = d.unread > 9 ? '9+' : d.unread;
-    items = d.items || []; page = 0; draw();
+    items = d.items || []; if (panel.hidden) page = 0; draw();
   }
   function draw() {
     list.innerHTML = '';
@@ -55,5 +57,5 @@
     });
   });
   document.addEventListener('click', function (e) { if (!panel.hidden && !panel.contains(e.target)) { panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); } });
-  load(); setInterval(function () { if (panel.hidden) load(); }, 60000);
+  load(); setInterval(function () { if (!document.hidden) load(); }, 5000);
 })();

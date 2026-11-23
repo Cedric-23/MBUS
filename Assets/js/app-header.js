@@ -170,3 +170,55 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 });
+
+/* Real-time pages: a page with <body data-live="swap|reload"> re-checks itself every few seconds and
+   updates when something changed (new reservation, payment approved, ...), so nobody has to switch tabs.
+   "swap" replaces the content below the header in place; "reload" reloads the page. It waits while the
+   user is typing, has something expanded or a confirmation open. */
+(function () {
+    var live = { 'commuter_dashboard.php': 'swap', 'my_reservations.php': 'reload', 'admin_dashboard.php': 'swap', 'payments.php': 'swap' };
+    var mode = document.body && (document.body.getAttribute('data-live') || live[location.pathname.split('/').pop()]);
+    if (!mode) return;
+    var head = document.querySelector('main header.home-top, main header.page-header, main .page-header');
+    var box = head ? head.parentNode : document.querySelector('main');
+    if (!box) return;
+    function parts(root) { return Array.prototype.filter.call(root.children, function (c) { return !c.contains(head && root === box ? head : null) && c.tagName !== 'HEADER' && !c.classList.contains('page-header') && !c.classList.contains('home-top'); }); }
+    function sig(nodes) {
+        var d = document.createElement('div');
+        nodes.forEach(function (n) { d.appendChild(n.cloneNode(true)); });
+        d.querySelectorAll('.countdown,.timer-value,script,style').forEach(function (e) { e.remove(); });
+        return d.innerHTML.replace(/\s+/g, ' ');
+    }
+    var last = sig(parts(box)), busy = false;
+    function idle() {
+        if (document.hidden) return false;
+        var a = document.activeElement;
+        if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && box.contains(a)) return false;
+        if (document.querySelector('.mbus-confirm-overlay')) return false;
+        if (box.querySelector('details[open]')) return false;
+        return true;
+    }
+    function check() {
+        if (busy || !idle()) return;
+        busy = true;
+        fetch(location.href, { credentials: 'same-origin', cache: 'no-store', headers: { 'X-Requested-With': 'live' } })
+            .then(function (r) { return r.ok ? r.text() : ''; })
+            .then(function (html) {
+                if (!html) return;
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                var nh = doc.querySelector('main header.home-top, main header.page-header, main .page-header');
+                var nbox = nh ? nh.parentNode : doc.querySelector('main');
+                if (!nbox) return;
+                var next = parts(nbox), s = sig(next);
+                if (s === last || !idle()) return;
+                last = s;
+                if (mode === 'reload') { location.reload(); return; }
+                parts(box).forEach(function (n) { n.remove(); });
+                next.forEach(function (n) { box.appendChild(document.importNode(n, true)); });
+            })
+            .catch(function () {})
+            .then(function () { busy = false; });
+    }
+    setInterval(check, 5000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
+})();
