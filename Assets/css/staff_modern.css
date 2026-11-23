@@ -166,10 +166,25 @@
 .stf .gc-btn.primary:hover{background:#2358c0}
 .stf .pay-badge{padding:4px 12px;font-size:.78rem}
 
-/* Profile button: just the avatar, no ring/border */
-.stf .profile-trigger,.stf .profile-trigger:hover,.stf .profile-trigger[aria-expanded="true"]{background:transparent!important;border:0!important;box-shadow:none!important;padding:0;width:42px!important;min-width:42px!important;height:42px!important}
+/* Profile button: just the avatar, no ring/border (44px button, 40px photo, same as commuter) */
+.stf .profile-trigger,.stf .profile-trigger:hover,.stf .profile-trigger[aria-expanded="true"]{background:transparent!important;border:0!important;box-shadow:none!important;padding:0;width:44px!important;min-width:44px!important;height:44px!important}
 .stf .profile-avatar{width:40px!important;height:40px!important;border-radius:50%;box-shadow:0 2px 8px rgba(47,111,228,.22)!important;overflow:hidden;background:#2f6fe4}
 .stf .profile-avatar img{width:100%;height:100%;border:0;border-radius:50%;object-fit:cover}
 .stf .profile-trigger:focus-visible{outline:3px solid rgba(47,111,228,.4);outline-offset:2px;border-radius:50%}
 .stf.staff-wait-page .sw-bar .profile-avatar{width:40px!important;height:40px!important}
-.stf.staff-wait-page .sw-bar .profile-trigger{width:42px!important;height:42px!important}
+.stf.staff-wait-page .sw-bar .profile-trigger{width:44px!important;height:44px!important}
+
+/* ---- Profile icon (and bell) pinned to ONE spot on every admin / operator / driver page (phones) ----
+   Same spot as the commuter pages: 14px from the top, 16px from the right, bell just to its left.
+   Fixed to the screen, so no page header or card can move it. This file is linked with a
+   file-time version, so a change here always reaches the phone (unify.css is cached for an hour). */
+@media(max-width:768px){
+  body.stf.stf.stf.stf .profile-menu-wrap{position:fixed!important;top:14px!important;right:16px!important;left:auto!important;bottom:auto!important;margin:0!important;z-index:700}
+  body.stf.stf.stf.stf .notif-wrap{position:fixed!important;top:14px!important;right:72px!important;left:auto!important;bottom:auto!important;margin:0!important;z-index:701}
+  body.stf.stf.stf.stf .notif-btn{width:44px;height:44px}
+  /* leave room on the right of the page header for the pinned icons */
+  body.stf.stf.stf .home-top{padding-right:108px!important}
+  body.stf.stf.stf .page-header{padding-right:64px!important}
+  /* waiting board: the refresh button sits where the bell is on other pages */
+  body.stf.stf.stf.staff-wait-page .sw-bar{padding-top:14px!important;padding-right:72px!important;box-sizing:border-box}
+}
