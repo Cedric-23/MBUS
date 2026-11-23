@@ -368,6 +368,7 @@ exit();
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=2">
     <link rel="stylesheet" href="../Assets/css/commuter_modern.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/commuter_modern.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/commuter_busmap.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/commuter_busmap.css'); ?>">
     <style>:root{--u-col:1040px}</style>
 </head>
 
@@ -443,20 +444,27 @@ exit();
 
 <div class="card seat-map-card">
 
-<div class="bus-front" aria-hidden="true"><i class="fa fa-steering-wheel"></i> Front of bus</div>
-
-<div class="seat-map" role="grid" aria-label="Bus seat map">
+<div class="seat-map bm" role="grid" aria-label="Bus seat map">
+<div class="bm-front" aria-hidden="true">Front of bus</div>
 
 <?php
-/* Same seat layout the operator sees on the Riders page: the bus's own customised layout
-   (gaps where there is no seat), or plain rows of 4 when the bus has no custom layout. */
-foreach(mbus_bus_seat_rows($route_data['seat_layout'] ?? null, $capacity) as $cells){
-echo "<div class='seat-row' role='row'>";
-foreach($cells as $ci => $seat){
+/* Same bus the driver built in My Bus: driver tile in front-left, a dashed aisle down the middle, and a door tile
+   wherever a whole side of a row has no seats. A single missing seat stays an empty gap so columns line up. */
+foreach(mbus_bus_seat_rows($route_data['seat_layout'] ?? null, $capacity) as $ri => $cells){
+echo "<div class='seat-row bm-row' role='row'>";
+foreach([0,2] as $start){
+if($start === 2){ echo "<div class='aisle bm-aisle' role='separator' aria-label='Aisle'></div>"; }
+if($cells[$start] === null && $cells[$start+1] === null){
+if($ri === 0 && $start === 0){ echo "<span class='bm-driver' role='gridcell' aria-label='Driver seat'>Driver</span>"; }
+else { echo "<span class='bm-door' role='gridcell' aria-label='Door, no seats'>Door</span>"; }
+continue;
+}
+foreach([$start, $start+1] as $ci){
+$seat = $cells[$ci];
 if($seat === null){
-/* no seat here: an invisible placeholder keeps the columns lined up */
-echo "<div class='seat-cell seat-gap' aria-hidden='true' style='visibility:hidden;pointer-events:none'><span class='seat-btn'>0</span></div>";
-} else {
+echo "<div class='seat-cell seat-gap' aria-hidden='true'></div>";
+continue;
+}
 $class="seat-btn";
 $disabled="";
 $aria_disabled="false";
@@ -467,7 +475,6 @@ $aria_disabled="true";
 }
 echo "<div class='seat-cell' data-seat-cell='$seat'><button type='button' class='$class' data-seat='$seat' role='gridcell' $disabled aria-disabled='$aria_disabled' aria-label='Seat $seat'>$seat</button></div>";
 }
-if($ci==1){echo "<div class='aisle' role='separator' aria-label='Aisle'></div>";}
 }
 echo "</div>";
 }

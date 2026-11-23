@@ -1,0 +1,33 @@
+/* Reservation seat map: the same bus the driver builds in My Bus.
+   Driver tile front-left, dashed aisle down the middle, a door tile where a side of a row has no seats. */
+.reserve-page .seat-map.bm {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px 14px 18px; border: 2px solid #dde7f8; border-radius: 28px; background: #f6f9ff;
+}
+.reserve-page .seat-map.bm .bm-front {
+  text-align: center; color: #8a98ae; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 2px;
+}
+.reserve-page .seat-map.bm .seat-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 26px minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center; gap: 8px; justify-content: stretch;
+}
+.reserve-page .seat-map.bm .seat-cell { min-width: 0; flex: none; display: block; }
+.reserve-page .seat-map.bm .seat-btn { width: 100%; max-width: none; height: 52px; min-height: 52px; }
+.reserve-page .seat-map.bm .bm-aisle { position: relative; align-self: stretch; width: auto; flex: none; }
+.reserve-page .seat-map.bm .bm-aisle::before {
+  content: ""; position: absolute; top: -5px; bottom: -5px; left: 50%; border-left: 2px dashed #c3d5f5; transform: translateX(-1px);
+}
+.reserve-page .seat-map.bm .bm-driver,
+.reserve-page .seat-map.bm .bm-door {
+  grid-column: span 2; box-sizing: border-box; height: 52px; display: flex; align-items: center; justify-content: center;
+  border-radius: 14px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+}
+.reserve-page .seat-map.bm .bm-driver { background: #14213d; color: #fff; }
+.reserve-page .seat-map.bm .bm-door {
+  border: 1.5px solid #d3def2; color: #6b7a99;
+  background: repeating-linear-gradient(135deg, #eef3fb 0 6px, #e3ebf8 6px 12px);
+}
+@media (max-width: 640px) {
+  .reserve-page .seat-map.bm { padding: 12px 10px 16px; }
+  .reserve-page .seat-map.bm .seat-btn, .reserve-page .seat-map.bm .bm-driver, .reserve-page .seat-map.bm .bm-door { height: 48px; min-height: 48px; }
+}
