@@ -29,6 +29,20 @@ $schedule_id = filter_var($_GET['schedule_id'] ?? null, FILTER_VALIDATE_INT, ['o
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=2">
     <link rel="stylesheet" href="../Assets/css/commuter_modern.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/commuter_modern.css'); ?>">
+    <style>
+        /* Phones: Live gets a title row like every other commuter page. The profile icon is pinned
+           in that row, so it no longer sits on top of the Active buses card. */
+        @media (max-width: 768px) {
+            body.cm.commuter-live-page .lv-shell > h1.lv-visually-hidden {
+                position: static !important; width: auto !important; height: auto !important;
+                margin: 0 0 14px !important; padding: 0 108px 0 0 !important;
+                overflow: visible !important; clip: auto !important; clip-path: none !important;
+                white-space: normal !important; display: flex !important; align-items: center;
+                min-height: 44px; font-size: 1.35rem; font-weight: 700; line-height: 1.2;
+                letter-spacing: -.02em; color: #14213d;
+            }
+        }
+    </style>
 </head>
 <body class="has-bottom-nav commuter-live-page cm">
 <main class="main lv-shell" role="main">
