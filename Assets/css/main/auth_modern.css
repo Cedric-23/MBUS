@@ -128,3 +128,9 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
   .auth-hero-m.auth-hero-brand p{font-size:.85rem}
   .auth-hero-m.auth-hero-brand .auth-hero-art{position:absolute;left:50%;right:auto;bottom:44px;transform:translateX(-50%);width:min(160px,46%);height:auto;z-index:1;pointer-events:none}
 }
+
+/* Login (phones): bigger logo set a little lower, bus picture higher and on the left */
+@media (max-width:768px){
+  .auth-hero-m.auth-hero-brand .auth-hero-logo{top:30px;height:46px}
+  .auth-hero-m.auth-hero-brand .auth-hero-art{left:20px;transform:none;bottom:62px;width:min(150px,42%)}
+}
