@@ -66,3 +66,12 @@ html body .notif-btn.notif-btn.notif-btn.notif-btn.notif-btn{width:44px!importan
   body.cm.cm.cm.cm .profile-menu-wrap{position:fixed!important;top:var(--u-top,14px)!important;right:var(--u-pad,16px)!important;left:auto!important;bottom:auto!important;margin:0!important;z-index:700}
   body.cm.cm.cm.cm .notif-wrap{position:fixed!important;top:var(--u-top,14px)!important;right:calc(var(--u-pad,16px) + 56px)!important;left:auto!important;bottom:auto!important;margin:0!important;z-index:701}
 }
+
+/* ---- Desktop: the pinned header is the positioned parent, so the icon sits at the header's right edge (not the page's).
+   Same spot for commuter, driver and admin: top-right of the content column, bell just to its left. ---- */
+@media (min-width:769px){
+  .page-header.page-header.page-header.page-header .profile-menu-wrap.profile-menu-wrap,
+  .home-top.home-top.home-top.home-top .profile-menu-wrap.profile-menu-wrap{position:absolute!important;top:var(--u-top)!important;right:0!important;left:auto!important}
+  .page-header.page-header.page-header.page-header .notif-wrap,
+  .home-top.home-top.home-top.home-top .notif-wrap{position:absolute!important;top:var(--u-top)!important;right:56px!important;left:auto!important}
+}
