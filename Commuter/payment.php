@@ -31,11 +31,25 @@ if($requested_reservation_id){
         ORDER BY created_at DESC");
     $transaction_lookup->execute([$user_id, $schedule_id]);
     $transaction_ids = [(int)$requested_reservation_id];
+    $matched_checkout = false;
     foreach($transaction_lookup->fetchAll(PDO::FETCH_COLUMN) as $ids_json){
         $linked = json_decode((string)$ids_json, true);
         if(is_array($linked) && in_array((int)$requested_reservation_id, array_map('intval', $linked), true)){
             $transaction_ids = array_values(array_unique(array_filter(array_map('intval', $linked), static fn($id) => $id > 0)));
+            $matched_checkout = true;
             break;
+        }
+    }
+    if(!$matched_checkout){
+        // No payment has been opened yet. Seats reserved together share one created_at,
+        // so they are paid as one booking: every seat of it, not just the one in the link.
+        $booking_lookup = $conn->pdo->prepare("SELECT reservation_id FROM reservation
+            WHERE user_id = ? AND schedule_id = ? AND status = 'Pending'
+            AND created_at = (SELECT created_at FROM reservation WHERE reservation_id = ? AND user_id = ?)");
+        $booking_lookup->execute([$user_id, $schedule_id, $requested_reservation_id, $user_id]);
+        $booking_ids = array_values(array_filter(array_map('intval', $booking_lookup->fetchAll(PDO::FETCH_COLUMN)), static fn($id) => $id > 0));
+        if($booking_ids){
+            $transaction_ids = $booking_ids;
         }
     }
     $reservation_filter = ' AND reservation.reservation_id IN (' . implode(',', array_fill(0, count($transaction_ids), '?')) . ')';
@@ -195,14 +209,61 @@ if(isset($_POST['start_gcash']) && !paymongo_enabled()){
     }
 }
 
-/* CANCEL */
+/* REMOVE ONE SEAT from this booking (the other seats stay and are paid together) */
+if(isset($_POST['cancel_seat'])){
+    if(!csrf_validate_token()){
+        $error = "Security validation failed. Please try again.";
+    } else {
+        $seatId = filter_var($_POST['seat_reservation_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $shownIds = array_map('intval', array_column($reservations, 'reservation_id'));
+        if(!$seatId || !in_array((int)$seatId, $shownIds, true) || count($shownIds) < 2){
+            $error = "That seat is no longer part of this booking.";
+        } else {
+            $remoteSessions = [];
+            try {
+                $conn->pdo->beginTransaction();
+                // An open card payment that included this seat no longer matches: close it.
+                $open = $conn->pdo->prepare("SELECT session_id, reservation_ids FROM paymongo_checkout
+                    WHERE user_id = ? AND schedule_id = ? AND status = 'Created' FOR UPDATE");
+                $open->execute([$user_id, $schedule_id]);
+                foreach($open->fetchAll(PDO::FETCH_ASSOC) as $checkout){
+                    $linked = json_decode((string)$checkout['reservation_ids'], true);
+                    if(!is_array($linked) || !in_array((int)$seatId, array_map('intval', $linked), true)) continue;
+                    $conn->pdo->prepare("UPDATE paymongo_checkout SET status = 'Cancelled' WHERE session_id = ? AND status = 'Created'")->execute([$checkout['session_id']]);
+                    if(strpos((string)$checkout['session_id'], 'manual_') !== 0) $remoteSessions[] = (string)$checkout['session_id'];
+                }
+                $upd = $conn->pdo->prepare("UPDATE reservation SET status = 'Cancelled'
+                    WHERE reservation_id = ? AND user_id = ? AND schedule_id = ? AND status = 'Pending'");
+                $upd->execute([$seatId, $user_id, $schedule_id]);
+                if($upd->rowCount() < 1) throw new RuntimeException('seat_not_pending');
+                $conn->pdo->commit();
+            } catch(Throwable $e){
+                if($conn->pdo->inTransaction()) $conn->pdo->rollBack();
+                $error = ($e instanceof RuntimeException && $e->getMessage() === 'seat_not_pending')
+                    ? 'That seat is no longer pending.' : 'Could not remove that seat. Please try again.';
+            }
+            foreach(array_unique($remoteSessions) as $sessionId){
+                try { paymongo_expire_session($sessionId); } catch(Throwable $e){ error_log('Could not expire PayMongo checkout: ' . $e->getMessage()); }
+            }
+            if($error === ''){
+                log_activity($conn, $user_id, ACTION_RESERVATION_CANCEL, "Removed seat reservation $seatId from schedule $schedule_id booking");
+                $left = array_values(array_diff($shownIds, [(int)$seatId]));
+                header("Location: payment.php?schedule_id=" . (int)$schedule_id . "&reservation_id=" . (int)$left[0]);
+                exit();
+            }
+        }
+    }
+}
+
+/* CANCEL THE WHOLE BOOKING */
 if(isset($_POST['cancel_reservation'])){
     // Validate CSRF token
     if(!csrf_validate_token()){
         $error = "Security validation failed. Please try again.";
     } else {
         $cancelId = filter_var($_POST['reservation_id'] ?? ($reservations[0]['reservation_id'] ?? null), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        $cancelIds = $cancelId ? [(int)$cancelId] : [];
+        // every seat shown on this page belongs to the booking being cancelled
+        $cancelIds = array_map('intval', array_column($reservations, 'reservation_id'));
         $remoteSessions = [];
         try {
             $conn->pdo->beginTransaction();
@@ -271,7 +332,16 @@ if(isset($_POST['cancel_reservation'])){
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=2">
     <link rel="stylesheet" href="../Assets/css/commuter_modern.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/commuter_modern.css'); ?>">
-    <style>:root{--u-col:1040px}</style>
+    <style>
+    :root{--u-col:1040px}
+    /* a seat row with a remove button: seat tag | stops | price | x */
+    body.payment-page.cm .pay-seat-row.has-x{grid-template-columns:auto minmax(0,1fr) auto auto}
+    .pay-seat-x-form{margin:0}
+    .pay-seat-x{display:grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:50%;background:#f3f6fb;color:#b42318;font-size:.85rem;cursor:pointer}
+    .pay-seat-x:hover{background:#fdecea}
+    .pay-seat-x:focus-visible{outline:3px solid rgba(47,111,228,.4);outline-offset:2px}
+    .pay-seats-note{margin:8px 0 0;font-size:.78rem;color:#7a8aa0}
+    </style>
 </head>
 
 <body class="payment-page cm">
@@ -321,19 +391,28 @@ if(isset($_POST['cancel_reservation'])){
 <?php
     $stopBySeat = [];
     foreach($reservations as $reservation){ $stopBySeat[(string)$reservation['seat_number']] = $reservation['pickup_location'] . ' → ' . $reservation['destination']; }
+    $canRemoveSeat = count($quote['lines']) > 1;
 ?>
 <ul class="pay-seats">
     <?php foreach($quote['lines'] as $ln){ $sk = (string)$ln['seat']; ?>
-    <li class="pay-seat-row">
+    <li class="pay-seat-row<?php echo $canRemoveSeat ? ' has-x' : ''; ?>">
         <span class="seat-tag">Seat <?php echo htmlspecialchars($sk); ?></span>
         <span class="pay-seat-info">
             <span class="pay-seat-stop"><?php echo htmlspecialchars($stopBySeat[$sk] ?? ''); ?></span>
             <small class="pay-seat-break"><?php echo htmlspecialchars($ln['type']); ?> &middot; &#8369;<?php echo number_format($ln['base'], 2); ?><?php if($ln['discount'] > 0): ?> &minus; &#8369;<?php echo number_format($ln['discount'], 2); ?><?php endif; ?> + &#8369;<?php echo number_format($ln['fee'], 2); ?> fee</small>
         </span>
         <span class="pay-line">&#8369;<?php echo number_format($ln['final'], 2); ?></span>
+        <?php if($canRemoveSeat){ ?>
+        <form method="POST" class="pay-seat-x-form" onsubmit="return confirm('Remove seat <?php echo htmlspecialchars($sk, ENT_QUOTES); ?> from this booking? Your other seats stay.');">
+            <?php csrf_field(); ?>
+            <input type="hidden" name="seat_reservation_id" value="<?php echo (int)($ln['reservation_id'] ?? 0); ?>">
+            <button type="submit" name="cancel_seat" value="1" class="pay-seat-x" aria-label="Remove seat <?php echo htmlspecialchars($sk); ?>"><i class="fa fa-times" aria-hidden="true"></i></button>
+        </form>
+        <?php } ?>
     </li>
     <?php } ?>
 </ul>
+<?php if($canRemoveSeat){ ?><p class="pay-seats-note">You pay for all <?php echo count($quote['lines']); ?> seats together. Tap &times; to drop a seat you don&rsquo;t need.</p><?php } ?>
 <div class="pay-total"><span>Total</span><strong>&#8369;<span id="totalAmt"><?php echo number_format($total, 2); ?></span></strong></div>
 </div>
 
@@ -385,7 +464,7 @@ if(isset($_POST['cancel_reservation'])){
 <form method="POST" class="cancel-form" onsubmit="return confirm('Cancel this reservation and release your seats?');">
     <?php csrf_field(); ?>
     <input type="hidden" name="reservation_id" value="<?php echo (int)($reservations[0]['reservation_id'] ?? 0); ?>">
-    <button type="submit" name="cancel_reservation" value="1" class="btn btn-block btn-cancel-reservation">Cancel reservation</button>
+    <button type="submit" name="cancel_reservation" value="1" class="btn btn-block btn-cancel-reservation"><?php echo $canRemoveSeat ? 'Cancel all seats' : 'Cancel reservation'; ?></button>
 </form>
 
 </div>
