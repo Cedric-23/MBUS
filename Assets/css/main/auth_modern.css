@@ -135,3 +135,19 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
   .auth-hero-m.auth-hero-brand{min-height:237px}
   .auth-hero-m.auth-hero-brand .auth-hero-art{left:41%;transform:translateX(-50%);bottom:57px;width:min(150px,42%)}
 }
+
+/* Login hero (phones): one tidy grid so the logo, headline and bus fit together.
+   Logo sits top-left. Below it the headline and subtitle sit on the left and the bus
+   sits beside them on the right, so nothing floats, overlaps or leaves empty space. */
+@media (max-width:900px){
+  body.auth-login .auth-hero-m.auth-hero-brand{
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,40%);
+    grid-template-areas:"logo logo" "title art" "sub art";grid-template-rows:auto auto 1fr;
+    column-gap:6px;align-items:start;justify-content:stretch;
+    height:auto;min-height:0;padding:22px 22px 62px;
+  }
+  body.auth-login .auth-hero-brand .auth-hero-logo{grid-area:logo;position:relative;top:auto;right:auto;left:auto;height:38px;width:auto;margin:0 0 22px;justify-self:start;z-index:2}
+  body.auth-login .auth-hero-brand h1{grid-area:title;align-self:end;max-width:none;margin:0 0 6px;font-size:1.55rem;line-height:1.15;white-space:nowrap}
+  body.auth-login .auth-hero-brand p{grid-area:sub;align-self:start;max-width:none;font-size:.86rem;line-height:1.4}
+  body.auth-login .auth-hero-brand .auth-hero-art{grid-area:art;position:relative;left:auto;right:auto;bottom:auto;transform:none;width:100%;max-width:170px;height:auto;justify-self:end;align-self:center;z-index:1;pointer-events:none}
+}
