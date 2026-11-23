@@ -62,10 +62,10 @@
             rowElement.setAttribute('role', 'row');
             row.forEach((active, seatIndex) => {
                 if (seatIndex === 2) {
+                    /* plain gap, exactly like the aisle on the real seat map (no label) */
                     const aisle = document.createElement('span');
                     aisle.className = 'seat-aisle';
                     aisle.setAttribute('aria-hidden', 'true');
-                    aisle.textContent = 'AISLE';
                     rowElement.append(aisle);
                 }
                 if (active) number++;
