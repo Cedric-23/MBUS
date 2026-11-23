@@ -59,6 +59,13 @@ function mbus_application_photo(string $field, &$error): ?array {
 
 $allowed_types  = $staff_portal ? ["conductor", "driver"] : ["passenger"];
 $requested_type = $_GET['type'] ?? ($staff_portal ? 'driver' : 'passenger');
+
+if (!$staff_portal && $_SERVER['REQUEST_METHOD'] !== 'POST'
+    && in_array($requested_type, ['conductor', 'driver'], true)) {
+    header('Location: https://mbus-registrations.onrender.com/register.php?type=' . rawurlencode($requested_type), true, 302);
+    exit;
+}
+
 $user_type      = in_array($requested_type, $allowed_types, true) ? $requested_type : ($staff_portal ? 'driver' : 'passenger');
 
 $error   = '';
@@ -77,11 +84,14 @@ $step_with_error = 0;
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $posted_type = $_POST["user_type"] ?? "passenger";
-    $user_type   = in_array($posted_type, $allowed_types, true) ? $posted_type : ($staff_portal ? 'driver' : 'passenger');
+    $posted_type = $_POST["user_type"] ?? ($staff_portal ? 'driver' : 'passenger');
+    $invalid_type = !in_array($posted_type, $allowed_types, true);
+    $user_type = $invalid_type ? ($staff_portal ? 'driver' : 'passenger') : $posted_type;
 
     if (!csrf_validate_token()) {
         $error = 'Security validation failed. Please reload the page and try again.';
+    } elseif ($invalid_type) {
+        $error = 'This registration type is not available on this site.';
     }
 
     /* ===== Passenger (Commuter) / Conductor ===== */
@@ -311,10 +321,10 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
             .form-fieldset { display: contents; border: 0; padding: 0; margin: 0; min-width: 0; }
         </style>
     </head>
-    <body class="auth-register">
+    <body class="auth-register<?= $staff_portal ? ' staff-registration' : '' ?>">
         <div class="auth-hero-m">
-            <h1>Create your account</h1>
-            <p>Plan your next bus trip in just a few steps.</p>
+            <h1><?= $staff_portal ? 'Apply for an MBUS staff role' : 'Create your account' ?></h1>
+            <p><?= $staff_portal ? 'Choose Driver/Operator or Conductor to start an application.' : 'Plan your next bus trip in just a few steps.' ?></p>
         </div>
         <div class="left-container">
             <div class="left-container-child-1">
@@ -348,8 +358,8 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                 </div>
                 <div class="form-header">
                     <div class="form-header-text">
-                        <h1>Create your Account</h1>
-                        <p>Plan your next bus trip in just a few steps.</p>
+                        <h1><?= $staff_portal ? 'Apply to join MBUS' : 'Create your Account' ?></h1>
+                        <p><?= $staff_portal ? 'Applications are reviewed by an admin before staff access is granted.' : 'Plan your next bus trip in just a few steps.' ?></p>
                     </div>
                     <div class="form-header-picker">
                         <div class="picker-container-text">

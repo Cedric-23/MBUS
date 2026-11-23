@@ -251,7 +251,11 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
 
                         
 
-                        <div class="footer"></div>
+                        <div class="footer">
+                            <?php if ($staff_portal): ?>
+                                <p>New to MBUS staff? <a style="color: #086FCF; text-decoration: none;" href="register.php?type=driver">Apply as Driver/Operator</a> or <a style="color: #086FCF; text-decoration: none;" href="register.php?type=conductor">apply as Conductor</a>.</p>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </form>
             </div>

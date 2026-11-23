@@ -51,6 +51,12 @@ Public bus reservation system — PHP + Supabase PostgreSQL.
 | `MAIL_RELAY_URL` | *(optional HTTPS mail relay endpoint; use with MAIL_RELAY_SECRET)* |
 | `MAIL_RELAY_SECRET` | *(shared secret for the HTTPS mail relay)* |
 
+### Separate staff registration service
+
+Create a second Render Web Service from this repository for `https://mbus-registrations.onrender.com`. Set its branch to `ash` while testing, Dockerfile path to `Dockerfile.staff`, and health check path to `/health.php`. Copy the same Supabase database, mail relay/SMTP, and application environment variables used by the commuter service. It serves `StaffPortal` as its public document root and explicitly aliases the existing Operator and Conductor dashboards, required static assets, and staff APIs. Keep the main commuter service on the root `Dockerfile`; see [the staff portal deployment guide](STAFF_PORTAL.md) for details.
+
+Use `https://mbus-registrations.onrender.com/register.php?type=driver` for Driver/Operator applications and `https://mbus-registrations.onrender.com/register.php?type=conductor` for Conductor applications. Applications remain pending until approved by an Admin. Approved staff can sign in on either host; each host has its own browser session cookie, while both authenticate against the shared database. The commuter login accepts approved staff accounts but does not show staff application links.
+
 Commuter accounts require a six-digit email code before sign-in. Codes expire after 15 minutes, lock after five incorrect attempts, and can be resent no more than once per minute. Sliding-hour limits cap accepted delivery requests at five per email and 120 across the service; a request still counts if account creation or the mail provider later fails. Driver and conductor applications remain admin-reviewed; field-validated submission attempts are capped at three per email and 30 across the service per sliding hour, counted before file processing or persistence.
 
 ### After go-live checklist
@@ -107,6 +113,7 @@ The commuter **Live** page remains bus-only: it shows current bus locations and 
 Check the static UI contract and API behavior locally:
 
 ```bash
+node tests/staff_portal_routing_test.cjs
 node tests/waiting_ux_test.cjs
 node tests/operator_live_tracking_test.cjs
 node tests/operator_navigation_test.cjs
