@@ -14,6 +14,11 @@ if(
 
 include "../config/db_connect.php";
 include "../Includes/csrf.php";
+include_once "../Includes/bus_from_application.php";
+
+/* Buses come from driver applications (see Includes/bus_from_application.php): approving a driver adds the bus
+   they submitted. This also catches up drivers who were approved before that existed. Admins cannot add buses by hand. */
+mbus_sync_driver_buses($conn->pdo);
 
 /* Give a bus to one operator (0 = unassigned). Replaces whoever had the bus before.
    An operator can still keep several buses: each bus has one operator, an operator can have many buses. */
@@ -39,61 +44,24 @@ function mbus_set_bus_operator($conn, int $bus_id, int $operator_id): bool {
     }
 }
 
-/* ADD BUS */
-if(isset($_POST['add_bus'])){
-    // Validate CSRF token
-    if(!csrf_validate_token()){
-        $error = "Security validation failed. Please try again.";
-    } else {
-        $bus_number = trim((string)($_POST['bus_number'] ?? ''));
-        $bus_type   = (string)($_POST['bus_type'] ?? '');
-        $capacity   = (int)($_POST['capacity'] ?? 0);
-        $operator_id = (int)($_POST['operator_id'] ?? 0);
-
-        if($bus_number === '' || !in_array($bus_type, ['Aircon','Ordinary'], true) || $capacity < 1 || $capacity > 100){
-            $error = "Please provide a bus number, a type and a capacity from 1 to 100.";
-        } else {
-            try {
-                $st = $conn->pdo->prepare("INSERT INTO buses (bus_number, bus_type, capacity) VALUES (?, ?, ?) RETURNING bus_id");
-                $st->execute([$bus_number, $bus_type, $capacity]);
-                $new_bus_id = (int)$st->fetchColumn();
-                if($operator_id > 0 && $new_bus_id > 0 && !mbus_set_bus_operator($conn, $new_bus_id, $operator_id)){
-                    $success = "Bus added, but the operator could not be assigned. Open Edit to assign one.";
-                } else {
-                    $success = "Bus added successfully";
-                }
-            } catch(Throwable $e){
-                error_log('Bus insert failed: ' . $e->getMessage());
-                $error = "Bus could not be added. Please try again.";
-            }
-        }
-    }
-}
-
-/* UPDATE BUS (details + assigned operator) */
+/* REASSIGN BUS: the only thing an admin changes on a bus is who drives it (for example when the usual
+   driver is sick). The bus details (number, type, seats, photos) stay as the driver submitted them. */
 if(isset($_POST['update_bus'])){
     if(!csrf_validate_token()){
         $error = "Security validation failed. Please try again.";
     } else {
         $bus_id = (int)($_POST['bus_id'] ?? 0);
-        $bus_number = trim((string)($_POST['bus_number'] ?? ''));
-        $bus_type = (string)($_POST['bus_type'] ?? '');
-        $capacity = (int)($_POST['capacity'] ?? 0);
         $operator_id = (int)($_POST['operator_id'] ?? 0);
         $prev_operator_id = (int)($_POST['prev_operator_id'] ?? 0);
-        if($bus_id < 1 || $bus_number === '' || !in_array($bus_type, ['Aircon','Ordinary'], true) || $capacity < 1 || $capacity > 100){
-            $error = "Please provide a bus number, a type and a capacity from 1 to 100.";
+        $exists = $bus_id > 0 ? mbus_db_prepare($conn, "SELECT 1 FROM buses WHERE bus_id = ?", [$bus_id]) : false;
+        if($exists === false || mbus_db_num_rows($exists) < 1){
+            $error = "That bus no longer exists.";
+        } elseif($operator_id === $prev_operator_id){
+            $success = "Nothing changed.";
+        } elseif(!mbus_set_bus_operator($conn, $bus_id, $operator_id)){
+            $error = "The driver could not be assigned. Please try again.";
         } else {
-            $u = mbus_db_prepare($conn, "UPDATE buses SET bus_number = ?, bus_type = ?, capacity = ? WHERE bus_id = ?", [$bus_number, $bus_type, $capacity, $bus_id]);
-            if($u === false){
-                $error = "Bus could not be updated.";
-            } elseif($operator_id !== $prev_operator_id && !mbus_set_bus_operator($conn, $bus_id, $operator_id)){
-                /* Only touch assignments when the admin actually changed the operator: a plain edit (number/type/seats)
-                   must never drop operators that already have this bus. */
-                $error = "Bus saved, but the operator could not be assigned. Please try again.";
-            } else {
-                $success = $operator_id > 0 ? "Bus updated and assigned" : "Bus updated";
-            }
+            $success = $operator_id > 0 ? "Bus reassigned" : "Bus unassigned";
         }
     }
 }
@@ -197,42 +165,43 @@ if(isset($_POST['delete_bus'])){
 
 <?php
 $bq = mbus_db_query($conn, "
-    SELECT b.*,
+    SELECT b.bus_id, b.bus_number, b.bus_type, b.capacity,
       (SELECT COUNT(*) FROM schedule sc WHERE sc.bus_id=b.bus_id AND sc.departure_time >= NOW() AND sc.schedule_status='Active') AS upcoming,
       (SELECT string_agg(u.full_name, ', ') FROM operator_bus_assignments oa JOIN users u ON u.user_id=oa.operator_id WHERE oa.bus_id=b.bus_id) AS operators,
-      (SELECT oa.operator_id FROM operator_bus_assignments oa WHERE oa.bus_id=b.bus_id ORDER BY oa.assignment_id LIMIT 1) AS operator_id
+      (SELECT oa.operator_id FROM operator_bus_assignments oa WHERE oa.bus_id=b.bus_id ORDER BY oa.assignment_id LIMIT 1) AS operator_id,
+      (SELECT a.full_name FROM operator_application a WHERE a.application_status::text = 'Approved' AND LOWER(TRIM(a.vehicle_plate_number)) = LOWER(b.bus_number) ORDER BY a.application_id LIMIT 1) AS submitted_by
     FROM buses b ORDER BY b.bus_number");
 $bus_list = [];
 while($bq !== false && ($row = mbus_db_fetch_assoc($bq))){ $bus_list[] = $row; }
-$aircon = count(array_filter($bus_list, fn($x) => strtolower($x['bus_type']) === 'aircon'));
 
-/* operators the admin can give a bus to */
+/* drivers an admin can give a bus to */
 $opq = mbus_db_query($conn, "SELECT user_id, full_name FROM users WHERE LOWER(user_type) IN ('operator', 'driver') ORDER BY full_name");
 $operator_options = [];
 while($opq !== false && ($orow = mbus_db_fetch_assoc($opq))){ $operator_options[] = $orow; }
 ?>
-<div class="ad-toolbar">
-    <button type="button" class="ad-btn primary" data-ad-open="add" data-title="Add bus" data-action="add_bus"><i class="fa fa-plus" aria-hidden="true"></i> Add bus</button>
-</div>
+<p style="margin:0 0 14px;color:#7a8aa6;font-size:.9rem;line-height:1.45">Buses are added from driver applications: approve a driver and the bus they submitted appears here. You can only change who drives a bus, for example when the usual driver is sick.</p>
 
-<?php if(!$bus_list): ?><div class="ad-empty"><i class="fa fa-bus" aria-hidden="true"></i><p>No buses yet.</p></div><?php endif; ?>
+<?php if(!$bus_list): ?><div class="ad-empty"><i class="fa fa-bus" aria-hidden="true"></i><p>No buses yet. They appear here once a driver application is approved.</p></div><?php endif; ?>
 <div class="ad-cards">
 <?php foreach($bus_list as $row):
     $is_ac = strtolower($row['bus_type']) === 'aircon';
-    $edit = ['bus_id'=>(int)$row['bus_id'],'bus_number'=>$row['bus_number'],'bus_type'=>$row['bus_type'],'capacity'=>(int)$row['capacity'],'operator_id'=>(int)($row['operator_id'] ?? 0),'prev_operator_id'=>(int)($row['operator_id'] ?? 0)];
+    $label = (ctype_digit((string)$row['bus_number']) ? 'Bus ' : '') . $row['bus_number'];
+    $edit = ['bus_id'=>(int)$row['bus_id'],'bus_label'=>$label,'operator_id'=>(int)($row['operator_id'] ?? 0),'prev_operator_id'=>(int)($row['operator_id'] ?? 0)];
+    $covering = !empty($row['submitted_by']) && !empty($row['operators']) && $row['submitted_by'] !== $row['operators'];
 ?>
-<article class="ad-card" data-q="<?php echo htmlspecialchars(strtolower('bus '.$row['bus_number'].' '.$row['bus_type'].' '.($row['operators'] ?? '')), ENT_QUOTES); ?>">
+<article class="ad-card" data-q="<?php echo htmlspecialchars(strtolower('bus '.$row['bus_number'].' '.$row['bus_type'].' '.($row['operators'] ?? '').' '.($row['submitted_by'] ?? '')), ENT_QUOTES); ?>">
     <header>
         <span class="ad-ico <?php echo $is_ac ? '' : 'green'; ?>"><i class="fa fa-bus" aria-hidden="true"></i></span>
-        <div><h3>Bus <?php echo htmlspecialchars($row['bus_number']); ?></h3><span class="ad-pill <?php echo $is_ac ? 'info' : 'active'; ?>"><?php echo htmlspecialchars($row['bus_type']); ?></span></div>
+        <div><h3><?php echo htmlspecialchars($label); ?></h3><span class="ad-pill <?php echo $is_ac ? 'info' : 'active'; ?>"><?php echo htmlspecialchars($row['bus_type']); ?></span></div>
     </header>
     <dl>
         <div><dt>Capacity</dt><dd><?php echo (int)$row['capacity']; ?> seats</dd></div>
         <div><dt>Upcoming</dt><dd><?php echo (int)$row['upcoming']; ?> trip<?php echo (int)$row['upcoming']===1?'':'s'; ?></dd></div>
-        <div><dt>Operator</dt><dd><?php echo !empty($row['operators']) ? htmlspecialchars($row['operators']) : '<span class="muted">Unassigned</span>'; ?></dd></div>
+        <div><dt>Driver</dt><dd><?php echo !empty($row['operators']) ? htmlspecialchars($row['operators']) : '<span class="muted">Unassigned</span>'; ?></dd></div>
+        <?php if(!empty($row['submitted_by'])): ?><div><dt>Submitted by</dt><dd><?php echo htmlspecialchars($row['submitted_by']); ?><?php echo $covering ? ' <span class="muted">(covered by another driver)</span>' : ''; ?></dd></div><?php endif; ?>
     </dl>
     <footer>
-        <button type="button" class="ad-btn sm" data-ad-open="edit" data-title="Edit bus" data-action="update_bus" data-edit="<?php echo htmlspecialchars(json_encode($edit), ENT_QUOTES); ?>"><i class="fa fa-pen" aria-hidden="true"></i> <?php echo empty($row['operators']) ? 'Edit / assign' : 'Edit'; ?></button>
+        <button type="button" class="ad-btn sm" data-ad-open="edit" data-title="Reassign driver" data-action="update_bus" data-edit="<?php echo htmlspecialchars(json_encode($edit), ENT_QUOTES); ?>"><i class="fa fa-user-pen" aria-hidden="true"></i> <?php echo empty($row['operators']) ? 'Assign driver' : 'Reassign driver'; ?></button>
         <form method="POST" data-confirm="Delete this bus?"><?php csrf_field(); ?><input type="hidden" name="bus_id" value="<?php echo (int)$row['bus_id']; ?>"><button type="submit" name="delete_bus" class="ad-icon danger" aria-label="Delete bus"><i class="fa fa-trash" aria-hidden="true"></i></button></form>
     </footer>
 </article>
@@ -242,16 +211,12 @@ while($opq !== false && ($orow = mbus_db_fetch_assoc($opq))){ $operator_options[
 <dialog class="ad-dialog" id="adDialog" aria-labelledby="adTitle">
     <form method="POST" class="ad-form">
         <?php csrf_field(); ?>
-        <header class="ad-dialog-head"><h2 id="adTitle">Add bus</h2><button type="button" class="ad-x" data-ad-close aria-label="Close"><i class="fa fa-xmark" aria-hidden="true"></i></button></header>
+        <header class="ad-dialog-head"><h2 id="adTitle">Reassign driver</h2><button type="button" class="ad-x" data-ad-close aria-label="Close"><i class="fa fa-xmark" aria-hidden="true"></i></button></header>
         <div class="ad-dialog-body">
             <input type="hidden" name="bus_id">
             <input type="hidden" name="prev_operator_id" value="0">
-            <label class="ad-field"><span>Bus number</span><input type="text" name="bus_number" required placeholder="e.g. 101"></label>
-            <div class="ad-two">
-                <label class="ad-field"><span>Type</span><select name="bus_type" required><option value="Aircon">Aircon</option><option value="Ordinary">Ordinary</option></select></label>
-                <label class="ad-field"><span>Seats</span><input type="number" name="capacity" min="1" max="100" required placeholder="40"></label>
-            </div>
-            <label class="ad-field"><span>Operator</span>
+            <label class="ad-field"><span>Bus</span><input type="text" name="bus_label" readonly tabindex="-1"></label>
+            <label class="ad-field"><span>Driver</span>
                 <select name="operator_id">
                     <option value="0">Unassigned</option>
                     <?php foreach($operator_options as $op): ?>
@@ -262,22 +227,13 @@ while($opq !== false && ($orow = mbus_db_fetch_assoc($opq))){ $operator_options[
         </div>
         <footer class="ad-dialog-foot">
             <button type="button" class="ad-btn" data-ad-close>Cancel</button>
-            <button type="submit" class="ad-btn primary" id="adSubmit" name="add_bus" value="1">Save</button>
+            <button type="submit" class="ad-btn primary" id="adSubmit" name="update_bus" value="1">Save changes</button>
         </footer>
     </form>
 </dialog>
 </main>
 
 <script>
-function scEdit(btn, on) {
-    const row = btn.closest('.sc-row');
-    row.querySelector('.sc-edit').hidden = !on;
-    if (!on) row.querySelectorAll('.sc-edit select, .sc-edit input').forEach(el => {
-        if (el.tagName === 'SELECT') Array.from(el.options).forEach(o => { o.selected = o.defaultSelected; });
-        else el.value = el.defaultValue;
-    });
-    else { const f = row.querySelector('.sc-edit input'); if (f) f.focus(); }
-}
 // Toggle sidebar for mobile
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
