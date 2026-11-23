@@ -151,3 +151,26 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
   body.auth-login .auth-hero-brand p{grid-area:sub;align-self:start;max-width:none;font-size:.86rem;line-height:1.4}
   body.auth-login .auth-hero-brand .auth-hero-art{grid-area:art;position:relative;left:auto;right:auto;bottom:auto;transform:none;width:100%;max-width:170px;height:auto;justify-self:end;align-self:center;z-index:1;pointer-events:none}
 }
+
+/* Keep the login and registration sheets starting at the same vertical position. */
+@media (min-width:901px){
+  .right-container{align-items:flex-start}
+  .form-container{margin:0 auto}
+}
+
+/* Matching mobile hero heights prevent the sheet from jumping between auth pages. */
+@media (max-width:900px){
+  body.auth-login .auth-hero-m.auth-hero-brand,
+  body.auth-register .auth-hero-m{
+    box-sizing:border-box;
+    height:264px;
+    min-height:264px;
+  }
+}
+@media (max-width:768px){
+  body.auth-login .auth-hero-m.auth-hero-brand,
+  body.auth-register .auth-hero-m{
+    height:237px;
+    min-height:237px;
+  }
+}
