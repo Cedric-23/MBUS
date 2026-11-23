@@ -165,15 +165,24 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
   body.auth-login .auth-hero-m.auth-hero-brand,
   body.auth-register .auth-hero-m{
     box-sizing:border-box;
-    height:264px;
-    min-height:264px;
+    height:220px;
+    min-height:220px;
+  }
+  body.auth-login .auth-hero-m.auth-hero-brand{padding:14px 22px 26px}
+  body.auth-login .auth-hero-brand .auth-hero-logo{height:32px;margin:0 0 8px}
+  body.auth-login .auth-hero-brand h1{margin-bottom:4px;font-size:1.32rem}
+  body.auth-login .auth-hero-brand p{font-size:.76rem;line-height:1.28}
+  body.auth-login .auth-hero-brand .auth-hero-art{max-width:140px}
+  body.auth-register .auth-hero-m{
+    justify-content:flex-start;
+    padding:24px 24px 0;
   }
 }
 @media (max-width:768px){
   body.auth-login .auth-hero-m.auth-hero-brand,
   body.auth-register .auth-hero-m{
-    height:237px;
-    min-height:237px;
+    height:190px;
+    min-height:190px;
   }
 }
 
