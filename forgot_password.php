@@ -69,7 +69,7 @@ function reset_page_e(mixed $value): string { return htmlspecialchars((string)$v
     <script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
 </head>
 <body class="auth-reset">
-<div class="auth-hero-m"><a class="auth-back" href="login.php" aria-label="Back to login"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></a><h1>Reset your password</h1><p>We’ll send a 6-digit verification code to your MBUS email.</p></div>
+<div class="auth-hero-m"><h1>Reset your password</h1><p>We’ll send a 6-digit verification code to your MBUS email.</p></div>
     <div class="left-container">
         <div class="left-container-child-1"><div class="logo-wordmark"><img src="Assets/images/mbus_logo.png" alt="MBUS"></div></div>
         <div class="left-container-child-2"><div class="lc-heading"><h1>Travel smarter.</h1><h1>Travel on time.</h1></div><div class="lc-sub-heading"><p>Your dependable way to reserve seats, manage trips, and travel with confidence.</p></div></div>
