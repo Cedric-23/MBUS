@@ -248,7 +248,6 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
                         
 
                         <div class="footer">
-                            <p>Don't have an account? <a style="color: #086FCF; text-decoration: none;" href="register.php?type=passenger">Create one</a></p>
                             <p>Want to drive with us? <a style="color: #086FCF; text-decoration: none;" href="register.php?type=driver">Apply as Driver/Operator</a></p>
                             
                         </div>
