@@ -560,7 +560,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                     <?= mbus_field_error($errors, 'vehicle-plate') ?></div>
                                     <div class="bus-seats">
                                         <label class="input-label">Number of Seats</label>
-                                        <input type="number" name="bus-seats" inputmode="numeric" min="10" max="100" placeholder="e.g. 45" value="<?= reg_old('bus-seats') ?>" required/>
+                                        <input type="text" name="bus-seats" inputmode="numeric" pattern="[0-9]{2,3}" maxlength="3" title="Enter 10 to 100 seats" placeholder="e.g. 45" value="<?= reg_old('bus-seats') ?>" required/>
                                         <i class="input-icon" data-lucide="armchair"></i>
                                     <?= mbus_field_error($errors, 'bus-seats') ?></div>
                                     <div class="vehicle-expiry">

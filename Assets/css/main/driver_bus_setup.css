@@ -298,3 +298,8 @@
 }
 .auth-register .upload-group .upload-document-group { flex-wrap: nowrap !important; }
 .auth-register .upload-group .document-desc .document-name { white-space: nowrap; }
+
+/* Vehicle type dropdown: same left spacing as the text fields (it has no icon) and a clear label */
+.form-body select[name="vehicle-type"] { padding-left: 22px; text-align: left; text-align-last: left; }
+.form-body select[name="vehicle-type"]:invalid { color: #8a98ae; }
+.form-body input[name="bus-seats"] { padding-left: 46px; }

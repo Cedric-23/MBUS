@@ -167,7 +167,7 @@ try {
     if ($pdo->inTransaction()) { try { $pdo->rollBack(); } catch (Throwable $e) { $pdo->exec('ROLLBACK'); } }
     $pdo->exec("SET TIME ZONE '" . str_replace("'", "''", mbus_timezone()) . "'");
     // Schema upgrades are ~35 extra round trips to the database. Run them once per version, not on every page.
-    $schemaVersion = '2026-11-22a';
+    $schemaVersion = '2026-11-23a';
     $schemaFlag = sys_get_temp_dir() . '/mbus_schema_' . md5($host . $database . $schemaVersion) . '.ok';
     if (!is_file($schemaFlag)) {
         $done = false;
