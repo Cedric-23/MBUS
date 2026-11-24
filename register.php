@@ -15,7 +15,7 @@ $staff_portal = defined('MBUS_STAFF_PORTAL') && MBUS_STAFF_PORTAL === true;
 
 /*
  * Conductor accounts:
- *   true  -> the person applies; an admin approves the application before a login exists
+ *   true  -> the person applies; they verify their email first, then an admin approves the application before a login exists
  *            (needs the conductor_application table, see conductor_application.sql)
  *   false -> a Conductor account is created immediately in `users`
  */
@@ -66,6 +66,21 @@ function mbus_application_id_photo(string $field, &$error): ?array {
     $mime = str_starts_with($data, "\xFF\xD8\xFF") ? 'image/jpeg' : (str_starts_with($data, "\x89PNG\r\n\x1a\n") ? 'image/png' : '');
     if ($mime === '') { $error = 'The 2x2 picture must be a JPG or PNG image.'; return null; }
     return ['b64' => base64_encode($data), 'mime' => $mime];
+}
+
+/**
+ * Email the 6-digit code for a driver/conductor application and send the applicant to the verification page.
+ * The application stays hidden from the admin until the code is entered (see verify_application.php).
+ */
+function mbus_staff_send_verification($conn, string $type, string $email, string $full_name, string $code): void {
+    $mail_error = mbus_send_registration_code($email, $code, $full_name);
+    if ($mail_error !== null) error_log('Staff application verification email failed: ' . (string)$mail_error);
+    $_SESSION['staff_verify_email'] = $email;
+    $_SESSION['staff_verify_type'] = $type;
+    $_SESSION['staff_verify_mail_sent'] = $mail_error === null;
+    $_SESSION['staff_verify_sent_at'] = time();
+    header('Location: verify_application.php');
+    exit();
 }
 
 /* ---------- user type ---------- */
@@ -127,7 +142,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         elseif ($password !== $confirm) $errors['confirmationPassword'] = 'Passwords do not match.';
         $_POST['emailAddress'] = $email; $_POST['mobileNumber'] = $phone;
 
-        if (!$errors && !$is_conductor_application && !mbus_registration_mail_is_configured()) {
+        /* every route (commuter, conductor) now needs a working verification email */
+        if (!$errors && !mbus_registration_mail_is_configured()) {
             $error = 'Email verification is temporarily unavailable. Please try again later.';
         }
 
@@ -137,10 +153,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             elseif ($phone_used) $errors['mobileNumber'] = 'That mobile number is already used by another account. Use a different number or log in.';
         }
         if (!$errors && $error === '') {
+            /* only verified applications count as pending: an unverified one never reached the admin and is replaced below */
             $dup = mbus_db_prepare($conn,
                 "SELECT 1 FROM users WHERE LOWER(email) = ?
-                 UNION SELECT 1 FROM operator_application WHERE LOWER(email) = ? AND application_status::text = 'Pending'
-                 UNION SELECT 1 FROM conductor_application WHERE LOWER(email) = ? AND application_status = 'Pending'",
+                 UNION SELECT 1 FROM operator_application WHERE LOWER(email) = ? AND application_status::text = 'Pending' AND email_verified = TRUE
+                 UNION SELECT 1 FROM conductor_application WHERE LOWER(email) = ? AND application_status = 'Pending' AND email_verified = TRUE",
                 [$email, $email, $email]);
             if ($dup === false) {
                 $error = 'Registration is temporarily unavailable. Please try again in a moment.';
@@ -148,20 +165,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $errors['emailAddress'] = 'This email already has an account or a pending application. Log in, or wait for the admin to review it.';
             } else {
                 $limit_reason = $is_conductor_application
-                    ? mbus_registration_allow_application($conn, $email)
+                    ? (mbus_registration_allow_application($conn, $email) ?? mbus_registration_allow_code_send($conn, $email))
                     : mbus_registration_allow_code_send($conn, $email);
                 if ($limit_reason !== null) {
-                    $error = mbus_registration_limit_message($limit_reason, !$is_conductor_application);
+                    $error = mbus_registration_limit_message($limit_reason, true);
                 } else {
                     $hash = password_hash($password, PASSWORD_DEFAULT);
                     if ($is_conductor_application) {
-                        $ok = mbus_db_prepare($conn, "INSERT INTO conductor_application (full_name, email, phone_number, password_hash, application_status) VALUES (?, ?, ?, ?, 'Pending')",
-                            [$full_name, $email, $phone, $hash]);
+                        $verify_code = (string)random_int(100000, 999999);
+                        $verify_expiry = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+                        /* replace an earlier, never-verified attempt with the same email */
+                        mbus_db_prepare($conn, "DELETE FROM conductor_application WHERE LOWER(email) = LOWER(?) AND email_verified = FALSE", [$email]);
+                        $ok = mbus_db_prepare($conn, "INSERT INTO conductor_application (full_name, email, phone_number, password_hash, application_status, email_verified, verification_code, verification_code_expiry, verification_code_attempts) VALUES (?, ?, ?, ?, 'Pending', FALSE, ?, ?, 0)",
+                            [$full_name, $email, $phone, $hash, $verify_code, $verify_expiry]);
                         if ($ok === false) { $error = 'We could not save your application. Please try again.'; }
                         else {
-                            mbus_notify_admins($conn, 'New conductor application from ' . $full_name . '. Review it in Staff applications.');
-                            $_SESSION['register_flash'] = 'Application submitted. An admin will review it. Once approved, log in with ' . $email . ' and the password you chose.';
-                            header('Location: register.php?type=conductor'); exit();
+                            /* the admin is notified only after the email is verified (verify_application.php) */
+                            mbus_staff_send_verification($conn, 'conductor', $email, $full_name, $verify_code);
                         }
                     } else {
                         $registration_code = (string)random_int(100000, 999999);
@@ -234,10 +254,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $_POST['license-number'] = $license_number; $_POST['vehicle-plate'] = $plate; $_POST['home-address'] = $address;
 
         if (!isset($errors['email-address'])) {
+            /* only verified applications count as pending: an unverified one never reached the admin and is replaced below */
             $dup = mbus_db_prepare($conn,
                 "SELECT 1 FROM users WHERE LOWER(email) = ?
-                 UNION SELECT 1 FROM operator_application WHERE LOWER(email) = ? AND application_status::text = 'Pending'
-                 UNION SELECT 1 FROM conductor_application WHERE LOWER(email) = ? AND application_status = 'Pending'",
+                 UNION SELECT 1 FROM operator_application WHERE LOWER(email) = ? AND application_status::text = 'Pending' AND email_verified = TRUE
+                 UNION SELECT 1 FROM conductor_application WHERE LOWER(email) = ? AND application_status = 'Pending' AND email_verified = TRUE",
                 [$email, $email, $email]);
             if ($dup !== false && mbus_db_num_rows($dup) > 0) $errors['email-address'] = 'This email already has an account or a pending application. Log in, or wait for the admin to review it.';
         }
@@ -246,9 +267,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             if ($phone_used === null) $error = 'Registration is temporarily unavailable. Please try again in a moment.';
             elseif ($phone_used) $errors['phone-number'] = 'That mobile number is already used by another account. Use a different number or log in.';
         }
+        /* the application is sent to the admin only after the applicant verifies their email, so mail must work */
+        if (!$errors && $error === '' && !mbus_registration_mail_is_configured()) {
+            $error = 'Email verification is temporarily unavailable. Please try again later.';
+        }
         if (!$errors && $error === '') {
-            $application_limit = mbus_registration_allow_application($conn, $email);
-            if ($application_limit !== null) $error = mbus_registration_limit_message($application_limit);
+            $application_limit = mbus_registration_allow_application($conn, $email) ?? mbus_registration_allow_code_send($conn, $email);
+            if ($application_limit !== null) $error = mbus_registration_limit_message($application_limit, true);
         }
         $lic = $veh = $busPhoto = $interiorPhoto = $idPhoto = $medical = $nbi = null;
         if (!$errors && $error === '') {
@@ -268,23 +293,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             if (!$interiorPhoto) $errors['interior_photo'] = 'Bus interior photo: ' . $fe;
         }
         if (!$errors && $error === '') {
+            $verify_code = (string)random_int(100000, 999999);
+            $verify_expiry = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+            /* replace an earlier, never-verified attempt with the same email */
+            mbus_db_prepare($conn, "DELETE FROM operator_application WHERE LOWER(email) = LOWER(?) AND email_verified = FALSE", [$email]);
             $ok = mbus_db_prepare($conn,
                 "INSERT INTO operator_application
                     (full_name, email, phone_number, address, license_number, license_expiry, vehicle_type, vehicle_plate_number,
                      license_document_b64, license_document_mime, vehicle_document_b64, vehicle_document_mime, password_hash,
                      bus_photo_b64, bus_photo_mime, interior_photo_b64, interior_photo_mime, last_name, vehicle_registration_expiry, seat_layout,
-                     id_photo_b64, id_photo_mime, medical_document_b64, medical_document_mime, nbi_document_b64, nbi_document_mime, application_status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')",
+                     id_photo_b64, id_photo_mime, medical_document_b64, medical_document_mime, nbi_document_b64, nbi_document_mime,
+                     email_verified, verification_code, verification_code_expiry, verification_code_attempts, application_status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, ?, ?, 0, 'Pending')",
                 [$full_name, $email, $phone_number, $address, $license_number, ($license_expiry === "" ? null : $license_expiry), $vehicle_type, $plate,
                  $lic['b64'], $lic['mime'], $veh['b64'], $veh['mime'], password_hash($password, PASSWORD_DEFAULT),
                  $busPhoto['b64'], $busPhoto['mime'], $interiorPhoto['b64'], $interiorPhoto['mime'],
                  $last_name, $vehicle_expiry !== '' ? $vehicle_expiry : null, json_encode(mbus_seat_layout_default($seats)),
-                 $idPhoto['b64'], $idPhoto['mime'], $medical['b64'], $medical['mime'], $nbi['b64'], $nbi['mime']]);
+                 $idPhoto['b64'], $idPhoto['mime'], $medical['b64'], $medical['mime'], $nbi['b64'], $nbi['mime'],
+                 $verify_code, $verify_expiry]);
             if ($ok === false) { $error = 'We could not save your application. Please try again.'; }
             else {
-                mbus_notify_admins($conn, 'New driver/operator application from ' . $full_name . '. Review it in Staff applications.');
-                $_SESSION['register_flash'] = 'Application submitted. An admin will review it. Once approved, log in with ' . $email . ' and the password you chose.';
-                header('Location: register.php?type=driver'); exit();
+                /* the admin is notified only after the email is verified (verify_application.php) */
+                mbus_staff_send_verification($conn, 'driver', $email, $full_name, $verify_code);
             }
         }
     }
@@ -309,14 +339,14 @@ $option_bar_class = $user_type === "driver" ? "active" : ($user_type === "conduc
 $picker_messages = [
     "passenger" => "Book seats and keep all your trips in one place",
     "conductor" => $conductor_requires_approval
-        ? "Apply to validate tickets and assist passengers on board. An admin reviews each application."
+        ? "Apply to validate tickets and assist passengers on board. Verify your email first; an admin then reviews your application."
         : "Register to validate tickets and assist passengers on board.",
-    "driver"    => "Register to manage assigned routes and passenger trips."
+    "driver"    => "Register to manage assigned routes and passenger trips. Verify your email first; an admin then reviews your application."
 ];
 $picker_text = $picker_messages[$user_type];
 
 if ($user_type === "conductor") {
-    $submit_text = $conductor_requires_approval ? "Submit conductor application" : "Create conductor account";
+    $submit_text = $conductor_requires_approval ? "Submit & verify email" : "Create conductor account";
 } else {
     $submit_text = "Create passenger account";
 }
@@ -383,7 +413,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                 <div class="form-header">
                     <div class="form-header-text">
                         <h1><?= $staff_portal ? 'Apply to join MBUS' : 'Create your Account' ?></h1>
-                        <p><?= $staff_portal ? 'Applications are reviewed by an admin before staff access is granted.' : 'Plan your next bus trip in just a few steps.' ?></p>
+                        <p><?= $staff_portal ? 'Verify your email, then an admin reviews your application before staff access is granted.' : 'Plan your next bus trip in just a few steps.' ?></p>
                     </div>
                     <div class="form-header-picker">
                         <div class="picker-container-text">
@@ -424,7 +454,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                 <input name="emailAddress" type="email" placeholder="juan@example.com" maxlength="254" autocapitalize="none" spellcheck="false" autocomplete="email" aria-describedby="email-verification-hint" value="<?= reg_old('emailAddress') ?>" required/>
                                 <i class="input-icon" data-lucide="mail"></i>
                             <?= mbus_field_error($errors, 'emailAddress') ?>
-                                <small class="field-hint" id="email-verification-hint">We’ll send a 6-digit code to this address. Your account becomes active after verification; the code expires in 15 minutes.</small>
+                                <small class="field-hint" id="email-verification-hint">We’ll send a 6-digit code to this address. <?= $user_type === 'conductor' ? 'Your application goes to the admin only after you verify it; the code expires in 15 minutes.' : 'Your account becomes active after verification; the code expires in 15 minutes.' ?></small>
                             </div>
                             <div class="form-phone-input">
                                 <label>Mobile Number</label>
@@ -435,12 +465,10 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                             <div class="password-input">
                                 <label>Password</label>
                                 <input name="password" type="password" placeholder="At least 8 characters" minlength="8" maxlength="72" autocomplete="new-password" required/>
-                                <i class="input-icon" data-lucide="lock"></i>
                             <?= mbus_field_error($errors, 'password') ?></div>
                             <div class="confirm-password-input">
                                 <label>Confirm Password</label>
                                 <input type="password" name="confirmationPassword" placeholder="Repeat Password" minlength="8" maxlength="72" autocomplete="new-password" required/>
-                                <i class="input-icon" data-lucide="lock"></i>
                             <?= mbus_field_error($errors, 'confirmationPassword') ?></div>
                         </div>
                         <div class="form-tos-check">
@@ -486,7 +514,8 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         <label class="input-label">Email Address</label>
                                         <input type="email" name="email-address" placeholder="Enter your email" maxlength="254" autocapitalize="none" spellcheck="false" value="<?= reg_old('email-address') ?>" required/>
                                         <i class="input-icon" data-lucide="mail"></i>
-                                    <?= mbus_field_error($errors, 'email-address') ?></div>
+                                    <?= mbus_field_error($errors, 'email-address') ?>
+                                        <small class="field-hint">We’ll send a 6-digit code to verify this email. Your application goes to the admin only after you verify it.</small></div>
                                     <div class="phone-number">
                                         <label>Phone Number</label>
                                 <div class="phone-input"><span class="phone-prefix" aria-hidden="true">+63</span><input type="text" name="phone-number" placeholder="9XXXXXXXXX" maxlength="10" minlength="10" inputmode="numeric" pattern="9[0-9]{9}" value="<?= preg_replace('/^0/', '', reg_old('phone-number')) ?>" required/></div>
@@ -512,13 +541,11 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                     <div class="password-input">
                                         <label>Password</label>
                                         <input type="password" name="driver-password" placeholder="At least 8 characters" minlength="8" maxlength="72" autocomplete="new-password" required/>
-                                        <i class="input-icon" data-lucide="lock"></i>
                                         <?= mbus_field_error($errors, 'driver-password') ?>
                                     </div>
                                     <div class="confirm-password-input">
                                         <label>Confirm Password</label>
                                         <input type="password" name="driver-confirm" placeholder="Repeat password" minlength="8" maxlength="72" autocomplete="new-password" required/>
-                                        <i class="input-icon" data-lucide="lock"></i>
                                         <?= mbus_field_error($errors, 'driver-confirm') ?>
                                     </div>
                                 </div>
@@ -713,7 +740,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                             <div class="button-container">
                                 <button class="step-button-back" id="step-back" type="button">Back</button>
                                 <button class="submit-button step-button-next active" id="step-next" type="button">Next</button>
-                                <button class="submit-button step-button-submit" id="step-submit" type="submit">Submit Application</button>
+                                <button class="submit-button step-button-submit" id="step-submit" type="submit">Submit &amp; Verify Email</button>
                             </div>
                             <div class="redirect-footer">
                                 <div class="accounts-redirect">
