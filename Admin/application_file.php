@@ -1,10 +1,11 @@
 <?php
-// Serves an operator application document (license or vehicle registration) to admins only.
+// Serves an operator application document (license, vehicle registration, photos, 2x2, medical, NBI) to admins only.
 session_start();
 if (strtolower((string)($_SESSION['user_type'] ?? '')) !== 'admin') { http_response_code(403); exit; }
 include "../config/db_connect.php";
 $id = (int)($_GET['id'] ?? 0);
-$docMap = ['license' => 'license_document', 'vehicle' => 'vehicle_document', 'bus' => 'bus_photo', 'interior' => 'interior_photo'];
+$docMap = ['license' => 'license_document', 'vehicle' => 'vehicle_document', 'bus' => 'bus_photo', 'interior' => 'interior_photo',
+           'photo' => 'id_photo', 'medical' => 'medical_document', 'nbi' => 'nbi_document'];
 $docKey = (string)($_GET['doc'] ?? 'license');
 $doc = $docMap[$docKey] ?? 'license_document';
 $q = mbus_db_prepare($conn, "SELECT {$doc}_b64 AS b64, {$doc}_mime AS mime FROM operator_application WHERE application_id = ?", [$id]);
