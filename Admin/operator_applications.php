@@ -86,6 +86,9 @@ $q = mbus_db_prepare($conn, "SELECT application_id, full_name, email, phone_numb
     vehicle_registration_expiry, license_document_mime AS lic_mime, vehicle_document_mime AS veh_mime,
     (bus_photo_b64 IS NOT NULL AND bus_photo_b64 <> '') AS has_bus_photo,
     (interior_photo_b64 IS NOT NULL AND interior_photo_b64 <> '') AS has_interior_photo,
+    (id_photo_b64 IS NOT NULL AND id_photo_b64 <> '') AS has_id_photo, id_photo_mime AS id_mime,
+    (medical_document_b64 IS NOT NULL AND medical_document_b64 <> '') AS has_medical, medical_document_mime AS med_mime,
+    (nbi_document_b64 IS NOT NULL AND nbi_document_b64 <> '') AS has_nbi, nbi_document_mime AS nbi_mime,
     seat_layout, application_status::text AS status, submitted_at, rejection_reason
     FROM operator_application $where ORDER BY (application_status::text = 'Pending') DESC, submitted_at DESC LIMIT 100", []);
 while ($q !== false && ($r = mbus_db_fetch_assoc($q))) $rows[] = $r;
@@ -208,7 +211,10 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
         <?php
         $aid = (int)$a['application_id'];
         $photos = [
-            ['license',  'License',              $yes($a['has_lic']),          (string)($a['lic_mime'] ?? '')],
+            ['license',  'Updated license',      $yes($a['has_lic']),          (string)($a['lic_mime'] ?? '')],
+            ['photo',    '2x2 picture',          $yes($a['has_id_photo']),     (string)($a['id_mime'] ?? 'image/jpeg')],
+            ['medical',  'Medical + drug test',  $yes($a['has_medical']),      (string)($a['med_mime'] ?? '')],
+            ['nbi',      'NBI clearance',        $yes($a['has_nbi']),          (string)($a['nbi_mime'] ?? '')],
             ['vehicle',  'Vehicle registration', $yes($a['has_veh']),          (string)($a['veh_mime'] ?? '')],
             ['bus',      'Bus exterior',         $yes($a['has_bus_photo']),    'image/jpeg'],
             ['interior', 'Bus interior',         $yes($a['has_interior_photo']), 'image/jpeg'],
