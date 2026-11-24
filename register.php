@@ -465,10 +465,12 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                             <div class="password-input">
                                 <label>Password</label>
                                 <input name="password" type="password" placeholder="At least 8 characters" minlength="8" maxlength="72" autocomplete="new-password" required/>
+                                <i class="input-icon" data-lucide="lock"></i>
                             <?= mbus_field_error($errors, 'password') ?></div>
                             <div class="confirm-password-input">
                                 <label>Confirm Password</label>
                                 <input type="password" name="confirmationPassword" placeholder="Repeat Password" minlength="8" maxlength="72" autocomplete="new-password" required/>
+                                <i class="input-icon" data-lucide="lock"></i>
                             <?= mbus_field_error($errors, 'confirmationPassword') ?></div>
                         </div>
                         <div class="form-tos-check">
@@ -541,11 +543,13 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                     <div class="password-input">
                                         <label>Password</label>
                                         <input type="password" name="driver-password" placeholder="At least 8 characters" minlength="8" maxlength="72" autocomplete="new-password" required/>
+                                        <i class="input-icon" data-lucide="lock"></i>
                                         <?= mbus_field_error($errors, 'driver-password') ?>
                                     </div>
                                     <div class="confirm-password-input">
                                         <label>Confirm Password</label>
                                         <input type="password" name="driver-confirm" placeholder="Repeat password" minlength="8" maxlength="72" autocomplete="new-password" required/>
+                                        <i class="input-icon" data-lucide="lock"></i>
                                         <?= mbus_field_error($errors, 'driver-confirm') ?>
                                     </div>
                                 </div>

@@ -15,9 +15,7 @@
 .reset-footer p { margin:0 0 8px; }
 .reset-footer a { color:var(--blue); text-decoration:none; font-weight:600; }
 .password-requirements { margin:7px 2px 0; padding:0; list-style:none; display:grid; gap:3px; color:var(--muted); font-size:.78rem; }
-.password-requirements li::before { content:'•'; display:inline-block; width:16px; color:#98a2b3; }
-.password-requirements li.met { color:var(--ok); }
-.password-requirements li.met::before { content:'✓'; font-weight:700; }
+.password-requirements li.met { color:var(--ok); font-weight:600; }
 .reset-form .password-input,.reset-form .confirm-password-input { position:relative; }
 .reset-form .password-input > input,.reset-form .confirm-password-input > input,.reset-form .pw-wrap > input { padding-right:52px; }
 .reset-form .password-input .pw-wrap,.reset-form .confirm-password-input .pw-wrap { position:relative; display:block; width:100%; }

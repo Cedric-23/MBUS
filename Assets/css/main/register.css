@@ -121,9 +121,7 @@ body{display:flex;min-height:100vh;background:#fff}
 }
 /* password strength checklist (same look as the reset password page) */
 .password-requirements{margin:7px 2px 0;padding:0;list-style:none;display:grid;gap:3px;color:var(--muted);font-size:.78rem}
-.password-requirements li::before{content:'•';display:inline-block;width:16px;color:#98a2b3}
-.password-requirements li.met{color:var(--ok)}
-.password-requirements li.met::before{content:'✓';font-weight:700;color:var(--ok)}
+.password-requirements li.met{color:var(--ok);font-weight:600}
 
 /* Terms row: minimal, no box */
 .form-body .form-tos-check,.form-body .terms-conditions{align-items:flex-start;gap:10px;margin:8px 0 16px;padding:0;border:0;border-radius:0;background:none;font-size:13px!important;line-height:1.45;color:#6b7a8d}
