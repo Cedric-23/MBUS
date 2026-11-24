@@ -20,7 +20,7 @@
             group.classList.toggle('is-done', Boolean(f && src));
             const name = group.querySelector('.document-name'), hint = group.querySelector('.document-desc span:last-child');
             if (name && hint) {
-                if (f && src) { name.textContent = f.name; hint.textContent = '\u2713 Ready \u00b7 ' + Math.max(1, Math.round(f.size / 1024)) + ' KB'; }
+                if (f && src) { name.textContent = f.name; hint.textContent = '✓ Ready · ' + Math.max(1, Math.round(f.size / 1024)) + ' KB'; }
                 else { name.textContent = name.dataset.idle || name.textContent; hint.textContent = hint.dataset.idle || hint.textContent; }
             }
         };
@@ -77,8 +77,22 @@
     layout = layout.slice(0, 25);
     lockDriver();
 
+    const MAX_SEATS = 50, MAX_DOORS = 2;
     function seatTotal() {
         return layout.reduce((total, row) => total + row.filter(Boolean).length, 0);
+    }
+    /* a door is a side-by-side pair with no seats (the driver's cell does not count) */
+    function doorTotal() {
+        let n = 0;
+        layout.forEach((row, i) => [0, 2].forEach(s => { if (!(i === 0 && s === 0) && !row[s] && !row[s + 1]) n++; }));
+        return n;
+    }
+    function limitMessage() {
+        const total = seatTotal(), doors = doorTotal();
+        if (total > MAX_SEATS) return `Too many seats: ${total}. The most is ${MAX_SEATS}.`;
+        if (doors > MAX_DOORS) return `Too many doors: ${doors}. The most is ${MAX_DOORS}.`;
+        if (total < 1) return 'Choose at least 1 seat.';
+        return '';
     }
 
     function render() {
@@ -149,7 +163,10 @@
             grid.append(rowElement);
         });
         const total = seatTotal();
-        countLabel.textContent = `${total} seat${total === 1 ? '' : 's'} selected`;
+        const doors = doorTotal();
+        const problem = limitMessage();
+        countLabel.textContent = problem || `${total} seat${total === 1 ? '' : 's'} selected · ${doors} door${doors === 1 ? '' : 's'}`;
+        countLabel.style.color = problem ? '#b42318' : '';
         dataInput.value = JSON.stringify(layout);
         addRow.disabled = layout.length >= 25;
         minusRow.disabled = layout.length <= 1;
@@ -177,10 +194,9 @@
 
     if (form) {
         form.addEventListener('submit', event => {
-            const total = seatTotal();
-            if (total < 1 || total > 100) {
+            if (limitMessage()) {
                 event.preventDefault();
-                countLabel.textContent = 'Choose between 1 and 100 seats before submitting.';
+                countLabel.textContent = limitMessage();
                 grid.querySelector('button')?.focus();
             }
         });

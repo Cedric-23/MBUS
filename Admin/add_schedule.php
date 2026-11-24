@@ -60,6 +60,8 @@ if(isset($_POST['add_schedule'])){
                 || ($arrival_errors !== false && ($arrival_errors['warning_count'] > 0 || $arrival_errors['error_count'] > 0));
             if($bus_id <= 0 || $route_id <= 0 || $date_invalid || $arrival_dt <= $departure_dt){
                 $error = "Please provide valid bus, route, departure, and arrival values.";
+            } elseif($departure_dt < new DateTimeImmutable('now')){
+                $error = "A new schedule cannot be set in the past. Choose a departure that has not happened yet.";
             } else {
 
                 $inserted = mbus_db_prepare($conn, "
@@ -199,7 +201,7 @@ if(isset($_POST['add_schedule'])){
         <div class="form-grid">
             <div class="form-group">
                 <label for="departure_date">Departure Date</label>
-                <input type="date" name="departure_date" id="departure_date" class="form-control" required>
+                <input type="date" name="departure_date" id="departure_date" class="form-control" min="<?php echo date('Y-m-d'); ?>" required>
             </div>
             <div class="form-group">
                 <label for="departure_time">Departure Time</label>

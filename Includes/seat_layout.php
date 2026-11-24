@@ -4,12 +4,16 @@
  * true = a seat is there, false = no seat. Seats are numbered 1..N from the front, left to right.
  * Saved in buses.seat_layout (JSON). A bus without one gets a plain 4-per-row layout from its capacity. */
 
-/** Validated layout (1-25 rows, 1-100 seats) from JSON or an array, or null when it is not usable. */
+/** Most seats and doors a bus layout may have. A door is a pair of side-by-side cells with no seats (the driver's cell does not count). */
+if (!defined('MBUS_MAX_SEATS')) define('MBUS_MAX_SEATS', 50);
+if (!defined('MBUS_MAX_DOORS')) define('MBUS_MAX_DOORS', 2);
+
+/** Validated layout (1-25 rows, 1-50 seats, at most 2 doors) from JSON or an array, or null when it is not usable. */
 function mbus_seat_layout_parse($raw): ?array
 {
     $layout = is_array($raw) ? $raw : json_decode((string)$raw, true);
     if (!is_array($layout) || count($layout) < 1 || count($layout) > 25) return null;
-    $seats = 0;
+    $seats = 0; $doors = 0;
     $clean = [];
     foreach ($layout as $row) {
         if (!is_array($row) || count($row) !== 4) return null;
@@ -19,9 +23,13 @@ function mbus_seat_layout_parse($raw): ?array
             if ($seat) $seats++;
             $cells[] = $seat;
         }
+        foreach ([0, 2] as $start) {
+            if (count($clean) === 0 && $start === 0) continue;   // the driver's cell
+            if (!$cells[$start] && !$cells[$start + 1]) $doors++;
+        }
         $clean[] = $cells;
     }
-    return ($seats >= 1 && $seats <= 100) ? $clean : null;
+    return ($seats >= 1 && $seats <= MBUS_MAX_SEATS && $doors <= MBUS_MAX_DOORS) ? $clean : null;
 }
 
 function mbus_seat_layout_count(array $layout): int
@@ -34,7 +42,7 @@ function mbus_seat_layout_count(array $layout): int
 /** Plain layout for a bus with no saved one: full rows of 4, last row filled from the left. */
 function mbus_seat_layout_default(int $capacity): array
 {
-    $capacity = max(1, min(100, $capacity));
+    $capacity = max(1, min(MBUS_MAX_SEATS, $capacity));
     $layout = [];
     for ($n = 0; $n < $capacity; $n += 4) {
         $row = [];
