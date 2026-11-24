@@ -2,6 +2,7 @@
 
 session_start();
 include "../config/db_connect.php";
+include_once "../Includes/csrf.php";
 include "../Includes/activity_log.php";
 
 if(!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'admin'){
@@ -116,6 +117,7 @@ if($recent_activity_query === false){
     <link rel="stylesheet" href="../Assets/css/unify.css?v=3">
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/notif_bell.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/notif_bell.css'); ?>">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
 </head>
 <body class="stf has-sidebar">
 

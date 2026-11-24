@@ -2,6 +2,7 @@
 session_start();
 include_once __DIR__ . '/../config/db_connect.php';
 include_once __DIR__ . '/../Includes/profile_photo.php';
+include_once __DIR__ . '/../Includes/csrf.php';
 if(!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !== 'admin'){
     header('Location: ../login.php');
     exit();
@@ -22,6 +23,7 @@ $name = htmlspecialchars($_SESSION['full_name'] ?? 'Admin');
     <link rel="stylesheet" href="../Assets/css/unify.css?v=3">
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/notif_bell.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/notif_bell.css'); ?>">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
 </head>
 <body class="stf has-bottom-nav">
 <main class="main" role="main">

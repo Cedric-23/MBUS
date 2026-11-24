@@ -6,8 +6,8 @@ const root = path.resolve(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const { execFileSync } = require('node:child_process');
 const driverExpected = ['Home', 'My Bus', 'Scan', 'Riders', 'Waiting', 'Updates'];
-const conductorOperatorExpected = ['Home', 'Trips', 'Scan', 'Riders', 'Waiting'];
-const conductorHomeExpected = ['Home', 'Trips', 'Scan', 'Riders', 'Waiting'];
+const conductorOperatorExpected = ['Home', 'Trips', 'Scan', 'Riders', 'Waiting', 'Updates'];
+const conductorHomeExpected = ['Home', 'Trips', 'Scan', 'Riders', 'Waiting', 'Updates'];
 const conductorSharedExpected = ['Home', 'Trips', 'Scan', 'Riders', 'Waiting', 'Updates'];
 
 function bottomNav(html, page, role) {

@@ -125,6 +125,7 @@ if (!$trips && $assignedBuses > 0) {
             <a href="../Operator/scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
             <a href="../Operator/passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Riders</a>
             <a href="../Operator/waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
+            <a href="../Operator/announcements.php"><i class="fa fa-bullhorn" aria-hidden="true"></i> Updates</a>
         </nav>
         <div class="menu-bottom">
             <a href="../logout.php" class="logout-btn btn btn-outline btn-block"><i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
@@ -156,6 +157,7 @@ if (!$trips && $assignedBuses > 0) {
                         <a href="../Operator/payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments<?php if ($paymentCount > 0): ?><span class="menu-badge"><?php echo $paymentCount > 99 ? '99+' : $paymentCount; ?></span><?php endif; ?></a>
                         <a href="../Operator/reports.php" role="menuitem"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a>
                         <a href="../Operator/profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                        <a href="../Operator/announcements.php" role="menuitem"><i class="fa fa-bullhorn" aria-hidden="true"></i> Updates</a>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>
                 </div>
@@ -227,6 +229,7 @@ if (!$trips && $assignedBuses > 0) {
         <a href="../Operator/scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
         <a href="../Operator/passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
         <a href="../Operator/waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
+        <a href="../Operator/announcements.php" class="bottom-nav-item"><i class="fa fa-bullhorn" aria-hidden="true"></i><span>Updates</span></a>
     </nav>
     <script src="../Assets/js/app-header.js"></script>
     <script>window.MBUS_NOTIFICATIONS_ENDPOINT = '../Operator/notifications.php';</script>

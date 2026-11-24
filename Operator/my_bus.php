@@ -167,7 +167,6 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Driver'));
                 <input type="hidden" name="seat-layout" data-seat-layout value="<?php echo htmlspecialchars(json_encode($layout), ENT_QUOTES); ?>">
             </section>
             <?php if ($busOnSchedule): ?><div class="mb-warning" role="status">This bus is on an active schedule. You cannot change its layout until the schedule is completed.</div><?php endif; ?>
-            <p class="mb-hint">Changing seats updates the bus's seat count. Layout changes are unavailable while this bus is on an active schedule or has booked passengers on an upcoming or running trip.</p>
         </section>
 
         <div class="mb-save"><button type="submit" class="btn btn-primary">Save changes</button></div>

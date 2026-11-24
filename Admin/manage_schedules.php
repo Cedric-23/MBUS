@@ -114,6 +114,7 @@ ORDER BY departure_time ASC
     <link rel="stylesheet" href="../Assets/css/unify.css?v=3">
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/notif_bell.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/notif_bell.css'); ?>">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
 </head>
 
 <body class="stf has-sidebar">
@@ -251,7 +252,6 @@ $route_options = function() use ($route_rows){ $o='<option value="">Select route
                 <label class="ad-field"><span>Departure</span><input type="datetime-local" name="departure_time" min="<?php echo date('Y-m-d'); ?>T00:00" required></label>
                 <label class="ad-field"><span>Arrival</span><input type="datetime-local" name="arrival_time" required></label>
             </div>
-            <p class="ad-date-note" role="note">Schedules can only be added from today onward. Past departure dates are not accepted.</p>
             <label class="ad-field"><span>Status</span><select name="schedule_status"><option>Active</option><option>Cancelled</option><option>Completed</option></select></label>
         </div>
         <footer class="ad-dialog-foot">

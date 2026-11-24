@@ -92,6 +92,7 @@ if ($routes_query === false) {
     <link rel="stylesheet" href="../Assets/css/unify.css?v=3">
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/notif_bell.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/notif_bell.css'); ?>">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
 </head>
 <body class="stf has-sidebar">
 <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
@@ -152,10 +153,9 @@ if ($routes_query === false) {
     <section class="routes-panel" aria-labelledby="existing-routes-title">
         <div class="routes-panel-heading">
             <div>
-                <h2 id="existing-routes-title">Existing routes</h2>
-                <p><?php echo count($routes); ?> <?php echo count($routes) === 1 ? 'route' : 'routes'; ?> · fare editing only</p>
+                <h2 id="existing-routes-title">Routes</h2>
+                <p><?php echo count($routes); ?> <?php echo count($routes) === 1 ? 'route' : 'routes'; ?></p>
             </div>
-            <span class="routes-lock"><i class="fa fa-lock" aria-hidden="true"></i> Route details fixed</span>
         </div>
 
         <?php if ($routes): ?>

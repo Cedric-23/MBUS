@@ -199,6 +199,7 @@ $query = mbus_db_prepare($conn, "
         <?php if($isConductor): ?>
         <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Riders</a>
         <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
+        <a href="announcements.php"><i class="fa fa-bullhorn" aria-hidden="true"></i> Updates</a>
         <?php else: ?>
         <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
         <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
@@ -235,6 +236,7 @@ $query = mbus_db_prepare($conn, "
                         <?php if($isConductor): ?><a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a><?php else: ?><a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a><?php endif; ?>
                         <a href="reports.php" role="menuitem"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a>
                         <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                        <?php if($isConductor): ?><a href="announcements.php" role="menuitem"><i class="fa fa-bullhorn" aria-hidden="true"></i> Updates</a><?php endif; ?>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>
                 </div>
@@ -430,6 +432,7 @@ document.addEventListener('keydown', function(e) {
     <a href="waiting.php" class="bottom-nav-item">
         <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
     </a>
+    <?php if($isConductor): ?><a href="announcements.php" class="bottom-nav-item"><i class="fa fa-bullhorn" aria-hidden="true"></i><span>Updates</span></a><?php endif; ?>
 </nav>
 <script src="../Assets/js/app-header.js"></script>
 <script src="../Assets/js/operator_tracker.js"></script>
