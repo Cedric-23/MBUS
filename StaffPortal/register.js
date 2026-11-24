@@ -288,8 +288,7 @@ document.querySelectorAll("input[inputmode='numeric']").forEach(function (el) {
         ["At least 8 characters", function (v) { return v.length >= 8; }],
         ["One uppercase letter", function (v) { return /[A-Z]/.test(v); }],
         ["One lowercase letter", function (v) { return /[a-z]/.test(v); }],
-        ["One number", function (v) { return /\d/.test(v); }],
-        ["One symbol", function (v) { return /[^A-Za-z0-9]/.test(v); }]
+        ["One number", function (v) { return /\d/.test(v); }]
     ];
     document.querySelectorAll(".password-input input[type='password'], .password-input .pw-wrap input").forEach(function (input) {
         if (input.dataset.pwRules) return;

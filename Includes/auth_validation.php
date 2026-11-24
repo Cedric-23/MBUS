@@ -97,8 +97,8 @@ function mbus_validate_password(string $password, int $minimum = 8): ?string
         return 'Password must be 128 characters or fewer.';
     }
 
-    if (!preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/\d/', $password) || !preg_match('/[^A-Za-z0-9]/', $password)) {
-        return 'Password must include an uppercase letter, lowercase letter, number, and symbol.';
+    if (!preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/\d/', $password)){
+        return 'Password must include an uppercase letter, lowercase letter, and number.';
     }
 
     return null;
