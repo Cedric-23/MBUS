@@ -65,6 +65,9 @@
       if (path.indexOf('/Operator/') !== -1) return 'payments.php';
       return 'my_reservations.php';
     }
+    if (/you were assigned as conductor|you are no longer assigned as conductor/i.test(m)) {
+      return path.indexOf('/Conductor/') !== -1 ? '../Operator/manage_trips.php' : 'manage_trips.php';
+    }
     return 'announcements.php';
   }
   function draw() {

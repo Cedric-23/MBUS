@@ -14,6 +14,7 @@ if(
 
 include "../config/db_connect.php";
 include "../Includes/csrf.php";
+require_once "../Includes/notify.php";
 
 /* Buses are not added here: approving a driver application creates the bus they submitted (see
    Includes/bus_from_application.php). It arrives with its plate as the number, and the admin gives it the real
@@ -78,6 +79,12 @@ if(isset($_POST['update_bus'])){
         $prev_operator_id = (int)($_POST['prev_operator_id'] ?? 0);
         $conductor_id = (int)($_POST['conductor_id'] ?? 0);
         $prev_conductor_id = (int)($_POST['prev_conductor_id'] ?? 0);
+        $actual_operator_id = 0;
+        $operator_assignment_q = mbus_db_prepare($conn, "SELECT operator_id FROM operator_bus_assignments WHERE bus_id = ? LIMIT 1", [$bus_id]);
+        if ($operator_assignment_q !== false && ($operator_assignment_row = mbus_db_fetch_assoc($operator_assignment_q))) $actual_operator_id = (int)$operator_assignment_row['operator_id'];
+        $actual_conductor_id = 0;
+        $assignment_q = mbus_db_prepare($conn, "SELECT conductor_id FROM conductor_bus_assignments WHERE bus_id = ? LIMIT 1", [$bus_id]);
+        if ($assignment_q !== false && ($assignment_row = mbus_db_fetch_assoc($assignment_q))) $actual_conductor_id = (int)$assignment_row['conductor_id'];
         $exists = $bus_id > 0 ? mbus_db_prepare($conn, "SELECT 1 FROM buses WHERE bus_id = ?", [$bus_id]) : false;
         if($exists === false || mbus_db_num_rows($exists) < 1){
             $error = "That bus no longer exists.";
@@ -97,11 +104,28 @@ if(isset($_POST['update_bus'])){
                     if(mbus_set_bus_operator($conn, $bus_id, $operator_id)){ $changed[] = $operator_id > 0 ? "driver reassigned" : "driver removed"; }
                     else { $error = "The driver could not be assigned. Please try again."; }
                 }
-                if(!isset($error) && $conductor_id !== $prev_conductor_id){
+                if(!isset($error) && $conductor_id !== $actual_conductor_id){
                     if(mbus_set_bus_conductor($conn, $bus_id, $conductor_id)){ $changed[] = $conductor_id > 0 ? "conductor assigned" : "conductor removed"; }
                     else { $error = "The conductor could not be assigned. Please try again."; }
                 }
-                if(!isset($error)){ $success = $changed ? "Bus updated: " . implode(", ", $changed) . "." : "Nothing changed."; }
+                if(!isset($error)){
+                    if($conductor_id !== $actual_conductor_id){
+                        $bus_label = $bus_number !== '' ? $bus_number : ('#' . $bus_id);
+                        if($conductor_id > 0){
+                            mbus_notify($conn, $conductor_id, "You were assigned as conductor for bus $bus_label. Open Trips to manage its scheduled trips.");
+                        }
+                        if($actual_conductor_id > 0 && $actual_conductor_id !== $conductor_id){
+                            mbus_notify($conn, $actual_conductor_id, "You are no longer assigned as conductor for bus $bus_label.");
+                        }
+                        if($actual_operator_id > 0){
+                            $staff_note = $conductor_id > 0
+                                ? "A conductor was assigned to your bus $bus_label."
+                                : "The conductor for your bus $bus_label was removed.";
+                            mbus_notify($conn, $actual_operator_id, $staff_note);
+                        }
+                    }
+                    $success = $changed ? "Bus updated: " . implode(", ", $changed) . "." : "Nothing changed.";
+                }
             }
         }
     }
