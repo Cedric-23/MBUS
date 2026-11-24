@@ -97,9 +97,9 @@
     }
     const personIcon = (name, on, r) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
         html: '<span class="sw-person' + (on ? ' is-on' : '') + '"><img src="' + photoOf(r) + '" alt=""></span>' });
-    /* reservation pin: the rider's photo at the stop they chose. kind = 'pick' (pick-up stop) or 'drop' (drop-off stop) */
+    /* reservation pin: the rider's photo at the pickup stop they chose. */
     const reserveIcon = (r, kind, approx, seat, tracked) => L.divIcon({ className: '', iconSize: [38, 38], iconAnchor: [19, 19],
-        html: '<span class="sw-res-pin sw-res-' + kind + (approx ? ' is-approx' : '') + (tracked ? ' is-tracked' : '') + '"><span class="sw-person"><img src="' + photoOf(r) + '" alt=""></span><span class="sw-res-tag">' + (kind === 'drop' ? 'Drop-off' : 'Pick-up') + ' · ' + String(seat || '') + '</span></span>' });
+        html: '<span class="sw-res-pin sw-res-' + kind + (approx ? ' is-approx' : '') + (tracked ? ' is-tracked' : '') + '"><span class="sw-person"><img src="' + photoOf(r) + '" alt=""></span><span class="sw-res-tag">' + 'Pick-up' + ' · ' + String(seat || '') + '</span></span>' });
 
     function fit(points) {
         if (!map || !points.length) return;
@@ -274,7 +274,7 @@
         const p = alongRoute(road, i / (stops.length - 1));
         return p ? { p, approx: true } : null;
     }
-    /* Road route per trip (schedule_id -> {key, route}), loaded once so every rider's pickup and drop-off pin can be placed. */
+    /* Road route per trip (schedule_id -> {key, route}), loaded once so every rider's pickup pin can be placed. */
     const tripRoutes = {};
     function ensureTripRoute(trip) {
         const raw = [trip.origin_lat, trip.origin_lng, trip.destination_lat, trip.destination_lng];
@@ -297,14 +297,13 @@
         return [{ seat_number: r.seat_numbers || '1', pickup_location: r.pickup_location, destination: r.stop_destination }];
     }
     function reservationSeatPoint(r, seat, kind) {
-        const prefix = kind === 'pick' ? 'pickup' : 'destination';
-        const lat = seat[prefix + '_latitude'], lng = seat[prefix + '_longitude'];
+        const lat = seat.pickup_latitude, lng = seat.pickup_longitude;
         if (validPt(lat, lng)) return {p:[Number(lat),Number(lng)], approx:false};
-        return stopPoint(r, kind === 'pick' ? seat.pickup_location : seat.destination);
+        return stopPoint(r, seat.pickup_location);
     }
     function reservationMapPoints(r) {
         const points = [];
-        reservationSeats(r).forEach(seat => ['pick','drop'].forEach(kind => {
+        reservationSeats(r).forEach(seat => ['pick'].forEach(kind => {
             const point = reservationSeatPoint(r, seat, kind);
             if (point) points.push(point.p);
         }));
@@ -314,14 +313,14 @@
         if (!layer || !map) return;
         rows.forEach(r => {
             if (hiddenReservationKeys.has(reservationKey(r))) return;
-            reservationSeats(r).forEach(seat => ['pick','drop'].forEach(kind => {
+            reservationSeats(r).forEach(seat => ['pick'].forEach(kind => {
                 const sp = reservationSeatPoint(r, seat, kind);
                 if (!sp) return;
-                const name = kind === 'pick' ? seat.pickup_location : seat.destination;
+                const name = seat.pickup_location;
                 const seatNumber = seat.seat_number || '?';
                 const pinData = Object.assign({}, r, seat);
                 pts.push(sp.p);
-                const m = L.marker(sp.p, { icon: reserveIcon(pinData, kind, sp.approx, seatNumber, trackedPin === reservationKey(r) + '|' + seatNumber + '|' + kind), title: (r.full_name || 'Commuter') + ' · seat ' + seatNumber + (kind === 'drop' ? ' · drop-off at ' : ' · pick-up at ') + (name || '') + (sp.approx ? ' (approx.)' : ''), zIndexOffset: 200 }).addTo(layer);
+                const m = L.marker(sp.p, { icon: reserveIcon(pinData, kind, sp.approx, seatNumber, trackedPin === reservationKey(r) + '|' + seatNumber + '|' + kind), title: (r.full_name || 'Commuter') + ' · seat ' + seatNumber + ' · pick-up at ' + (name || '') + (sp.approx ? ' (approx.)' : ''), zIndexOffset: 200 }).addTo(layer);
                 bindAvatarFallback(m.getElement() && m.getElement().querySelector('.sw-person img'));
                 m.on('click', () => showReservation(r));
             }));
@@ -490,7 +489,7 @@
         });
         sizeSheet();
     }
-    /* Fly to one seat pin (pick-up or drop-off) and keep it highlighted until the map is tapped. */
+    /* Fly to one seat pickup pin and keep it highlighted until the map is tapped. */
     function trackPin(r, seat, kind) {
         const sp = reservationSeatPoint(r, seat, kind);
         if (!sp || !map) { say('That stop has no map position yet.'); return; }
@@ -524,7 +523,7 @@
             const li = node('li', undefined, 'sw-rc-seat');
             li.append(node('span', String(seat.seat_number || '?'), 'sw-rc-no'));
             const stops = node('span', undefined, 'sw-rc-stops');
-            [['pick', seat.pickup_location, 'Pick-up'], ['drop', seat.destination, 'Drop-off']].forEach(([kind, name, label]) => {
+            [['pick', seat.pickup_location, 'Pick-up']].forEach(([kind, name, label]) => {
                 const b = node('button', undefined, 'sw-rc-track sw-rc-' + kind); b.type = 'button';
                 const ok = !!reservationSeatPoint(r, seat, kind);
                 b.disabled = !ok || !map;

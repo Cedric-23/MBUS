@@ -293,8 +293,6 @@ function mbus_pickup_feed(PDO $pdo, string $role, int $userId): array
                     'destination', rv.destination,
                     'pickup_latitude', NULLIF(to_jsonb(rv)->>'pickup_latitude','')::double precision,
                     'pickup_longitude', NULLIF(to_jsonb(rv)->>'pickup_longitude','')::double precision,
-                    'destination_latitude', NULLIF(to_jsonb(rv)->>'destination_latitude','')::double precision,
-                    'destination_longitude', NULLIF(to_jsonb(rv)->>'destination_longitude','')::double precision
                 ) ORDER BY rv.seat_number::integer) AS seat_details,
                 MAX(rv.created_at) AS reserved_at
             FROM public.reservation rv

@@ -67,7 +67,7 @@ while($q !== false && ($r = mbus_db_fetch_assoc($q))){
     } elseif($r['status'] === 'Boarded'){
         $pay = 'boarded';
     }
-    /* one entry per seat: its own pickup and drop-off */
+    /* one entry per seat: its own pickup and destination */
     $groups[$sid]['riders'][] = [
         'seat' => $r['seat_number'],
         'pickup' => (string)($r['pickup_location'] ?: $r['origin']),
@@ -139,7 +139,7 @@ function mbus_home_pay_tag(string $pay): string {
     <link rel="stylesheet" href="../Assets/css/unify.css?v=3">
     <link rel="stylesheet" href="../Assets/css/commuter_modern.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/commuter_modern.css'); ?>">
     <style>
-        /* multi reservation: one row per seat with its own pickup and drop-off */
+        /* multi reservation: one row per seat with its own pickup and destination */
         .next-riders-head, .next-riders li { display: grid; grid-template-columns: 42px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: center; }
         .next-riders-head { margin: 12px 0 6px; padding: 0 10px; font-size: .7rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; opacity: .78; }
         .next-riders { margin: 0 0 2px; padding: 0; list-style: none; display: grid; gap: 6px; }
@@ -224,7 +224,7 @@ function mbus_home_pay_tag(string $pay): string {
         <p class="next-route"><?php echo htmlspecialchars($route); ?></p>
         <?php if($is_multi){ ?>
         <p class="next-meta"><?php echo htmlspecialchars(mbus_home_bus($next['bus_number'])); ?> &middot; <?php echo $seat_count; ?> seats reserved</p>
-        <div class="next-riders-head" aria-hidden="true"><span>Seat</span><span>Pickup</span><span>Drop-off</span></div>
+        <div class="next-riders-head" aria-hidden="true"><span>Seat</span><span>Pickup</span><span>Destination</span></div>
         <ul class="next-riders">
             <?php foreach($show_riders as $rd){ ?>
             <li><b class="nr-seat"><?php echo htmlspecialchars((string)$rd['seat']); ?></b><span><?php echo htmlspecialchars($rd['pickup']); ?></span><span><?php echo htmlspecialchars($rd['drop']); ?></span><?php if($next['pending']){ ?><em class="nr-tag is-<?php echo htmlspecialchars($rd['pay']); ?>"><?php echo htmlspecialchars(mbus_home_pay_tag($rd['pay'])); ?></em><?php } ?></li>

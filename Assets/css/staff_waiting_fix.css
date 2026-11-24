@@ -19,13 +19,11 @@
 .sw-handle-caret{flex:none;color:#6b7a8d;transition:transform .2s}
 .sw-sheet.is-collapsed .sw-handle-caret{transform:rotate(180deg)}
 
-/* ---------- reservation pins (pick-up stop and drop-off stop on the map) ---------- */
+/* ---------- reservation pins at the selected pick-up stop ---------- */
 .sw-res-pin{position:relative;display:block;width:38px;height:38px}
 .sw-res-pin .sw-person{border-color:#7a5af8}
-.sw-res-pin.sw-res-drop .sw-person{border-color:#18365d}
 .sw-res-pin.is-approx .sw-person{border-style:dashed}
 .sw-res-tag{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:2px;padding:1px 7px;border-radius:999px;background:#5b3fd1;color:#fff;font:700 .625rem/1.4 Inter,system-ui,sans-serif;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.3)}
-.sw-res-pin.sw-res-drop .sw-res-tag{background:#18365d}
 
 /* View switch + bus cards */
 .staff-wait-page .sw-view{display:flex;gap:4px;padding:4px;margin:4px 0 8px;border-radius:999px;background:#eef2f8}

@@ -2,7 +2,6 @@ let selectedSeats = [];
 /* every rider (seat) has their own pickup and destination */
 const seatPickups = {};
 const seatDestinations = {};
-const seatPins = {};
 /* ...and their own passenger classification (+ ID photo for discounted seats that are not the account holder's own).
    Declared up here because the seat cards below read them. */
 const seatTypes = {};
@@ -18,60 +17,6 @@ const PASSENGER_TYPE_OPTIONS = [
 const PASSENGER_TYPE_SHORT = { Regular: "Regular", Student: "Student", Senior: "Senior Citizen", PWD: "PWD" };
 let reservationMode = "solo";
 let reviewed = false;
-let pinMode = "pickup";
-let reservationMap = null;
-let reservationPinLayer = null;
-
-function renderSeatPins() {
-    const select = document.getElementById("pinSeat"), status = document.getElementById("pinStatus");
-    if (!select || !status) return;
-    const previous = select.value;
-    select.replaceChildren(...selectedSeats.map(seat => new Option("Seat " + seat, String(seat))));
-    select.value = selectedSeats.some(seat => String(seat) === previous) ? previous : (selectedSeats.length ? String(selectedSeats[0]) : "");
-    if (reservationPinLayer) reservationPinLayer.clearLayers();
-    if (!selectedSeats.length) { status.textContent = "Select seats, then place optional pickup and drop-off pins."; return; }
-    const seat = select.value, pins = seatPins[seat] || {};
-    status.textContent = `Seat ${seat}: pickup ${pins.pickup ? "pinned" : "not set"}; drop-off ${pins.destination ? "pinned" : "not set"}.`;
-    if (!reservationMap || !reservationPinLayer) return;
-    selectedSeats.forEach(number => ["pickup", "destination"].forEach(kind => {
-        const point = seatPins[number] && seatPins[number][kind];
-        if (!point) return;
-        const active = String(number) === seat;
-        L.circleMarker([point.lat, point.lng], {radius:active ? 9 : 7, color:"#fff", weight:2, fillColor:kind === "pickup" ? "#16834a" : "#244a9b", fillOpacity:active ? 1 : .5})
-            .addTo(reservationPinLayer).bindTooltip(`Seat ${number} · ${kind === "pickup" ? "Pickup" : "Drop-off"}`);
-    }));
-}
-
-function initReservationMap() {
-    const host = document.getElementById("reservationMap");
-    if (!host) return;
-    if (!window.L) { document.getElementById("pinStatus").textContent = "Map unavailable; named stops can still be used."; return; }
-    const bounds = routeBounds.map(Number), [oLat,oLng,dLat,dLng] = bounds;
-    const center = bounds.every(Number.isFinite) ? [(oLat+dLat)/2, (oLng+dLng)/2] : [14.75,120.27];
-    reservationMap = L.map(host, {scrollWheelZoom:false}).setView(center, 12);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"&copy; OpenStreetMap contributors"}).addTo(reservationMap);
-    if (bounds.every(Number.isFinite)) reservationMap.fitBounds([[oLat,oLng],[dLat,dLng]], {padding:[20,20], maxZoom:13});
-    reservationPinLayer = L.layerGroup().addTo(reservationMap);
-    reservationMap.on("click", event => {
-        const seat = document.getElementById("pinSeat").value;
-        if (!seat || !selectedSeats.some(number => String(number) === seat)) { document.getElementById("pinStatus").textContent = "Select a seat before placing a pin."; return; }
-        seatPins[seat] = seatPins[seat] || {};
-        seatPins[seat][pinMode] = {lat:event.latlng.lat, lng:event.latlng.lng};
-        hideReview(); renderSeatPins();
-    });
-    document.getElementById("pinSeat").addEventListener("change", renderSeatPins);
-    document.querySelectorAll("[data-pin-mode]").forEach(button => button.addEventListener("click", () => {
-        pinMode = button.dataset.pinMode;
-        document.querySelectorAll("[data-pin-mode]").forEach(other => other.classList.toggle("active", other === button));
-    }));
-    document.querySelector(".reserve-pin-clear").addEventListener("click", () => {
-        const seat = document.getElementById("pinSeat").value;
-        if (seat) delete seatPins[seat];
-        hideReview(); renderSeatPins();
-    });
-    renderSeatPins();
-}
-
 /* Styles for the read-only rider list in the Reservation Summary (MBUS-48) */
 (function addSummaryStyles() {
     const style = document.createElement("style");
@@ -118,7 +63,6 @@ function setReservationMode(mode) {
     hideReview();
     updateMultiSeatWarning();
     renderSeatTripControls();
-    renderSeatPins();
 }
 
 document.querySelectorAll(".reservation-mode-tab").forEach(tab => {
@@ -132,8 +76,7 @@ function clearSeatTrips() {
     Object.keys(seatDestinations).forEach(seat => delete seatDestinations[seat]);
     Object.keys(seatTypes).forEach(seat => delete seatTypes[seat]);
     Object.keys(seatIds).forEach(seat => delete seatIds[seat]);
-    Object.keys(seatPins).forEach(seat => delete seatPins[seat]);
-}
+    }
 
 function fillStops(select, stops, placeholder, selected) {
     select.innerHTML = "";
@@ -329,8 +272,7 @@ document.querySelectorAll(".seat-btn").forEach(seat => {
             );
             delete seatPickups[seatNumber];
             delete seatDestinations[seatNumber];
-            delete seatPins[seatNumber];
-            delete seatTypes[seatNumber];
+                delete seatTypes[seatNumber];
             delete seatIds[seatNumber];
 
         } else {
@@ -341,16 +283,13 @@ document.querySelectorAll(".seat-btn").forEach(seat => {
         }
 
         renderSeatTripControls();
-        renderSeatPins();
-        updateMultiSeatWarning();
+            updateMultiSeatWarning();
 
     });
 
 });
 
 renderSeatTripControls();
-initReservationMap();
-
 /* The first selected seat that is missing a valid pickup/destination, or null when all are set. */
 function firstIncompleteSeat() {
     for (const seat of selectedSeats) {
@@ -424,12 +363,6 @@ document.getElementById("doneBtn")
     const missing = firstIncompleteSeat();
     if (missing) {
         tripError(missing, showTopError);
-        return;
-    }
-    const partialPin = selectedSeats.find(seat => Boolean(seatPins[seat]?.pickup) !== Boolean(seatPins[seat]?.destination));
-    if (partialPin) {
-        showTopError("For seat " + partialPin + ", set both map pins or clear the one already placed.");
-        document.getElementById("reservationMap").scrollIntoView({behavior:"smooth",block:"center"});
         return;
     }
     if (discountPhotoError(showTopError)) return;
@@ -613,7 +546,6 @@ async function reserveSeats() {
     formData.append("reservation_mode", reservationMode);
     formData.append("pickups", JSON.stringify(seatPickups));
     formData.append("destinations", JSON.stringify(seatDestinations));
-    formData.append("stop_pins", JSON.stringify(seatPins));
     formData.append("seats", selectedSeats.join(","));
     const types = {}, ids = {};
     selectedSeats.forEach((seat, i) => {

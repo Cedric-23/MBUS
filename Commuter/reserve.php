@@ -61,22 +61,15 @@ $fare_table=mbus_stop_positions();
 $passenger_type=mbus_passenger_type($conn,(int)$user_id);
 
 /* ROUTE
- * Falls back to NULL coordinates if the routes table has no map columns yet
- * (supabase/03_add_map_coordinates.sql not applied), so booking still works without the map.
  * The bus's own seat layout (the one the operator customised) is read the same safe way. */
 $route_sql = "
-SELECT routes.origin,routes.destination,buses.bus_number,buses.capacity,to_jsonb(buses)->>'seat_layout' AS seat_layout,schedule.departure_time,schedule.arrival_time,schedule.trip_status,schedule.schedule_status,
-%s
+SELECT routes.origin,routes.destination,buses.bus_number,buses.capacity,to_jsonb(buses)->>'seat_layout' AS seat_layout,schedule.departure_time,schedule.arrival_time,schedule.trip_status,schedule.schedule_status
 FROM schedule
 JOIN routes ON schedule.route_id=routes.route_id
 JOIN buses ON schedule.bus_id=buses.bus_id
 WHERE schedule.schedule_id=?
 ";
-$route_query=mbus_db_prepare($conn,sprintf($route_sql,"routes.origin_lat,routes.origin_lng,routes.destination_lat,routes.destination_lng"), [$schedule_id]);
-if($route_query === false){
-    error_log("Commuter/reserve.php route query failed, retrying without coordinates: " . ($conn->lastError ?? 'unknown error'));
-    $route_query=mbus_db_prepare($conn,sprintf($route_sql,"NULL AS origin_lat,NULL AS origin_lng,NULL AS destination_lat,NULL AS destination_lng"), [$schedule_id]);
-}
+$route_query=mbus_db_prepare($conn,$route_sql, [$schedule_id]);
 
 $route_data=mbus_db_fetch_assoc($route_query);
 
@@ -130,8 +123,6 @@ $pickups_in = json_decode((string)($_POST['pickups'] ?? '{}'), true);
 if(!is_array($pickups_in)) $pickups_in = [];
 $destinations_in = json_decode((string)($_POST['destinations'] ?? '{}'), true);
 if(!is_array($destinations_in)) $destinations_in = [];
-$pins_in = json_decode((string)($_POST['stop_pins'] ?? '{}'), true);
-if(!is_array($pins_in)) $pins_in = [];
 $seats_input=$_POST['seats'] ?? '';
 if(!is_string($seats_input)){
     die("Invalid reservation details.");
@@ -152,7 +143,6 @@ if($reservation_mode === '' || ($reservation_mode === 'solo' && count($requested
 $seats=$requested_seats;
 $pickup_by_seat = [];
 $destination_by_seat = [];
-$pin_by_seat = [];
 foreach($seats as $seat_no){
     $seat_pickup = $pickups_in[(string)$seat_no] ?? '';
     $seat_destination = $destinations_in[(string)$seat_no] ?? '';
@@ -172,28 +162,6 @@ foreach($seats as $seat_no){
     /* stored values come from the trusted stop list, never straight from the request */
     $pickup_by_seat[$seat_no] = $stops[$pickup_index];
     $destination_by_seat[$seat_no] = $stops[$destination_index];
-    $seat_pins = $pins_in[(string)$seat_no] ?? null;
-    $pin_by_seat[$seat_no] = ['pickup'=>null, 'destination'=>null];
-    if(is_array($seat_pins)){
-        $has_pickup = isset($seat_pins['pickup']);
-        $has_destination = isset($seat_pins['destination']);
-        if($has_pickup !== $has_destination){
-            http_response_code(422); echo "Set both map pins or clear both pins for seat $seat_no."; exit();
-        }
-        if($has_pickup){
-            foreach(['pickup','destination'] as $kind){
-                $point = $seat_pins[$kind];
-                $lat = is_array($point) && isset($point['lat']) && is_numeric($point['lat']) ? (float)$point['lat'] : NAN;
-                $lng = is_array($point) && isset($point['lng']) && is_numeric($point['lng']) ? (float)$point['lng'] : NAN;
-                if(!is_finite($lat) || !is_finite($lng) || abs($lat) > 90 || abs($lng) > 180){
-                    http_response_code(422); echo "Set valid pickup and drop-off map pins for seat $seat_no."; exit();
-                }
-                $pin_by_seat[$seat_no][$kind] = ['lat'=>$lat, 'lng'=>$lng];
-            }
-        }
-    } elseif($seat_pins !== null){
-        http_response_code(422); echo "Invalid map pins for seat $seat_no."; exit();
-    }
 }
 /* Per-seat passenger type (+ ID photo for discounted seats that are not the verified account holder's own) */
 $types_in = json_decode((string)($_POST['types'] ?? '{}'), true); if(!is_array($types_in)) $types_in = [];
@@ -296,9 +264,9 @@ FOR UPDATE
             throw new DomainException($locked_action);
         }
         $inserted = mbus_db_prepare($conn,"
-INSERT INTO reservation(ticket_code,user_id,schedule_id,seat_number,pickup_location,destination,pickup_latitude,pickup_longitude,destination_latitude,destination_longitude,reservation_date,created_at,expires_at,status,passenger_type,discount_status,id_image_b64,id_image_mime)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW() + INTERVAL '10 minutes', 'Pending', ?, ?, ?, ?)
-        ", [$ticket_code, $user_id, $schedule_id, $seat, $pickup_by_seat[$seat], $destination_by_seat[$seat], $pin_by_seat[$seat]['pickup']['lat'] ?? null, $pin_by_seat[$seat]['pickup']['lng'] ?? null, $pin_by_seat[$seat]['destination']['lat'] ?? null, $pin_by_seat[$seat]['destination']['lng'] ?? null, $seat_info[$seat]['type'], $seat_info[$seat]['status'], $seat_info[$seat]['b64'], $seat_info[$seat]['mime']]);
+INSERT INTO reservation(ticket_code,user_id,schedule_id,seat_number,pickup_location,destination,reservation_date,created_at,expires_at,status,passenger_type,discount_status,id_image_b64,id_image_mime)
+VALUES(?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW() + INTERVAL '10 minutes', 'Pending', ?, ?, ?, ?)
+        ", [$ticket_code, $user_id, $schedule_id, $seat, $pickup_by_seat[$seat], $destination_by_seat[$seat], $seat_info[$seat]['type'], $seat_info[$seat]['status'], $seat_info[$seat]['b64'], $seat_info[$seat]['mime']]);
         if($inserted === false){
             throw new RuntimeException("Reservation insert failed");
         }
@@ -567,7 +535,6 @@ const scheduleId = <?php echo (int)$schedule_id; ?>;
 const csrfToken = <?php echo json_encode(csrf_get_token()); ?>;
 const route = <?php echo json_encode($stops); ?>;
 const fixedPickup = <?php echo json_encode($fixed_pickup); ?>;
-const routeBounds = <?php echo json_encode([(float)($route_data['origin_lat'] ?? 14.6798552),(float)($route_data['origin_lng'] ?? 120.2728757),(float)($route_data['destination_lat'] ?? 14.8243652),(float)($route_data['destination_lng'] ?? 120.2801434)]); ?>;
 const fareTable = <?php echo json_encode($fare_table); ?>;
 const passengerType = <?php echo json_encode($passenger_type); ?>;
 </script>

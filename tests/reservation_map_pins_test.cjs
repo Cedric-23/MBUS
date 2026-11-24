@@ -11,18 +11,14 @@ const db = read('config/db_connect.php');
 const schema = read('supabase/01_schema.sql');
 const migration = read('supabase/19_reservation_stop_coordinates.sql');
 
-// The reserve page now picks stops from per-seat dropdowns; the optional map host is only used if present.
-assert.match(reserveJs, /getElementById\("reservationMap"\)/);
-assert.match(reservePhp, /name="stop_pins"|stop_pins/);
-assert.match(reservePhp, /pickup_latitude,pickup_longitude,destination_latitude,destination_longitude/);
-assert.match(reservePhp, /Set both map pins or clear both pins/);
-assert.match(reserveJs, /const seatPins = \{\}/);
-assert.match(reserveJs, /reservationMap\.on\("click"/);
-assert.match(reserveJs, /Boolean\(seatPins\[seat\]\?\.pickup\) !== Boolean\(seatPins\[seat\]\?\.destination\)/);
-assert.match(reserveJs, /formData\.append\("stop_pins", JSON\.stringify\(seatPins\)\)/);
+// Reservations keep named pickup and destination stops, but no longer support drop-off map pins.
+assert.doesNotMatch(reserveJs, /reservationMap|seatPins|stop_pins|Drop-off/);
+assert.doesNotMatch(reservePhp, /stop_pins|destination_latitude|destination_longitude|drop-off map pins/);
 assert.match(feed, /AS seat_details/);
 assert.match(feed, /pickup_latitude/);
+assert.doesNotMatch(feed, /destination_latitude|destination_longitude/);
 assert.match(staffJs, /reservationSeatPoint/);
+assert.doesNotMatch(staffJs, /drop-off|kind === 'drop'|\['pick','drop'\]/i);
 assert.match(staffJs, /hiddenReservationKeys/);
 assert.match(staffJs, /sw-res-map-toggle/);
 assert.match(staffJs, /trackPin/);

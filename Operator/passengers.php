@@ -117,7 +117,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_walkin'])){
         } else {
             $pickup = strtoupper(trim((string)($_POST['pickup'] ?? '')));
             $dest = strtoupper(trim((string)($_POST['destination'] ?? '')));
-            if(!isset($fares[$pickup], $fares[$dest]) || $pickup === $dest){ $msg = 'Choose a pickup and a different drop-off stop.'; break; }
+            if(!isset($fares[$pickup], $fares[$dest]) || $pickup === $dest){ $msg = 'Choose a pickup and a different destination stop.'; break; }
             $fare = mbus_seat_fare($pickup, $dest);
             if($fare <= 0){ $msg = 'Those stops have no fare between them.'; break; }
         }
@@ -496,7 +496,7 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
     <span class="rider-state" id="rdState"></span>
     <dl class="rider-facts">
         <dt>Pickup</dt><dd id="rdPickup"></dd>
-        <dt>Drop-off</dt><dd id="rdDest"></dd>
+        <dt>Destination</dt><dd id="rdDest"></dd>
         <dt>Phone</dt><dd id="rdPhone"></dd>
         <dt>Ticket</dt><dd id="rdCode"></dd>
         <dt>Paid</dt><dd id="rdAmount"></dd>
@@ -536,7 +536,7 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
             <?php foreach($stops as $st){ echo '<option value="' . htmlspecialchars($st['key']) . '" data-fare="' . $st['fare'] . '">' . htmlspecialchars($st['label']) . '</option>'; } ?>
             </select>
         </label>
-        <label class="wk-field wk-manual">Drop-off stop
+        <label class="wk-field wk-manual">Destination stop
             <select name="destination" id="wkDest" required><option value="">Choose stop</option>
             <?php foreach($stops as $st){ echo '<option value="' . htmlspecialchars($st['key']) . '" data-fare="' . $st['fare'] . '">' . htmlspecialchars($st['label']) . '</option>'; } ?>
             </select>
