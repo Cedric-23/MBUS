@@ -122,6 +122,12 @@ function mbus_run_schema_upgrades(PDO $pdo): void {
           "seat_layout TEXT",
           "last_name VARCHAR(100)",
           "vehicle_registration_expiry DATE",
+          "id_photo_b64 TEXT",
+          "id_photo_mime VARCHAR(50)",
+          "medical_document_b64 TEXT",
+          "medical_document_mime VARCHAR(50)",
+          "nbi_document_b64 TEXT",
+          "nbi_document_mime VARCHAR(50)",
       ] as $col) {
           $pdo->exec('ALTER TABLE operator_application ADD COLUMN IF NOT EXISTS ' . $col);
       }
@@ -149,6 +155,23 @@ function mbus_run_schema_upgrades(PDO $pdo): void {
           submitted_at TIMESTAMP DEFAULT NOW(), reviewed_at TIMESTAMP, reviewed_by INT, rejection_reason TEXT, user_id INT)");
   } catch (PDOException $schema_error) {
       error_log('Conductor application schema check failed: ' . $schema_error->getMessage());
+  }
+  // Driver/conductor applications reach the admin only after the applicant verifies their email.
+  // Rows that already exist keep email_verified = TRUE so applications already under review stay visible.
+  foreach (['operator_application', 'conductor_application'] as $appTable) {
+      try {
+          foreach ([
+              "email_verified BOOLEAN NOT NULL DEFAULT TRUE",
+              "email_verified_at TIMESTAMP",
+              "verification_code VARCHAR(10)",
+              "verification_code_expiry TIMESTAMP",
+              "verification_code_attempts INT NOT NULL DEFAULT 0",
+          ] as $col) {
+              $pdo->exec('ALTER TABLE ' . $appTable . ' ADD COLUMN IF NOT EXISTS ' . $col);
+          }
+      } catch (PDOException $schema_error) {
+          error_log($appTable . ' email verification schema check failed: ' . $schema_error->getMessage());
+      }
   }
   try {
       $pdo->exec("CREATE TABLE IF NOT EXISTS conductor_bus_assignments (
@@ -183,7 +206,7 @@ try {
     if ($pdo->inTransaction()) { try { $pdo->rollBack(); } catch (Throwable $e) { $pdo->exec('ROLLBACK'); } }
     $pdo->exec("SET TIME ZONE '" . str_replace("'", "''", mbus_timezone()) . "'");
     // Schema upgrades are ~35 extra round trips to the database. Run them once per version, not on every page.
-    $schemaVersion = '2026-11-24a';
+    $schemaVersion = '2026-11-24b';
     $schemaFlag = sys_get_temp_dir() . '/mbus_schema_' . md5($host . $database . $schemaVersion) . '.ok';
     if (!is_file($schemaFlag)) {
         $done = false;

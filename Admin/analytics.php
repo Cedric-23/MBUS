@@ -45,7 +45,7 @@ $pending_verifications_query = mbus_db_query($conn, "SELECT COUNT(*) as count FR
 $pending_verifications = mbus_analytics_row($pending_verifications_query)['count'] ?? 0;
 
 // Pending operator applications
-$pending_applications_query = mbus_db_query($conn, "SELECT COUNT(*) as count FROM operator_application WHERE application_status = 'Pending'");
+$pending_applications_query = mbus_db_query($conn, "SELECT COUNT(*) as count FROM operator_application WHERE application_status = 'Pending' AND email_verified = TRUE");
 $pending_applications = mbus_analytics_row($pending_applications_query)['count'] ?? 0;
 
 // Reservations by status

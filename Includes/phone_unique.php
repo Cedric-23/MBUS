@@ -17,8 +17,8 @@ function mbus_phone_in_use($conn, string $phone, int $exclude_user_id = 0): ?boo
 
     // Pending applications reserve the number too; a missing table just means none are pending.
     $pending = [
-        "SELECT 1 FROM operator_application WHERE $norm = ? AND application_status::text = 'Pending' LIMIT 1",
-        "SELECT 1 FROM conductor_application WHERE $norm = ? AND application_status = 'Pending' LIMIT 1",
+        "SELECT 1 FROM operator_application WHERE $norm = ? AND application_status::text = 'Pending' AND email_verified = TRUE LIMIT 1",
+        "SELECT 1 FROM conductor_application WHERE $norm = ? AND application_status = 'Pending' AND email_verified = TRUE LIMIT 1",
     ];
     foreach ($pending as $sql) {
         $r = mbus_db_prepare($conn, $sql, [$digits]);

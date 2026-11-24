@@ -9,8 +9,8 @@ function mbus_admin_pending_counts($conn): array {
     $q = mbus_db_prepare($conn, "SELECT COUNT(*) AS c FROM commuter_verification WHERE verification_status = 'Pending'", []);
     $row = $q === false ? false : mbus_db_fetch_assoc($q);
     $oq = mbus_db_prepare($conn, "SELECT
-            (SELECT COUNT(*) FROM operator_application WHERE application_status::text = 'Pending')
-          + (SELECT COUNT(*) FROM conductor_application WHERE application_status::text = 'Pending') AS c", []);
+            (SELECT COUNT(*) FROM operator_application WHERE application_status::text = 'Pending' AND email_verified = TRUE)
+          + (SELECT COUNT(*) FROM conductor_application WHERE application_status::text = 'Pending' AND email_verified = TRUE) AS c", []);
     $orow = $oq === false ? false : mbus_db_fetch_assoc($oq);
     require_once dirname(__DIR__) . '/Includes/gcash_manual.php';
     $counts = [

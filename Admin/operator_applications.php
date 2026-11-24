@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo = $conn->pdo;
         try {
             $pdo->beginTransaction();
-            $st = $pdo->prepare("SELECT * FROM operator_application WHERE application_id = ? AND application_status::text = 'Pending' FOR UPDATE");
+            $st = $pdo->prepare("SELECT * FROM operator_application WHERE application_id = ? AND email_verified = TRUE AND application_status::text = 'Pending' FOR UPDATE");
             $st->execute([$id]);
             $app = $st->fetch(PDO::FETCH_ASSOC);
             if (!$app) throw new RuntimeException('That application was already reviewed.');
@@ -77,9 +77,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $opts = ['pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected'];
 $f = $_GET['status'] ?? 'pending'; if ($f !== 'all' && !isset($opts[$f])) $f = 'pending';
 $counts = array_fill_keys(array_keys($opts), 0);
-$cq = mbus_db_prepare($conn, "SELECT LOWER(application_status::text) AS s, COUNT(*) AS c FROM operator_application GROUP BY 1", []);
+$cq = mbus_db_prepare($conn, "SELECT LOWER(application_status::text) AS s, COUNT(*) AS c FROM operator_application WHERE email_verified = TRUE GROUP BY 1", []);
 while ($cq !== false && ($r = mbus_db_fetch_assoc($cq))) if (isset($counts[$r['s']])) $counts[$r['s']] = (int)$r['c'];
-$where = $f === 'all' ? '' : "WHERE LOWER(application_status::text) = '" . $f . "'";
+$where = "WHERE email_verified = TRUE" . ($f === 'all' ? '' : " AND LOWER(application_status::text) = '" . $f . "'");
 $rows = [];
 $q = mbus_db_prepare($conn, "SELECT application_id, full_name, email, phone_number, address, license_number, license_expiry, vehicle_type, vehicle_plate_number,
     (license_document_b64 IS NOT NULL AND license_document_b64 <> '') AS has_lic, (vehicle_document_b64 IS NOT NULL AND vehicle_document_b64 <> '') AS has_veh,
