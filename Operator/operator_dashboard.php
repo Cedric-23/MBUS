@@ -155,6 +155,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
                         </div>
                 <a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
                         <a href="analytics.php" role="menuitem"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a>
+                        <a href="reports.php" role="menuitem"><i class="fa fa-file-lines" aria-hidden="true"></i> Reports</a>
                         <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>
