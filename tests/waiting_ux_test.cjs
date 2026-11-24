@@ -9,6 +9,9 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const commuterWaiting = read('Commuter/waiting.php');
 const waitingBoardJs = read('Assets/js/commuter_waiting_board.js');
 const waitingBoardCss = read('Assets/css/commuter_waiting_board.css');
+const commuterWaitingHeaderCss = read('Assets/css/commuter_waiting_header.css');
+const staffWaitingCss = read('Assets/css/staff_waiting.css');
+const sharedWaitingBoardCss = read('Assets/css/waiting_board.css');
 const bottomNavCss = read('Assets/css/bottom-nav.css');
 const pickupPage = read('Commuter/pickup.php');
 const pickupJs = read('Assets/js/commuter_pickup.js');
@@ -50,6 +53,10 @@ assert.match(commuterWaiting, /<h1>Waiting<\/h1>/);
 assert.match(commuterWaiting, /aria-current="page"/);
 assert.equal((commuterWaiting.match(/<nav class="bottom-nav"/g) || []).length, 1, 'commuter Waiting page must render one bottom navigation');
 assert.equal((commuterWaiting.match(/class="profile-menu-wrap"/g) || []).length, 1, 'commuter Waiting page must render one account control');
+assert.match(waitingBoardCss, /\.cwb-icon-button \{[^}]*width:\s*44px;[^}]*height:\s*44px;[^}]*border-radius:\s*50%/s,
+    'commuter Waiting refresh control must be a 44px circle');
+assert.match(commuterWaitingHeaderCss, /\.cm \.cwb-header \.profile-trigger\{[^}]*width:44px!important;[^}]*height:44px!important;/,
+    'commuter Waiting profile control must be 44px');
 assert.doesNotMatch(commuterWaiting, /pickupMap|Mark me as waiting|Update my spot/);
 assert.match(bottomNavCss, /--bottom-nav-height:\s*58px/);
 assert.match(bottomNavCss, /bottom:\s*calc\(10px \+ env\(safe-area-inset-bottom\)\)/);
@@ -157,7 +164,13 @@ assert.match(staffView, /class="bottom-nav-item active" aria-current="page"/);
 assert.equal((staffView.match(/<nav class="bottom-nav"/g) || []).length, 1, 'staff Waiting page must render one bottom navigation');
 assert.equal((staffView.match(/class="profile-menu-wrap"/g) || []).length, 1, 'staff Waiting page must render one account control');
 assert.match(unifiedCss, /\.staff-wait-page \.sw-bar \.profile-menu-wrap\{[^}]*position:relative!important;[^}]*top:auto!important;[^}]*right:auto!important;/);
-assert.match(unifiedCss, /\.staff-wait-page \.sw-bar \.profile-trigger\{[^}]*width:42px!important;[^}]*height:42px!important;/);
+assert.match(staffWaitingCss, /\.sw-icon-btn \{[^}]*width:\s*44px;[^}]*height:\s*44px;[^}]*border-radius:\s*50%/s,
+    'staff Waiting refresh control must be a 44px circle');
+assert.match(staffWaitingCss, /\.sw-bar \.profile-trigger \{[^}]*width:\s*44px;[^}]*height:\s*44px;[^}]*min-width:\s*44px;[^}]*min-height:\s*44px/s,
+    'staff Waiting profile control must be 44px');
+assert.match(sharedWaitingBoardCss, /\.board-refresh \{[^}]*width:\s*44px;[^}]*height:\s*44px;[^}]*border-radius:\s*50%/s,
+    'shared Waiting board refresh control must be a 44px circle');
+assert.match(unifiedCss, /\.staff-wait-page \.sw-bar \.profile-trigger\{[^}]*width:44px!important;[^}]*height:44px!important;/);
 assert.match(staffView, /unify\.css\?v=.*filemtime/);
 assert.doesNotMatch(adminDash, /Waiting pickups/);
 assert.doesNotMatch(adminSchedules, /Waiting pickups/);

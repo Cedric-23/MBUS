@@ -33,7 +33,7 @@ body:not(:has(.sidebar)):not(.commuter-waiting-board):not(.staff-wait-page) .pro
 
 /* Staff map toolbar: keep one account control in the flex row so it cannot overlap the refresh/filter controls. */
 .staff-wait-page .sw-bar .profile-menu-wrap{position:relative!important;top:auto!important;right:auto!important;left:auto!important;bottom:auto!important;z-index:2;margin:0!important;flex:none}
-.staff-wait-page .sw-bar .profile-trigger{width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important}
+.staff-wait-page .sw-bar .profile-trigger{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important}
 .staff-wait-page .sw-bar .profile-avatar{width:30px!important;height:30px!important}
 .staff-wait-page .sw-bar .profile-menu{top:calc(100% + 8px)!important;right:0!important;left:auto!important}
 

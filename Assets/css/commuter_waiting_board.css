@@ -10,9 +10,9 @@ body.commuter-waiting-board .bottom-nav { border-color: #edf0f4; background: #ff
 .cwb-title { flex: 1; min-width: 0; }
 .cwb-title h1 { margin: 0; color: #111b2e; font-size: 1.25rem; line-height: 1.2; }
 .cwb-title p { margin: 2px 0 0; color: #758196; font-size: .8125rem; }
-.cwb-icon-button { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #dfe5ec; border-radius: 50%; background: #fff; color: #1e3a5f; cursor: pointer; }
+.cwb-icon-button { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #dfe5ec; border-radius: 50%; background: #fff; color: #1e3a5f; cursor: pointer; }
 .cwb-icon-button:disabled { opacity: .55; }
-.cwb-header .profile-trigger { width: 42px; height: 42px; min-width: 42px; min-height: 42px; padding: 0; border-radius: 50%; }
+.cwb-header .profile-trigger { width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; border-radius: 50%; }
 .cwb-location-pill { position: fixed; z-index: 450; top: calc(80px + env(safe-area-inset-top)); right: 12px; display: inline-flex; align-items: center; gap: 9px; max-width: calc(100vw - 24px); padding: 10px 15px; border: 1px solid rgba(23,43,77,.06); border-radius: 999px; background: rgba(255,255,255,.96); color: #172b4d; box-shadow: 0 3px 12px rgba(0,0,0,.12); font-size: .875rem; font-weight: 700; }
 .cwb-status-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #18ae72; }
 .cwb-status-dot.is-off { background: #f0a228; }

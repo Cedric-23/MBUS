@@ -18,13 +18,13 @@
 .board-sub { margin: 4px 0 0; font-size: 0.78rem; color: var(--board-muted); }
 
 .board-refresh {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   margin-right: 6px;
   display: grid;
   place-items: center;
   border: 1px solid var(--board-line);
-  border-radius: 12px;
+  border-radius: 50%;
   background: #fff;
   color: var(--board-navy);
   font-size: 0.9rem;
