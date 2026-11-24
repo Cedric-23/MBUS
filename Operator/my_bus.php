@@ -23,6 +23,12 @@ function mbus_bus_photo_upload(string $field, ?string &$error): ?array {
     return ['b64' => base64_encode($data), 'mime' => $mime];
 }
 
+function mbus_bus_schedule_locked($conn, int $busId): bool {
+    $q = mbus_db_prepare($conn, "SELECT COUNT(*) AS n FROM schedule
+        WHERE bus_id = ? AND schedule_status = 'Active' AND trip_status IN ('Scheduled','Boarding','Departed')", [$busId]);
+    return $q !== false && (int)(mbus_db_fetch_assoc($q)['n'] ?? 0) > 0;
+}
+
 /* ---- this driver's buses ---- */
 $buses = [];
 $bq = mbus_db_prepare($conn, "SELECT b.bus_id, b.bus_number, b.bus_type, b.capacity, b.seat_layout,
@@ -33,7 +39,7 @@ while ($bq !== false && ($r = mbus_db_fetch_assoc($bq))) $buses[(int)$r['bus_id'
 $busId = (int)($_POST['bus_id'] ?? $_GET['bus_id'] ?? 0);
 if (!isset($buses[$busId])) $busId = $buses ? (int)array_key_first($buses) : 0;
 
-$ok = ''; $err = '';
+$ok = ''; $err = ''; $warning = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $busId > 0) {
     if (!csrf_validate_token()) {
         $err = 'Your session expired. Reload the page and try again.';
@@ -54,15 +60,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $busId > 0) {
                 $newFlat = [];
                 foreach ($newLayout as $row) foreach ($row as $cell) $newFlat[] = (bool)$cell;
                 if ($currentFlat !== $newFlat) {
-                    $busy = mbus_db_prepare($conn, "SELECT COUNT(*) AS n FROM reservation r JOIN schedule s ON s.schedule_id = r.schedule_id
-                        WHERE s.bus_id = ? AND r.status IN ('Pending','Paid','Confirmed','Boarded') AND s.trip_status IN ('Scheduled','Boarding','Departed')", [$busId]);
-                    $n = $busy !== false ? (int)(mbus_db_fetch_assoc($busy)['n'] ?? 0) : 0;
-                    if ($n > 0) {
-                        $err = 'This bus has booked passengers on an upcoming or running trip, so the seats can\'t change yet. Update the layout after that trip.';
+                    if (mbus_bus_schedule_locked($conn, $busId)) {
+                        $warning = 'This bus is assigned to an active schedule, so its layout cannot be changed until that schedule is completed.';
                     } else {
-                        $updates[] = 'seat_layout = ?'; $params[] = json_encode($newLayout);
-                        $updates[] = 'capacity = ?'; $params[] = $count;
-                        $notes[] = "seat layout ($count seats)";
+                        $busy = mbus_db_prepare($conn, "SELECT COUNT(*) AS n FROM reservation r JOIN schedule s ON s.schedule_id = r.schedule_id
+                            WHERE s.bus_id = ? AND r.status IN ('Pending','Paid','Confirmed','Boarded') AND s.trip_status IN ('Scheduled','Boarding','Departed')", [$busId]);
+                        $n = $busy !== false ? (int)(mbus_db_fetch_assoc($busy)['n'] ?? 0) : 0;
+                        if ($n > 0) {
+                            $warning = 'This bus has booked passengers on an upcoming or running trip, so the layout cannot be changed until that trip is completed.';
+                        } else {
+                            $updates[] = 'seat_layout = ?'; $params[] = json_encode($newLayout);
+                            $updates[] = 'capacity = ?'; $params[] = $count;
+                            $notes[] = "seat layout ($count seats)";
+                        }
                     }
                 }
             }
@@ -86,6 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $busId > 0) {
 }
 
 $bus = $buses[$busId] ?? null;
+$busOnSchedule = $bus ? mbus_bus_schedule_locked($conn, $busId) : false;
 $layout = [];
 if ($bus) {
     $saved = $bus['seat_layout'] ? mbus_seat_layout_parse($bus['seat_layout']) : null;
@@ -132,22 +143,24 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Driver'));
 
     <?php if ($ok): ?><div class="alert alert-success mb-alert" role="status"><?php echo htmlspecialchars($ok); ?></div><?php endif; ?>
     <?php if ($err): ?><div class="alert alert-error mb-alert" role="alert"><?php echo htmlspecialchars($err); ?></div><?php endif; ?>
+    <?php if ($warning): ?><div class="mb-warning" role="status"><?php echo htmlspecialchars($warning); ?></div><?php endif; ?>
 
     <form method="POST" class="mb-form">
         <?php csrf_field(); ?>
         <input type="hidden" name="bus_id" value="<?php echo (int)$busId; ?>">
 
         <section class="card mb-card">
-            <section class="seat-builder" data-seat-builder aria-labelledby="seat-builder-title">
+            <section class="seat-builder" data-seat-builder data-layout-locked="<?php echo $busOnSchedule ? '1' : '0'; ?>" aria-labelledby="seat-builder-title">
                 <div class="seat-builder-head">
                     <div><h3 id="seat-builder-title">Seat layout</h3><p>Tap a seat to add or remove it. The aisle sits between the two seats on each side.</p></div>
                     <div class="seat-builder-actions"><button type="button" class="seat-layout-button" data-seat-add-row>Add Row</button><button type="button" class="seat-layout-button" data-seat-minus-row>Minus Row</button><button type="button" class="seat-layout-button" data-seat-reset>Reset</button></div>
                 </div>
-                <div class="seat-builder-meta"><span data-seat-count aria-live="polite"><?php echo (int)$bus['capacity']; ?> seats selected</span><span>1–40 seats · up to 2 doors</span></div>
+                <div class="seat-builder-meta"><span data-seat-count aria-live="polite"><?php echo (int)$bus['capacity']; ?> seats selected</span><span data-seat-warning class="seat-layout-warning" role="status"></span><span>1–40 seats · up to 2 doors</span></div>
                 <div class="seat-layout-preview" data-seat-grid role="grid" aria-label="Bus seat layout"></div>
                 <input type="hidden" name="seat-layout" data-seat-layout value="<?php echo htmlspecialchars(json_encode($layout), ENT_QUOTES); ?>">
             </section>
-            <p class="mb-hint">Changing seats updates the bus's seat count. It is blocked while passengers are booked on an upcoming or running trip.</p>
+            <?php if ($busOnSchedule): ?><div class="mb-warning" role="status">This bus is on an active schedule. You cannot change its layout until the schedule is completed.</div><?php endif; ?>
+            <p class="mb-hint">Changing seats updates the bus's seat count. Layout changes are unavailable while this bus is on an active schedule or has booked passengers on an upcoming or running trip.</p>
         </section>
 
         <div class="mb-save"><button type="submit" class="btn btn-primary">Save changes</button></div>

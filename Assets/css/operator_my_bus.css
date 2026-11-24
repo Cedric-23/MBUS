@@ -3,6 +3,8 @@
 .mybus-page .mb-card h3{margin:14px 0 2px;font-size:1rem}
 .mybus-page .mb-hint{margin:2px 0 0;color:#64748b;font-size:.85rem}
 .mybus-page .mb-alert{max-width:720px;margin:0 auto 12px}
+.mybus-page .mb-warning{max-width:720px;margin:10px auto;padding:11px 14px;border:1px solid rgba(245,158,11,.35);border-radius:12px;background:var(--color-warning-light,#fff7e6);color:var(--color-warning-dark,#8a5a00);font-size:.88rem;line-height:1.45}
+.mybus-page .seat-layout-warning{color:var(--color-warning-dark,#8a5a00);font-size:.8rem;font-weight:600}
 .mybus-page .mb-tabs{max-width:720px;margin:0 auto 14px;display:flex;gap:8px;flex-wrap:wrap}
 .mybus-page .mb-tabs a{display:grid;gap:2px;min-width:130px;padding:10px 16px;border-radius:16px;background:#fff;color:#25467f;font-weight:600;font-size:.85rem;text-decoration:none;box-shadow:0 1px 6px rgba(47,111,228,.12)}
 .mybus-page .mb-tabs a.active{background:#2f6fe4;color:#fff}

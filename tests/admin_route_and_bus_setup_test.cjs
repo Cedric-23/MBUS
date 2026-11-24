@@ -49,6 +49,13 @@ assert.match(setupJs, /const MAX_SEATS = 40, MAX_DOORS = 2/,
     'the builder must use the 40-seat and two-door limits');
 assert.match(setupJs, /wouldCreateThirdDoor/,
     'the builder must block creating a third door before changing the seat');
+assert.match(setupJs, /Maximum of 2 doors reached/,
+    'the builder must show an inline two-door warning');
+const myBusPage = read('Operator/my_bus.php');
+assert.match(myBusPage, /mbus_bus_schedule_locked/,
+    'My Bus must check whether its bus is on an active schedule');
+assert.match(myBusPage, /cannot be changed until that schedule is completed/,
+    'My Bus must explain the schedule layout lock inline');
 /* The driver's cell is part of the bus design: the builder never deletes front-row seats to make room for it,
    and every seat map (My Bus, Riders, commuter) shows the same driver and door tiles. */
 const layoutHelper = read('Includes/seat_layout.php');

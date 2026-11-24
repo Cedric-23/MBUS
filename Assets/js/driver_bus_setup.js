@@ -55,6 +55,8 @@
     const grid = builder.querySelector('[data-seat-grid]');
     const dataInput = builder.querySelector('[data-seat-layout]');
     const countLabel = builder.querySelector('[data-seat-count]');
+    const doorWarning = builder.querySelector('[data-seat-warning]');
+    const layoutLocked = builder.dataset.layoutLocked === '1';
     const addRow = builder.querySelector('[data-seat-add-row]');
     const minusRow = builder.querySelector('[data-seat-minus-row]');
     const reset = builder.querySelector('[data-seat-reset]');
@@ -185,8 +187,10 @@
                     door.style.gridColumn = start === 0 ? '1 / 3' : '4 / 6';
                     door.setAttribute('role', 'gridcell');
                     door.setAttribute('aria-label', `Row ${rowIndex + 1}: door, no seats. Tap to add the two seats back`);
+                    door.disabled = layoutLocked;
                     door.textContent = 'Door';
                     door.addEventListener('click', () => {
+                        if (layoutLocked) return;
                         layout[rowIndex][start] = true;
                         layout[rowIndex][start + 1] = true;
                         render();
@@ -207,10 +211,11 @@
                     button.setAttribute('aria-label', `Row ${rowIndex + 1}, seat ${seatIndex + 1}: ${active ? `included as seat ${number}` : 'removed'}`);
                     const other = seatIndex === start ? start + 1 : start;
                     const wouldCreateThirdDoor = active && !row[other] && doorTotal() >= MAX_DOORS;
-                    button.disabled = wouldCreateThirdDoor;
+                    button.disabled = layoutLocked || wouldCreateThirdDoor;
                     if (wouldCreateThirdDoor) button.setAttribute('aria-label', 'Maximum of 2 doors reached; this seat cannot be removed');
                     button.textContent = active ? String(number) : '—';
                     button.addEventListener('click', () => {
+                        if (layoutLocked) return;
                         if (active && !layout[rowIndex][other] && doorTotal() >= MAX_DOORS) return;
                         layout[rowIndex][seatIndex] = !layout[rowIndex][seatIndex];
                         render();
@@ -225,13 +230,18 @@
         const problem = limitMessage();
         countLabel.textContent = problem || `${total} seat${total === 1 ? '' : 's'} selected · ${doors} door${doors === 1 ? '' : 's'}`;
         countLabel.style.color = problem ? '#b42318' : '';
+        if (doorWarning) {
+            doorWarning.textContent = doors >= MAX_DOORS ? 'Maximum of 2 doors reached. Remove a door before adding another.' : '';
+            doorWarning.hidden = doors < MAX_DOORS;
+        }
         dataInput.value = JSON.stringify(layout);
-        addRow.disabled = layout.length >= 25;
-        minusRow.disabled = layout.length <= 1;
+        addRow.disabled = layoutLocked || layout.length >= 25;
+        minusRow.disabled = layoutLocked || layout.length <= 1;
+        reset.disabled = layoutLocked;
     }
 
     addRow.addEventListener('click', () => {
-        if (layout.length < 25) {
+        if (!layoutLocked && layout.length < 25) {
             layout.push([true, true, true, true]);
             render();
             grid.lastElementChild?.scrollIntoView({ block: 'nearest' });
@@ -239,13 +249,14 @@
     });
 
     minusRow.addEventListener('click', () => {
-        if (layout.length > 1) {
+        if (!layoutLocked && layout.length > 1) {
             layout.pop();
             render();
         }
     });
 
     reset.addEventListener('click', () => {
+        if (layoutLocked) return;
         layout = defaultLayout();
         render();
     });
