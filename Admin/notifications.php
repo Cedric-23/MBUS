@@ -10,6 +10,11 @@ $uid = (int)$_SESSION['user_id'];
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     if (!csrf_validate_token()) { http_response_code(403); exit('{"error":"csrf"}'); }
+    if (($_POST['action'] ?? '') === 'clear') {
+        // "Clear all": remove every notification of the logged-in admin (only their own rows).
+        mbus_db_prepare($conn, "DELETE FROM notification WHERE user_id = ?", [$uid]);
+        exit('{"ok":true,"cleared":true}');
+    }
     mbus_db_prepare($conn, "UPDATE notification SET status = 'Read' WHERE user_id = ? AND status = 'Unread'", [$uid]);
     exit('{"ok":true}');
 }
