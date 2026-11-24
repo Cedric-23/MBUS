@@ -263,12 +263,33 @@
         const known = STOP_COORDS[key];
         if (known && validPt(known[0], known[1])) return { p: [Number(known[0]), Number(known[1])], approx: false };
         const trip = schedules.find(s => Number(s.schedule_id) === Number(r.schedule_id));
-        if (!trip || !routeData || routeKey.indexOf(String(trip.schedule_id) + ':') !== 0) return null;
+        if (!trip) return null;
+        /* Each trip keeps its own road route, so pins show for every bus, not only the one picked in the filter. */
+        const own = tripRoutes[trip.schedule_id];
+        const road = own && own.route ? own.route : (routeData && routeKey.indexOf(String(trip.schedule_id) + ':') === 0 ? routeData : null);
+        if (!road) return null;
         const stops = Array.isArray(trip.stops) ? trip.stops : [];
         const i = stops.indexOf(key);
         if (i < 0 || stops.length < 2) return null;
-        const p = alongRoute(routeData, i / (stops.length - 1));
+        const p = alongRoute(road, i / (stops.length - 1));
         return p ? { p, approx: true } : null;
+    }
+    /* Road route per trip (schedule_id -> {key, route}), loaded once so every rider's pickup and drop-off pin can be placed. */
+    const tripRoutes = {};
+    function ensureTripRoute(trip) {
+        const raw = [trip.origin_lat, trip.origin_lng, trip.destination_lat, trip.destination_lng];
+        if (raw.some(v => v === null || v === undefined || String(v).trim() === '') || !window.MBUSRouting) return;
+        const o = { lat: Number(trip.origin_lat), lng: Number(trip.origin_lng) }, d = { lat: Number(trip.destination_lat), lng: Number(trip.destination_lng) };
+        if (![o.lat, o.lng, d.lat, d.lng].every(Number.isFinite)) return;
+        const key = [o.lat, o.lng, d.lat, d.lng].join(',');
+        const cur = tripRoutes[trip.schedule_id];
+        if (cur && cur.key === key) return;
+        tripRoutes[trip.schedule_id] = { key };
+        window.MBUSRouting.getDrivingRoute(o, d).then(route => {
+            if (!tripRoutes[trip.schedule_id] || tripRoutes[trip.schedule_id].key !== key) return;
+            tripRoutes[trip.schedule_id] = { key, route };
+            render();
+        }).catch(() => {});
     }
     const reservationKey = r => String(r.user_id) + ':' + String(r.schedule_id);
     function reservationSeats(r) {
@@ -382,6 +403,7 @@
             list.append(li);
         });
 
+        if (view !== 'buses') { const seen = new Set(resRows.map(r => Number(r.schedule_id))); schedules.filter(t => seen.has(Number(t.schedule_id))).forEach(ensureTripRoute); }
         reservationPins(view === 'buses' ? [] : resRows, pts);
         updateCompact(reqs);
         if (!fittedOnce && pts.length) { fit(pts); fittedOnce = true; }

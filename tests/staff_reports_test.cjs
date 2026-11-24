@@ -19,3 +19,5 @@ const adminGc = read('Admin/gcash_approval.php');
 assert(!/sms|webhook|auto-confirm/i.test(adminGc), 'admin GCash page must not show the SMS auto-confirm feature');
 assert(/http_response_code\(410\)/.test(read('api/gcash_sms_webhook.php')), 'SMS webhook must stay switched off');
 assert(!/Commuters pay into this account/.test(gs), 'driver GCash page must not show the extra note');
+const wjs = read('Assets/js/staff_waiting.js');
+assert(/tripRoutes\[trip\.schedule_id\]/.test(wjs) && /forEach\(ensureTripRoute\)/.test(wjs), 'Waiting map must load every trip route so drop-off pins show without picking a bus');
