@@ -205,7 +205,6 @@ $busLabel = static fn($n) => ctype_digit((string)$n) ? 'Bus ' . $n : $n;
         <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span><?php echo mbus_admin_dot($conn); ?></button>
         <div class="profile-menu" id="profileMenu" role="menu">
             <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $h($_SESSION['full_name'] ?? $staffLabel); ?></span><span class="profile-menu-role"><?php echo $staffLabel; ?> account</span></div>
-            <a href="analytics.php" role="menuitem"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a>
             <a href="reports.php" role="menuitem" aria-current="page"><i class="fa fa-file-lines" aria-hidden="true"></i> Reports</a>
             <?php if ($isConductor): ?><a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a><?php else: ?><a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a><?php endif; ?>
             <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
