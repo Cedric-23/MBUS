@@ -232,11 +232,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if ($e = mbus_check_password($password)) $errors['driver-password'] = $e;
         elseif ($password !== $confirm) $errors['driver-confirm'] = 'Passwords do not match.';
         if ($e = mbus_check_license_number($license_number)) $errors['license-number'] = $e;
-        /* Expiry is optional: some licenses have none. When given it must be a real, unexpired date. */
+        /* ID expiry is optional: some IDs have none. When given it must be a real, unexpired date. */
         $d = DateTime::createFromFormat('Y-m-d', $license_expiry);
         if ($license_expiry === '') { /* nothing to check */ }
         elseif (!$d || $d->format('Y-m-d') !== $license_expiry) $errors['license-expiry'] = 'Enter a valid expiry date or leave it blank.';
-        elseif ($license_expiry < date('Y-m-d')) $errors['license-expiry'] = 'This license has expired. Apply again with a valid license.';
+        elseif ($license_expiry < date('Y-m-d')) $errors['license-expiry'] = 'This ID has expired. Apply again with a valid ID.';
         elseif ($license_expiry > date('Y-m-d', strtotime('+15 years'))) $errors['license-expiry'] = 'That expiry date is too far ahead. Check the year.';
         if (!in_array($vehicle_type, ['Ordinary', 'Aircon'], true)) $errors['vehicle-type'] = 'Choose a bus type (Ordinary or Aircon).';
         if ($e = mbus_check_plate($plate)) $errors['vehicle-plate'] = $e;
@@ -569,7 +569,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         <i class="input-icon" data-lucide="user"></i>
                                     <?= mbus_field_error($errors, 'license-number') ?></div>
                                     <div class="license-expiry">
-                                        <label class="input-label">License Expiry Date <span class="optional-tag">(if applicable)</span></label>
+                                        <label class="input-label">ID Expiry Date <span class="optional-tag">(if applicable)</span></label>
                                         <input type="date" name="license-expiry" min="<?= date('Y-m-d') ?>" value="<?= reg_old('license-expiry') ?>"/>
                                         <i class="input-icon" data-lucide="calendar"></i>
                                     <?= mbus_field_error($errors, 'license-expiry') ?></div>
