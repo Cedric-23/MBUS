@@ -31,7 +31,14 @@ for (const link of ['admin_dashboard.php', 'manage_schedules.php', 'manage_buses
 }
 assert.match(announcements, /class="profile-trigger"/, 'Admin announcements must keep the account menu trigger');
 assert.match(announcements, /id="profileMenu"/, 'Admin announcements must render the account dropdown');
-assert.match(announcements, /href="announcements\.php" class="bottom-nav-item active"/, 'Admin announcements must mark Updates active');
+const adminDefaultNav = ['admin_dashboard.php', 'manage_schedules.php', 'manage_buses.php', 'manage_operators.php', 'waiting.php'];
+for (const page of [announcements, read('Admin/live_map.php')]) {
+  for (const link of adminDefaultNav) {
+    assert.match(page, new RegExp(`href="${link}"[^>]*class="bottom-nav-item"`), `Admin pages must keep the default ${link} navigation button`);
+  }
+  assert.doesNotMatch(page, /<span>(?:Updates|Live)<\/span>/, 'Admin pages must not introduce a role-specific bottom tab');
+}
+assert.match(read('Admin/live_map.php'), /class="profile-trigger"/, 'Admin Live Map must keep the account menu trigger');
 assert.match(dashboard, /href="gcash_approval\.php"/, 'Admin dashboard must expose GCash account management directly');
 assert.match(gcash, /mbus_gcash_pending\(\$conn\)/, 'Admin GCash page must read pending Conductor changes');
 assert.match(gcash, /name="approve"/, 'Admin GCash page must provide approval');

@@ -4,6 +4,8 @@ if (!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !==
     header('Location: ../login.php');
     exit;
 }
+include_once __DIR__ . '/../config/db_connect.php';
+include_once __DIR__ . '/../Includes/admin_menu.php';
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -17,20 +19,37 @@ if (!isset($_SESSION['user_id']) || strtolower($_SESSION['user_type'] ?? '') !==
 </style>
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
 </head>
-<body>
+<body class="stf has-bottom-nav">
 <main class="wrap">
+    <header class="page-header" role="banner">
+        <div class="page-header-left"><h1>Live operations</h1></div>
+        <div class="page-header-right"><div class="profile-menu-wrap">
+            <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
+                <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span><?php echo mbus_admin_dot($conn); ?>
+            </button>
+            <div class="profile-menu" id="profileMenu" role="menu">
+                <div class="profile-menu-header">
+                    <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
+                    <span class="profile-menu-role">Admin account</span>
+                </div>
+                <?php echo mbus_admin_approvals_link($conn); ?>
+                <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
+            </div>
+        </div></div>
+    </header>
     <p class="eyebrow"><i class="fa fa-tower-broadcast"></i> Operations control</p>
-    <h1 class="title">Live operations</h1>
     <p class="muted">Monitor every active bus, onboard count, and passenger waiting for pickup.</p>
     <div id="map" class="map-summary" role="status"><i class="fa fa-location-dot"></i><span>Live operations map loading…</span></div>
     <div id="buses" class="grid"></div>
 </main>
-<nav class="bottom-nav">
+<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="admin_dashboard.php" class="bottom-nav-item"><i class="fa fa-home"></i><span>Home</span></a>
     <a href="manage_schedules.php" class="bottom-nav-item"><i class="fa fa-calendar"></i><span>Schedules</span></a>
-    <a href="live_map.php" class="bottom-nav-item active"><i class="fa fa-map-location-dot"></i><span>Live</span></a>
     <a href="manage_buses.php" class="bottom-nav-item"><i class="fa fa-bus"></i><span>Buses</span></a>
+    <a href="manage_operators.php" class="bottom-nav-item"><i class="fa fa-users"></i><span>Operators</span></a>
+    <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half"></i><span>Waiting</span></a>
 </nav>
+<script src="../Assets/js/app-header.js"></script>
 <script>
 const fallbackAvatar = '../Assets/images/mbus_icon.png';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

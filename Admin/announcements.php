@@ -128,8 +128,8 @@ $h = static fn($value) => htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <a href="admin_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
     <a href="manage_schedules.php" class="bottom-nav-item"><i class="fa fa-calendar" aria-hidden="true"></i><span>Schedules</span></a>
-    <a href="announcements.php" class="bottom-nav-item active" aria-current="page"><i class="fa fa-bullhorn" aria-hidden="true"></i><span>Updates</span></a>
     <a href="manage_buses.php" class="bottom-nav-item"><i class="fa fa-bus" aria-hidden="true"></i><span>Buses</span></a>
+    <a href="manage_operators.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Operators</span></a>
     <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
 </nav>
 <script src="../Assets/js/admin_list.js?v=<?php echo filemtime(__DIR__ . '/../Assets/js/admin_list.js'); ?>"></script>
