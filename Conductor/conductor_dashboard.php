@@ -17,8 +17,15 @@ $greeting = (int)date('G') < 12 ? 'Good morning' : ((int)date('G') < 18 ? 'Good 
 $bounds = mbus_local_bounds();
 
 $assignedBuses = 0;
+$assignedBusLabels = [];
 $assignedQuery = mbus_db_prepare($conn, 'SELECT COUNT(*) AS n FROM conductor_bus_assignments WHERE conductor_id = ?', [$conductorId]);
 if ($assignedQuery !== false && ($assignedRow = mbus_db_fetch_assoc($assignedQuery))) $assignedBuses = (int)$assignedRow['n'];
+$assignedBusQuery = mbus_db_prepare($conn, "SELECT b.bus_number
+    FROM conductor_bus_assignments cba JOIN buses b ON b.bus_id = cba.bus_id
+    WHERE cba.conductor_id = ? ORDER BY b.bus_number ASC", [$conductorId]);
+while ($assignedBusQuery !== false && ($assignedBusRow = mbus_db_fetch_assoc($assignedBusQuery))) {
+    $assignedBusLabels[] = (string)$assignedBusRow['bus_number'];
+}
 
 $stats = ['trips' => 0, 'booked' => 0, 'boarded' => 0];
 $statsQuery = mbus_db_prepare($conn, "SELECT COUNT(DISTINCT s.schedule_id) AS trips,
@@ -65,6 +72,24 @@ $tripQuery = mbus_db_prepare($conn, "SELECT s.schedule_id, s.departure_time, s.a
     LIMIT 5", [$conductorId, $bounds['today'], $bounds['tomorrow']]);
 while ($tripQuery !== false && ($trip = mbus_db_fetch_assoc($tripQuery))) $trips[] = $trip;
 $nextTrip = $trips[0] ?? null;
+$showingUpcoming = false;
+if (!$trips && $assignedBuses > 0) {
+    $upcomingQuery = mbus_db_prepare($conn, "SELECT s.schedule_id, s.departure_time, s.arrival_time, s.trip_status,
+            b.bus_number, b.capacity, r.origin, r.destination,
+            (SELECT COUNT(*) FROM reservation rv WHERE rv.schedule_id = s.schedule_id AND rv.status IN ('Paid', 'Confirmed', 'Boarded')) AS booked,
+            (SELECT COUNT(*) FROM reservation rv WHERE rv.schedule_id = s.schedule_id AND rv.status = 'Boarded') AS boarded
+        FROM schedule s
+        JOIN conductor_bus_assignments cba ON cba.bus_id = s.bus_id
+        JOIN buses b ON b.bus_id = s.bus_id
+        JOIN routes r ON r.route_id = s.route_id
+        WHERE cba.conductor_id = ? AND s.schedule_status = 'Active'
+          AND s.trip_status IN ('Scheduled', 'Boarding', 'Departed')
+          AND s.departure_time >= ?
+        ORDER BY s.departure_time ASC LIMIT 5", [$conductorId, $bounds['now']]);
+    while ($upcomingQuery !== false && ($upcomingTrip = mbus_db_fetch_assoc($upcomingQuery))) $trips[] = $upcomingTrip;
+    $nextTrip = $trips[0] ?? null;
+    $showingUpcoming = (bool)$trips;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -140,7 +165,7 @@ $nextTrip = $trips[0] ?? null;
         <section class="cond-highlight" aria-labelledby="condHighlightTitle">
             <?php if ($nextTrip): ?>
                 <div>
-                    <p><?php echo $nextTrip['trip_status'] === 'Departed' ? 'Trip in progress' : ($nextTrip['trip_status'] === 'Boarding' ? 'Boarding now' : 'Next trip today'); ?></p>
+                    <p><?php echo $nextTrip['trip_status'] === 'Departed' ? 'Trip in progress' : ($nextTrip['trip_status'] === 'Boarding' ? 'Boarding now' : ($showingUpcoming ? 'Next scheduled trip' : 'Next trip today')); ?></p>
                     <h2 id="condHighlightTitle"><?php echo htmlspecialchars($nextTrip['origin'] . ' to ' . $nextTrip['destination']); ?></h2>
                     <small><?php echo htmlspecialchars('Bus ' . $nextTrip['bus_number']); ?> · <?php echo date('g:i A', strtotime($nextTrip['departure_time'])); ?> departure</small>
                 </div>
@@ -149,7 +174,7 @@ $nextTrip = $trips[0] ?? null;
                 <div>
                     <p>Your duty board</p>
                     <h2 id="condHighlightTitle">No trips assigned today</h2>
-                    <small><?php echo $assignedBuses > 0 ? 'Your assigned buses will appear here when a trip is scheduled.' : 'Ask an administrator to assign a bus to your account.'; ?></small>
+                    <small><?php echo $assignedBuses > 0 ? 'Assigned bus' . ($assignedBuses === 1 ? '' : 'es') . ': ' . htmlspecialchars(implode(', ', $assignedBusLabels)) . '.' : 'Ask an administrator to assign a bus to your account.'; ?></small>
                 </div>
                 <span class="cond-highlight-icon" aria-hidden="true"><i class="fa fa-clipboard-check"></i></span>
             <?php endif; ?>
@@ -175,7 +200,7 @@ $nextTrip = $trips[0] ?? null;
         </a>
 
         <section class="home-section" aria-labelledby="todayTripsHeading">
-            <div class="home-section-head"><h2 id="todayTripsHeading">Trips today</h2><a href="../Operator/manage_trips.php">All trips</a></div>
+            <div class="home-section-head"><h2 id="todayTripsHeading"><?php echo $showingUpcoming ? 'Upcoming trips' : 'Trips today'; ?></h2><a href="../Operator/manage_trips.php">All trips</a></div>
             <?php if ($trips): ?>
             <ul class="soon-list">
                 <?php foreach ($trips as $trip):
