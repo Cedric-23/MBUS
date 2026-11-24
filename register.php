@@ -583,7 +583,6 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         </div>
                                         <div class="document-desc">
                                             <span class="document-name">Click to upload your updated license</span>
-                                            <span>JPG, JPEG, PNG, or PDF &middot; Max 3 MB</span>
                                         </div>
                                         <div class="document-input-button">
                                             <button type="button">Browse</button>
@@ -602,7 +601,6 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         <div class="upload-icon"><i data-lucide="camera"></i></div>
                                         <div class="document-desc">
                                             <span class="document-name">Upload a recent 2x2 picture</span>
-                                            <span>JPG or PNG &middot; Max 1 MB</span>
                                         </div>
                                         <div class="document-input-button">
                                             <button type="button">Browse</button>
@@ -623,7 +621,6 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         </div>
                                         <div class="document-desc">
                                             <span class="document-name">Upload your medical certificate and drug test</span>
-                                            <span>JPG, JPEG, PNG, or PDF &middot; Max 3 MB</span>
                                         </div>
                                         <div class="document-input-button">
                                             <button type="button">Browse</button>
@@ -644,7 +641,6 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         </div>
                                         <div class="document-desc">
                                             <span class="document-name">Upload your NBI clearance</span>
-                                            <span>JPG, JPEG, PNG, or PDF &middot; Max 3 MB</span>
                                         </div>
                                         <div class="document-input-button">
                                             <button type="button">Browse</button>
@@ -700,7 +696,6 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         </div>
                                         <div class="document-desc">
                                             <span class="document-name">Click to upload document</span>
-                                            <span>JPG, JPEG, PNG, or PDF &middot; Max 3 MB</span>
                                         </div>
                                         <div class="document-input-button">
                                             <button type="button">Browse</button>
@@ -718,7 +713,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         <label class="input-label" for="bus-photo-input">Bus Exterior Photo</label>
                                         <div class="upload-document-group">
                                             <div class="upload-icon"><i data-lucide="camera"></i></div>
-                                            <div class="document-desc"><span class="document-name">Upload a clear exterior photo</span><span>JPG or PNG · Max 768 KB</span></div>
+                                            <div class="document-desc"><span class="document-name">Upload a clear exterior photo</span></div>
                                             <div class="document-input-button"><button type="button">Browse</button><input id="bus-photo-input" type="file" name="bus_photo" accept="image/jpeg,image/png" data-max-bytes="786432" required/></div>
                                         </div>
                                         <?= mbus_field_error($errors, 'bus_photo') ?>
@@ -728,7 +723,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         <label class="input-label" for="interior-photo-input">Bus Interior Photo</label>
                                         <div class="upload-document-group">
                                             <div class="upload-icon"><i data-lucide="camera"></i></div>
-                                            <div class="document-desc"><span class="document-name">Show the passenger seating area</span><span>JPG or PNG · Max 768 KB</span></div>
+                                            <div class="document-desc"><span class="document-name">Show the passenger seating area</span></div>
                                             <div class="document-input-button"><button type="button">Browse</button><input id="interior-photo-input" type="file" name="interior_photo" accept="image/jpeg,image/png" data-max-bytes="786432" required/></div>
                                         </div>
                                         <?= mbus_field_error($errors, 'interior_photo') ?>
