@@ -168,14 +168,18 @@ function mbus_run_schema_upgrades(PDO $pdo): void {
 $dsn = "pgsql:host=$host;port=$port;dbname=$database;sslmode=require;connect_timeout=10";
 
 try {
-    $pdo = new PDO($dsn, $user, $password, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        // Reuse the database connection between requests. Opening a new TLS connection to a far-away database
-        // costs several round trips on EVERY page; a persistent connection pays that once per web worker.
-        PDO::ATTR_PERSISTENT => true,
-    ]);
-    // A persistent connection can come back mid-transaction (or aborted) if the previous request died; clear it.
+    // ONE connection per request, given back when the request ends. The Supabase pooler (session mode) only lets
+    // 15 clients connect at once, and a persistent connection stays checked out for the life of its web worker, so a
+    // few workers used every slot ("EMAXCONNSESSION max clients reached"). The session handler (Includes/db_session.php)
+    // already opened this request's connection, so reuse it instead of opening a second one.
+    $pdo = (class_exists('MbusDbSessionHandler', false) && MbusDbSessionHandler::$shared) ? MbusDbSessionHandler::$shared : null;
+    if (!$pdo) {
+        $pdo = new PDO($dsn, $user, $password, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]);
+    }
+    // Defensive: never start a page inside an aborted or leftover transaction.
     if ($pdo->inTransaction()) { try { $pdo->rollBack(); } catch (Throwable $e) { $pdo->exec('ROLLBACK'); } }
     $pdo->exec("SET TIME ZONE '" . str_replace("'", "''", mbus_timezone()) . "'");
     // Schema upgrades are ~35 extra round trips to the database. Run them once per version, not on every page.
