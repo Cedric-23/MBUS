@@ -169,6 +169,7 @@ $busLabel = static fn($n) => ctype_digit((string)$n) ? 'Bus ' . $n : $n;
     <link rel="stylesheet" href="../Assets/css/unify.css?v=3">
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/admin/reports.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/admin/reports.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/notif_bell.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/notif_bell.css'); ?>">
 </head>
 <body class="stf has-sidebar reports-page">
 <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar"><i class="fa fa-bars" aria-hidden="true"></i></button>
@@ -191,7 +192,11 @@ $busLabel = static fn($n) => ctype_digit((string)$n) ? 'Bus ' . $n : $n;
 <main class="main" role="main">
 <header class="page-header" role="banner">
     <div class="page-header-left"><h1>Reports</h1></div>
-    <div class="page-header-right"><div class="profile-menu-wrap">
+    <div class="page-header-right">                <div class="notif-wrap">
+                    <button class="notif-btn" type="button" id="notifBtn" aria-expanded="false" aria-controls="notifPanel" aria-label="Notifications"><i class="fa fa-bell" aria-hidden="true"></i><span class="notif-dot" id="notifDot" hidden>0</span></button>
+                    <div class="notif-panel" id="notifPanel" hidden><h2>Notifications</h2><ul id="notifList" class="notif-list"></ul></div>
+                </div>
+                <div class="profile-menu-wrap">
         <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span><?php echo mbus_admin_dot($conn); ?></button>
         <div class="profile-menu" id="profileMenu" role="menu">
             <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $h($_SESSION['full_name'] ?? 'Account'); ?></span><span class="profile-menu-role">Admin account</span></div>
@@ -279,4 +284,6 @@ set(t.getAttribute('aria-expanded')==='true');
 t.addEventListener('click',function(){set(m.hidden);});})();
 </script>
 <script src="../Assets/js/app-header.js"></script>
+<script src="../Assets/js/notifications.js"></script>
+
 </body></html>

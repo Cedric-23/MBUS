@@ -2,6 +2,7 @@
 /* Transportation updates for staff: announcements sent to everyone or to staff (operators, drivers, conductors). */
 require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../Includes/staff_nav.php';
+require_once __DIR__ . '/../Includes/csrf.php';
 require_once __DIR__ . '/../Includes/header_avatar.php';
 session_start();
 if (!isset($_SESSION['user_id'])) {
@@ -50,6 +51,8 @@ $h = static fn($value) => htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
         .updates-tag.is-service-resumed { background: #dff5e6; color: #1f7a3d; }
         .updates-empty { padding: 24px; text-align: center; color: #6b7a90; background: #fff; border-radius: 14px; }
     </style>
+    <link rel="stylesheet" href="../Assets/css/notif_bell.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/notif_bell.css'); ?>">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
 </head>
 <body class="stf has-sidebar has-bottom-nav staff-updates">
     <aside class="sidebar" id="sidebar" role="navigation" aria-label="<?php echo $h($staffLabel); ?> navigation">
@@ -63,7 +66,12 @@ $h = static fn($value) => htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
     <main class="main" role="main">
         <header class="page-header" role="banner">
             <div class="page-header-left"><h1>Service updates</h1></div>
-            <div class="page-header-right"><div class="profile-menu-wrap">
+            <div class="page-header-right">
+                <div class="notif-wrap">
+                    <button class="notif-btn" type="button" id="notifBtn" aria-expanded="false" aria-controls="notifPanel" aria-label="Notifications"><i class="fa fa-bell" aria-hidden="true"></i><span class="notif-dot" id="notifDot" hidden>0</span></button>
+                    <div class="notif-panel" id="notifPanel" hidden><h2>Notifications</h2><ul id="notifList" class="notif-list"></ul></div>
+                </div>
+<div class="profile-menu-wrap">
                 <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
                     <span class="profile-avatar" aria-hidden="true"><?php echo mbus_header_avatar('../'); ?></span>
                 </button>
@@ -97,5 +105,7 @@ $h = static fn($value) => htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
     </main>
     <?php echo mbus_staff_bottom_nav($staffRole, 'updates'); ?>
     <script src="../Assets/js/app-header.js"></script>
+<script>window.MBUS_NOTIFICATIONS_ENDPOINT = 'notifications.php';</script>
+<script src="../Assets/js/notifications.js"></script>
 </body>
 </html>

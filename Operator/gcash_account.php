@@ -74,6 +74,7 @@ $fullName = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Driver'));
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=3">
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/notif_bell.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/notif_bell.css'); ?>">
 </head>
 <body class="stf has-bottom-nav pay-page">
 
@@ -81,6 +82,11 @@ $fullName = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Driver'));
 <header class="page-header">
     <div class="page-header-left"><h1>GCash account</h1></div>
     <div class="page-header-right">
+                <div class="notif-wrap">
+                    <button class="notif-btn" type="button" id="notifBtn" aria-expanded="false" aria-controls="notifPanel" aria-label="Notifications"><i class="fa fa-bell" aria-hidden="true"></i><span class="notif-dot" id="notifDot" hidden>0</span></button>
+                    <div class="notif-panel" id="notifPanel" hidden><h2>Notifications</h2><ul id="notifList" class="notif-list"></ul></div>
+                </div>
+
         <div class="profile-menu-wrap">
             <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
                 <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span>
@@ -137,5 +143,7 @@ $fullName = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Driver'));
 
 <?php echo mbus_staff_bottom_nav('driver', ''); ?>
 <script src="../Assets/js/app-header.js"></script>
+<script>window.MBUS_NOTIFICATIONS_ENDPOINT = 'notifications.php';</script>
+<script src="../Assets/js/notifications.js"></script>
 </body>
 </html>

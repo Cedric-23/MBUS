@@ -100,8 +100,11 @@ $until = $co['submitted_at'] ? date('g:i A', strtotime($co['submitted_at']) + 15
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Confirming payment — MBUS</title>
+<meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
 <?php if($state === 'waiting'): ?><meta http-equiv="refresh" content="4"><?php endif; ?>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../Assets/css/notif_bell.css">
 <style>
 body{margin:0;min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr);place-items:center;padding:24px 0;box-sizing:border-box;background:linear-gradient(180deg,#e6efff,#f5f8ff);font-family:Inter,system-ui,sans-serif;color:#172b4d}
 .box{box-sizing:border-box;width:min(380px,calc(100vw - 32px));min-width:0;padding:28px 20px;border-radius:28px;background:#fff;box-shadow:0 14px 36px rgba(47,111,228,.14);text-align:center}
@@ -122,10 +125,15 @@ a.alt{background:none;color:#5b6b7e;font-weight:600;min-height:40px;margin-top:6
 .refform .shot{font-size:.82rem;color:#5b6b7e;display:grid;gap:4px}.refform .shot i{display:none}.refform input[type=file]{font-size:.8rem}
 .refform .cp{flex:none}.refform button.cp{background:#2f6fe4;border-color:#2f6fe4;color:#fff}.refform button.cp:disabled{opacity:.7}.refform input[type=file]::file-selector-button{margin-right:10px;padding:8px 14px;border:0;border-radius:999px;background:#eaf1ff;color:#2f6fe4;font:700 .8rem Inter,system-ui,sans-serif;cursor:pointer}.refform input[type=text]{letter-spacing:1px;text-align:center;font-weight:600}.ref .sent{margin:0 0 8px;font-size:.84rem;color:#1a7f37}.ref .err{margin:0 0 8px;font-size:.84rem;color:#b42318}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
+.payment-notif{position:fixed;top:16px;right:16px;z-index:20}.payment-notif .notif-btn{position:relative;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:#fff;color:#2f6fe4;box-shadow:0 2px 10px rgba(47,111,228,.18);cursor:pointer;font-size:1.1rem}.payment-notif .notif-btn[aria-expanded="true"]{background:#2f6fe4;color:#fff}.payment-notif .notif-dot{position:absolute;top:-3px;right:-3px;min-width:20px;height:20px;padding:0 5px;border:2px solid #fff;border-radius:10px;background:#e5484d;color:#fff;font-size:.65rem;font-weight:700}.payment-notif .notif-dot[hidden],.payment-notif .notif-panel[hidden]{display:none}.payment-notif .notif-panel{position:absolute;right:0;top:54px;width:min(280px,calc(100vw - 32px));padding:12px;border-radius:16px;background:#fff;box-shadow:0 12px 40px rgba(20,40,90,.2);text-align:left}.payment-notif .notif-panel h2{margin:2px 4px 8px;font-size:.9rem}.payment-notif .notif-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}.payment-notif .notif-list li{padding:8px 10px;border-radius:12px;background:#f5f8fe;font-size:.78rem;line-height:1.3}.payment-notif .notif-list small{display:block;color:#6b7a90;margin-top:2px}.payment-notif .notif-empty{margin:0;color:#6b7a90;font-size:.8rem}
 .approval{text-align:center;padding:6px 0 4px}.approval-ico{width:72px;height:72px;margin:0 auto 12px;border-radius:50%;background:#eaf1ff;display:grid;place-items:center}.approval-ico .ring{width:34px;height:34px;border:4px solid #cfe0fb;border-top-color:#2f6fe4;border-radius:50%;animation:s .9s linear infinite}.approval h1{margin:0 0 6px;font-size:1.3rem;color:#14213d}.approval p{margin:0 0 14px;font-size:.9rem;color:#4a5b78;line-height:1.5}.approval-amt{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:16px;background:#f1f6ff;margin-bottom:14px}.approval-amt span{color:#7a8aa6;font-size:.85rem}.approval-amt strong{font-size:1.2rem;color:#2f6fe4}.approval-btn{display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 13px;border-radius:999px;background:#2f6fe4;color:#fff;font-weight:700;text-decoration:none}details.paydetails{margin-top:14px;border-top:1px solid #e8effb;padding-top:10px}details.paydetails>summary{cursor:pointer;font-weight:600;color:#2f6fe4;font-size:.9rem;margin-bottom:8px}
 </style>
 </head>
 <body>
+<div class="payment-notif notif-wrap">
+    <button class="notif-btn" type="button" id="notifBtn" aria-expanded="false" aria-controls="notifPanel" aria-label="Notifications"><i class="fa fa-bell" aria-hidden="true"></i><span class="notif-dot" id="notifDot" hidden>0</span></button>
+    <div class="notif-panel" id="notifPanel" hidden><h2>Notifications</h2><ul id="notifList" class="notif-list"></ul></div>
+</div>
 <main class="box" role="status" aria-live="polite">
 <?php if($state === 'review'): ?>
     <?php $hasRef = !empty($co['reference_number']); ?>
@@ -200,5 +208,6 @@ var rf=document.querySelector('.refform');
 if(rf)rf.addEventListener('submit',function(){setTimeout(function(){var b=rf.querySelector('button[type=submit]');if(b){b.disabled=true;b.textContent='Sending…';}},0);});
 </script>
 <?php endif; ?>
+<script src="../Assets/js/notifications.js"></script>
 </body>
 </html>

@@ -119,12 +119,19 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Driver'));
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/main/driver_bus_setup.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/main/driver_bus_setup.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/operator_my_bus.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/operator_my_bus.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/notif_bell.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/notif_bell.css'); ?>">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
 </head>
 <body class="stf has-bottom-nav mybus-page">
 <main class="main" role="main">
     <header class="page-header" role="banner">
         <div class="page-header-left"><h1>My Bus</h1></div>
-        <div class="page-header-right"><div class="profile-menu-wrap">
+        <div class="page-header-right">
+                <div class="notif-wrap">
+                    <button class="notif-btn" type="button" id="notifBtn" aria-expanded="false" aria-controls="notifPanel" aria-label="Notifications"><i class="fa fa-bell" aria-hidden="true"></i><span class="notif-dot" id="notifDot" hidden>0</span></button>
+                    <div class="notif-panel" id="notifPanel" hidden><h2>Notifications</h2><ul id="notifList" class="notif-list"></ul></div>
+                </div>
+<div class="profile-menu-wrap">
             <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span></button>
             <div class="profile-menu" id="profileMenu" role="menu">
                 <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $name; ?></span><span class="profile-menu-role">Driver account</span></div>
@@ -175,4 +182,6 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Driver'));
   new MutationObserver(function () { var m = c.textContent.match(/\d+/); if (m) t.textContent = m[0]; }).observe(c, { childList: true, characterData: true, subtree: true }); })();
 </script>
 <script src="../Assets/js/operator_tracker.js"></script>
+<script>window.MBUS_NOTIFICATIONS_ENDPOINT = 'notifications.php';</script>
+<script src="../Assets/js/notifications.js"></script>
 </body></html>

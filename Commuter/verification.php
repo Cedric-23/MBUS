@@ -97,6 +97,10 @@ $can_submit = !$latest || $status === 'Rejected' || ($status === 'Approved' && $
         <h1>Get 20% off</h1>
     </div>
     <div class="page-header-right">
+        <div class="notif-wrap">
+            <button class="notif-btn" type="button" id="notifBtn" aria-expanded="false" aria-controls="notifPanel" aria-label="Notifications"><i class="fa fa-bell" aria-hidden="true"></i><span class="notif-dot" id="notifDot" hidden>0</span></button>
+            <div class="notif-panel" id="notifPanel" hidden><h2>Notifications</h2><ul id="notifList" class="notif-list"></ul></div>
+        </div>
         <div class="profile-menu-wrap">
             <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
                 <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span>
@@ -178,5 +182,6 @@ document.getElementById('verification_document').addEventListener('change', func
     <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
 </nav>
 <script src="../Assets/js/app-header.js"></script>
+<script src="../Assets/js/notifications.js"></script>
 </body>
 </html>

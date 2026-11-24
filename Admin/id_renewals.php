@@ -94,6 +94,7 @@ while ($q !== false && ($row = mbus_db_fetch_assoc($q))) $recent[] = $row;
         .ir-recent li{padding:10px 14px;border-radius:14px;background:#fff}
         .ir-bad{color:#b42318}.ir-ok{color:#1b7a46}
     </style>
+    <link rel="stylesheet" href="../Assets/css/notif_bell.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/notif_bell.css'); ?>">
 </head>
 <body class="stf has-sidebar">
 <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar"><i class="fa fa-bars" aria-hidden="true"></i></button>
@@ -115,7 +116,11 @@ while ($q !== false && ($row = mbus_db_fetch_assoc($q))) $recent[] = $row;
 <header class="page-header">
     <h1>Driver ID renewals</h1>
     <div class="page-header-right">
-        <div class="profile-menu-wrap">
+                        <div class="notif-wrap">
+                    <button class="notif-btn" type="button" id="notifBtn" aria-expanded="false" aria-controls="notifPanel" aria-label="Notifications"><i class="fa fa-bell" aria-hidden="true"></i><span class="notif-dot" id="notifDot" hidden>0</span></button>
+                    <div class="notif-panel" id="notifPanel" hidden><h2>Notifications</h2><ul id="notifList" class="notif-list"></ul></div>
+                </div>
+                <div class="profile-menu-wrap">
             <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
                 <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span><?php include_once dirname(__DIR__) . '/Includes/admin_menu.php'; echo mbus_admin_dot($conn); ?>
             </button>
@@ -170,5 +175,7 @@ while ($q !== false && ($row = mbus_db_fetch_assoc($q))) $recent[] = $row;
 function toggleSidebar(){var s=document.querySelector('.sidebar'),o=document.querySelector('.sidebar-overlay'),t=document.querySelector('.sidebar-toggle');var open=s.classList.toggle('open');o.classList.toggle('active');if(t)t.setAttribute('aria-expanded',open);document.body.style.overflow=open?'hidden':'';}
 </script>
 <script src="../Assets/js/app-header.js"></script>
+<script src="../Assets/js/notifications.js"></script>
+
 </body>
 </html>

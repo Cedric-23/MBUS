@@ -52,8 +52,17 @@ $config = [
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/commuter_pickup.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/commuter_pickup.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/commuter_modern.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/commuter_modern.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/notif_bell.css">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
+    <style>
+        .pickup-notif{position:fixed;top:16px;right:16px;z-index:30}.pickup-notif .notif-btn{position:relative;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:#fff;color:#2f6fe4;box-shadow:0 2px 10px rgba(47,111,228,.18);cursor:pointer;font-size:1.1rem}.pickup-notif .notif-btn[aria-expanded="true"]{background:#2f6fe4;color:#fff}.pickup-notif .notif-dot{position:absolute;top:-3px;right:-3px;min-width:20px;height:20px;padding:0 5px;border:2px solid #fff;border-radius:10px;background:#e5484d;color:#fff;font-size:.65rem;font-weight:700}.pickup-notif .notif-dot[hidden],.pickup-notif .notif-panel[hidden]{display:none}.pickup-notif .notif-panel{position:absolute;right:0;top:54px;width:min(280px,calc(100vw - 32px));padding:12px;border-radius:16px;background:#fff;box-shadow:0 12px 40px rgba(20,40,90,.2);text-align:left}.pickup-notif .notif-panel h2{margin:2px 4px 8px;font-size:.9rem}.pickup-notif .notif-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}.pickup-notif .notif-list li{padding:8px 10px;border-radius:12px;background:#f5f8fe;font-size:.78rem;line-height:1.3}.pickup-notif .notif-list small{display:block;color:#6b7a90;margin-top:2px}.pickup-notif .notif-empty{margin:0;color:#6b7a90;font-size:.8rem}
+    </style>
 </head>
 <body class="pickup-page cm">
+    <div class="pickup-notif notif-wrap">
+        <button class="notif-btn" type="button" id="notifBtn" aria-expanded="false" aria-controls="notifPanel" aria-label="Notifications"><i class="fa fa-bell" aria-hidden="true"></i><span class="notif-dot" id="notifDot" hidden>0</span></button>
+        <div class="notif-panel" id="notifPanel" hidden><h2>Notifications</h2><ul id="notifList" class="notif-list"></ul></div>
+    </div>
     <div id="pickupMap" class="pickup-map" role="region" aria-label="Map showing you and the bus"></div>
 
     <a class="pickup-back" id="pickupBack" href="live.php" aria-label="Go back"><i class="fa fa-arrow-left" aria-hidden="true"></i></a>
@@ -83,5 +92,6 @@ $config = [
     <script>window.mbusPickup = <?php echo json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="../Assets/js/commuter_pickup.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/commuter_pickup.js'); ?>"></script>
+    <script src="../Assets/js/notifications.js"></script>
 </body>
 </html>

@@ -155,12 +155,19 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? $staffLabel));
     <link rel="stylesheet" href="../Assets/css/ui2026.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/ui2026.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/unify.css?v=3">
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/notif_bell.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/notif_bell.css'); ?>">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
 </head>
 <body class="stf has-bottom-nav profile-page operator-profile">
 <main class="main" role="main">
     <header class="page-header" role="banner">
         <div class="page-header-left"><h1>My Profile</h1></div>
-        <div class="page-header-right"><div class="profile-menu-wrap">
+        <div class="page-header-right">
+                <div class="notif-wrap">
+                    <button class="notif-btn" type="button" id="notifBtn" aria-expanded="false" aria-controls="notifPanel" aria-label="Notifications"><i class="fa fa-bell" aria-hidden="true"></i><span class="notif-dot" id="notifDot" hidden>0</span></button>
+                    <div class="notif-panel" id="notifPanel" hidden><h2>Notifications</h2><ul id="notifList" class="notif-list"></ul></div>
+                </div>
+<div class="profile-menu-wrap">
             <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span></button>
             <div class="profile-menu" id="profileMenu" role="menu">
                 <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $name; ?></span><span class="profile-menu-role"><?php echo $staffLabel; ?> account</span></div>
@@ -244,4 +251,6 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? $staffLabel));
 <script src="../Assets/js/app-header.js"></script>
 <script src="../Assets/js/operator_tracker.js"></script>
 <script>(function(){var el=document.getElementById('operatorPhone');if(!el)return;function fix(){var d=el.value.replace(/\D/g,'');if(/^63/.test(d)&&d.length>10)d=d.slice(2);else if(/^0/.test(d))d=d.slice(1);el.value=d.slice(0,10);}el.addEventListener('input',fix);fix();})();</script>
+<script>window.MBUS_NOTIFICATIONS_ENDPOINT = 'notifications.php';</script>
+<script src="../Assets/js/notifications.js"></script>
 </body></html>
