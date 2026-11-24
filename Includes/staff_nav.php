@@ -2,7 +2,7 @@
 /* Navigation for the staff pages in /Operator/ (Driver and Conductor), kept in one place so every page shows the same menu.
  * All links are relative to /Operator/.
  *
- *   Driver:    Home, Scan, Riders, My Bus, Waiting
+ *   Driver:    Home, My Bus, Scan, Riders, Waiting   (Scan sits in the middle, Riders second to last, like the Conductor)
  *   Conductor: Home, Trips, Scan, Riders, Waiting
  *
  * Roles: the Driver owns the bus and its GCash account setup; the Conductor checks and approves the GCash payments.
@@ -29,9 +29,9 @@ function mbus_staff_nav_items(string $role): array
     }
     return [
         'home'    => ['operator_dashboard.php', 'fa-home', 'Home', 'Dashboard'],
+        'mybus'   => ['my_bus.php', 'fa-bus-simple', 'My Bus', 'My Bus'],
         'scan'    => ['scan.php', 'fa-qrcode', 'Scan', 'Scan Ticket'],
         'riders'  => ['passengers.php', 'fa-users', 'Riders', 'Riders'],
-        'mybus'   => ['my_bus.php', 'fa-bus-simple', 'My Bus', 'My Bus'],
         'waiting' => ['waiting.php', 'fa-hourglass-half', 'Waiting', 'Waiting'],
     ];
 }
