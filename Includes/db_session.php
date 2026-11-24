@@ -1,8 +1,15 @@
 <?php
 /* Keeps PHP sessions in the database instead of container files, so a Render restart,
- * redeploy or wake-up from sleep no longer signs everybody out. */
+ * redeploy or wake-up from sleep no longer signs everybody out.
+ *
+ * Connections: the Supabase pooler in session mode only allows 15 clients at once, so a page must never hold
+ * more than ONE database connection, and must give it back when the request ends. The session handler opens the
+ * connection and config/db_connect.php reuses it (see $shared), instead of each opening its own and keeping it. */
 final class MbusDbSessionHandler implements SessionHandlerInterface, SessionUpdateTimestampHandlerInterface
 {
+    /** The one connection for this request. db_connect.php picks it up so the page does not open a second one. */
+    public static ?PDO $shared = null;
+
     private PDO $pdo;
     private int $lifetime;
     private array $seen = [];   // id => [data, updated_at epoch]
@@ -11,6 +18,7 @@ final class MbusDbSessionHandler implements SessionHandlerInterface, SessionUpda
 
     public static function connect(): ?PDO
     {
+        if (self::$shared) return self::$shared;
         require_once dirname(__DIR__) . '/config/load_env.php';
         foreach ([dirname(__DIR__) . '/.env', dirname(__DIR__) . '/config/.env'] as $f) load_env($f);
         $password = (string)getenv('SUPABASE_DB_PASSWORD');
@@ -20,11 +28,13 @@ final class MbusDbSessionHandler implements SessionHandlerInterface, SessionUpda
         $db = getenv('SUPABASE_DB_NAME') ?: 'postgres';
         $user = getenv('SUPABASE_DB_USER') ?: 'postgres.xeczvnheaixpfattbwsk';
         try {
-            return new PDO("pgsql:host=$host;port=$port;dbname=$db;sslmode=require;connect_timeout=5", $user, $password, [
+            /* NOT persistent: a persistent connection stays checked out of the pooler for the life of the web
+               worker, and a few workers use up all 15 slots (EMAXCONNSESSION). */
+            self::$shared = new PDO("pgsql:host=$host;port=$port;dbname=$db;sslmode=require;connect_timeout=10", $user, $password, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_PERSISTENT => true,
             ]);
+            return self::$shared;
         } catch (Throwable $e) { error_log('Session DB unavailable, using files: ' . $e->getMessage()); return null; }
     }
 
