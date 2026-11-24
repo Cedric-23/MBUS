@@ -5,6 +5,8 @@ function mbus_notify($conn, int $user_id, string $message): void
     if ($user_id <= 0 || $message === '') return;
     try {
         mbus_db_prepare($conn, "INSERT INTO notification (user_id, message, status) VALUES (?, ?, 'Unread')", [$user_id, mb_substr($message, 0, 300)]);
+        // Keep only the newest 50 per user so notifications never stack up forever.
+        mbus_db_prepare($conn, "DELETE FROM notification WHERE user_id = ? AND notification_id NOT IN (SELECT notification_id FROM notification WHERE user_id = ? ORDER BY notification_date DESC, notification_id DESC LIMIT 50)", [$user_id, $user_id]);
     } catch (Throwable $e) { error_log('notify failed: ' . $e->getMessage()); }
 }
 
