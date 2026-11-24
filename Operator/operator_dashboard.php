@@ -24,6 +24,7 @@ $b = mbus_local_bounds();
 
 /* BUS, CONDUCTOR AND SCHEDULES (today highlighted, everything upcoming listed) */
 require_once __DIR__ . '/../Includes/driver_home.php';
+require_once __DIR__ . '/../Includes/id_renewal.php';
 $home = mbus_driver_home_data($conn, (int)$operator_id, $b);
 $today_ymd = date('Y-m-d', strtotime($b['today']));
 
@@ -142,6 +143,8 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
                 </div>
             </div>
         </header>
+
+        <?php echo mbus_id_expiry_banner($conn, (int)$operator_id); ?>
 
         <div class="tracking-sr-only" aria-live="polite" role="status">
             <span id="operatorTrackingStatus">Driver location sharing is active.</span>
