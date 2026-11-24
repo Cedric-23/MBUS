@@ -159,7 +159,7 @@ if ($export) {
     $out = fopen('php://output', 'w');
     fwrite($out, "\xEF\xBB\xBF");
     $safe = static fn($v) => is_string($v) && $v !== '' && strpbrk($v[0], "=+-@\t\r") !== false && !is_numeric($v) ? "'" . $v : $v;
-    fputcsv($out, ['MBUS ' . $staffLabel . ' ' . $title . ' report', 'From: ' . ($from ?: 'all'), 'To: ' . ($to ?: 'all'), 'Generated: ' . date('Y-m-d H:i')]);
+    fputcsv($out, ['MBUS ' . $staffLabel . ' analytics - ' . $title, 'From: ' . ($from ?: 'all'), 'To: ' . ($to ?: 'all'), 'Generated: ' . date('Y-m-d H:i')]);
     fputcsv($out, $head);
     foreach ($rows as $r) fputcsv($out, array_map($safe, $r));
     fclose($out);
@@ -184,7 +184,7 @@ $busLabel = static fn($n) => ctype_digit((string)$n) ? 'Bus ' . $n : $n;
 <html lang="en">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reports - <?php echo $staffLabel; ?></title>
+    <title>Analytics - <?php echo $staffLabel; ?></title>
     <link rel="icon" href="../Assets/images/mbus_icon.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../Assets/css/responsive.css">
@@ -200,12 +200,12 @@ $busLabel = static fn($n) => ctype_digit((string)$n) ? 'Bus ' . $n : $n;
 <body class="stf has-bottom-nav reports-page">
 <main class="main" role="main">
 <header class="page-header" role="banner">
-    <div class="page-header-left"><h1>Reports</h1></div>
+    <div class="page-header-left"><h1>Analytics</h1></div>
     <div class="page-header-right"><div class="profile-menu-wrap">
         <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span></button>
         <div class="profile-menu" id="profileMenu" role="menu">
             <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $h($_SESSION['full_name'] ?? $staffLabel); ?></span><span class="profile-menu-role"><?php echo $staffLabel; ?> account</span></div>
-            <a href="reports.php" role="menuitem" aria-current="page"><i class="fa fa-file-lines" aria-hidden="true"></i> Reports</a>
+            <a href="reports.php" role="menuitem" aria-current="page"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a>
             <?php if ($isConductor): ?><a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a><?php else: ?><a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a><?php endif; ?>
             <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
             <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
