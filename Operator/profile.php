@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../Includes/staff_nav.php';
 include_once __DIR__ . '/../config/db_connect.php';
 include_once __DIR__ . '/../Includes/profile_photo.php';
 include_once __DIR__ . '/../Includes/validation.php';
@@ -119,9 +120,7 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? $staffLabel));
             <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span></button>
             <div class="profile-menu" id="profileMenu" role="menu">
                 <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $name; ?></span><span class="profile-menu-role"><?php echo $staffLabel; ?> account</span></div>
-                <?php if ($isConductor): ?><a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a><?php else: ?><a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a><?php endif; ?>
-                <a href="reports.php" role="menuitem"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a>
-                <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                <?php echo mbus_staff_profile_links($isConductor ? 'conductor' : 'driver', 'profile'); ?>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
         </div></div>
@@ -159,18 +158,7 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? $staffLabel));
         </form>
     </section>
 </main>
-<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
-    <a href="<?php echo $isConductor ? '../Conductor/conductor_dashboard.php' : 'operator_dashboard.php'; ?>" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
-    <?php if($isConductor): ?>
-    <a href="manage_trips.php" class="bottom-nav-item"><i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span></a>
-    <a href="scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
-    <a href="passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
-    <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
-    <?php else: ?>
-    <a href="my_bus.php" class="bottom-nav-item"><i class="fa fa-bus-simple" aria-hidden="true"></i><span>My Bus</span></a>
-    <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
-    <?php endif; ?>
-</nav>
+<?php echo mbus_staff_bottom_nav($isConductor ? 'conductor' : 'driver', ''); ?>
 <script src="../Assets/js/app-header.js"></script>
 <script src="../Assets/js/operator_tracker.js"></script>
 <script>(function(){var el=document.getElementById('operatorPhone');if(!el)return;function fix(){var d=el.value.replace(/\D/g,'');if(/^63/.test(d)&&d.length>10)d=d.slice(2);else if(/^0/.test(d))d=d.slice(1);el.value=d.slice(0,10);}el.addEventListener('input',fix);fix();})();</script>

@@ -15,7 +15,7 @@ function phpFiles(dir) {
 
 const navPages = ['Admin', 'Operator', 'Commuter', 'Includes']
     .flatMap(phpFiles)
-    .filter(file => read(file).includes('<nav class="bottom-nav"'));
+    .filter(file => file !== 'Includes/staff_nav.php' && read(file).includes('<nav class="bottom-nav"'));
 assert.ok(navPages.length > 0, 'expected to find role pages with bottom navigation');
 for (const page of navPages) {
     const source = read(page);

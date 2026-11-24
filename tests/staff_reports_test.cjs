@@ -12,3 +12,6 @@ const pay = read('Operator/payments.php');
 assert(/'driver'/.test(gs) && /gcash_pending/.test(gs), 'GCash account setup belongs to the driver');
 assert(!/save_settings|gcash_qr/.test(pay) && /'conductor'/.test(pay), 'payment review stays with the conductor');
 console.log('staff analytics ok');
+for (const f of ['Operator/operator_dashboard.php', 'Operator/my_bus.php', 'Operator/profile.php', 'Operator/reports.php', 'Operator/passengers.php', 'Includes/pickup_staff_view.php'])
+  assert(/mbus_staff_profile_links\(/.test(read(f)) && /mbus_staff_bottom_nav\(/.test(read(f)), f + ' must use the shared staff menu so every driver page shows GCash Account, Scan and Riders');
+assert(/'waiting'\s*=> \['waiting\.php'/.test(nav), 'shared nav must include Waiting');

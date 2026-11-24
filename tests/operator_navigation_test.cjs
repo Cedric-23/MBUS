@@ -4,11 +4,17 @@ const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
-const driverExpected = ['Home', 'My Bus', 'Waiting'];
+const { execFileSync } = require('node:child_process');
+const driverExpected = ['Home', 'Scan', 'Riders', 'My Bus', 'Waiting'];
 const conductorOperatorExpected = ['Home', 'Trips', 'Scan', 'Riders', 'Waiting'];
 const conductorHomeExpected = ['Home', 'Trips', 'Scan', 'Riders', 'Waiting'];
 
 function bottomNav(html, page, role) {
+    if (html.includes('mbus_staff_bottom_nav(')) {
+        // Rendered by the shared helper: ask PHP for the real output.
+        const out = execFileSync('php', ['-r', `require '${root}/Includes/staff_nav.php'; echo mbus_staff_bottom_nav('${role}');`]).toString();
+        return [...out.matchAll(/<span>([^<]*)<\/span>/g)].map(m => m[1].trim());
+    }
     const match = html.match(/<nav class="bottom-nav"[^>]*>([\s\S]*?)<\/nav>/);
     assert.ok(match, `${page} has no bottom navigation`);
     let source = match[1];
@@ -23,8 +29,7 @@ for (const page of ['Operator/profile.php', 'Operator/my_bus.php']) {
     const html = read(page);
     assert.deepEqual(bottomNav(html, page, 'driver'), driverExpected,
         `${page} Driver navigation should expose only Driver tools`);
-    const nav = html.match(/<nav class="bottom-nav"[^>]*>([\s\S]*?)<\/nav>/)[1];
-    assert.doesNotMatch(nav, /live_map\.php|<span>Live<\/span>/, `${page} must not include Live`);
+    assert.doesNotMatch(html.includes('mbus_staff_bottom_nav(') ? '' : html.match(/<nav class="bottom-nav"[^>]*>([\s\S]*?)<\/nav>/)[1], /live_map\.php|<span>Live<\/span>/, `${page} must not include Live`);
 }
 
 for (const page of ['Operator/manage_trips.php', 'Operator/scan.php']) {

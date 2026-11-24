@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/staff_nav.php';
 require_once __DIR__ . '/csrf.php';
 // Shared Waiting board for staff roles. Driver/Conductor: assigned buses. Admin: all buses.
 if (!isset($pickupStaffRole) || !in_array($pickupStaffRole, ['admin', 'driver', 'conductor'], true)) {
@@ -72,8 +73,7 @@ $navItems = $isAdmin
                     <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
                     <span class="profile-menu-role"><?php echo $roleLabel; ?> account</span>
                 </div>
-                <?php if ($isDriver): ?><a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a><a href="reports.php" role="menuitem"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a><?php endif; ?>
-                <?php if ($isConductor): ?><a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a><a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a><?php elseif (!$isAdmin): ?><a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a><?php endif; ?>
+                <?php if (!$isAdmin) echo mbus_staff_profile_links($isDriver ? 'driver' : 'conductor'); ?>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
         </div>
@@ -141,12 +141,14 @@ $navItems = $isAdmin
     <noscript><p class="sw-notice">Enable JavaScript to see waiting riders.</p></noscript>
 </main>
 
+<?php if ($isAdmin): ?>
 <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
     <?php foreach ($navItems as $item): ?>
     <a href="<?php echo $item[0]; ?>" class="bottom-nav-item"><i class="fa <?php echo $item[1]; ?>" aria-hidden="true"></i><span><?php echo $item[2]; ?></span></a>
     <?php endforeach; ?>
     <a href="waiting.php" class="bottom-nav-item active" aria-current="page"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
 </nav>
+<?php else: echo mbus_staff_bottom_nav($isDriver ? 'driver' : 'conductor', 'waiting'); endif; ?>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="../Assets/js/route_utils.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/route_utils.js'); ?>"></script>

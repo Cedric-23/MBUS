@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../Includes/staff_nav.php';
 include_once __DIR__ . '/../config/db_connect.php';
 include_once __DIR__ . '/../Includes/csrf.php';
 include_once __DIR__ . '/../Includes/seat_layout.php';
@@ -116,9 +117,7 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Driver'));
             <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span></button>
             <div class="profile-menu" id="profileMenu" role="menu">
                 <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $name; ?></span><span class="profile-menu-role">Driver account</span></div>
-                <a href="my_bus.php" role="menuitem"><i class="fa fa-bus" aria-hidden="true"></i> My Bus</a>
-                <a href="reports.php" role="menuitem"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a>
-                <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                <?php echo mbus_staff_profile_links('driver', 'mybus'); ?>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
         </div></div>
@@ -155,11 +154,7 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Driver'));
     </form>
 <?php endif; ?>
 </main>
-<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
-    <a href="operator_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
-    <a href="my_bus.php" class="bottom-nav-item active" aria-current="page"><i class="fa fa-bus-simple" aria-hidden="true"></i><span>My Bus</span></a>
-    <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
-</nav>
+<?php echo mbus_staff_bottom_nav('driver', 'mybus'); ?>
 <script src="../Assets/js/app-header.js"></script>
 <script src="../Assets/js/driver_bus_setup.js?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/js/driver_bus_setup.js'); ?>"></script>
 <script>

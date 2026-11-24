@@ -23,7 +23,7 @@ for (const [name, page, endpointPath] of [
   assert.match(page, /meta name="csrf-token"/, `${name} dashboard needs a CSRF token for marking notifications read`);
 }
 assert.doesNotMatch(driver, /Open Waiting/, 'Driver dashboard should not show the Open Waiting callout');
-assert.match(driver, /href="waiting\.php"/, 'Driver Waiting remains accessible from navigation');
+assert.match(driver, /href="waiting\.php"|mbus_staff_bottom_nav\(/, 'Driver Waiting remains accessible from navigation');
 assert.match(conductor, /MBUS_NOTIFICATIONS_ENDPOINT/, 'Conductor should use the Operator-relative notification endpoint');
 assert.match(endpoint, /driver.*operator.*conductor|operator.*conductor.*driver/s, 'staff notification endpoint should allow split staff roles');
 assert.match(notifications, /window\.MBUS_NOTIFICATIONS_ENDPOINT/, 'notification script should support a page-specific endpoint');

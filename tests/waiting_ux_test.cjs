@@ -37,6 +37,7 @@ const navPages = [
 for (const page of navPages) {
     const html = read(page);
     assert.doesNotMatch(html, />Alerts</, `${page} still labels the tab Alerts`);
+    if (html.includes('mbus_staff_bottom_nav(')) continue; // the shared helper always includes Waiting (checked below)
     assert.match(html, /href="(?:\.\.\/Operator\/)?waiting\.php"[^>]*class="bottom-nav-item|class="bottom-nav-item"[^>]*href="(?:\.\.\/Operator\/)?waiting\.php"/, `${page} has no Waiting tab`);
     assert.match(html, /<span>Waiting<\/span>/, `${page} Waiting tab label missing`);
 }

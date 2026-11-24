@@ -1,6 +1,7 @@
 <?php
 session_start();
 
+require_once __DIR__ . '/../Includes/staff_nav.php';
 if(
     !isset($_SESSION['user_type']) ||
     strtolower((string)$_SESSION['user_type']) !== 'driver'
@@ -115,11 +116,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
 
         <h2>Driver</h2>
 
-        <nav class="menu-top" aria-label="Driver menu">
-            <a href="operator_dashboard.php" aria-current="page"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
-            <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
-            <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
-        </nav>
+        <?php echo mbus_staff_sidebar_nav('driver', 'home'); ?>
 
         <div class="menu-bottom">
             <a href="../logout.php" class="logout-btn btn btn-outline btn-block">
@@ -153,9 +150,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
                             <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name']); ?></span>
                             <span class="profile-menu-role">Driver account</span>
                         </div>
-                <a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
-                        <a href="reports.php" role="menuitem"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a>
-                        <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                        <?php echo mbus_staff_profile_links('driver'); ?>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>
                 </div>
@@ -198,17 +193,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
 <script src="../Assets/js/notifications.js"></script>
 <script>window.OPERATOR_CSRF_TOKEN = <?php echo json_encode(csrf_get_token()); ?>; window.MBUS_GPS_ENABLED = true;</script>
 
-<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
-    <a href="operator_dashboard.php" class="bottom-nav-item active" aria-current="page">
-        <i class="fa fa-home" aria-hidden="true"></i><span>Home</span>
-    </a>
-    <a href="my_bus.php" class="bottom-nav-item">
-        <i class="fa fa-bus-simple" aria-hidden="true"></i><span>My Bus</span>
-    </a>
-    <a href="waiting.php" class="bottom-nav-item">
-        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
-    </a>
-</nav>
+<?php echo mbus_staff_bottom_nav('driver', 'home'); ?>
 <script src="../Assets/js/operator_tracker.js"></script>
 </body>
 </html>

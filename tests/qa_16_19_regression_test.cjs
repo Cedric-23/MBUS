@@ -51,7 +51,7 @@ for (const file of [
   'Includes/pickup_staff_view.php',
 ]) {
   const source = read(file);
-  assert.match(source, /href="profile\.php"[^>]*role="menuitem"[^>]*>[\s\S]*?My Profile/, `${file} must link to operator profile from the account menu`);
+  assert.ok(/mbus_staff_profile_links\(/.test(source) || /href="profile\.php"[^>]*role="menuitem"[^>]*>[\s\S]*?My Profile/.test(source), `${file} must link to operator profile from the account menu`);
 }
 
 console.log('PASS: MBUS-16 desktop payment layout, MBUS-17 avatar parity, and MBUS-19 operator profile edit flow');

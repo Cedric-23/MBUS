@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../Includes/staff_nav.php';
 include "../config/db_connect.php";
 require_once __DIR__ . '/../Includes/staff_assignment_scope.php';
 
@@ -205,9 +206,7 @@ $busLabel = static fn($n) => ctype_digit((string)$n) ? 'Bus ' . $n : $n;
         <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span></button>
         <div class="profile-menu" id="profileMenu" role="menu">
             <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $h($_SESSION['full_name'] ?? $staffLabel); ?></span><span class="profile-menu-role"><?php echo $staffLabel; ?> account</span></div>
-            <a href="reports.php" role="menuitem" aria-current="page"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a>
-            <?php if ($isConductor): ?><a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a><?php else: ?><a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a><?php endif; ?>
-            <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+            <?php echo mbus_staff_profile_links($role, 'reports'); ?>
             <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
         </div>
     </div></div>
@@ -275,18 +274,7 @@ $busLabel = static fn($n) => ctype_digit((string)$n) ? 'Bus ' . $n : $n;
 </div>
 </main>
 
-<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
-    <a href="<?php echo $homeUrl; ?>" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
-    <?php if ($isConductor): ?>
-    <a href="manage_trips.php" class="bottom-nav-item"><i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span></a>
-    <a href="scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
-    <a href="passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
-    <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
-    <?php else: ?>
-    <a href="my_bus.php" class="bottom-nav-item"><i class="fa fa-bus-simple" aria-hidden="true"></i><span>My Bus</span></a>
-    <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
-    <?php endif; ?>
-</nav>
+<?php echo mbus_staff_bottom_nav($role, ''); ?>
 <script>
 (function(){var t=document.getElementById('rpToggle'),m=document.getElementById('rpMore');if(!t||!m)return;
 function set(o){t.setAttribute('aria-expanded',o?'true':'false');m.hidden=!o;t.querySelector('span').textContent=o?'Hide filters':'More filters';}

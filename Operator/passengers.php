@@ -7,12 +7,13 @@ require_once "../Includes/activity_log.php";
 require_once "../Includes/seat_layout.php";
 require_once "../Includes/staff_assignment_scope.php";
 
-if(!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?? '')) !== 'conductor'){
+require_once "../Includes/staff_nav.php";
+if(!isset($_SESSION['user_id']) || mbus_staff_role() === ''){
     header("Location: ../login.php");
     exit();
 }
 
-$staffRole = 'conductor';
+$staffRole = mbus_staff_role();
 $operator_id = (int)$_SESSION['user_id'];
 $b = mbus_local_bounds(); // app-timezone boundaries (not the DB clock)
 $notice = '';
@@ -286,14 +287,8 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
 
 <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
     <div class="logo-container"><img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo"></div>
-    <h2>Conductor</h2>
-    <nav class="menu-top" aria-label="Conductor menu">
-        <a href="../Conductor/conductor_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
-        <a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
-        <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
-        <a href="passengers.php" aria-current="page"><i class="fa fa-users" aria-hidden="true"></i> Riders</a>
-        <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
-    </nav>
+    <h2><?php echo $staffRole === 'conductor' ? 'Conductor' : 'Driver'; ?></h2>
+    <?php echo mbus_staff_sidebar_nav($staffRole, 'riders'); ?>
     <div class="menu-bottom">
         <a href="../logout.php" class="logout-btn btn btn-outline btn-block"><i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
     </div>
@@ -310,11 +305,9 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
             <div class="profile-menu" id="profileMenu" role="menu">
                 <div class="profile-menu-header">
                     <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
-                <span class="profile-menu-role">Conductor account</span>
+                <span class="profile-menu-role"><?php echo $staffRole === 'conductor' ? 'Conductor' : 'Driver'; ?> account</span>
             </div>
-                <a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a>
-                <a href="reports.php" role="menuitem"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a>
-                <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                <?php echo mbus_staff_profile_links($staffRole, ''); ?>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
         </div>
@@ -542,21 +535,7 @@ const TRIP_DEST = <?php echo json_encode(strtoupper((string)$selected['destinati
 <script src="../Assets/js/operator_riders.js"></script>
 <?php } ?>
 
-<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
-    <a href="../Conductor/conductor_dashboard.php" class="bottom-nav-item">
-        <i class="fa fa-home" aria-hidden="true"></i><span>Home</span>
-    </a>
-    <a href="manage_trips.php" class="bottom-nav-item">
-        <i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span>
-    </a>
-    <a href="scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
-    <a href="passengers.php" class="bottom-nav-item active" aria-current="page">
-        <i class="fa fa-users" aria-hidden="true"></i><span>Riders</span>
-    </a>
-    <a href="waiting.php" class="bottom-nav-item">
-        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
-    </a>
-</nav>
+<?php echo mbus_staff_bottom_nav($staffRole, 'riders'); ?>
 <script src="../Assets/js/app-header.js"></script>
 <script src="../Assets/js/operator_tracker.js"></script>
 </body>
