@@ -221,6 +221,9 @@ $busLabel = static fn($n) => ctype_digit((string)$n) ? 'Bus ' . $n : $n;
             <a href="?<?php echo $h($qs(['range' => $k, 'from' => '', 'to' => '', 'page' => ''])); ?>"<?php echo $range === $k ? ' class="on"' : ''; ?>><?php echo $l; ?></a>
             <?php endforeach; ?>
         </div>
+        <?php $rpActive = $bus_id || $route_id || $trip_status !== '' || $res_status !== '' || $range === ''; ?>
+        <button type="button" class="rp-toggle" id="rpToggle" aria-expanded="<?php echo $rpActive ? 'true' : 'false'; ?>" aria-controls="rpMore"><span>More filters</span><i class="fa fa-chevron-down" aria-hidden="true"></i></button>
+        <div class="rp-more" id="rpMore"<?php echo $rpActive ? '' : ' hidden'; ?>>
         <div class="rp-grid">
             <label>From<input type="date" name="from" value="<?php echo $h($from); ?>"></label>
             <label>To<input type="date" name="to" value="<?php echo $h($to); ?>"></label>
@@ -232,6 +235,7 @@ $busLabel = static fn($n) => ctype_digit((string)$n) ? 'Bus ' . $n : $n;
         <div class="rp-actions">
             <button type="submit" class="btn btn-primary">Apply filters</button>
             <a class="btn btn-outline" href="reports.php?report=<?php echo $h($report); ?>">Reset</a>
+        </div>
         </div>
     </form>
 
@@ -283,5 +287,11 @@ $busLabel = static fn($n) => ctype_digit((string)$n) ? 'Bus ' . $n : $n;
     <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
     <?php endif; ?>
 </nav>
+<script>
+(function(){var t=document.getElementById('rpToggle'),m=document.getElementById('rpMore');if(!t||!m)return;
+function set(o){t.setAttribute('aria-expanded',o?'true':'false');m.hidden=!o;t.querySelector('span').textContent=o?'Hide filters':'More filters';}
+set(t.getAttribute('aria-expanded')==='true');
+t.addEventListener('click',function(){set(m.hidden);});})();
+</script>
 <script src="../Assets/js/app-header.js"></script>
 </body></html>

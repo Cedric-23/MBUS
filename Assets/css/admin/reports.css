@@ -34,3 +34,12 @@
 .reports-page .main{min-width:0;overflow-x:hidden}
 .reports-page .rp{min-width:0;width:100%;grid-template-columns:minmax(0,1fr);padding-top:16px}
 .reports-page .rp>*{min-width:0}
+
+/* Collapsible filter block under the quick ranges */
+.reports-page .rp-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:44px;padding:0 14px;border:1px solid #dbe3ee;border-radius:12px;background:#f6f9fe;color:#1f4fb8;font:inherit;font-size:.86rem;font-weight:700;cursor:pointer}
+.reports-page .rp-toggle i{transition:transform .2s}
+.reports-page .rp-toggle[aria-expanded="true"] i{transform:rotate(180deg)}
+.reports-page .rp-toggle:focus-visible{outline:2px solid #2f6fe4;outline-offset:2px}
+.reports-page .rp-more{margin-top:12px}
+.reports-page .rp-more[hidden]{display:none}
+@media (prefers-reduced-motion:reduce){.reports-page .rp-toggle i{transition:none}}
