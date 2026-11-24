@@ -39,3 +39,12 @@
 .password-control>input{padding-right:52px}
 .password-control>.input-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);z-index:1}
 .password-control>.password-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:40px;height:40px;display:grid;place-items:center;padding:0;border:0;border-radius:10px;background:transparent;color:#6b7a8d;cursor:pointer;z-index:2}
+
+/* Resend code: its own roomy secondary button under the primary action, timer centred below it */
+.reset-actions { flex-direction:column; align-items:stretch; gap:10px; margin:20px 0 6px; }
+.reset-actions form { display:block; margin:0; }
+.reset-actions button { width:100%; min-height:46px; padding:0 18px; border:1.5px solid #cfdcf3; border-radius:999px; background:#fff; color:var(--blue); font-size:.92rem; font-weight:700; }
+.reset-actions button:hover:not(:disabled) { background:#eef4ff; }
+.reset-actions button:disabled { background:#f3f5f9; border-color:#e3e8f1; color:#98a2b3; cursor:not-allowed; }
+.reset-timer { text-align:center; font-size:.82rem; min-height:1.2em; }
+.reset-footer p { margin-top:18px !important; }
