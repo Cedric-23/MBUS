@@ -262,7 +262,13 @@ $busLabel = static fn($n) => ctype_digit((string)$n) ? 'Bus ' . $n : $n;
     </section>
 </div>
 </main>
-
+<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
+    <a href="admin_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
+    <a href="manage_schedules.php" class="bottom-nav-item"><i class="fa fa-calendar" aria-hidden="true"></i><span>Schedules</span></a>
+    <a href="manage_buses.php" class="bottom-nav-item"><i class="fa fa-bus" aria-hidden="true"></i><span>Buses</span></a>
+    <a href="manage_operators.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Operators</span></a>
+    <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
+</nav>
 <script>
 function toggleSidebar(){var s=document.querySelector('.sidebar'),o=document.querySelector('.sidebar-overlay'),t=document.querySelector('.sidebar-toggle');var open=s.classList.toggle('open');o.classList.toggle('active',open);t.setAttribute('aria-expanded',open?'true':'false');document.body.classList.toggle('sidebar-open',open);}
 </script>
