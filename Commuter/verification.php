@@ -81,6 +81,7 @@ $can_submit = !$latest || $status === 'Rejected' || ($status === 'Approved' && $
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/bottom-nav.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/bottom-nav.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/app-header.css">
     <link rel="stylesheet" href="../Assets/css/minimal-ui.css">
     <link rel="stylesheet" href="../Assets/css/commuter_mobile.css">
     <link rel="stylesheet" href="../Assets/css/commuter_verification.css">
@@ -94,6 +95,21 @@ $can_submit = !$latest || $status === 'Rejected' || ($status === 'Approved' && $
     <div class="page-header-left">
         <a href="<?php echo ($_GET['from'] ?? '') === 'profile' ? 'profile.php' : 'commuter_dashboard.php'; ?>" class="back-btn" aria-label="Go back"><i class="fa fa-arrow-left" aria-hidden="true"></i></a>
         <h1>Get 20% off</h1>
+    </div>
+    <div class="page-header-right">
+        <div class="profile-menu-wrap">
+            <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
+                <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span>
+            </button>
+            <div class="profile-menu" id="profileMenu" role="menu">
+                <div class="profile-menu-header">
+                    <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
+                    <span class="profile-menu-role">Commuter account</span>
+                </div>
+                <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
+            </div>
+        </div>
     </div>
 </header>
 
@@ -161,5 +177,6 @@ document.getElementById('verification_document').addEventListener('change', func
     <a href="my_reservations.php" class="bottom-nav-item"><i class="fa fa-ticket" aria-hidden="true"></i><span>Trips</span></a>
     <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
 </nav>
+<script src="../Assets/js/app-header.js"></script>
 </body>
 </html>

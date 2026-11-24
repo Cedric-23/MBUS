@@ -2,8 +2,8 @@
 /* Navigation for the staff pages in /Operator/ (Driver and Conductor), kept in one place so every page shows the same menu.
  * All links are relative to /Operator/.
  *
- *   Driver:    Home, My Bus, Scan, Riders, Waiting   (Scan sits in the middle, Riders second to last, like the Conductor)
- *   Conductor: Home, Trips, Scan, Riders, Waiting
+ *   Driver:    Home, My Bus, Scan, Riders, Waiting, Updates   (Scan sits in the middle, Riders second to last, like the Conductor)
+ *   Conductor: Home, Trips, Scan, Riders, Waiting, Updates
  *
  * Roles: the Driver owns the bus and its GCash account setup; the Conductor checks and approves the GCash payments.
  */
@@ -25,6 +25,7 @@ function mbus_staff_nav_items(string $role): array
             'scan'    => ['scan.php', 'fa-qrcode', 'Scan', 'Scan Ticket'],
             'riders'  => ['passengers.php', 'fa-users', 'Riders', 'Riders'],
             'waiting' => ['waiting.php', 'fa-hourglass-half', 'Waiting', 'Waiting'],
+            'updates' => ['announcements.php', 'fa-bullhorn', 'Updates', 'Transportation Updates'],
         ];
     }
     return [
@@ -33,6 +34,7 @@ function mbus_staff_nav_items(string $role): array
         'scan'    => ['scan.php', 'fa-qrcode', 'Scan', 'Scan Ticket'],
         'riders'  => ['passengers.php', 'fa-users', 'Riders', 'Riders'],
         'waiting' => ['waiting.php', 'fa-hourglass-half', 'Waiting', 'Waiting'],
+        'updates' => ['announcements.php', 'fa-bullhorn', 'Updates', 'Transportation Updates'],
     ];
 }
 

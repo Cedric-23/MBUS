@@ -39,12 +39,27 @@ $items = mbus_announcements_active($conn, ['All', 'Commuters']);
         .upd-tag.is-service-resumed { background: #dff5e6; color: #1f7a3d; }
     </style>
 </head>
-<body class="home-page cm">
+<body class="home-page has-bottom-nav cm">
 <main class="main" role="main">
     <header class="home-top">
         <div>
             <p class="home-hello">Bus operations</p>
             <h1>Service updates</h1>
+        </div>
+        <div class="page-header-right">
+            <div class="profile-menu-wrap">
+                <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
+                    <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span>
+                </button>
+                <div class="profile-menu" id="profileMenu" role="menu">
+                    <div class="profile-menu-header">
+                        <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
+                        <span class="profile-menu-role">Commuter account</span>
+                    </div>
+                    <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                    <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -63,6 +78,14 @@ $items = mbus_announcements_active($conn, ['All', 'Commuters']);
     </ul>
     <?php endif; ?>
 </main>
+
+<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
+    <a href="commuter_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
+    <a href="schedule.php" class="bottom-nav-item"><i class="fa fa-calendar" aria-hidden="true"></i><span>Schedule</span></a>
+    <a href="live.php" class="bottom-nav-item"><i class="fa fa-location-dot" aria-hidden="true"></i><span>Live</span></a>
+    <a href="my_reservations.php" class="bottom-nav-item"><i class="fa fa-ticket" aria-hidden="true"></i><span>Trips</span></a>
+    <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
+</nav>
 
 <script src="../Assets/js/app-header.js"></script>
 </body>

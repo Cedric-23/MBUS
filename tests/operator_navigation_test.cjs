@@ -5,9 +5,10 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const { execFileSync } = require('node:child_process');
-const driverExpected = ['Home', 'My Bus', 'Scan', 'Riders', 'Waiting'];
+const driverExpected = ['Home', 'My Bus', 'Scan', 'Riders', 'Waiting', 'Updates'];
 const conductorOperatorExpected = ['Home', 'Trips', 'Scan', 'Riders', 'Waiting'];
 const conductorHomeExpected = ['Home', 'Trips', 'Scan', 'Riders', 'Waiting'];
+const conductorSharedExpected = ['Home', 'Trips', 'Scan', 'Riders', 'Waiting', 'Updates'];
 
 function bottomNav(html, page, role) {
     if (html.includes('mbus_staff_bottom_nav(')) {
@@ -32,14 +33,17 @@ for (const page of ['Operator/profile.php', 'Operator/my_bus.php']) {
     assert.doesNotMatch(html.includes('mbus_staff_bottom_nav(') ? '' : html.match(/<nav class="bottom-nav"[^>]*>([\s\S]*?)<\/nav>/)[1], /live_map\.php|<span>Live<\/span>/, `${page} must not include Live`);
 }
 
-for (const page of ['Operator/manage_trips.php', 'Operator/scan.php']) {
-    assert.deepEqual(bottomNav(read(page), page, 'conductor'), conductorOperatorExpected,
+assert.deepEqual(bottomNav(read('Operator/manage_trips.php'), 'Operator/manage_trips.php', 'conductor'), conductorOperatorExpected);
+for (const page of ['Operator/scan.php']) {
+    assert.deepEqual(bottomNav(read(page), page, 'conductor'), conductorSharedExpected,
         `${page} Conductor navigation should place Scan in the center and include Riders`);
 }
-assert.deepEqual(bottomNav(read('Operator/passengers.php'), 'Operator/passengers.php', 'conductor'), conductorOperatorExpected);
+assert.deepEqual(bottomNav(read('Operator/passengers.php'), 'Operator/passengers.php', 'conductor'), conductorSharedExpected);
 assert.deepEqual(bottomNav(read('Conductor/conductor_dashboard.php'), 'Conductor/conductor_dashboard.php', 'conductor'),
     conductorHomeExpected);
-assert.deepEqual(bottomNav(read('Operator/payments.php'), 'Operator/payments.php', 'conductor'), conductorHomeExpected);
+assert.deepEqual(bottomNav(read('Operator/payments.php'), 'Operator/payments.php', 'conductor'), conductorSharedExpected);
+assert.deepEqual(bottomNav(read('Operator/announcements.php'), 'Operator/announcements.php', 'conductor'),
+    ['Home', 'Trips', 'Scan', 'Riders', 'Waiting', 'Updates']);
 
 for (const page of ['Conductor/conductor_dashboard.php', 'Operator/manage_trips.php', 'Operator/scan.php', 'Operator/passengers.php', 'Operator/payments.php']) {
     const html = read(page);
