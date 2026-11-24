@@ -7,6 +7,7 @@ const seatPins = {};
    Declared up here because the seat cards below read them. */
 const seatTypes = {};
 const seatIds = {};
+const pendingIdPhotos = {};
 const PASSENGER_TYPE_OPTIONS = [
     ["Self", "My account"],
     ["Regular", "Regular (Standard)"],
@@ -210,7 +211,14 @@ function idUploadField(seat) {
     text.textContent = seatIds[seat] ? "ID attached · tap to replace" : "Upload ID photo";
     const file = document.createElement("input");
     file.type = "file"; file.accept = "image/*"; file.hidden = true;
-    file.addEventListener("change", () => readIdPhoto(file.files && file.files[0], seat, img, text));
+        file.addEventListener("change", () => {
+            const pending = readIdPhoto(file.files && file.files[0], seat, img, text);
+            if (!pending) return;
+            pendingIdPhotos[seat] = pending;
+            pending.finally(() => {
+                if (pendingIdPhotos[seat] === pending) delete pendingIdPhotos[seat];
+            });
+        });
     up.appendChild(img); up.appendChild(text); up.appendChild(file);
     return up;
 }
@@ -376,6 +384,11 @@ function discountPhotoError(show) {
     return true;
 }
 
+async function waitForPendingIdPhotos() {
+    const pending = Object.values(pendingIdPhotos);
+    if (pending.length) await Promise.all(pending);
+}
+
 /* Tell the rider which seat still needs what, and jump to that dropdown. */
 function tripError(missing, show) {
     show(missing.field === "pickup"
@@ -387,9 +400,11 @@ function tripError(missing, show) {
 
 /* DONE */
 document.getElementById("doneBtn")
-.addEventListener("click", () => {
+.addEventListener("click", async () => {
 
     hideReview();
+
+    await waitForPendingIdPhotos();
 
     if (selectedSeats.length === 0) {
         showTopError("Please select your seat.");
@@ -503,20 +518,27 @@ function renderPassengerTypes() {
 
 /* Resize the ID photo in the browser (max 1000px JPEG) so it uploads quickly. */
 function readIdPhoto(file, seat, img, text) {
-    if (!file) return;
-    const url = URL.createObjectURL(file), image = new Image();
-    image.onload = () => {
-        const k = Math.min(1, 1000 / Math.max(image.width, image.height));
-        const c = document.createElement("canvas");
-        c.width = Math.round(image.width * k); c.height = Math.round(image.height * k);
-        c.getContext("2d").drawImage(image, 0, 0, c.width, c.height);
-        seatIds[seat] = c.toDataURL("image/jpeg", 0.8);
-        img.src = seatIds[seat]; img.hidden = false;
-        text.textContent = "ID attached · tap to replace";
-        URL.revokeObjectURL(url);
-    };
-    image.onerror = () => { text.textContent = "Could not read that photo"; URL.revokeObjectURL(url); };
-    image.src = url;
+    if (!file) return null;
+    return new Promise(resolve => {
+        const url = URL.createObjectURL(file), image = new Image();
+        image.onload = () => {
+            const k = Math.min(1, 1000 / Math.max(image.width, image.height));
+            const c = document.createElement("canvas");
+            c.width = Math.round(image.width * k); c.height = Math.round(image.height * k);
+            c.getContext("2d").drawImage(image, 0, 0, c.width, c.height);
+            seatIds[seat] = c.toDataURL("image/jpeg", 0.8);
+            img.src = seatIds[seat]; img.hidden = false;
+            text.textContent = "ID attached · tap to replace";
+            URL.revokeObjectURL(url);
+            resolve(true);
+        };
+        image.onerror = () => {
+            text.textContent = "Could not read that photo";
+            URL.revokeObjectURL(url);
+            resolve(false);
+        };
+        image.src = url;
+    });
 }
 
 /* CALCULATE */
@@ -631,6 +653,8 @@ async function reserveSeats() {
 /* RESERVE BUTTON */
 document.getElementById("reserveBtn")
 .addEventListener("click", async () => {
+
+    await waitForPendingIdPhotos();
 
     if (!reviewed) {
         showError("Click Review my trip before paying.");

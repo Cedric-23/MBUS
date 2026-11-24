@@ -27,6 +27,9 @@ assert.match(reserveJs, /"destination_" \+ seat/, 'each seat gets its own destin
 assert.match(reserveJs, /Choose a destination for seat/);
 assert.match(reserveJs, /Choose a pickup for seat/);
 assert.match(reserveJs, /"Self", "My account"/, "classification offers My account plus the four fare types");
+assert.match(reserveJs, /const pendingIdPhotos = \{\}/, 'ID photo processing must be tracked while the image loads');
+assert.match(reserveJs, /async function waitForPendingIdPhotos\(\)[\s\S]*?Promise\.all\(pending\)/, 'review and reservation must be able to wait for ID processing');
+assert.match(reserveJs, /\.addEventListener\("click", async \(\) => \{[\s\S]*?await waitForPendingIdPhotos\(\)/, 'review must wait for an ID photo selected moments earlier');
 assert.match(reserveJs, /formData\.append\("pickups", JSON\.stringify\(seatPickups\)\)/);
 assert.match(reserveJs, /formData\.append\("destinations", JSON\.stringify\(seatDestinations\)\)/);
 assert.match(reservePhp, /\$destination_by_seat\[\$seat_no\]/, 'server must retain the destination per seat');
