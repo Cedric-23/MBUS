@@ -45,6 +45,10 @@ assert.match(setupJs, /JSON\.stringify\(layout\)/,
     'seat-map changes must be serialized into the application form');
 assert.match(setupJs, /total > MAX_SEATS/,
     'the client must enforce the maximum seating capacity');
+assert.match(setupJs, /const MAX_SEATS = 40, MAX_DOORS = 2/,
+    'the builder must use the 40-seat and two-door limits');
+assert.match(setupJs, /wouldCreateThirdDoor/,
+    'the builder must block creating a third door before changing the seat');
 /* The driver's cell is part of the bus design: the builder never deletes front-row seats to make room for it,
    and every seat map (My Bus, Riders, commuter) shows the same driver and door tiles. */
 const layoutHelper = read('Includes/seat_layout.php');

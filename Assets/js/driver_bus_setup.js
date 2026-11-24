@@ -161,9 +161,6 @@
                     return;
                 }
 
-                /* The legacy front-right pair was already drawn beside the driver above. */
-                if (rowIndex === 0 && start === 2 && legacyFrontSeats) return;
-
                 /* two seats side by side both removed: the pair is cleared automatically and shown as a door */
                 if (!row[start] && !row[start + 1]) {
                     const door = document.createElement('button');
@@ -184,6 +181,7 @@
 
                 [start, start + 1].forEach(seatIndex => {
                     const active = row[seatIndex];
+                    if (legacyFrontSeats && rowIndex === 0 && start === 2 && active && number < 4) number = 4;
                     if (active) number++;
                     const button = document.createElement('button');
                     button.type = 'button';
@@ -191,15 +189,19 @@
                     button.setAttribute('role', 'gridcell');
                     button.setAttribute('aria-pressed', String(active));
                     button.setAttribute('aria-label', `Row ${rowIndex + 1}, seat ${seatIndex + 1}: ${active ? `included as seat ${number}` : 'removed'}`);
+                    const other = seatIndex === start ? start + 1 : start;
+                    const wouldCreateThirdDoor = active && !row[other] && doorTotal() >= MAX_DOORS;
+                    button.disabled = wouldCreateThirdDoor;
+                    if (wouldCreateThirdDoor) button.setAttribute('aria-label', 'Maximum of 2 doors reached; this seat cannot be removed');
                     button.textContent = active ? String(number) : '—';
                     button.addEventListener('click', () => {
+                        if (active && !layout[rowIndex][other] && doorTotal() >= MAX_DOORS) return;
                         layout[rowIndex][seatIndex] = !layout[rowIndex][seatIndex];
                         render();
                     });
                     rowElement.append(button);
                 });
             });
-            if (legacyFrontSeats && rowIndex === 0) number = 4;
             grid.append(rowElement);
         });
         const total = seatTotal();
