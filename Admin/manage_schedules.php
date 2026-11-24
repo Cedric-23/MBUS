@@ -20,6 +20,7 @@ function mbus_admin_schedule_valid(array $data, bool $with_id=false): bool
     $departure_errors=DateTimeImmutable::getLastErrors();
     $arrival_errors=DateTimeImmutable::getLastErrors();
     if($departure === false || $arrival === false || ($departure_errors !== false && ($departure_errors['warning_count'] > 0 || $departure_errors['error_count'] > 0)) || ($arrival_errors !== false && ($arrival_errors['warning_count'] > 0 || $arrival_errors['error_count'] > 0))) return false;
+    if($departure->format('Y-m-d') < date('Y-m-d')) { $GLOBALS['mbus_sched_err'] = 'Schedules can only be added from today onward. Past departure dates are not allowed.'; return false; }
     if($arrival <= $departure){ $GLOBALS['mbus_sched_err'] = 'Arrival must be after departure (check the date too).'; return false; }
     return true;
 }
@@ -226,9 +227,10 @@ $route_options = function() use ($route_rows){ $o='<option value="">Select route
             <label class="ad-field"><span>Bus</span><select name="bus_id" required><?php echo $bus_options(); ?></select></label>
             <label class="ad-field"><span>Route</span><select name="route_id" required><?php echo $route_options(); ?></select></label>
             <div class="ad-two">
-                <label class="ad-field"><span>Departure</span><input type="datetime-local" name="departure_time" required></label>
+                <label class="ad-field"><span>Departure</span><input type="datetime-local" name="departure_time" min="<?php echo date('Y-m-d'); ?>T00:00" required></label>
                 <label class="ad-field"><span>Arrival</span><input type="datetime-local" name="arrival_time" required></label>
             </div>
+            <p class="ad-date-note" role="note">Schedules can only be added from today onward. Past departure dates are not accepted.</p>
             <label class="ad-field"><span>Status</span><select name="schedule_status"><option>Active</option><option>Cancelled</option><option>Completed</option></select></label>
         </div>
         <footer class="ad-dialog-foot">

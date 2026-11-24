@@ -87,6 +87,7 @@
 .ad-two{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
 .ad-field{display:flex;flex-direction:column;gap:.35rem;min-width:0}
 .ad-field span{font-size:.8rem;font-weight:600;color:var(--ad-muted)}
+.ad-date-note{margin:-.35rem 0 0;padding:.65rem .75rem;border-radius:10px;background:var(--color-warning-light,#fff7e6);color:var(--color-warning-dark,#8a5a00);font-size:.78rem;line-height:1.4}
 .ad-field input,.ad-field select{all:unset;box-sizing:border-box;width:100%;height:42px;padding:0 .8rem;border:1px solid var(--ad-line);border-radius:10px;font-size:.92rem;color:var(--ad-text);background:#fff}
 .ad-field select{cursor:pointer}
 .ad-field input:focus,.ad-field select:focus{border-color:var(--ad-primary);box-shadow:0 0 0 3px rgba(30,58,95,.1)}

@@ -18,6 +18,13 @@ assert.doesNotMatch(route, /INSERT INTO routes|DELETE FROM routes|\$_POST\['add_
     'route creation and deletion must not be available from this page');
 assert.doesNotMatch(route, /name="origin"|name="destination"|routeMap|routeEstimate/,
     'route endpoints and map editing must be removed from the fare-only screen');
+const schedules = read('Admin/manage_schedules.php');
+assert.match(schedules, /departure->format\('Y-m-d'\) < date\('Y-m-d'\)/,
+    'Admin must reject schedule departures before today');
+assert.match(schedules, /Past departure dates are not allowed/,
+    'Admin must explain why a past departure is rejected');
+assert.match(schedules, /name="departure_time" min="<\?php echo date\('Y-m-d'\); \?>T00:00"/,
+    'the schedule form must prevent selecting a past departure date');
 assert.match(route, /Only this route’s fare can be changed/,
     'the interface should explain the fare-only edit scope');
 
