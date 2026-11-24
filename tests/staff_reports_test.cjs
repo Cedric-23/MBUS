@@ -6,4 +6,5 @@ assert(/\$where = \[\$assignment\]/.test(rp), 'reports must be limited to the st
 assert(/\['gcash'\] = 'GCash payments'/.test(rp) && /isConductor/.test(rp));
 for (const f of ['Operator/operator_dashboard.php','Operator/my_bus.php','Operator/manage_trips.php','Operator/passengers.php','Operator/payments.php','Operator/scan.php','Operator/profile.php','Conductor/conductor_dashboard.php'])
   assert(/reports\.php" role="menuitem"/.test(fs.readFileSync(f, 'utf8')), f + ' needs the Reports menu link');
+assert(!/mbus_admin_/.test(rp), 'admin-only helpers must not be used in staff reports');
 console.log('reports ok');

@@ -202,7 +202,7 @@ $busLabel = static fn($n) => ctype_digit((string)$n) ? 'Bus ' . $n : $n;
 <header class="page-header" role="banner">
     <div class="page-header-left"><h1>Reports</h1></div>
     <div class="page-header-right"><div class="profile-menu-wrap">
-        <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span><?php echo mbus_admin_dot($conn); ?></button>
+        <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu"><span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span></button>
         <div class="profile-menu" id="profileMenu" role="menu">
             <div class="profile-menu-header"><span class="profile-menu-name"><?php echo $h($_SESSION['full_name'] ?? $staffLabel); ?></span><span class="profile-menu-role"><?php echo $staffLabel; ?> account</span></div>
             <a href="reports.php" role="menuitem" aria-current="page"><i class="fa fa-file-lines" aria-hidden="true"></i> Reports</a>
