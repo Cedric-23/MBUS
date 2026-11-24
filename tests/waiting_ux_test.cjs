@@ -113,7 +113,7 @@ assert.match(waitingBoardJs, /function fitFullRoute\(trip\)/);
 assert.match(waitingBoardJs, /window\.addEventListener\('resize',[\s\S]*?if \(!trackSelected\) return;[\s\S]*?routeViewMode === 'route' && routeData[\s\S]*?fitFullRoute\(trip\)/);
 assert.match(read('Assets/css/commuter_waiting_board.css'), /\.cwb-bus-pin\.is-untracked/);
 assert.doesNotMatch(waitingBoardJs, /Pick up/);
-const visibleCopy = commuterWaiting.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, ' ')
+const visibleCopy = commuterWaiting.replace(/<\?php[\s\S]*?\?>/g, ' ').replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, ' ')
     .replace(/&[a-z]+;/g, ' ').replace(/\s+/g, ' ').trim();
 assert.ok(visibleCopy.split(' ').length < 120, `waiting status page copy too long: ${visibleCopy.split(' ').length} words`);
 

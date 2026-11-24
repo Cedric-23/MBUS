@@ -11,7 +11,8 @@ const db = read('config/db_connect.php');
 const schema = read('supabase/01_schema.sql');
 const migration = read('supabase/19_reservation_stop_coordinates.sql');
 
-assert.match(reservePhp, /id="reservationMap"/);
+// The reserve page now picks stops from per-seat dropdowns; the optional map host is only used if present.
+assert.match(reserveJs, /getElementById\("reservationMap"\)/);
 assert.match(reservePhp, /name="stop_pins"|stop_pins/);
 assert.match(reservePhp, /pickup_latitude,pickup_longitude,destination_latitude,destination_longitude/);
 assert.match(reservePhp, /Set both map pins or clear both pins/);
