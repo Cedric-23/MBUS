@@ -6,6 +6,8 @@ include_once __DIR__ . '/../Includes/profile_photo.php';
 include_once __DIR__ . '/../Includes/validation.php';
 include_once __DIR__ . '/../Includes/csrf.php';
 include_once __DIR__ . '/../Includes/phone_unique.php';
+require_once __DIR__ . '/../Includes/id_renewal.php';
+require_once __DIR__ . '/../Includes/notify.php';
 
 if (!isset($_SESSION['user_id']) || !in_array(strtolower((string)($_SESSION['user_type'] ?? '')), ['driver', 'conductor'], true)) {
     header('Location: ../login.php');
@@ -96,6 +98,48 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['update_pro
     }
 }
 
+/* ---- Driver ID renewal: new expiry date + photo, sent to the admin for approval ---- */
+$renewError = ''; $renewSuccess = '';
+if (!$isConductor && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['submit_renewal'])) {
+    $latestRenewal = mbus_renewal_latest($conn, $userId);
+    $newExpiry = trim((string)($_POST['new_expiry'] ?? ''));
+    $file = $_FILES['renewal_document'] ?? null;
+    $d = DateTime::createFromFormat('Y-m-d', $newExpiry);
+    if (!csrf_validate_token()) {
+        $renewError = 'Security validation failed. Please reload and try again.';
+    } elseif ($latestRenewal && $latestRenewal['status'] === 'Pending') {
+        $renewError = 'You already have a renewal waiting for approval.';
+    } elseif (!$d || $d->format('Y-m-d') !== $newExpiry) {
+        $renewError = 'Enter the new expiry date shown on your ID.';
+    } elseif ($newExpiry <= date('Y-m-d')) {
+        $renewError = 'That date has already passed. Use your renewed ID.';
+    } elseif ($newExpiry > date('Y-m-d', strtotime('+15 years'))) {
+        $renewError = 'That expiry date is too far ahead. Check the year.';
+    } elseif (!$file || $file['error'] !== UPLOAD_ERR_OK) {
+        $renewError = 'Upload a photo of your renewed ID.';
+    } elseif ($file['size'] > 5 * 1024 * 1024) {
+        $renewError = 'File is too large. Maximum is 5 MB.';
+    } else {
+        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+        if (!in_array($mime, ['image/jpeg', 'image/png', 'application/pdf'], true)) {
+            $renewError = 'Only JPG, PNG or PDF files are allowed.';
+        } else {
+            $ok = mbus_db_prepare($conn, "INSERT INTO id_renewal (user_id, new_expiry, document_b64, document_mime) VALUES (?, ?, ?, ?)",
+                [$userId, $newExpiry, base64_encode(file_get_contents($file['tmp_name'])), $mime]);
+            if ($ok === false) {
+                $renewError = 'Could not send your renewal. Please try again.';
+            } else {
+                $renewSuccess = 'Sent. An admin will review your renewed ID shortly.';
+                mbus_notify_admins($conn, ($_SESSION['full_name'] ?? 'A driver') . ' sent a renewed ID for approval.');
+            }
+        }
+    }
+}
+if (!$isConductor) {
+    $idStatus = mbus_driver_id_status($conn, $userId);
+    $renewal = mbus_renewal_latest($conn, $userId);
+}
+
 $name = htmlspecialchars((string)($_SESSION['full_name'] ?? $staffLabel));
 ?>
 <!DOCTYPE html>
@@ -157,6 +201,44 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? $staffLabel));
             <button type="submit" class="btn btn-primary">Save changes</button>
         </form>
     </section>
+
+    <?php if (!$isConductor): $canRenew = !($renewal && $renewal['status'] === 'Pending'); ?>
+    <section class="card pf-form" id="id-renewal" style="max-width:720px;margin:0 auto 16px;">
+        <h2><i class="fa fa-id-card" aria-hidden="true"></i> ID &amp; licence</h2>
+        <?php if ($renewSuccess !== ''): ?><div class="alert alert-success" role="status"><?php echo htmlspecialchars($renewSuccess); ?></div><?php endif; ?>
+        <?php if ($renewError !== ''): ?><div class="alert alert-error" role="alert"><?php echo htmlspecialchars($renewError); ?></div><?php endif; ?>
+        <?php if ($idStatus['expiry']): ?>
+        <p class="form-hint"><strong>
+            <?php if ($idStatus['state'] === 'expired'): ?>Expired on <?php echo date('M j, Y', strtotime($idStatus['expiry'])); ?>.
+            <?php elseif ($idStatus['state'] === 'soon'): ?>Expires in <?php echo (int)$idStatus['days']; ?> day<?php echo $idStatus['days'] === 1 ? '' : 's'; ?> (<?php echo date('M j, Y', strtotime($idStatus['expiry'])); ?>).
+            <?php else: ?>Valid until <?php echo date('M j, Y', strtotime($idStatus['expiry'])); ?>.<?php endif; ?>
+        </strong></p>
+        <?php else: ?><p class="form-hint">No expiry date is on file for your ID. You can still send a renewed ID below.</p><?php endif; ?>
+        <?php if ($renewal && $renewal['status'] === 'Pending'): ?>
+            <p class="form-hint">Your renewed ID (valid until <?php echo date('M j, Y', strtotime($renewal['new_expiry'])); ?>) is waiting for admin approval.</p>
+        <?php elseif ($renewal && $renewal['status'] === 'Rejected'): ?>
+            <p class="form-hint" style="color:#b42318">Your last renewal was rejected<?php echo !empty($renewal['rejection_reason']) ? ': ' . htmlspecialchars($renewal['rejection_reason']) : '.'; ?> Send a clearer photo below.</p>
+        <?php elseif ($renewal && $renewal['status'] === 'Approved'): ?>
+            <p class="form-hint" style="color:#1b7a46">Your last renewal was approved.</p>
+        <?php endif; ?>
+        <?php if ($canRenew): ?>
+        <form method="POST" enctype="multipart/form-data">
+            <?php csrf_field(); ?>
+            <input type="hidden" name="submit_renewal" value="1">
+            <div class="pf-field">
+                <label for="newExpiry">New ID Expiry Date</label>
+                <input class="form-control" type="date" id="newExpiry" name="new_expiry" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" required>
+            </div>
+            <div class="pf-field">
+                <label for="renewalDoc">Photo of your renewed ID</label>
+                <input class="form-control" type="file" id="renewalDoc" name="renewal_document" accept="image/jpeg,image/png,application/pdf" required>
+                <small class="form-hint">JPG, PNG or PDF, up to 5 MB.</small>
+            </div>
+            <button type="submit" class="btn btn-primary">Send for approval</button>
+        </form>
+        <?php endif; ?>
+    </section>
+    <?php endif; ?>
 </main>
 <?php echo mbus_staff_bottom_nav($isConductor ? 'conductor' : 'driver', ''); ?>
 <script src="../Assets/js/app-header.js"></script>
