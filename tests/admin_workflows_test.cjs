@@ -12,6 +12,7 @@ const gcash = read('Admin/gcash_approval.php');
 const conductorPayments = read('Operator/payments.php');
 const dashboard = read('Admin/admin_dashboard.php');
 const reports = read('Admin/reports.php');
+const announcements = read('Admin/announcements.php');
 const notify = read('Includes/notify.php');
 const schedules = read('Admin/manage_schedules.php');
 
@@ -28,6 +29,9 @@ assert.match(schedules, /mbus_notify_schedule_change\(\$conn\s*,\s*\$before_chan
 for (const link of ['admin_dashboard.php', 'manage_schedules.php', 'manage_buses.php', 'manage_operators.php', 'waiting.php']) {
   assert.match(reports, new RegExp(`href="${link}"[^>]*class="bottom-nav-item"`), `Reports must keep the Admin ${link} navigation button`);
 }
+assert.match(announcements, /class="profile-trigger"/, 'Admin announcements must keep the account menu trigger');
+assert.match(announcements, /id="profileMenu"/, 'Admin announcements must render the account dropdown');
+assert.match(announcements, /href="announcements\.php" class="bottom-nav-item active"/, 'Admin announcements must mark Updates active');
 assert.match(dashboard, /href="gcash_approval\.php"/, 'Admin dashboard must expose GCash account management directly');
 assert.match(gcash, /mbus_gcash_pending\(\$conn\)/, 'Admin GCash page must read pending Conductor changes');
 assert.match(gcash, /name="approve"/, 'Admin GCash page must provide approval');

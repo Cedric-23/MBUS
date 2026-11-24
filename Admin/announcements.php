@@ -7,6 +7,7 @@ if (!isset($_SESSION['user_type']) || strtolower($_SESSION['user_type']) != 'adm
 include("../config/db_connect.php");
 include("../Includes/csrf.php");
 include_once("../Includes/announcements.php");
+include_once("../Includes/admin_menu.php");
 
 $admin_id = (int)($_SESSION['user_id'] ?? 0);
 $success = null; $error = null;
@@ -31,6 +32,7 @@ if (isset($_POST['withdraw_announcement'])) {
 }
 
 $items = mbus_announcements_active($conn);
+$h = static fn($value) => htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -51,7 +53,7 @@ $items = mbus_announcements_active($conn);
     <link rel="stylesheet" href="../Assets/css/unify.css?v=3">
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
 </head>
-<body class="stf has-sidebar">
+<body class="stf has-sidebar has-bottom-nav">
 
 <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
     <div class="logo-container"><img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo"></div>
@@ -68,7 +70,22 @@ $items = mbus_announcements_active($conn);
 </aside>
 
 <main class="main" role="main">
-<header class="page-header"><h1>Announcements</h1></header>
+<header class="page-header" role="banner">
+    <div class="page-header-left"><h1>Announcements</h1></div>
+    <div class="page-header-right"><div class="profile-menu-wrap">
+        <button class="profile-trigger" type="button" aria-expanded="false" aria-controls="profileMenu" aria-label="Open account menu">
+            <span class="profile-avatar" aria-hidden="true"><?php require_once dirname(__DIR__) . '/Includes/header_avatar.php'; echo mbus_header_avatar('../'); ?></span><?php echo mbus_admin_dot($conn); ?>
+        </button>
+        <div class="profile-menu" id="profileMenu" role="menu">
+            <div class="profile-menu-header">
+                <span class="profile-menu-name"><?php echo $h($_SESSION['full_name'] ?? 'Account'); ?></span>
+                <span class="profile-menu-role">Admin account</span>
+            </div>
+            <?php echo mbus_admin_approvals_link($conn); ?>
+            <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
+        </div>
+    </div></div>
+</header>
 
 <?php if ($success): ?><div class="alert alert-success" role="alert"><?php echo htmlspecialchars($success); ?></div><?php endif; ?>
 <?php if ($error): ?><div class="alert alert-error" role="alert"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
