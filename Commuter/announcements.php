@@ -39,7 +39,7 @@ $items = mbus_announcements_active($conn, ['All', 'Commuters']);
         .upd-tag.is-service-resumed { background: #dff5e6; color: #1f7a3d; }
     </style>
 </head>
-<body class="home-page has-bottom-nav cm">
+<body class="home-page cm">
 <main class="main" role="main">
     <header class="home-top">
         <div>
@@ -64,13 +64,6 @@ $items = mbus_announcements_active($conn, ['All', 'Commuters']);
     <?php endif; ?>
 </main>
 
-<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
-    <a href="commuter_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
-    <a href="schedule.php" class="bottom-nav-item"><i class="fa fa-calendar" aria-hidden="true"></i><span>Schedule</span></a>
-    <a href="live.php" class="bottom-nav-item"><i class="fa fa-location-dot" aria-hidden="true"></i><span>Live</span></a>
-    <a href="my_reservations.php" class="bottom-nav-item"><i class="fa fa-ticket" aria-hidden="true"></i><span>Trips</span></a>
-    <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
-</nav>
 <script src="../Assets/js/app-header.js"></script>
 </body>
 </html>
