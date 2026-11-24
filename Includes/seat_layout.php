@@ -6,10 +6,10 @@
  * stays free in the front row, then full rows of 4. */
 
 /** Most seats and doors a bus layout may have. A door is a pair of side-by-side cells with no seats (the driver's cell does not count). */
-if (!defined('MBUS_MAX_SEATS')) define('MBUS_MAX_SEATS', 50);
+if (!defined('MBUS_MAX_SEATS')) define('MBUS_MAX_SEATS', 40);
 if (!defined('MBUS_MAX_DOORS')) define('MBUS_MAX_DOORS', 2);
 
-/** Validated layout (1-25 rows, 1-50 seats, at most 2 doors) from JSON or an array, or null when it is not usable. */
+/** Validated layout (1-25 rows, 1-40 seats, at most 2 doors) from JSON or an array, or null when it is not usable. */
 function mbus_seat_layout_parse($raw): ?array
 {
     $layout = is_array($raw) ? $raw : json_decode((string)$raw, true);
@@ -85,6 +85,13 @@ function mbus_bus_seat_rows($savedLayout, int $capacity): array
         $cells = [];
         foreach ($row as $seat) $cells[] = $seat ? $number++ : null;
         $rows[] = $cells;
+    }
+    /* Legacy buses stored four seats in row 1 before the driver cell was part of the layout. Keep every seat ID,
+       but place the old front-right seats (3 and 4) beside the driver and put seats 1 and 2 in the next row. */
+    if (isset($rows[0]) && $rows[0][0] !== null && $rows[0][1] !== null && $rows[0][2] !== null && $rows[0][3] !== null) {
+        $front = $rows[0];
+        $rows[0] = [null, null, $front[2], $front[3]];
+        array_splice($rows, 1, 0, [[ $front[0], $front[1], null, null ]]);
     }
     return $rows;
 }

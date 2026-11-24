@@ -78,7 +78,9 @@
     }
     layout = layout.slice(0, 25);
 
-    const MAX_SEATS = 50, MAX_DOORS = 2;
+    const MAX_SEATS = 40, MAX_DOORS = 2;
+    /* Older saved layouts used all four cells in row 1. Keep those seat IDs, but draw the old front-right pair
+       beside the driver instead of leaving an empty area above them. */
     function seatTotal() {
         return layout.reduce((total, row) => total + row.filter(Boolean).length, 0);
     }
@@ -98,6 +100,7 @@
 
     function render() {
         grid.replaceChildren();
+        const legacyFrontSeats = !driverInside() && layout[0][2] && layout[0][3];
         let number = 0;
         if (!driverInside()) {
             const front = document.createElement('div');
@@ -113,6 +116,23 @@
             lane.className = 'seat-aisle';
             lane.setAttribute('aria-hidden', 'true');
             front.append(cab, lane);
+            if (legacyFrontSeats) {
+                [2, 3].forEach(seatIndex => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'seat-cell is-open';
+                    button.style.gridColumn = seatIndex === 2 ? '4' : '5';
+                    button.setAttribute('role', 'gridcell');
+                    button.setAttribute('aria-pressed', 'true');
+                    button.setAttribute('aria-label', `Front row, seat ${seatIndex + 1}`);
+                    button.textContent = String(seatIndex + 1);
+                    button.addEventListener('click', () => {
+                        layout[0][seatIndex] = false;
+                        render();
+                    });
+                    front.append(button);
+                });
+            }
             grid.append(front);
         }
         layout.forEach((row, rowIndex) => {
@@ -140,6 +160,9 @@
                     rowElement.append(driver);
                     return;
                 }
+
+                /* The legacy front-right pair was already drawn beside the driver above. */
+                if (rowIndex === 0 && start === 2 && legacyFrontSeats) return;
 
                 /* two seats side by side both removed: the pair is cleared automatically and shown as a door */
                 if (!row[start] && !row[start + 1]) {
@@ -176,6 +199,7 @@
                     rowElement.append(button);
                 });
             });
+            if (legacyFrontSeats && rowIndex === 0) number = 4;
             grid.append(rowElement);
         });
         const total = seatTotal();

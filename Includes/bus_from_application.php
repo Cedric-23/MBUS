@@ -24,7 +24,7 @@ function mbus_bus_from_application(PDO $pdo, array $app, int $operatorId): ?arra
     /* Applicants only pick the bus type; the seat layout is set later in My Bus. Until then use a standard one. */
     $layout = mbus_seat_layout_parse((string)($app['seat_layout'] ?? ''));
     if ($layout === null || mbus_seat_layout_count($layout) < 1) {
-        $layout = mbus_seat_layout_default($type === 'Aircon' ? 40 : 50);
+        $layout = mbus_seat_layout_default(40);
     }
     $count = mbus_seat_layout_count($layout);
 
