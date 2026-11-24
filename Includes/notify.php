@@ -33,3 +33,112 @@ function mbus_notify_admins($conn, string $message): void
         }
     } catch (Throwable $e) { error_log('notify admins failed: ' . $e->getMessage()); }
 }
+
+/* ------------------------------------------------------------------
+ * Schedule change notifications (Rank 5)
+ * ------------------------------------------------------------------ */
+
+/** Snapshot of a schedule row with route and bus labels, used to describe what changed. Null if not found. */
+function mbus_schedule_snapshot($conn, int $schedule_id): ?array
+{
+    if ($schedule_id <= 0) return null;
+    try {
+        $q = mbus_db_prepare($conn, "SELECT s.schedule_id, s.bus_id, s.route_id, s.departure_time, s.arrival_time, s.schedule_status, r.origin, r.destination, b.bus_number FROM schedule s LEFT JOIN routes r ON r.route_id = s.route_id LEFT JOIN buses b ON b.bus_id = s.bus_id WHERE s.schedule_id = ?", [$schedule_id]);
+        $row = $q !== false ? mbus_db_fetch_assoc($q) : false;
+        return $row ? $row : null;
+    } catch (Throwable $e) { error_log('schedule snapshot failed: ' . $e->getMessage()); return null; }
+}
+
+/** Riders who still hold a seat (Pending/Paid/Confirmed) on a schedule. Call this BEFORE deleting a schedule. */
+function mbus_schedule_rider_ids($conn, int $schedule_id): array
+{
+    $ids = [];
+    try {
+        $q = mbus_db_prepare($conn, "SELECT DISTINCT user_id FROM reservation WHERE schedule_id = ? AND status IN ('Pending','Paid','Confirmed')", [$schedule_id]);
+        while ($q !== false && ($row = mbus_db_fetch_assoc($q))) $ids[] = (int)$row['user_id'];
+    } catch (Throwable $e) { error_log('schedule riders failed: ' . $e->getMessage()); }
+    return array_values(array_unique(array_filter($ids)));
+}
+
+/** Operator, driver and conductor user ids tied to any of the given buses. */
+function mbus_schedule_staff_ids($conn, array $bus_ids): array
+{
+    $bus_ids = array_values(array_unique(array_filter(array_map('intval', $bus_ids))));
+    if (!$bus_ids) return [];
+    $in = implode(',', array_fill(0, count($bus_ids), '?'));
+    $queries = [
+        "SELECT operator_id AS uid FROM operator_bus_assignments WHERE bus_id IN ($in)",
+        "SELECT driver_id AS uid FROM buses WHERE bus_id IN ($in) AND driver_id IS NOT NULL",
+        "SELECT conductor_id AS uid FROM conductor_bus_assignments WHERE bus_id IN ($in)",
+    ];
+    $ids = [];
+    // One query each so a missing optional table (for example conductor assignments) cannot hide the others.
+    foreach ($queries as $sql) {
+        try {
+            $q = mbus_db_prepare($conn, $sql, $bus_ids);
+            while ($q !== false && ($row = mbus_db_fetch_assoc($q))) $ids[] = (int)$row['uid'];
+        } catch (Throwable $e) { error_log('schedule staff lookup failed: ' . $e->getMessage()); }
+    }
+    return array_values(array_unique(array_filter($ids)));
+}
+
+function mbus_schedule_when($value): string
+{
+    $t = strtotime((string)$value);
+    return $t ? date('M j, g:i A', $t) : '';
+}
+
+function mbus_schedule_route_label(array $s): string
+{
+    return trim((string)($s['origin'] ?? '')) . ' to ' . trim((string)($s['destination'] ?? ''));
+}
+
+/** Plain-language summary of what changed. Empty string when nothing a passenger cares about changed. */
+function mbus_schedule_change_message(array $before, ?array $after): string
+{
+    $route = mbus_schedule_route_label($before);
+    $when = mbus_schedule_when($before['departure_time'] ?? '');
+    if ($after === null) {
+        return "Trip removed: the $route trip on $when is no longer on the schedule. Please check Schedule for other trips.";
+    }
+    $was = (string)($before['schedule_status'] ?? '');
+    $now = (string)($after['schedule_status'] ?? '');
+    if ($now === 'Cancelled' && $was !== 'Cancelled') {
+        return "Trip cancelled: the $route trip on $when has been cancelled. Please check Schedule for other trips.";
+    }
+    $changes = [];
+    if (strtotime((string)$before['departure_time']) !== strtotime((string)$after['departure_time'])) {
+        $changes[] = 'departure moved to ' . mbus_schedule_when($after['departure_time']);
+    }
+    if (strtotime((string)$before['arrival_time']) !== strtotime((string)$after['arrival_time'])) {
+        $changes[] = 'arrival is now ' . mbus_schedule_when($after['arrival_time']);
+    }
+    if ((int)$before['bus_id'] !== (int)$after['bus_id']) {
+        $changes[] = 'bus changed to ' . ($after['bus_number'] ?? '');
+    }
+    if ((int)$before['route_id'] !== (int)$after['route_id']) {
+        $changes[] = 'route changed to ' . mbus_schedule_route_label($after);
+    }
+    if ($now !== $was) {
+        $changes[] = 'status is now ' . $now;
+    }
+    if (!$changes) return '';
+    return "Schedule change: the $route trip on $when - " . implode('; ', $changes) . '.';
+}
+
+/**
+ * Notify riders and the bus's staff that a schedule changed. $after is null when the schedule was deleted.
+ * Pass $rider_ids collected before a delete, because reservations cascade-delete with the schedule.
+ * Best effort: never blocks the admin action.
+ */
+function mbus_notify_schedule_change($conn, array $before, ?array $after, array $rider_ids = []): void
+{
+    try {
+        $message = mbus_schedule_change_message($before, $after);
+        if ($message === '') return;
+        $bus_ids = [(int)($before['bus_id'] ?? 0)];
+        if ($after !== null) $bus_ids[] = (int)($after['bus_id'] ?? 0);
+        $recipients = array_unique(array_merge($rider_ids, mbus_schedule_staff_ids($conn, $bus_ids)));
+        foreach ($recipients as $uid) mbus_notify($conn, (int)$uid, $message);
+    } catch (Throwable $e) { error_log('notify schedule change failed: ' . $e->getMessage()); }
+}
