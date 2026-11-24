@@ -22,8 +22,9 @@ assert.match(dashboard, /href="gcash_approval\.php"/, 'Admin dashboard must expo
 assert.match(gcash, /mbus_gcash_pending\(\$conn\)/, 'Admin GCash page must read pending Conductor changes');
 assert.match(gcash, /name="approve"/, 'Admin GCash page must provide approval');
 assert.match(gcash, /name="reject"/, 'Admin GCash page must provide rejection');
-assert.match(conductorPayments, /mbus_set_setting\(\$conn, 'gcash_pending'/, 'Conductor GCash changes must enter the Admin approval queue');
-assert.match(conductorPayments, /Sent to admin for approval/, 'Conductor must be told the account change is pending Admin approval');
+const driverGcash = read('Operator/gcash_account.php');
+assert.match(driverGcash, /mbus_set_setting\(\$conn, 'gcash_pending'/, 'Driver GCash changes must enter the Admin approval queue');
+assert.match(driverGcash, /Sent to admin for approval/, 'Driver must be told the account change is pending Admin approval');
 
 assert.match(dashboard, /'Drivers'\s*=>.*LOWER\(user_type\).*driver/s, 'Admin dashboard must count Drivers');
 assert.match(dashboard, /'Conductors'\s*=>.*LOWER\(user_type\).*conductor/s, 'Admin dashboard must count Conductors');
