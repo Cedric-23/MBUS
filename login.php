@@ -25,11 +25,12 @@ $type_aliases = [
     'operator'  => 'driver',
 ];
 
+$dashboard_prefix = $staff_portal ? '../' : '';
 $dashboards = [
-    'commuter'  => 'Commuter/commuter_dashboard.php',
-    'driver'    => 'Operator/operator_dashboard.php',
-    'admin'     => 'Admin/admin_dashboard.php',
-    'conductor' => 'Conductor/conductor_dashboard.php',
+    'commuter'  => $dashboard_prefix . 'Commuter/commuter_dashboard.php',
+    'driver'    => $dashboard_prefix . 'Operator/operator_dashboard.php',
+    'admin'     => $dashboard_prefix . 'Admin/admin_dashboard.php',
+    'conductor' => $dashboard_prefix . 'Conductor/conductor_dashboard.php',
 ];
 
 $csrf_error    = '';
