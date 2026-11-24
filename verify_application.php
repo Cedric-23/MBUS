@@ -116,8 +116,7 @@ if (isset($_POST['resend'])) {
                     // Only now does the application reach the admin.
                     mbus_notify_admins($conn, 'New ' . $roleLabel . ' application from ' . $app['full_name'] . '. Review it in Staff applications.');
                     unset($_SESSION['staff_verify_email'], $_SESSION['staff_verify_type'], $_SESSION['staff_verify_mail_sent'], $_SESSION['staff_verify_sent_at']);
-                    $_SESSION['register_flash'] = 'Email verified. Your application was sent to the admin for review. Once approved, log in with ' . $email . ' and the password you chose.';
-                    header('Location: register.php?type=' . $type, true, 303);
+                    header('Location: login.php', true, 303);
                     exit();
                 }
             }
