@@ -227,8 +227,8 @@ while($cq !== false && ($crow = mbus_db_fetch_assoc($cq))){ $conductor_options[]
 $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
 ?>
 <?php if($bus_list): $n_ac=0;$n_ord=0;$n_nd=0;$n_nc=0; foreach($bus_list as $x){ if(strtolower($x['bus_type'])==='aircon')$n_ac++; else $n_ord++; if(empty($x['operators']))$n_nd++; if(empty($x['conductor']))$n_nc++; } ?>
-<div class="ad-toolbar op-tools">
-    <label class="ad-search"><i class="fa fa-search" aria-hidden="true"></i><input type="text" id="opSearch" placeholder="Search bus, driver or conductor" autocomplete="off" aria-label="Search buses"></label>
+<div class="op-tools">
+    <div class="op-search"><i class="fa fa-search" aria-hidden="true"></i><input type="search" id="opSearch" placeholder="Search bus, driver or conductor" autocomplete="off" aria-label="Search buses"><button type="button" class="op-clear" id="opClear" aria-label="Clear search" hidden><i class="fa fa-xmark" aria-hidden="true"></i></button></div>
     <div class="op-chips" role="group" aria-label="Filter buses">
         <button type="button" class="op-chip on" data-f="all">All <span><?php echo count($bus_list); ?></span></button>
         <button type="button" class="op-chip" data-f="aircon">Aircon <span><?php echo $n_ac; ?></span></button>
@@ -236,6 +236,7 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
         <button type="button" class="op-chip" data-f="nodriver">No driver <span><?php echo $n_nd; ?></span></button>
         <button type="button" class="op-chip" data-f="noconductor">No conductor <span><?php echo $n_nc; ?></span></button>
     </div>
+    <p class="op-count" id="opCount" aria-live="polite"></p>
 </div>
 <?php endif; ?>
 <?php if(!$bus_list): ?><div class="ad-empty"><i class="fa fa-bus" aria-hidden="true"></i><p>No buses yet. They appear here once a driver application is approved.</p></div><?php endif; ?>
@@ -368,7 +369,8 @@ document.addEventListener('keydown', function(e) {
   var q = document.getElementById('opSearch'); if (!q) return;
   var PER = 4, rows = [].slice.call(document.querySelectorAll('[data-item]')), page = 0, f = 'all';
   var pager = document.getElementById('opPager'), label = document.getElementById('opPageLabel'), none = document.getElementById('opNone');
-  var grid = document.querySelector('.ad-cards');
+  var cnt = document.getElementById('opCount'), clr = document.getElementById('opClear');
+  clr.addEventListener('click', function () { q.value = ''; page = 0; apply(); q.focus(); });
   function apply() {
     var term = q.value.trim().toLowerCase();
     var hit = rows.filter(function (r) { return (f === 'all' || (' ' + r.dataset.tags + ' ').indexOf(' ' + f + ' ') !== -1) && (term === '' || r.dataset.q.indexOf(term) !== -1); });
@@ -377,6 +379,8 @@ document.addEventListener('keydown', function(e) {
     rows.forEach(function (r) { r.hidden = true; });
     hit.slice(page * PER, page * PER + PER).forEach(function (r) { r.hidden = false; });
     none.hidden = hit.length > 0;
+    cnt.textContent = hit.length === rows.length ? rows.length + ' buses' : hit.length + ' of ' + rows.length + ' buses';
+    clr.hidden = term === '';
     pager.hidden = pages < 2;
     label.textContent = 'Page ' + (page + 1) + ' of ' + pages;
     pager.querySelector('[data-d="-1"]').disabled = page === 0;

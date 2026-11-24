@@ -129,6 +129,7 @@ $nextTrip = $trips[0] ?? null;
                             <span class="profile-menu-role">Conductor account</span>
                         </div>
                         <a href="../Operator/payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments<?php if ($paymentCount > 0): ?><span class="menu-badge"><?php echo $paymentCount > 99 ? '99+' : $paymentCount; ?></span><?php endif; ?></a>
+                        <a href="../Operator/analytics.php" role="menuitem"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a>
                         <a href="../Operator/profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                         <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                     </div>

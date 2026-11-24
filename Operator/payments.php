@@ -165,6 +165,7 @@ $gPending = mbus_gcash_pending($conn);
                         <span class="profile-menu-role">Conductor account</span>
                     </div>
                 <a href="payments.php" role="menuitem" aria-current="page"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a>
+                <a href="analytics.php" role="menuitem"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a>
                 <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>

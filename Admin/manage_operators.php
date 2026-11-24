@@ -168,13 +168,14 @@ $op_list = [];
 while($oq !== false && ($row = mbus_db_fetch_assoc($oq))){ $op_list[] = $row; }
 $assigned = count(array_filter($op_list, fn($x) => !empty($x['buses'])));
 ?>
-<div class="ad-toolbar op-tools">
-    <label class="ad-search"><i class="fa fa-search" aria-hidden="true"></i><input type="text" id="opSearch" placeholder="Search name, email or bus" autocomplete="off" aria-label="Search operators"></label>
+<div class="op-tools">
+    <div class="op-search"><i class="fa fa-search" aria-hidden="true"></i><input type="search" id="opSearch" placeholder="Search name, email or bus" autocomplete="off" aria-label="Search operators"><button type="button" class="op-clear" id="opClear" aria-label="Clear search" hidden><i class="fa fa-xmark" aria-hidden="true"></i></button></div>
     <div class="op-chips" role="group" aria-label="Filter operators">
         <button type="button" class="op-chip on" data-f="all">All <span><?php echo count($op_list); ?></span></button>
         <button type="button" class="op-chip" data-f="bus">With bus <span><?php echo $assigned; ?></span></button>
         <button type="button" class="op-chip" data-f="nobus">No bus <span><?php echo count($op_list) - $assigned; ?></span></button>
     </div>
+    <p class="op-count" id="opCount" aria-live="polite"></p>
 </div>
 
 <?php if(!$op_list): ?><div class="ad-empty"><i class="fa fa-user-gear" aria-hidden="true"></i><p>No operators yet.</p></div><?php endif; ?>
@@ -283,6 +284,8 @@ document.addEventListener('keydown', function(e) {
   var PER = 4, rows = [].slice.call(document.querySelectorAll('[data-op]')), page = 0, f = 'all';
   var q = document.getElementById('opSearch'), pager = document.getElementById('opPager'), label = document.getElementById('opPageLabel'), none = document.getElementById('opNone');
   var table = document.querySelector('.ad-table.ops');
+  var cnt = document.getElementById('opCount'), clr = document.getElementById('opClear');
+  clr.addEventListener('click', function () { q.value = ''; page = 0; apply(); q.focus(); });
   function apply() {
     var term = q.value.trim().toLowerCase();
     var hit = rows.filter(function (r) { return (f === 'all' || r.dataset.has === f) && (term === '' || r.dataset.q.indexOf(term) !== -1); });
@@ -292,6 +295,8 @@ document.addEventListener('keydown', function(e) {
     hit.slice(page * PER, page * PER + PER).forEach(function (r) { r.hidden = false; });
     if (table) table.hidden = rows.length > 0 && hit.length === 0;
     none.hidden = !(rows.length > 0 && hit.length === 0);
+    cnt.textContent = hit.length === rows.length ? rows.length + ' operators' : hit.length + ' of ' + rows.length + ' operators';
+    clr.hidden = term === '';
     pager.hidden = pages < 2;
     label.textContent = 'Page ' + (page + 1) + ' of ' + pages;
     pager.querySelector('[data-d="-1"]').disabled = page === 0;
