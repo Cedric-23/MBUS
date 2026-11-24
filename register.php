@@ -56,6 +56,18 @@ function mbus_application_photo(string $field, &$error): ?array {
     return ['b64' => base64_encode($data), 'mime' => $mime];
 }
 
+/** Read the required 2x2 picture: a JPEG/PNG image only, up to 1 MB. */
+function mbus_application_id_photo(string $field, &$error): ?array {
+    if (!isset($_FILES[$field]) || $_FILES[$field]['error'] === UPLOAD_ERR_NO_FILE) { $error = 'Please attach your 2x2 picture.'; return null; }
+    $f = $_FILES[$field];
+    if ($f['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name'])) { $error = 'The picture could not be uploaded. Try a smaller image.'; return null; }
+    if ($f['size'] > 1048576) { $error = 'The 2x2 picture must be 1 MB or smaller.'; return null; }
+    $data = file_get_contents($f['tmp_name']);
+    $mime = str_starts_with($data, "\xFF\xD8\xFF") ? 'image/jpeg' : (str_starts_with($data, "\x89PNG\r\n\x1a\n") ? 'image/png' : '');
+    if ($mime === '') { $error = 'The 2x2 picture must be a JPG or PNG image.'; return null; }
+    return ['b64' => base64_encode($data), 'mime' => $mime];
+}
+
 /* ---------- user type ---------- */
 
 $allowed_types  = $staff_portal ? ["conductor", "driver"] : ["passenger"];
@@ -238,10 +250,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $application_limit = mbus_registration_allow_application($conn, $email);
             if ($application_limit !== null) $error = mbus_registration_limit_message($application_limit);
         }
-        $lic = $veh = $busPhoto = $interiorPhoto = null;
+        $lic = $veh = $busPhoto = $interiorPhoto = $idPhoto = $medical = $nbi = null;
         if (!$errors && $error === '') {
             $fe = ''; $lic = mbus_application_file('license_document', $fe);
             if (!$lic) $errors['license_document'] = 'License file: ' . $fe;
+            $fe = ''; $idPhoto = mbus_application_id_photo('id_photo', $fe);
+            if (!$idPhoto) $errors['id_photo'] = '2x2 picture: ' . $fe;
+            $fe = ''; $medical = mbus_application_file('medical_document', $fe);
+            if (!$medical) $errors['medical_document'] = 'Medical certificate with drug test: ' . $fe;
+            $fe = ''; $nbi = mbus_application_file('nbi_document', $fe);
+            if (!$nbi) $errors['nbi_document'] = 'NBI clearance: ' . $fe;
             $fe = ''; $veh = mbus_application_file('vehicle_document', $fe);
             if (!$veh) $errors['vehicle_document'] = 'Vehicle registration file: ' . $fe;
             $fe = ''; $busPhoto = mbus_application_photo('bus_photo', $fe);
@@ -254,12 +272,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 "INSERT INTO operator_application
                     (full_name, email, phone_number, address, license_number, license_expiry, vehicle_type, vehicle_plate_number,
                      license_document_b64, license_document_mime, vehicle_document_b64, vehicle_document_mime, password_hash,
-                     bus_photo_b64, bus_photo_mime, interior_photo_b64, interior_photo_mime, last_name, vehicle_registration_expiry, seat_layout, application_status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')",
+                     bus_photo_b64, bus_photo_mime, interior_photo_b64, interior_photo_mime, last_name, vehicle_registration_expiry, seat_layout,
+                     id_photo_b64, id_photo_mime, medical_document_b64, medical_document_mime, nbi_document_b64, nbi_document_mime, application_status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')",
                 [$full_name, $email, $phone_number, $address, $license_number, ($license_expiry === "" ? null : $license_expiry), $vehicle_type, $plate,
                  $lic['b64'], $lic['mime'], $veh['b64'], $veh['mime'], password_hash($password, PASSWORD_DEFAULT),
                  $busPhoto['b64'], $busPhoto['mime'], $interiorPhoto['b64'], $interiorPhoto['mime'],
-                 $last_name, $vehicle_expiry !== '' ? $vehicle_expiry : null, json_encode(mbus_seat_layout_default($seats))]);
+                 $last_name, $vehicle_expiry !== '' ? $vehicle_expiry : null, json_encode(mbus_seat_layout_default($seats)),
+                 $idPhoto['b64'], $idPhoto['mime'], $medical['b64'], $medical['mime'], $nbi['b64'], $nbi['mime']]);
             if ($ok === false) { $error = 'We could not save your application. Please try again.'; }
             else {
                 mbus_notify_admins($conn, 'New driver/operator application from ' . $full_name . '. Review it in Staff applications.');
@@ -272,7 +292,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if ($errors && $error === '') $error = 'Please fix the highlighted fields.';
     // Driver form is a 3-step wizard: reopen on the first step that has an error
     $stepOf = ['driver-first-name'=>0,'driver-last-name'=>0,'email-address'=>0,'phone-number'=>0,'home-address'=>0,'driver-password'=>0,'driver-confirm'=>0,
-               'license-number'=>1,'license-expiry'=>1,'license_document'=>1,'vehicle-type'=>2,'vehicle-plate'=>2,'bus-seats'=>2,'vehicle-expiry'=>2,'vehicle_document'=>2,
+               'license-number'=>1,'license-expiry'=>1,'license_document'=>1,'id_photo'=>1,'medical_document'=>1,'nbi_document'=>1,
+               'vehicle-type'=>2,'vehicle-plate'=>2,'bus-seats'=>2,'vehicle-expiry'=>2,'vehicle_document'=>2,
                'bus_photo'=>2,'interior_photo'=>2];
     foreach (array_keys($errors) as $k) { if (isset($stepOf[$k])) { $step_with_error = $stepOf[$k]; break; } }
 }
@@ -507,7 +528,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                         <div class="driver-input-group">
                             <div class="group-header">
                                 <div class="group-count">2</div>
-                                <h3 class="group-name">License Information</h3>
+                                <h3 class="group-name">License &amp; Requirements</h3>
                             </div>
                             <div class="form-inputs">
                                 <div class="input-group">
@@ -523,13 +544,13 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                     <?= mbus_field_error($errors, 'license-expiry') ?></div>
                                 </div>
                                 <div class="upload-group">
-                                    <label class="input-label">Upload License Document</label>
+                                    <label class="input-label">Updated Driver's License</label>
                                     <div class="upload-document-group">
                                         <div class="upload-icon">
                                             <i data-lucide="upload"></i>
                                         </div>
                                         <div class="document-desc">
-                                            <span class="document-name">Click to upload document</span>
+                                            <span class="document-name">Click to upload your updated license</span>
                                             <span>JPG, JPEG, PNG, or PDF &middot; Max 3 MB</span>
                                         </div>
                                         <div class="document-input-button">
@@ -541,6 +562,67 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                     <div class="document-preview">
                                         <img class="document-preview-image" alt="License document preview"/>
                                         <iframe class="document-preview-frame" title="License document preview"></iframe>
+                                    </div>
+                                </div>
+                                <div class="upload-group">
+                                    <label class="input-label" for="id-photo-input">2x2 Picture</label>
+                                    <div class="upload-document-group">
+                                        <div class="upload-icon"><i data-lucide="camera"></i></div>
+                                        <div class="document-desc">
+                                            <span class="document-name">Upload a recent 2x2 picture</span>
+                                            <span>JPG or PNG &middot; Max 1 MB</span>
+                                        </div>
+                                        <div class="document-input-button">
+                                            <button type="button">Browse</button>
+                                            <input id="id-photo-input" type="file" name="id_photo" accept="image/jpeg,image/png" data-max-bytes="1048576" required/>
+                                        </div>
+                                    </div>
+                                    <?= mbus_field_error($errors, 'id_photo') ?>
+                                    <div class="document-preview">
+                                        <img class="document-preview-image" alt="2x2 picture preview"/>
+                                        <iframe class="document-preview-frame" title="2x2 picture preview"></iframe>
+                                    </div>
+                                </div>
+                                <div class="upload-group">
+                                    <label class="input-label">Medical Certificate with Drug Test</label>
+                                    <div class="upload-document-group">
+                                        <div class="upload-icon">
+                                            <i data-lucide="upload"></i>
+                                        </div>
+                                        <div class="document-desc">
+                                            <span class="document-name">Upload your medical certificate and drug test</span>
+                                            <span>JPG, JPEG, PNG, or PDF &middot; Max 3 MB</span>
+                                        </div>
+                                        <div class="document-input-button">
+                                            <button type="button">Browse</button>
+                                            <input type="file" name="medical_document" accept=".jpg,.jpeg,.png,.pdf" required/>
+                                        </div>
+                                    </div>
+                                    <?= mbus_field_error($errors, 'medical_document') ?>
+                                    <div class="document-preview">
+                                        <img class="document-preview-image" alt="Medical certificate preview"/>
+                                        <iframe class="document-preview-frame" title="Medical certificate preview"></iframe>
+                                    </div>
+                                </div>
+                                <div class="upload-group">
+                                    <label class="input-label">NBI Clearance</label>
+                                    <div class="upload-document-group">
+                                        <div class="upload-icon">
+                                            <i data-lucide="upload"></i>
+                                        </div>
+                                        <div class="document-desc">
+                                            <span class="document-name">Upload your NBI clearance</span>
+                                            <span>JPG, JPEG, PNG, or PDF &middot; Max 3 MB</span>
+                                        </div>
+                                        <div class="document-input-button">
+                                            <button type="button">Browse</button>
+                                            <input type="file" name="nbi_document" accept=".jpg,.jpeg,.png,.pdf" required/>
+                                        </div>
+                                    </div>
+                                    <?= mbus_field_error($errors, 'nbi_document') ?>
+                                    <div class="document-preview">
+                                        <img class="document-preview-image" alt="NBI clearance preview"/>
+                                        <iframe class="document-preview-frame" title="NBI clearance preview"></iframe>
                                     </div>
                                 </div>
                             </div>
