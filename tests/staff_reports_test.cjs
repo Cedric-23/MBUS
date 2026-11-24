@@ -21,3 +21,5 @@ assert(/http_response_code\(410\)/.test(read('api/gcash_sms_webhook.php')), 'SMS
 assert(!/Commuters pay into this account/.test(gs), 'driver GCash page must not show the extra note');
 const wjs = read('Assets/js/staff_waiting.js');
 assert(/tripRoutes\[trip\.schedule_id\]/.test(wjs) && /forEach\(ensureTripRoute\)/.test(wjs), 'Waiting map must load every trip route so drop-off pins show without picking a bus');
+const riders = read('Operator/passengers.php');
+assert(/rtile driver/.test(riders) && /rtile door/.test(riders), 'Riders seat map must show the same driver and door tiles as the commuter map and My Bus');

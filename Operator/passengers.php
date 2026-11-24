@@ -420,12 +420,23 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
         <div class="rider-map mode-<?php echo $mode; ?>" role="group" aria-label="Bus seats">
         <?php
         $capacity = (int)$selected['capacity'];
-        foreach(mbus_bus_seat_rows($seat_layout_saved, $capacity) as $cells){
+        /* Same bus the driver built in My Bus and the commuter sees when reserving: driver tile front-left,
+           a dashed aisle down the middle, and a door tile wherever a whole side of a row has no seats. */
+        foreach(mbus_bus_seat_rows($seat_layout_saved, $capacity) as $ri => $cells){
             echo "<div class='seat-row'>";
-            foreach($cells as $ci => $n){
-                if($n === null){
-                    echo "<span class='rseat gap' aria-hidden='true'></span>";
-                } else {
+            foreach([0, 2] as $start){
+                if($start === 2){ echo "<span class='aisle' aria-hidden='true'></span>"; }
+                if(($cells[$start] ?? null) === null && ($cells[$start + 1] ?? null) === null){
+                    if($ri === 0 && $start === 0){ echo "<span class='rtile driver' aria-label='Driver seat'>Driver</span>"; }
+                    else { echo "<span class='rtile door' aria-label='Door, no seats'>Door</span>"; }
+                    continue;
+                }
+                foreach([$start, $start + 1] as $ci){
+                    $n = $cells[$ci] ?? null;
+                    if($n === null){
+                        echo "<span class='rseat gap' aria-hidden='true'></span>";
+                        continue;
+                    }
                     $info = $riders[(string)$n] ?? null;
                     if($info){
                         $cls = $info['status'] === 'Boarded' ? 'boarded' : (in_array($info['status'], ['Paid','Confirmed'], true) ? 'paid' : 'pending');
@@ -442,7 +453,6 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
                         echo "<span class='rseat empty locked' aria-disabled='true' aria-label='Seat $n empty'>$n</span>";
                     }
                 }
-                if($ci == 1){ echo "<span class='aisle'></span>"; }
             }
             echo "</div>";
         }

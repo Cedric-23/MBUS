@@ -83,3 +83,16 @@
 .riders-page .rseat.gap { visibility: hidden; }
 .riders-page .rseat.gap::before,
 .riders-page .rseat.gap::after { display: none; }
+
+/* Driver and door tiles, laid out on the same 2 + aisle + 2 grid as the My Bus builder and the commuter map */
+.riders-page .rider-map .seat-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) 26px repeat(2, minmax(0, 1fr)); align-items: stretch; }
+.riders-page .rider-map .seat-row .rseat { width: 100%; max-width: none; min-width: 0; }
+.riders-page .rider-map .aisle { position: relative; flex: none; width: auto; }
+.riders-page .rider-map .aisle::before { content: ""; position: absolute; top: -7px; bottom: -7px; left: 50%; border-left: 2px dashed #c3d5f5; transform: translateX(-1px); }
+.riders-page .rtile {
+    grid-column: span 2; box-sizing: border-box; height: 52px; display: flex; align-items: center; justify-content: center;
+    border-radius: 14px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+}
+.riders-page .rtile.driver { background: #14213d; color: #fff; }
+.riders-page .rtile.door { border: 1.5px solid #d3def2; color: #6b7a99; background: repeating-linear-gradient(135deg, #eef3fb 0 6px, #e3ebf8 6px 12px); }
+@media (max-width: 640px) { .riders-page .rtile { height: 48px; } }
