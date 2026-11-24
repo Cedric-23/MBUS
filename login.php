@@ -79,8 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $type = strtolower(trim($user['user_type'] ?? ''));
                     $type = $type_aliases[$type] ?? $type;
 
-                    if ($staff_portal && !in_array($type, ['driver', 'conductor'], true)) {
-                        $login_error = 'This portal is for approved driver and conductor accounts.';
+                    if ($staff_portal && !in_array($type, ['driver', 'conductor', 'admin'], true)) {
+                        $login_error = 'This portal is for approved driver and conductor accounts, and administrators.';
                     } elseif ($type === 'commuter' && empty($user['email_verified_at'])) {
                         $login_error = 'Please verify your email address before signing in. Check your inbox for the 6-digit code.';
                     } elseif (!isset($dashboards[$type])) {
