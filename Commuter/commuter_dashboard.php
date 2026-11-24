@@ -314,6 +314,11 @@ function mbus_home_pay_tag(string $pay): string {
         <?php } ?>
     </section>
 
+    <a class="home-perk" href="announcements.php">
+        <span><strong>Service updates</strong><small>Delays, suspensions and other bus operation notices.</small></span>
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+    </a>
+
     <?php if($passenger_type === 'Regular'){ ?>
     <a class="home-perk" href="verification.php">
         <span><strong>Student, senior or PWD?</strong><small>Verify your ID and get 20% off your fare.</small></span>
