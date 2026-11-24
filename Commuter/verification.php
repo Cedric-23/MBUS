@@ -39,8 +39,10 @@ if(isset($_POST['submit_verification'])){
         $error = "Enter the ID number shown on your ID.";
     } elseif($expiry !== '' && (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $expiry) || $expiry < date('Y-m-d'))){
         $error = "Your ID is expired. Use a valid ID.";
-    } elseif(!$file || $file['error'] !== UPLOAD_ERR_OK){
+    } elseif(!$file || $file['error'] === UPLOAD_ERR_NO_FILE){
         $error = "Upload a photo of your ID.";
+    } elseif($file['error'] !== UPLOAD_ERR_OK){
+        $error = "The ID photo upload failed. Please choose a smaller image and try again.";
     } elseif($file['size'] > $max_bytes){
         $error = "File is too large. Maximum is 5 MB.";
     } else {
@@ -159,17 +161,25 @@ $can_submit = !$latest || $status === 'Rejected' || ($status === 'Approved' && $
     </div>
     <div class="form-group">
         <label for="verification_document">Photo of your ID</label>
-        <label class="v-file" for="verification_document"><i class="fa fa-camera" aria-hidden="true"></i> <span id="fileName">Take or choose a photo</span></label>
+        <div class="v-upload-group">
+            <div class="v-upload-card">
+                <div class="v-upload-icon"><i class="fa fa-camera" aria-hidden="true"></i></div>
+                <div class="v-upload-copy">
+                    <strong id="fileName">Upload a clear ID photo</strong>
+                    <small>JPG, PNG or PDF · Max 5 MB</small>
+                </div>
+                <div class="v-upload-action"><button type="button" id="verificationBrowse">Browse</button></div>
+            </div>
+            <div class="v-upload-preview" id="verificationPreview" hidden>
+                <img id="verificationPreviewImage" alt="Selected ID preview" hidden>
+                <iframe id="verificationPreviewFrame" title="Selected ID preview" hidden></iframe>
+            </div>
+        </div>
         <input type="file" id="verification_document" name="verification_document" accept="image/jpeg,image/png,application/pdf" required>
         <small class="form-hint">JPG, PNG or PDF, up to 5 MB. Student ID, senior citizen ID or PWD ID.</small>
     </div>
     <button class="btn btn-primary btn-block" type="submit" name="submit_verification">Submit for review</button>
 </form>
-<script>
-document.getElementById('verification_document').addEventListener('change', function(){
-    document.getElementById('fileName').textContent = this.files[0] ? this.files[0].name : 'Take or choose a photo';
-});
-</script>
 <?php } ?>
 
 </main>
@@ -183,5 +193,6 @@ document.getElementById('verification_document').addEventListener('change', func
 </nav>
 <script src="../Assets/js/app-header.js"></script>
 <script src="../Assets/js/notifications.js"></script>
+<?php if($can_submit){ ?><script src="../Assets/js/commuter_verification.js?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/js/commuter_verification.js'); ?>"></script><?php } ?>
 </body>
 </html>
