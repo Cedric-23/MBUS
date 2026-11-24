@@ -6,7 +6,7 @@ if(!isset($_SESSION['user_type']) || strtolower($_SESSION['user_type']) != 'admi
 }
 include("../config/db_connect.php");
 include("../Includes/csrf.php");
-include_once("../Includes/notify.php");
+require_once __DIR__ . '/../Includes/notify.php';
 
 function mbus_admin_schedule_valid(array $data, bool $with_id=false): bool
 {
@@ -33,15 +33,16 @@ if(isset($_POST['update_schedule'])){
     else {
         $schedule_id=(int)$_POST['schedule_id']; $bus_id=(int)$_POST['bus_id']; $route_id=(int)$_POST['route_id'];
         $departure_time=(string)$_POST['departure_time']; $arrival_time=(string)$_POST['arrival_time']; $schedule_status=(string)$_POST['schedule_status'];
-        $before_change=mbus_schedule_snapshot($conn,$schedule_id);
+        $beforeQuery=mbus_db_prepare($conn, "SELECT s.bus_id, s.route_id, s.departure_time, s.arrival_time, b.bus_number
+            FROM schedule s LEFT JOIN buses b ON b.bus_id=s.bus_id WHERE s.schedule_id=?", [$schedule_id]);
+        $before=$beforeQuery === false ? [] : (mbus_db_fetch_assoc($beforeQuery) ?: []);
         $updated=mbus_db_prepare($conn,"UPDATE schedule SET bus_id=?, route_id=?, departure_time=?, arrival_time=?, schedule_status=? WHERE schedule_id=?",[$bus_id,$route_id,$departure_time,$arrival_time,$schedule_status,$schedule_id]);
         if($updated===false) $error="Schedule could not be updated. Please verify the selected values.";
         else {
-            /* Tell affected riders and the bus's staff what changed (best effort). */
-            if($before_change){
-                $after_change=mbus_schedule_snapshot($conn,$schedule_id);
-                if($after_change) mbus_notify_schedule_change($conn,$before_change,$after_change,mbus_schedule_rider_ids($conn,$schedule_id));
-            }
+            $sameMinute = static fn($a, $b) => date('Y-m-d H:i', strtotime((string)$a)) === date('Y-m-d H:i', strtotime((string)$b));
+            $changed = $before && ((int)$before['bus_id'] !== $bus_id || (int)$before['route_id'] !== $route_id
+                || !$sameMinute($before['departure_time'], $departure_time) || !$sameMinute($before['arrival_time'], $arrival_time));
+            if ($changed) mbus_notify_schedule_change($conn, $schedule_id, $before);
             header("Location: manage_schedules.php"); exit();
         }
     }
@@ -52,16 +53,9 @@ if(isset($_POST['delete_schedule'])){
     if(!csrf_validate_token()) $error="Security validation failed. Please try again.";
     elseif(!isset($_POST['schedule_id']) || !is_scalar($_POST['schedule_id']) || filter_var($_POST['schedule_id'], FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]) === false) $error="Invalid schedule.";
     else {
-        $delete_id=(int)$_POST['schedule_id'];
-        /* Collect recipients first: reservations cascade-delete together with the schedule. */
-        $before_change=mbus_schedule_snapshot($conn,$delete_id);
-        $rider_ids=$before_change ? mbus_schedule_rider_ids($conn,$delete_id) : [];
-        $deleted=mbus_db_prepare($conn,"DELETE FROM schedule WHERE schedule_id=?",[$delete_id]);
+        $deleted=mbus_db_prepare($conn,"DELETE FROM schedule WHERE schedule_id=?",[(int)$_POST['schedule_id']]);
         if($deleted===false) $error="Schedule could not be deleted.";
-        else {
-            if($before_change) mbus_notify_schedule_change($conn,$before_change,null,$rider_ids);
-            header("Location: manage_schedules.php"); exit();
-        }
+        else { header("Location: manage_schedules.php"); exit(); }
     }
 }
 

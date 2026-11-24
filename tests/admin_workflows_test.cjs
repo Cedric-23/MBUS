@@ -12,6 +12,8 @@ const gcash = read('Admin/gcash_approval.php');
 const conductorPayments = read('Operator/payments.php');
 const dashboard = read('Admin/admin_dashboard.php');
 const reports = read('Admin/reports.php');
+const notify = read('Includes/notify.php');
+const schedules = read('Admin/manage_schedules.php');
 
 assert.match(menu, /href="conductor_applications\.php"/, 'Admin applications should open on Conductors');
 assert.match(menu, /href="reports\.php"[^>]*>.*Reports/s, 'Admin profile menu must expose Reports');
@@ -20,6 +22,9 @@ assert.match(conductorApplications, /href="operator_applications\.php"/, 'Driver
 assert.match(conductorApplications, /class="on" aria-current="page">Conductors/, 'Conductors should be the active first queue');
 
 assert.match(menu, /href="gcash_approval\.php"/, 'Admin account menu must expose GCash account management');
+assert.match(notify, /function mbus_notify_schedule_change/, 'schedule changes must have a shared notification helper');
+assert.match(notify, /reservation r[\s\S]*operator_bus_assignments[\s\S]*conductor_bus_assignments/, 'schedule changes must notify riders and assigned bus staff');
+assert.match(schedules, /mbus_notify_schedule_change\(\$conn, \$schedule_id, \$before\)/, 'Admin schedule updates must trigger notifications');
 for (const link of ['admin_dashboard.php', 'manage_schedules.php', 'manage_buses.php', 'manage_operators.php', 'waiting.php']) {
   assert.match(reports, new RegExp(`href="${link}"[^>]*class="bottom-nav-item"`), `Reports must keep the Admin ${link} navigation button`);
 }

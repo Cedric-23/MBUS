@@ -22,6 +22,47 @@ function mbus_notify_departure($conn, int $schedule_id): void
     } catch (Throwable $e) { error_log('notify departure failed: ' . $e->getMessage()); }
 }
 
+/** Notify riders and assigned bus staff when an Admin changes a schedule. */
+function mbus_notify_schedule_change($conn, int $schedule_id, array $before): void
+{
+    if ($schedule_id <= 0) return;
+    try {
+        $q = mbus_db_prepare($conn, "SELECT s.departure_time, s.arrival_time, b.bus_number,
+                COALESCE(ro.origin || ' - ' || ro.destination, 'your route') AS route_name
+            FROM schedule s
+            LEFT JOIN buses b ON b.bus_id = s.bus_id
+            LEFT JOIN routes ro ON ro.route_id = s.route_id
+            WHERE s.schedule_id = ?", [$schedule_id]);
+        $after = $q === false ? false : mbus_db_fetch_assoc($q);
+        if (!$after) return;
+
+        $newDeparture = date('M j, Y g:i A', strtotime((string)$after['departure_time']));
+        $newArrival = date('M j, Y g:i A', strtotime((string)$after['arrival_time']));
+        $message = 'MBUS schedule changed: ' . $after['route_name'] . '. Departure: ' . $newDeparture . '; arrival: ' . $newArrival . '. Please check your trip details.';
+        if ((string)($before['bus_number'] ?? '') !== (string)($after['bus_number'] ?? '') && $after['bus_number'] !== null) {
+            $message .= ' Bus: ' . $after['bus_number'] . '.';
+        }
+
+        $recipients = mbus_db_prepare($conn, "
+            SELECT DISTINCT user_id FROM (
+                SELECT r.user_id FROM reservation r
+                    WHERE r.schedule_id = ? AND r.user_id IS NOT NULL AND r.status IN ('Pending','Paid','Confirmed','Boarded')
+                UNION ALL
+                SELECT b.driver_id FROM schedule s JOIN buses b ON b.bus_id = s.bus_id
+                    WHERE s.schedule_id = ? AND b.driver_id IS NOT NULL
+                UNION ALL
+                SELECT oba.operator_id FROM schedule s JOIN operator_bus_assignments oba ON oba.bus_id = s.bus_id
+                    WHERE s.schedule_id = ? AND oba.operator_id IS NOT NULL
+                UNION ALL
+                SELECT cba.conductor_id FROM schedule s JOIN conductor_bus_assignments cba ON cba.bus_id = s.bus_id
+                    WHERE s.schedule_id = ? AND cba.conductor_id IS NOT NULL
+            ) affected", [$schedule_id, $schedule_id, $schedule_id, $schedule_id]);
+        while ($recipients !== false && ($row = mbus_db_fetch_assoc($recipients))) {
+            mbus_notify($conn, (int)$row['user_id'], $message);
+        }
+    } catch (Throwable $e) { error_log('notify schedule change failed: ' . $e->getMessage()); }
+}
+
 /** Tell every admin about something a commuter did (new reservation, payment, ID request). Best effort. */
 function mbus_notify_admins($conn, string $message): void
 {
