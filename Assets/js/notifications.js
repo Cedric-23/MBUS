@@ -17,7 +17,9 @@
     '.notif-pager[hidden]{display:none}' +
     '.notif-pager span{font-size:.78rem;color:#6b7a90;font-weight:600}' +
     '.notif-pager button{min-height:30px;padding:0 12px;border:0;border-radius:999px;background:#eaf1fd;color:#2f6fe4;font:inherit;font-size:.74rem;font-weight:700;cursor:pointer}' +
-    '.notif-pager button:disabled{opacity:.4;cursor:default}';
+    '.notif-pager button:disabled{opacity:.4;cursor:default}' +
+    '.notif-clear{display:block;width:100%;margin-top:8px;min-height:32px;padding:0 12px;border:0;border-radius:999px;background:#fdecea;color:#b42318;font:inherit;font-size:.76rem;font-weight:700;cursor:pointer}' +
+    '.notif-clear[hidden]{display:none}.notif-clear:disabled{opacity:.5;cursor:default}';
   document.head.appendChild(st);
   var pager = document.createElement('div'); pager.className = 'notif-pager'; pager.hidden = true;
   pager.innerHTML = '<button type="button" data-d="-1">Previous</button><span></span><button type="button" data-d="1">Next</button>';
@@ -26,6 +28,19 @@
     e.stopPropagation();
     var b = e.target.closest('button'); if (!b || b.disabled) return;
     page += +b.dataset.d; draw();
+  });
+  /* Clear all: deletes every notification of the logged-in user so they do not pile up. */
+  var clearBtn = document.createElement('button'); clearBtn.type = 'button'; clearBtn.className = 'notif-clear'; clearBtn.textContent = 'Clear all'; clearBtn.hidden = true;
+  pager.parentNode.insertBefore(clearBtn, pager.nextSibling);
+  clearBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (clearBtn.disabled || !items.length) return;
+    clearBtn.disabled = true;
+    fetch(endpoint, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=clear&csrf_token=' + encodeURIComponent(token) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { if (d && d.ok) { items = []; page = 0; dot.hidden = true; draw(); } })
+      .catch(function () {})
+      .then(function () { clearBtn.disabled = false; });
   });
   function render(d) {
     dot.hidden = !d.unread; dot.textContent = d.unread > 9 ? '9+' : d.unread;
@@ -36,6 +51,7 @@
     var pages = Math.max(1, Math.ceil(items.length / PER));
     page = Math.min(Math.max(page, 0), pages - 1);
     pager.hidden = pages < 2;
+    clearBtn.hidden = !items.length;
     pager.querySelector('span').textContent = (page + 1) + ' / ' + pages;
     pager.querySelector('[data-d="-1"]').disabled = page === 0;
     pager.querySelector('[data-d="1"]').disabled = page >= pages - 1;
