@@ -290,3 +290,31 @@
     body.cm.cm.cm.cm:not(.commuter-waiting-board) .notif-wrap{animation:mbusIconRide linear both;animation-timeline:scroll(root block);animation-range:0px 120px}
   }
 }
+
+/* ---- Page title row: the SAME spot and size on Home, Bus Schedules, Live buses and My Reservations (phones) ----
+   The row starts 14px from the top and is 44px tall, exactly like the profile icon and bell pinned beside it, so
+   the title and the icons share one centre line. Titles are left-aligned at 16px, one size and weight. The row is
+   no longer pinned: the title, icons and page all scroll together. */
+@media(max-width:768px){
+  html body.cm.cm main,html body.cm.cm .main{padding-top:14px!important}
+  html body.cm.cm .page-header,
+  html body.cm.cm .home-top{
+    position:static!important;display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;
+    box-sizing:border-box;height:44px!important;min-height:44px!important;margin:0 0 16px!important;padding:0 112px 0 0!important;
+    background:transparent!important;box-shadow:none!important;border:0!important;gap:0!important
+  }
+  html body.cm.cm .page-header::before,html body.cm.cm .home-top::before,
+  html body.cm.cm .page-header::after,html body.cm.cm .home-top::after{display:none!important;content:none!important}
+  html body.cm.cm .page-header>div:first-child,html body.cm.cm .home-top>div:first-child{flex:1 1 auto;min-width:0;margin:0!important;padding:0!important}
+  html body.cm.cm .page-header h1,html body.cm.cm .home-top h1,
+  html body.cm.cm.commuter-live-page .lv-shell>h1.lv-visually-hidden{
+    margin:0!important;padding:0!important;font-size:1.5rem!important;font-weight:700!important;line-height:1.15!important;letter-spacing:-.02em!important;color:#14213d!important;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+  }
+  html body.cm.cm .home-hello{margin:0 0 1px!important;font-size:.8125rem!important;line-height:1.1!important;color:#7a8aa6!important}
+  html body.cm.cm .home-top h1{line-height:1.1!important}
+  html body.cm.cm.commuter-live-page .lv-shell>h1.lv-visually-hidden{
+    position:static!important;display:flex!important;align-items:center!important;box-sizing:border-box;width:auto!important;height:44px!important;min-height:44px!important;
+    margin:0 0 16px!important;padding:0 112px 0 0!important
+  }
+}
