@@ -8,7 +8,10 @@ require_once "../Includes/payment_finalize.php";
 require_once "../Includes/notify.php";
 require_once "../Includes/gcash_manual.php";
 require_once "../Includes/staff_assignment_scope.php";
+require_once "../Includes/staff_nav.php";
 
+/* Conductor: check and approve (or reject) the GCash payments of commuters on the assigned buses.
+ * The GCash account itself is set up by the Driver (gcash_account.php). */
 if (!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?? '')) !== 'conductor') {
     http_response_code(403);
     exit('GCash payment review is available to assigned Conductors only.');
@@ -24,28 +27,6 @@ unset($_SESSION['conductor_pay_flash']);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_validate_token()) {
         $error = 'Security check failed. Please try again.';
-    } elseif (isset($_POST['save_settings'])) {
-        $name = trim((string)($_POST['gcash_name'] ?? ''));
-        $num = preg_replace('/\s+/', '', (string)($_POST['gcash_number'] ?? ''));
-        if ($name === '' || strlen($name) > 80 || !preg_match('/^09\d{9}$/', $num)) {
-            $error = 'Enter the account name and an 11-digit number starting with 09.';
-        } else {
-            $prev = mbus_gcash_pending($conn);
-            $qr = $prev['qr'] ?? '';
-            if (isset($_FILES['gcash_qr']) && $_FILES['gcash_qr']['error'] !== UPLOAD_ERR_NO_FILE) {
-                $up = mbus_receipt_upload('gcash_qr', $error);
-                if ($up) $qr = 'data:' . $up['mime'] . ';base64,' . $up['b64'];
-            }
-            if ($error === '') {
-                mbus_set_setting($conn, 'gcash_pending', json_encode([
-                    'name' => $name, 'number' => $num, 'qr' => $qr,
-                    'by' => $operator_id, 'by_name' => (string)($_SESSION['full_name'] ?? 'Conductor'), 'at' => date('c'),
-                ]));
-                include_once "../Includes/activity_log.php";
-                log_activity($conn, $operator_id, 'Conductor GCash account change submitted', 'Awaiting admin approval');
-            }
-            if ($error === '') { $_SESSION['conductor_pay_flash'] = 'Sent to admin for approval. Commuters keep seeing the current account until it is approved.'; header('Location: payments.php'); exit(); }
-        }
     } elseif (isset($_POST['approve']) || isset($_POST['reject'])) {
         $sid = (string)($_POST['session_id'] ?? '');
         $st = $conn->pdo->prepare("SELECT c.* FROM paymongo_checkout c WHERE c.session_id = ? AND c.status = 'Submitted' AND c.session_id LIKE 'manual\\_%'
@@ -107,10 +88,7 @@ $q = mbus_db_prepare($conn, "SELECT (c.receipt_b64 IS NOT NULL AND c.receipt_b64
     ORDER BY c.submitted_at DESC LIMIT 100", [$operator_id, $f, $operator_id]);
 while ($q !== false && ($r = mbus_db_fetch_assoc($q))) $rows[] = $r;
 
-$gName = mbus_setting($conn, 'gcash_name');
 $gNum = mbus_setting($conn, 'gcash_number');
-$gQr = mbus_setting($conn, 'gcash_qr');
-$gPending = mbus_gcash_pending($conn);
 
 ?>
 <!DOCTYPE html>
@@ -139,13 +117,7 @@ $gPending = mbus_gcash_pending($conn);
 <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
     <div class="logo-container"><img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo"></div>
     <h2>Conductor</h2>
-    <nav class="menu-top" aria-label="Conductor menu">
-        <a href="../Conductor/conductor_dashboard.php"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
-        <a href="scan.php"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
-        <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
-        <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Riders</a>
-        <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
-    </nav>
+    <?php echo mbus_staff_sidebar_nav('conductor', ''); ?>
     <div class="menu-bottom">
         <a href="../logout.php" class="logout-btn btn btn-outline btn-block"><i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
     </div>
@@ -162,11 +134,9 @@ $gPending = mbus_gcash_pending($conn);
             <div class="profile-menu" id="profileMenu" role="menu">
                 <div class="profile-menu-header">
                     <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
-                        <span class="profile-menu-role">Conductor account</span>
-                    </div>
-                <a href="payments.php" role="menuitem" aria-current="page"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a>
-                <a href="reports.php" role="menuitem"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a>
-                <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                    <span class="profile-menu-role">Conductor account</span>
+                </div>
+                <?php echo mbus_staff_profile_links('conductor', 'payments'); ?>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
         </div>
@@ -179,7 +149,7 @@ $gPending = mbus_gcash_pending($conn);
 <?php if ($error !== ''): ?><div class="pay-alert bad" role="alert"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
 
 <?php if ($gNum === ''): ?>
-<div class="pay-alert warn" role="status"><i class="fa fa-triangle-exclamation" aria-hidden="true"></i> Add your GCash account below so commuters can pay.</div>
+<div class="pay-alert warn" role="status"><i class="fa fa-triangle-exclamation" aria-hidden="true"></i> No GCash account is set up yet. The driver sets it up from their account, then an admin approves it.</div>
 <?php endif; ?>
 
 <nav class="pay-tabs" aria-label="Payment status">
@@ -228,29 +198,10 @@ $gPending = mbus_gcash_pending($conn);
 <?php endforeach; ?>
 </div>
 
-<details class="pay-panel" <?php echo ($gNum === '' && !$gPending) ? 'open' : ''; ?>>
-    <summary><i class="fa fa-mobile-screen" aria-hidden="true"></i> GCash account<?php if ($gPending): ?> <span class="pay-badge">Pending approval</span><?php endif; ?></summary>
-    <?php if ($gPending): ?><p class="pay-note">Waiting for admin: <strong><?php echo htmlspecialchars($gPending['name']); ?></strong> &middot; <?php echo htmlspecialchars($gPending['number']); ?>. Saving again replaces this request.</p><?php endif; ?>
-    <form method="POST" enctype="multipart/form-data" class="pay-form">
-        <?php csrf_field(); ?>
-        <label>Account name<input type="text" name="gcash_name" value="<?php echo htmlspecialchars($gName); ?>" required maxlength="80" autocomplete="off"></label>
-        <label>GCash number<input type="tel" name="gcash_number" value="<?php echo htmlspecialchars($gNum); ?>" placeholder="09XXXXXXXXX" pattern="09\d{9}" maxlength="11" inputmode="numeric" required></label>
-        <label>QR code <small>(optional)</small><input type="file" name="gcash_qr" accept="image/jpeg,image/png"></label>
-        <?php if ($gQr !== ''): ?><img class="pay-qr" src="<?php echo htmlspecialchars($gQr, ENT_QUOTES); ?>" alt="Current GCash QR"><?php endif; ?>
-        <button type="submit" name="save_settings" value="1" class="pay-btn primary">Save</button>
-    </form>
-</details>
-
 </div>
 </main>
 
-<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
-    <a href="../Conductor/conductor_dashboard.php" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
-    <a href="manage_trips.php" class="bottom-nav-item"><i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span></a>
-    <a href="scan.php" class="bottom-nav-item"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
-    <a href="passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a>
-    <a href="waiting.php" class="bottom-nav-item"><i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span></a>
-</nav>
+<?php echo mbus_staff_bottom_nav('conductor', ''); ?>
 <script src="../Assets/js/app-header.js"></script>
 </body>
 </html>
