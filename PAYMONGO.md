@@ -25,10 +25,8 @@ If a payment finishes after the hold lapsed, the seats are revived when still fr
 
 The `paymongo_checkout` table is created automatically.
 
-## Free option (no PayMongo account): GCash QR + automatic SMS matching
-When `PAYMONGO_SECRET_KEY` is empty, "Pay with GCash" opens a payment page with the admin's QR, number and an **exact amount** (the fare minus 1-99 centavos, unique among open payments). The commuter just sends that amount; there is no reference number to type.
+## Free option (no PayMongo account): GCash QR + conductor approval
+When `PAYMONGO_SECRET_KEY` is empty, "Pay with GCash" opens a payment page with the QR and number the driver set up (an admin approves any change). The commuter pays and sends the GCash reference number; the conductor checks and approves each payment from Operator > GCash Payments.
 
-- The phone with the GCash SIM runs an SMS forwarder app that sends each "You have received PHP ..." SMS to `/api/gcash_sms_webhook.php?token=...` (the URL is shown in Admin > GCash payments > "Automatic payment matching"; send the SMS text in a field named `message`).
-- MBUS records the amount and reference, finds the one open payment with that exact amount, and issues the ticket. The commuter's page polls every 4 seconds and jumps to the ticket. Each SMS can pay for one booking only.
+SMS auto-confirm has been retired: `/api/gcash_sms_webhook.php` now answers 410 and nothing is approved automatically.
 - Seats are held 15 minutes; open payments lapse after 30 minutes; 3 lapsed payments in an hour pause new attempts.
-- Admin > GCash payments shows the phone status (time since the last SMS) and a fallback queue for unusual cases (e.g. the commuter paid a different amount). Set the QR, name and number in "Your GCash details".

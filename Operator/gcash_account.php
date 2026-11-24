@@ -131,7 +131,6 @@ $fullName = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Driver'));
     </form>
 </details>
 
-<p class="pay-note">Commuters pay into this account. An admin approves any change first, and your Conductor checks and approves each payment that comes in.</p>
 
 </div>
 </main>

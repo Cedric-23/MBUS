@@ -15,3 +15,7 @@ console.log('staff analytics ok');
 for (const f of ['Operator/operator_dashboard.php', 'Operator/my_bus.php', 'Operator/profile.php', 'Operator/reports.php', 'Operator/passengers.php', 'Includes/pickup_staff_view.php'])
   assert(/mbus_staff_profile_links\(/.test(read(f)) && /mbus_staff_bottom_nav\(/.test(read(f)), f + ' must use the shared staff menu so every driver page shows GCash Account, Scan and Riders');
 assert(/'waiting'\s*=> \['waiting\.php'/.test(nav), 'shared nav must include Waiting');
+const adminGc = read('Admin/gcash_approval.php');
+assert(!/sms|webhook|auto-confirm/i.test(adminGc), 'admin GCash page must not show the SMS auto-confirm feature');
+assert(/http_response_code\(410\)/.test(read('api/gcash_sms_webhook.php')), 'SMS webhook must stay switched off');
+assert(!/Commuters pay into this account/.test(gs), 'driver GCash page must not show the extra note');
