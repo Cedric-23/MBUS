@@ -422,7 +422,13 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
         $capacity = (int)$selected['capacity'];
         /* Same bus the driver built in My Bus and the commuter sees when reserving: driver tile front-left,
            a dashed aisle down the middle, and a door tile wherever a whole side of a row has no seats. */
-        foreach(mbus_bus_seat_rows($seat_layout_saved, $capacity) as $ri => $cells){
+        $seat_rows = mbus_bus_seat_rows($seat_layout_saved, $capacity);
+        /* A bus saved before the driver's cell was reserved still has seats in the front-left pair. Those seats keep
+           their numbers, so the driver tile gets a row of its own above the map instead of taking two seats away. */
+        if(!mbus_seat_rows_driver_inside($seat_rows)){
+            echo "<div class='seat-row seat-front'><span class='rtile driver' aria-label='Driver seat'>Driver</span><span class='aisle' aria-hidden='true'></span></div>";
+        }
+        foreach($seat_rows as $ri => $cells){
             echo "<div class='seat-row'>";
             foreach([0, 2] as $start){
                 if($start === 2){ echo "<span class='aisle' aria-hidden='true'></span>"; }

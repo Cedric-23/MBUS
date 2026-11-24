@@ -43,8 +43,25 @@ assert.match(setupJs, /data-seat-add-row/);
 assert.match(setupJs, /data-seat-reset/);
 assert.match(setupJs, /JSON\.stringify\(layout\)/,
     'seat-map changes must be serialized into the application form');
-assert.match(setupJs, /total > 100/,
+assert.match(setupJs, /total > MAX_SEATS/,
     'the client must enforce the maximum seating capacity');
+/* The driver's cell is part of the bus design: the builder never deletes front-row seats to make room for it,
+   and every seat map (My Bus, Riders, commuter) shows the same driver and door tiles. */
+const layoutHelper = read('Includes/seat_layout.php');
+assert.match(layoutHelper, /function mbus_seat_rows_driver_inside/,
+    'seat maps must be able to tell whether the driver tile fits inside the front row');
+assert.match(layoutHelper, /\$row = \[false, false, false, false\]/,
+    'a plain layout must keep the front-left pair free for the driver');
+assert.match(setupJs, /function driverInside\(\)/,
+    'the builder must detect a front row that still holds seats instead of clearing them');
+assert.doesNotMatch(setupJs, /lockDriver/,
+    'the builder must not delete front-row seats to place the driver');
+assert.match(setupJs, /classList\.add\('seat-front'\)|className = 'seat-row seat-front'/,
+    'the builder must draw a driver row above a bus that keeps its front seats');
+assert.match(read('Operator/passengers.php'), /seat-row seat-front/,
+    'the Riders map must show the driver tile for every bus design');
+assert.match(read('Commuter/reserve.php'), /bm-front-row/,
+    'the commuter map must show the driver tile for every bus design');
 
 const applications = read('Admin/operator_applications.php');
 for (const field of ['has_bus_photo', 'has_interior_photo', 'seat_layout', "['bus',      'Bus exterior'", "['interior', 'Bus interior'"]) {

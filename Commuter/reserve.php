@@ -450,7 +450,13 @@ exit();
 <?php
 /* Same bus the driver built in My Bus: driver tile in front-left, a dashed aisle down the middle, and a door tile
    wherever a whole side of a row has no seats. A single missing seat stays an empty gap so columns line up. */
-foreach(mbus_bus_seat_rows($route_data['seat_layout'] ?? null, $capacity) as $ri => $cells){
+$seat_rows = mbus_bus_seat_rows($route_data['seat_layout'] ?? null, $capacity);
+/* A bus saved before the driver's cell was reserved still has seats in the front-left pair. Those seats keep their
+   numbers, so the driver tile gets a row of its own above the map instead of taking two seats away. */
+if(!mbus_seat_rows_driver_inside($seat_rows)){
+echo "<div class='seat-row bm-row bm-front-row' role='row'><span class='bm-driver' role='gridcell' aria-label='Driver seat'>Driver</span><div class='aisle bm-aisle' role='separator' aria-label='Aisle'></div></div>";
+}
+foreach($seat_rows as $ri => $cells){
 echo "<div class='seat-row bm-row' role='row'>";
 foreach([0,2] as $start){
 if($start === 2){ echo "<div class='aisle bm-aisle' role='separator' aria-label='Aisle'></div>"; }

@@ -95,4 +95,7 @@
 }
 .riders-page .rtile.driver { background: #14213d; color: #fff; }
 .riders-page .rtile.door { border: 1.5px solid #d3def2; color: #6b7a99; background: repeating-linear-gradient(135deg, #eef3fb 0 6px, #e3ebf8 6px 12px); }
+/* A bus saved before the driver's cell was reserved keeps its front seats, so the driver gets a front row of its own */
+.riders-page .rider-map .seat-front { margin-bottom: 2px; }
+.riders-page .rider-map .seat-front .rtile.driver { grid-column: 1 / 3; }
 @media (max-width: 640px) { .riders-page .rtile { height: 48px; } }

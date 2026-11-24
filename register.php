@@ -241,7 +241,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if (!in_array($vehicle_type, ['Ordinary', 'Aircon'], true)) $errors['vehicle-type'] = 'Choose a bus type (Ordinary or Aircon).';
         if ($e = mbus_check_plate($plate)) $errors['vehicle-plate'] = $e;
         $seats = ctype_digit($seatsRaw) ? (int)$seatsRaw : 0;
-        if ($seats < 10 || $seats > 100) $errors['bus-seats'] = 'Enter how many seats your bus has (10 to 100).';
+        /* the seat map holds at most MBUS_MAX_SEATS seats, so the number typed here has to fit it as well */
+        if ($seats < 10 || $seats > MBUS_MAX_SEATS) $errors['bus-seats'] = 'Enter how many seats your bus has (10 to ' . MBUS_MAX_SEATS . ').';
         /* registration expiry is optional: only documents that show one */
         if ($vehicle_expiry !== '') {
             $vd = DateTime::createFromFormat('Y-m-d', $vehicle_expiry);
@@ -683,7 +684,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                     <?= mbus_field_error($errors, 'vehicle-plate') ?></div>
                                     <div class="bus-seats">
                                         <label class="input-label">Number of Seats</label>
-                                        <input type="text" name="bus-seats" inputmode="numeric" pattern="[0-9]{2,3}" maxlength="3" title="Enter 10 to 100 seats" placeholder="e.g. 45" value="<?= reg_old('bus-seats') ?>" required/>
+                                        <input type="text" name="bus-seats" inputmode="numeric" pattern="[0-9]{2,3}" maxlength="3" title="Enter 10 to <?= MBUS_MAX_SEATS ?> seats" placeholder="e.g. 45" value="<?= reg_old('bus-seats') ?>" required/>
                                         <i class="input-icon" data-lucide="armchair"></i>
                                     <?= mbus_field_error($errors, 'bus-seats') ?></div>
                                     <div class="vehicle-expiry">

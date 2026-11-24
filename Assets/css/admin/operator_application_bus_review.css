@@ -67,5 +67,20 @@
     pointer-events: none;
 }
 .oa-seat-empty { border: 1.5px dashed #c5d0e0; background: #fff; color: #a3aec3; }
+/* the driver's cell, drawn like the driver tile on the live seat maps */
+.oa-seat-driver {
+    grid-column: span 2;
+    display: grid;
+    place-items: center;
+    height: 38px;
+    box-sizing: border-box;
+    border-radius: 14px;
+    background: #14213d;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
 /* no "Aisle" label: just empty space */
 .oa-seat-aisle { display: block; font-size: 0; color: transparent; overflow: hidden; }

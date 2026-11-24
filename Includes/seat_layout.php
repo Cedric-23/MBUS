@@ -2,7 +2,8 @@
 /* Bus seat layouts.
  * A layout is a list of rows; every row has 4 booleans (2 seats, the aisle, 2 seats).
  * true = a seat is there, false = no seat. Seats are numbered 1..N from the front, left to right.
- * Saved in buses.seat_layout (JSON). A bus without one gets a plain 4-per-row layout from its capacity. */
+ * Saved in buses.seat_layout (JSON). A bus without one gets a plain layout from its capacity: the driver's cell
+ * stays free in the front row, then full rows of 4. */
 
 /** Most seats and doors a bus layout may have. A door is a pair of side-by-side cells with no seats (the driver's cell does not count). */
 if (!defined('MBUS_MAX_SEATS')) define('MBUS_MAX_SEATS', 50);
@@ -39,17 +40,34 @@ function mbus_seat_layout_count(array $layout): int
     return $n;
 }
 
-/** Plain layout for a bus with no saved one: full rows of 4, last row filled from the left. */
+/** Plain layout for a bus with no saved one: the driver's cell stays free in the front row, then full rows of 4. */
 function mbus_seat_layout_default(int $capacity): array
 {
     $capacity = max(1, min(MBUS_MAX_SEATS, $capacity));
-    $layout = [];
-    for ($n = 0; $n < $capacity; $n += 4) {
+    $left = $capacity;
+    /* Front row: the front-left pair is the driver's cell, so only the right pair can hold seats. */
+    $row = [false, false, false, false];
+    for ($i = 2; $i < 4 && $left > 0; $i++) { $row[$i] = true; $left--; }
+    $layout = [$row];
+    while ($left > 0) {
         $row = [];
-        for ($i = 0; $i < 4; $i++) $row[] = ($n + $i) < $capacity;
+        for ($i = 0; $i < 4; $i++) {
+            $row[] = $left > 0;
+            if ($left > 0) $left--;
+        }
         $layout[] = $row;
     }
     return $layout;
+}
+
+/**
+ * True when the front row already keeps its front-left pair free, so the driver tile fits inside row 1.
+ * Buses saved before that pair was reserved keep their seats and get a driver row above the map instead,
+ * so no seat number ever moves.
+ */
+function mbus_seat_rows_driver_inside(array $rows): bool
+{
+    return isset($rows[0]) && ($rows[0][0] ?? null) === null && ($rows[0][1] ?? null) === null;
 }
 
 /**

@@ -235,9 +235,12 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
         <section class="oa-seat-review" aria-label="Submitted bus seat layout">
             <strong>Submitted seat layout · <?php echo $seatTotal; ?> seats</strong>
             <div class="oa-seat-rows">
-            <?php $seatNumber = 1; foreach($layout as $seatRow): if(!is_array($seatRow) || count($seatRow) !== 4) continue; ?>
+            <?php $seatNumber = 1; $layoutRow = 0; foreach($layout as $seatRow): if(!is_array($seatRow) || count($seatRow) !== 4) continue; ?>
                 <div class="oa-seat-row" aria-label="Seat row">
+                    <?php $driverRow = $layoutRow === 0 && $seatRow[0] === false && $seatRow[1] === false; $layoutRow++; ?>
                     <?php foreach($seatRow as $i => $seatRowValue): if($i === 2): ?><span class="oa-seat-aisle" aria-hidden="true">Aisle</span><?php endif; ?>
+                    <?php if($driverRow && $i === 0): ?><span class="oa-seat-driver">Driver</span><?php continue; endif; ?>
+                    <?php if($driverRow && $i === 1) continue; ?>
                     <?php if($seatRowValue === true): ?><span class="oa-seat-chip"><?php echo $seatNumber++; ?></span><?php else: ?><span class="oa-seat-empty" aria-hidden="true">—</span><?php endif; endforeach; ?>
                 </div>
             <?php endforeach; ?>

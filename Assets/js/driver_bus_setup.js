@@ -61,13 +61,15 @@
     const form = builder.closest('form');
     let layout;
 
-    /* The first row, left pair (the two cells in front of seats 3 and 4) is always the driver: never a seat. */
+    /* The first row, left pair (the two cells in front of seats 3 and 4) is the driver's cell. */
     function defaultLayout() {
         return Array.from({ length: 10 }, (_, i) => (i === 0 ? [false, false, true, true] : [true, true, true, true]));
     }
-    function lockDriver() {
-        layout[0][0] = false;
-        layout[0][1] = false;
+    /* The driver sits in the front-left pair while both of its cells are free. A bus saved before that pair was
+       reserved still has seats there: they stay seats, and the driver tile is drawn in a front row of its own, so
+       the design the driver sees here is exactly the one the conductor and the commuters see. */
+    function driverInside() {
+        return !layout[0][0] && !layout[0][1];
     }
 
     try { layout = JSON.parse(dataInput.value); } catch (_) { layout = null; }
@@ -75,7 +77,6 @@
         layout = defaultLayout();
     }
     layout = layout.slice(0, 25);
-    lockDriver();
 
     const MAX_SEATS = 50, MAX_DOORS = 2;
     function seatTotal() {
@@ -98,6 +99,22 @@
     function render() {
         grid.replaceChildren();
         let number = 0;
+        if (!driverInside()) {
+            const front = document.createElement('div');
+            front.className = 'seat-row seat-front';
+            front.setAttribute('role', 'row');
+            const cab = document.createElement('span');
+            cab.className = 'seat-driver';
+            cab.style.gridColumn = '1 / 3';
+            cab.setAttribute('role', 'gridcell');
+            cab.setAttribute('aria-label', 'Driver seat');
+            cab.textContent = 'Driver';
+            const lane = document.createElement('span');
+            lane.className = 'seat-aisle';
+            lane.setAttribute('aria-hidden', 'true');
+            front.append(cab, lane);
+            grid.append(front);
+        }
         layout.forEach((row, rowIndex) => {
             const rowElement = document.createElement('div');
             rowElement.className = 'seat-row';
@@ -112,8 +129,8 @@
                     rowElement.append(aisle);
                 }
 
-                /* driver seat: always first row, left side. Not tappable. */
-                if (rowIndex === 0 && start === 0) {
+                /* driver seat: first row, left side, while that pair is free. Not tappable. */
+                if (rowIndex === 0 && start === 0 && driverInside()) {
                     const driver = document.createElement('span');
                     driver.className = 'seat-driver';
                     driver.style.gridColumn = '1 / 3';
@@ -154,7 +171,6 @@
                     button.textContent = active ? String(number) : '—';
                     button.addEventListener('click', () => {
                         layout[rowIndex][seatIndex] = !layout[rowIndex][seatIndex];
-                        lockDriver();
                         render();
                     });
                     rowElement.append(button);
