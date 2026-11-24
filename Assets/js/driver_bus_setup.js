@@ -61,13 +61,30 @@
     const form = builder.closest('form');
     let layout;
 
-    /* The first row, left pair (the two cells in front of seats 3 and 4) is the driver's cell. */
-    function defaultLayout() {
-        return Array.from({ length: 10 }, (_, i) => (i === 0 ? [false, false, true, true] : [true, true, true, true]));
+    /* The first row, left pair is the driver's cell; seats 1 and 2 start beside the driver. */
+    function layoutForSeatCount(count) {
+        const result = [[false, false, false, false]];
+        let left = Math.max(1, Math.min(40, count));
+        for (let i = 2; i < 4 && left > 0; i++) { result[0][i] = true; left--; }
+        while (left > 0) {
+            const row = [];
+            for (let i = 0; i < 4; i++) { row.push(left > 0); if (left > 0) left--; }
+            result.push(row);
+        }
+        return result;
     }
-    /* The driver sits in the front-left pair while both of its cells are free. A bus saved before that pair was
-       reserved still has seats there: they stay seats, and the driver tile is drawn in a front row of its own, so
-       the design the driver sees here is exactly the one the conductor and the commuters see. */
+
+    function defaultLayout() { return layoutForSeatCount(40); }
+
+    /* Old layouts had four seats in row 1. Normalize them once so the driver occupies only the front-left pair,
+       seats 1 and 2 are beside the driver, and every later seat is drawn exactly once in order. */
+    function normalizeLegacyLayout(value) {
+        if (value[0][0] && value[0][1] && value[0][2] && value[0][3]) {
+            return layoutForSeatCount(value.reduce((total, row) => total + row.filter(Boolean).length, 0));
+        }
+        return value;
+    }
+
     function driverInside() {
         return !layout[0][0] && !layout[0][1];
     }
@@ -76,11 +93,10 @@
     if (!Array.isArray(layout) || !layout.length || !layout.every(row => Array.isArray(row) && row.length === 4 && row.every(v => typeof v === 'boolean'))) {
         layout = defaultLayout();
     }
+    layout = normalizeLegacyLayout(layout);
     layout = layout.slice(0, 25);
 
     const MAX_SEATS = 40, MAX_DOORS = 2;
-    /* Older saved layouts used all four cells in row 1. Keep those seat IDs, but draw the old front-right pair
-       beside the driver instead of leaving an empty area above them. */
     function seatTotal() {
         return layout.reduce((total, row) => total + row.filter(Boolean).length, 0);
     }

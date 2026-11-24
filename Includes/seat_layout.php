@@ -86,14 +86,12 @@ function mbus_bus_seat_rows($savedLayout, int $capacity): array
         foreach ($row as $seat) $cells[] = $seat ? $number++ : null;
         $rows[] = $cells;
     }
-    /* Legacy buses stored four seats in row 1 before the driver cell was part of the layout. Keep every seat ID,
-       but place seats 3 and 4 beside the driver, then fill the next row with seats 1, 2, 5 and 6. Do not create
-       a fake door for the two cells that are now occupied by seats. */
+    /* Legacy buses stored four seats in row 1 before the driver cell was part of the layout. Normalize their display
+       to the current design: Driver, seats 1 and 2, then seats 3 onward. This keeps each seat visible exactly once. */
     if (isset($rows[0]) && $rows[0][0] !== null && $rows[0][1] !== null && $rows[0][2] !== null && $rows[0][3] !== null) {
         $seatCount = mbus_seat_layout_count($layout);
-        $legacy = [[null, null, 3, 4]];
-        if ($seatCount >= 6) $legacy[] = [1, 2, 5, 6];
-        $next = 7;
+        $legacy = [[null, null, $seatCount >= 1 ? 1 : null, $seatCount >= 2 ? 2 : null]];
+        $next = 3;
         while ($next <= $seatCount) {
             $row = [];
             for ($i = 0; $i < 4; $i++) $row[] = $next <= $seatCount ? $next++ : null;
