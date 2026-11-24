@@ -161,21 +161,23 @@ $can_submit = !$latest || $status === 'Rejected' || ($status === 'Approved' && $
     </div>
     <div class="form-group">
         <label for="verification_document">Photo of your ID</label>
-        <div class="v-upload-group">
-            <div class="v-upload-card">
-                <div class="v-upload-icon"><i class="fa fa-camera" aria-hidden="true"></i></div>
-                <div class="v-upload-copy">
-                    <strong id="fileName">Upload a clear ID photo</strong>
-                    <small>JPG, PNG or PDF · Max 5 MB</small>
+        <div class="upload-group">
+            <div class="upload-document-group">
+                <div class="upload-icon"><i class="fa fa-camera" aria-hidden="true"></i></div>
+                <div class="document-desc">
+                    <span class="document-name">Click to upload your ID</span>
+                    <span>JPG, PNG or PDF &middot; Max 5 MB</span>
                 </div>
-                <div class="v-upload-action"><button type="button" id="verificationBrowse">Browse</button></div>
+                <div class="document-input-button">
+                    <button type="button">Browse</button>
+                    <input type="file" id="verification_document" name="verification_document" accept="image/jpeg,image/png,application/pdf" required>
+                </div>
             </div>
-            <div class="v-upload-preview" id="verificationPreview" hidden>
-                <img id="verificationPreviewImage" alt="Selected ID preview" hidden>
-                <iframe id="verificationPreviewFrame" title="Selected ID preview" hidden></iframe>
+            <div class="document-preview">
+                <img class="document-preview-image" alt="Selected ID preview">
+                <iframe class="document-preview-frame" title="Selected ID preview"></iframe>
             </div>
         </div>
-        <input type="file" id="verification_document" name="verification_document" accept="image/jpeg,image/png,application/pdf" required>
         <small class="form-hint">JPG, PNG or PDF, up to 5 MB. Student ID, senior citizen ID or PWD ID.</small>
     </div>
     <button class="btn btn-primary btn-block" type="submit" name="submit_verification">Submit for review</button>

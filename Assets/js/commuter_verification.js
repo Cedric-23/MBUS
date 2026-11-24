@@ -1,52 +1,74 @@
-(function () {
-    'use strict';
-
+/* Commuter verification upload: same row behavior as the driver requirements uploader. */
+(() => {
     const form = document.querySelector('.v-form');
-    const input = document.getElementById('verification_document');
-    const group = document.querySelector('.v-upload-group');
-    const name = document.getElementById('fileName');
-    const preview = document.getElementById('verificationPreview');
-    const image = document.getElementById('verificationPreviewImage');
-    const frame = document.getElementById('verificationPreviewFrame');
-    const browse = document.getElementById('verificationBrowse');
+    const group = form && form.querySelector('.upload-group');
+    const icon = group && group.querySelector('.upload-icon');
+    const img = group && group.querySelector('.document-preview-image');
+    const frame = group && group.querySelector('.document-preview-frame');
+    const input = group && group.querySelector('input[type="file"]');
+    const button = group && group.querySelector('.document-input-button button');
+    const preview = group && group.querySelector('.document-preview');
     const submit = form && form.querySelector('button[type="submit"]');
-    if (!form || !input || !group || !name || !preview || !image || !frame || !browse || !submit) return;
+    if (!form || !group || !icon || !img || !frame || !input || !button || !preview || !submit) return;
 
-    const defaultName = name.textContent;
+    const idleLabel = button.textContent;
+    const name = group.querySelector('.document-name');
+    const hint = group.querySelector('.document-desc span:last-child');
+    const idleName = name.textContent;
+    const idleHint = hint.textContent;
     const maxBytes = 5 * 1024 * 1024;
     let objectUrl = null;
     let pending = null;
 
-    browse.addEventListener('click', function () { input.click(); });
+    name.dataset.idle = idleName;
+    hint.dataset.idle = idleHint;
 
     function clearPreview() {
         if (objectUrl) URL.revokeObjectURL(objectUrl);
         objectUrl = null;
-        image.removeAttribute('src');
+        img.removeAttribute('src');
         frame.removeAttribute('src');
-        image.hidden = true;
-        frame.hidden = true;
-        preview.hidden = true;
+        img.classList.remove('active');
+        frame.classList.remove('active');
+        preview.classList.remove('active');
+        icon.classList.remove('has-thumb');
+        icon.style.backgroundImage = '';
+    }
+
+    function sync() {
+        const src = img.getAttribute('src');
+        const file = input.files && input.files[0];
+        icon.classList.toggle('has-thumb', Boolean(src));
+        icon.style.backgroundImage = src ? 'url("' + src + '")' : '';
+        button.textContent = file ? 'Change' : idleLabel;
+        group.classList.toggle('is-done', Boolean(file && src));
+        if (file && src) {
+            name.textContent = file.name;
+            hint.textContent = '✓ Ready · ' + Math.max(1, Math.round(file.size / 1024)) + ' KB';
+        } else {
+            name.textContent = name.dataset.idle || idleName;
+            hint.textContent = hint.dataset.idle || idleHint;
+        }
     }
 
     function shrinkImage(file, maxDim, quality) {
         return new Promise(resolve => {
             const url = URL.createObjectURL(file);
-            const img = new Image();
-            img.onload = function () {
-                const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+            const source = new Image();
+            source.onload = function () {
+                const scale = Math.min(1, maxDim / Math.max(source.width, source.height));
                 const canvas = document.createElement('canvas');
-                canvas.width = Math.max(1, Math.round(img.width * scale));
-                canvas.height = Math.max(1, Math.round(img.height * scale));
+                canvas.width = Math.max(1, Math.round(source.width * scale));
+                canvas.height = Math.max(1, Math.round(source.height * scale));
                 const context = canvas.getContext('2d');
                 context.fillStyle = '#fff';
                 context.fillRect(0, 0, canvas.width, canvas.height);
-                context.drawImage(img, 0, 0, canvas.width, canvas.height);
+                context.drawImage(source, 0, 0, canvas.width, canvas.height);
                 URL.revokeObjectURL(url);
                 canvas.toBlob(blob => resolve(blob), 'image/jpeg', quality);
             };
-            img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
-            img.src = url;
+            source.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+            source.src = url;
         });
     }
 
@@ -64,41 +86,26 @@
         return new File([best], base + '.jpg', { type: 'image/jpeg' });
     }
 
-    function showPreview(file) {
-        clearPreview();
-        objectUrl = URL.createObjectURL(file);
-        if (file.type === 'application/pdf') {
-            frame.src = objectUrl;
-            frame.hidden = false;
-        } else {
-            image.src = objectUrl;
-            image.hidden = false;
-        }
-        preview.hidden = false;
-    }
-
+    button.addEventListener('click', () => input.click());
     input.addEventListener('change', function () {
         const file = input.files && input.files[0];
         clearPreview();
         group.classList.remove('is-done', 'has-error');
         input.setCustomValidity('');
-        if (!file) {
-            name.textContent = defaultName;
-            return;
-        }
+        if (!file) { sync(); return; }
         if (file.size > maxBytes) {
-            name.textContent = defaultName;
-            group.classList.add('has-error');
             input.value = '';
+            group.classList.add('has-error');
             input.setCustomValidity('This file is larger than 5 MB. Choose a smaller photo.');
             input.reportValidity();
+            sync();
             return;
         }
 
         const token = {};
         pending = token;
-        name.textContent = 'Preparing photo…';
         submit.disabled = true;
+        name.textContent = 'Preparing photo…';
         optimizeImage(file).then(small => {
             if (pending !== token) return;
             if (small !== file) {
@@ -106,23 +113,32 @@
                     const transfer = new DataTransfer();
                     transfer.items.add(small);
                     input.files = transfer.files;
-                } catch (_) { /* keep the original file when the browser cannot replace it */ }
+                } catch (_) { /* retain the original file when replacement is unsupported */ }
             }
             const finalFile = input.files && input.files[0] ? input.files[0] : file;
             if (finalFile.size > maxBytes) {
-                name.textContent = defaultName;
-                group.classList.add('has-error');
                 input.value = '';
+                group.classList.add('has-error');
                 input.setCustomValidity('This photo is larger than 5 MB. Choose a smaller image.');
+                sync();
                 return;
             }
-            name.textContent = finalFile.name;
-            group.classList.add('is-done');
-            showPreview(finalFile);
+            objectUrl = URL.createObjectURL(finalFile);
+            if (finalFile.type === 'application/pdf') {
+                frame.src = objectUrl;
+                frame.classList.add('active');
+            } else {
+                img.src = objectUrl;
+                img.classList.add('active');
+            }
+            preview.classList.add('active');
+            sync();
         }).catch(() => {
-            name.textContent = file.name;
-            group.classList.add('is-done');
-            showPreview(file);
+            objectUrl = URL.createObjectURL(file);
+            img.src = objectUrl;
+            img.classList.add('active');
+            preview.classList.add('active');
+            sync();
         }).finally(() => {
             if (pending === token) {
                 pending = null;
@@ -131,9 +147,11 @@
         });
     });
 
-    form.addEventListener('submit', function (event) {
+    form.addEventListener('submit', event => {
         if (!pending) return;
         event.preventDefault();
         pending.then(() => form.submit());
     });
+
+    sync();
 })();

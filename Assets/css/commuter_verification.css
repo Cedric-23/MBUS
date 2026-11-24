@@ -21,23 +21,27 @@
 .verify-page .form-group > label { display:block; margin-bottom:6px; font-weight:600; font-size:.9375rem; }
 .verify-page .form-control { min-height:48px; font-size:1rem; border-radius:12px; width:100%; }
 .verify-page input[type=file] { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
-.v-upload-card { display:flex; align-items:center; gap:14px; padding:12px 14px; border:1.5px dashed #b8cbea; border-radius:16px; background:#f7faff; transition:border-color .15s, background .15s; }
-.v-upload-card:hover { border-color:#2f6fe4; background:#f0f6ff; }
-.v-upload-icon { display:grid; place-items:center; width:56px; height:56px; flex:none; border-radius:14px; background:#e3edff; color:#2f6fe4; font-size:1.2rem; }
-.v-upload-copy { display:flex; flex:1; min-width:0; flex-direction:column; gap:3px; }
-.v-upload-copy strong { overflow:hidden; color:#14213d; font-size:.9rem; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
-.v-upload-copy small { color:#6b7a99; font-size:.75rem; }
-.v-upload-action { flex:none; }
-.v-upload-action button { min-height:36px; padding:0 14px; border:1.5px solid #2f6fe4; border-radius:9px; background:#fff; color:#2f6fe4; font:inherit; font-weight:600; cursor:pointer; }
-.v-upload-group.is-done .v-upload-card { border-style:solid; border-color:#34a770; background:#f3fbf7; }
-.v-upload-group.is-done .v-upload-copy small { color:#1f8a57; font-weight:600; }
-.v-upload-group.has-error .v-upload-card { border-color:#c0392b; background:#fff6f5; }
-.v-upload-preview { margin-top:10px; }
-.v-upload-preview img, .v-upload-preview iframe { display:block; width:100%; max-height:220px; border:1px solid var(--color-border); border-radius:10px; object-fit:contain; }
-.v-upload-preview iframe { height:220px; }
+.verify-page .upload-group { margin-bottom:16px; }
+.verify-page .upload-document-group { display:flex; align-items:center; gap:14px; padding:12px 14px; border:1.5px dashed #b8cbea; border-radius:16px; background:#f7faff; transition:border-color .15s, background .15s; }
+.verify-page .upload-document-group:hover { border-color:#2f6fe4; background:#f0f6ff; }
+.verify-page .upload-icon { display:grid; place-items:center; width:56px; height:56px; flex:none; border-radius:14px; background-color:#e3edff; background-position:center; background-size:cover; color:#2f6fe4; font-size:1.2rem; }
+.verify-page .upload-icon.has-thumb { color:transparent; }
+.verify-page .document-desc { display:flex; flex:1; min-width:0; flex-direction:column; gap:3px; }
+.verify-page .document-desc .document-name { overflow:hidden; color:#14213d; font-size:.9rem; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+.verify-page .document-desc span:last-child { color:#6b7a99; font-size:.75rem; }
+.verify-page .document-input-button { flex:none; }
+.verify-page .document-input-button button { min-height:36px; padding:0 14px; border:1.5px solid #2f6fe4; border-radius:999px; background:#fff; color:#2f6fe4; font:inherit; font-weight:600; cursor:pointer; }
+.verify-page .upload-group.is-done .upload-document-group { border-style:solid; border-color:#34a770; background:#f3fbf7; }
+.verify-page .upload-group.is-done .document-desc span:last-child { color:#1f8a57; font-weight:600; }
+.verify-page .upload-group.is-done .document-input-button button { border-color:#b8cbea; color:#516278; }
+.verify-page .upload-group.has-error .upload-document-group { border-color:#c0392b; background:#fff6f5; }
+.verify-page .document-preview { display:none; }
+.verify-page .document-preview-image, .verify-page .document-preview-frame { display:none; }
+.verify-page .document-preview-image.active, .verify-page .document-preview-frame.active { display:block; }
+.verify-page .document-preview-frame { height:220px; width:100%; }
 .verify-page .btn-block { min-height:52px; border-radius:12px; font-size:1rem; font-weight:600; }
 .verify-page .form-hint { display:block; margin-top:6px; color:var(--color-text-muted); font-size:.8125rem; }
-@media (max-width:480px) { .v-upload-card { align-items:flex-start; flex-wrap:wrap; } .v-upload-copy { flex-basis:calc(100% - 70px); padding-top:2px; } .v-upload-action { margin-left:70px; } }
+@media (max-width:480px) { .verify-page .upload-document-group { align-items:flex-start; flex-wrap:nowrap; } .verify-page .document-desc .document-name { white-space:nowrap; } }
 /* shared bits used on reserve / profile */
 .ptype-tag { padding:2px 10px; border-radius:999px; background:var(--color-primary-light-bg); color:var(--color-primary); font-size:.8125rem; font-weight:600; }
 .verify-hint { display:block; margin-top:8px; font-size:.875rem; color:var(--color-primary); }
