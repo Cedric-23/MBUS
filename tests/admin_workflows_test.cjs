@@ -24,7 +24,7 @@ assert.match(conductorApplications, /class="on" aria-current="page">Conductors/,
 assert.match(menu, /href="gcash_approval\.php"/, 'Admin account menu must expose GCash account management');
 assert.match(notify, /function mbus_notify_schedule_change/, 'schedule changes must have a shared notification helper');
 assert.match(notify, /reservation r[\s\S]*operator_bus_assignments[\s\S]*conductor_bus_assignments/, 'schedule changes must notify riders and assigned bus staff');
-assert.match(schedules, /mbus_notify_schedule_change\(\$conn, \$schedule_id, \$before\)/, 'Admin schedule updates must trigger notifications');
+assert.match(schedules, /mbus_notify_schedule_change\(\$conn\s*,\s*\$before_change\s*,\s*\$after_change/, 'Admin schedule updates must trigger notifications');
 for (const link of ['admin_dashboard.php', 'manage_schedules.php', 'manage_buses.php', 'manage_operators.php', 'waiting.php']) {
   assert.match(reports, new RegExp(`href="${link}"[^>]*class="bottom-nav-item"`), `Reports must keep the Admin ${link} navigation button`);
 }
