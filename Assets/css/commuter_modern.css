@@ -290,3 +290,18 @@
     body.cm.cm.cm.cm:not(.commuter-waiting-board) .notif-wrap{animation:mbusIconRide linear both;animation-timeline:scroll(root block);animation-range:0px 120px}
   }
 }
+
+/* ---- One centred title bar on every commuter page (Home, Schedule, Live, Trips, Waiting) ----
+   Same height, title centred between equal side gutters; the bell and profile icons stay pinned right. */
+body.cm.cm .page-header,body.cm.cm .home-top{justify-content:center!important;gap:0!important;min-height:64px!important;padding-left:108px!important;padding-right:108px!important;text-align:center!important}
+body.cm.cm .home-top>div:first-child,body.cm.cm .page-header-left,body.cm.cm .page-header>h1{flex:1 1 auto!important;text-align:center!important;justify-content:center}
+body.cm.cm .page-header-left{display:flex;align-items:center}
+body.cm.cm .page-header-left .back-btn{position:absolute;left:0;top:50%;transform:translateY(-50%)}
+body.cm.cm .home-hello{text-align:center}
+body.cm.cm .home-top-actions{flex:none!important;width:0!important;min-width:0!important;gap:0!important;overflow:visible}
+body.cm.cm .page-header-right{flex:none!important}
+body.cm.commuter-live-page .lv-shell>h1.lv-visually-hidden{position:static!important;width:auto!important;height:auto!important;margin:0 0 14px!important;padding:0 108px!important;overflow:visible!important;clip:auto!important;clip-path:none!important;white-space:normal!important;display:flex!important;align-items:center;justify-content:center;text-align:center;min-height:64px;font-size:1.6rem;font-weight:700;line-height:1.2;letter-spacing:-.02em;color:#14213d}
+@media (max-width:768px){body.cm.commuter-live-page .lv-shell>h1.lv-visually-hidden{font-size:1.35rem}}
+body.cm.cm .cwb-header{min-height:64px!important;align-items:center!important;justify-content:center;padding-left:108px!important;padding-right:108px!important;text-align:center}
+body.cm.cm .cwb-header .cwb-title{flex:0 1 auto!important;text-align:center}
+body.cm.cm .cwb-header #cwbRefresh{position:absolute;left:var(--u-pad,16px);top:50%;transform:translateY(-50%)}
