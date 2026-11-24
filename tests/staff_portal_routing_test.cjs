@@ -30,20 +30,19 @@ for (const [, route, target] of aliases) {
 }
 
 for (const route of [
-    '/Assets/', '/Operator/', '/Conductor/', '/terms.php', '/privacy.php',
+    '/Assets/', '/Admin/', '/Operator/', '/Conductor/', '/terms.php', '/privacy.php',
     '/avatar.php', '/id_image.php', '/gps.php', '/logout.php',
     '/api/live_tracking.php', '/api/gcash_sms_webhook.php'
 ]) {
-    assert.ok(apache.includes(`Alias ${route} `), `missing Apache alias for ${route}`);
+assert.ok(apache.includes(`Alias ${route} `), `missing Apache alias for ${route}`);
 }
 assert.match(apache, /Require all denied/);
-assert.doesNotMatch(apache, /Alias \/Admin\//);
 assert.doesNotMatch(apache, /Alias \/Commuter\//);
 assert.doesNotMatch(apache, /Alias \/login\.php/);
 assert.doesNotMatch(apache, /Alias \/register\.php/);
 
 assert.match(login, /defined\('MBUS_STAFF_PORTAL'\) && MBUS_STAFF_PORTAL === true/);
-assert.match(login, /!in_array\(\$type, \['driver', 'conductor'\], true\)/);
+assert.match(login, /!in_array\(\$type, \['driver', 'conductor', 'admin'\], true\)/);
 assert.match(login, /href="register\.php\?type=<\?php echo \$staff_portal \? 'conductor' : 'passenger'; \?>" class="" role="tab">Register/);
 const footer = login.match(/<div class="footer">([\s\S]*?)<\/div>/)?.[1] ?? '';
 assert.doesNotMatch(footer, /Apply as Driver\/Operator|apply as Conductor|New to MBUS staff/);

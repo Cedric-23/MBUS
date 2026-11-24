@@ -11,13 +11,13 @@ Create a second Render Web Service connected to `Cedric-23/MBUS` and set:
 - **Environment:** copy the existing MBUS database, mail, and application environment variables
 - **Branch:** `ash` while testing; use the production branch when ready
 
-The Dockerfile keeps the whole repository available to PHP so the portal can reuse the existing database bootstrap, CSRF protection, validation, mailer, and application-review logic, but Apache exposes only `StaffPortal/` as the public document root.
+The Dockerfile keeps the whole repository available to PHP so the portal can reuse the existing database bootstrap, CSRF protection, validation, mailer, and application-review logic. Apache exposes `StaffPortal/` as the public document root and explicitly aliases the protected Admin portal alongside the staff dashboards.
 
-`StaffPortal/login.php` and `StaffPortal/register.php` mark requests as staff-facing before delegating to the shared handlers. The staff Apache configuration explicitly aliases `/Operator/`, `/Conductor/`, `/Assets/`, the two staff APIs (`/api/live_tracking.php` and `/api/gcash_sms_webhook.php`), and the dashboard dependencies (`/gps.php`, `/logout.php`, `/avatar.php`, and `/id_image.php`). Root application files remain unavailable directly except for the specific legal/profile/GPS/logout endpoints required by staff pages. This lets approved staff reach the existing dashboards without exposing commuter or Admin directories on the staff host.
+`StaffPortal/login.php` and `StaffPortal/register.php` mark requests as staff-facing before delegating to the shared handlers. The staff Apache configuration explicitly aliases `/Admin/`, `/Operator/`, `/Conductor/`, `/Assets/`, the two staff APIs (`/api/live_tracking.php` and `/api/gcash_sms_webhook.php`), and the dashboard dependencies (`/gps.php`, `/logout.php`, `/avatar.php`, and `/id_image.php`). Root application files remain unavailable directly except for the specific legal/profile/GPS/logout endpoints required by the portals. Admin page-level guards still require an administrator session; exposing the directory does not grant staff accounts admin access.
 
 ## Portal behavior
 
-- `/login.php` accepts approved Operator and Conductor accounts and routes them to their existing dashboards.
+- `/login.php` accepts approved Operator and Conductor accounts and administrators, routing each to the appropriate existing portal.
 - `/register.php?type=driver` opens the validated Driver/Operator application wizard.
 - `/register.php?type=conductor` opens the Conductor application form.
 - Registration does not create staff access immediately; the existing Admin approval flow remains required.
