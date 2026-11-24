@@ -281,25 +281,3 @@ document.querySelectorAll("input[inputmode='numeric']").forEach(function (el) {
         if (/^63/.test(d) && d.length > 10) d = "0" + d.slice(2);
         el.value = d.slice(0, 11); });
 });
-
-/* live password checklist under every "create password" field (matches the reset password page) */
-(function () {
-    var rules = [
-        ["At least 8 characters", function (v) { return v.length >= 8; }],
-        ["One uppercase letter", function (v) { return /[A-Z]/.test(v); }],
-        ["One lowercase letter", function (v) { return /[a-z]/.test(v); }],
-        ["One number", function (v) { return /\d/.test(v); }],
-        ["One symbol", function (v) { return /[^A-Za-z0-9]/.test(v); }]
-    ];
-    document.querySelectorAll(".password-input input[type='password'], .password-input .pw-wrap input").forEach(function (input) {
-        if (input.dataset.pwRules) return;
-        input.dataset.pwRules = "1";
-        var ul = document.createElement("ul");
-        ul.className = "password-requirements";
-        var items = rules.map(function (r) { var li = document.createElement("li"); li.textContent = r[0]; ul.appendChild(li); return li; });
-        input.closest(".password-input").appendChild(ul);
-        function update() { items.forEach(function (li, i) { li.classList.toggle("met", rules[i][1](input.value)); }); }
-        input.addEventListener("input", update);
-        update();
-    });
-})();
