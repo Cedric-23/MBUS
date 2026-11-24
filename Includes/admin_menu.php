@@ -35,7 +35,10 @@ function mbus_admin_approvals_link($conn): string {
     $obadge = $c['op']    > 0 ? ' <span class="menu-badge">' . $c['op'] . '</span>' : '';
     $rbadge = $c['renew'] > 0 ? ' <span class="menu-badge">' . $c['renew'] . '</span>' : '';
     $gbadge = $c['gcash'] > 0 ? ' <span class="menu-badge">' . $c['gcash'] . '</span>' : '';
-    return '<a href="reports.php" role="menuitem"><i class="fa fa-file-lines" aria-hidden="true"></i> Reports</a>'
+    return '<a href="../Commuter/commuter_dashboard.php" role="menuitem"><i class="fa fa-globe" aria-hidden="true"></i> Main website</a>'
+        . '<a href="../Operator/operator_dashboard.php" role="menuitem"><i class="fa fa-id-badge" aria-hidden="true"></i> Driver portal</a>'
+        . '<a href="../Conductor/conductor_dashboard.php" role="menuitem"><i class="fa fa-user-group" aria-hidden="true"></i> Conductor portal</a>'
+        . '<a href="reports.php" role="menuitem"><i class="fa fa-file-lines" aria-hidden="true"></i> Reports</a>'
         . '<a href="announcements.php" role="menuitem"><i class="fa fa-bullhorn" aria-hidden="true"></i> Updates</a>'
         . '<a href="verifications.php" role="menuitem"><i class="fa fa-id-card" aria-hidden="true"></i> ID approvals' . $badge . '</a>'
         . '<a href="conductor_applications.php" role="menuitem"><i class="fa fa-user-check" aria-hidden="true"></i> Staff applications' . $obadge . '</a>'

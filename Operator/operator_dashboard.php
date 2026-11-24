@@ -4,7 +4,7 @@ session_start();
 require_once __DIR__ . '/../Includes/staff_nav.php';
 if(
     !isset($_SESSION['user_type']) ||
-    strtolower((string)$_SESSION['user_type']) !== 'driver'
+    !in_array(strtolower((string)$_SESSION['user_type']), ['driver', 'admin'], true)
 ){
     header("Location: ../login.php");
     exit();
