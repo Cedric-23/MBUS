@@ -36,6 +36,7 @@ function mbus_admin_approvals_link($conn): string {
     $rbadge = $c['renew'] > 0 ? ' <span class="menu-badge">' . $c['renew'] . '</span>' : '';
     $gbadge = $c['gcash'] > 0 ? ' <span class="menu-badge">' . $c['gcash'] . '</span>' : '';
     return '<a href="reports.php" role="menuitem"><i class="fa fa-file-lines" aria-hidden="true"></i> Reports</a>'
+        . '<a href="announcements.php" role="menuitem"><i class="fa fa-bullhorn" aria-hidden="true"></i> Announcements</a>'
         . '<a href="verifications.php" role="menuitem"><i class="fa fa-id-card" aria-hidden="true"></i> ID approvals' . $badge . '</a>'
         . '<a href="conductor_applications.php" role="menuitem"><i class="fa fa-user-check" aria-hidden="true"></i> Staff applications' . $obadge . '</a>'
         . '<a href="id_renewals.php" role="menuitem"><i class="fa fa-id-badge" aria-hidden="true"></i> Driver ID renewals' . $rbadge . '</a>'
