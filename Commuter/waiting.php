@@ -66,6 +66,7 @@ if ($ob !== false) { $onboard = mbus_db_fetch_assoc($ob) ?: null; }
                     <span class="profile-menu-role">Commuter account</span>
                 </div>
                 <a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                        <a href="announcements.php" role="menuitem"><i class="fa fa-bullhorn" aria-hidden="true"></i> Updates</a>
                 <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
             </div>
         </div>

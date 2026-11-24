@@ -77,6 +77,7 @@ function mbus_staff_profile_links(string $role, string $active = '', string $bad
             'mybus'  => ['my_bus.php', 'fa-bus-simple', 'My Bus'],
             'gcash'  => ['gcash_account.php', 'fa-mobile-screen', 'GCash Account'],
         ];
+    $links['updates'] = ['announcements.php', 'fa-bullhorn', 'Updates'];
     $links['reports'] = ['reports.php', 'fa-chart-line', 'Analytics'];
     $links['profile'] = ['profile.php', 'fa-user', 'My Profile'];
 

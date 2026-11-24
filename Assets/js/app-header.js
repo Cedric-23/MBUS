@@ -144,8 +144,17 @@ document.addEventListener('DOMContentLoaded', function () {
             trigger.setAttribute('aria-expanded', 'false');
         }
 
+        function closeNotifications() {
+            var panel = document.getElementById('notifPanel');
+            var button = document.getElementById('notifBtn');
+            if (!panel) return;
+            panel.hidden = true;
+            if (button) button.setAttribute('aria-expanded', 'false');
+        }
+
         trigger.addEventListener('click', function (event) {
             event.stopPropagation();
+            closeNotifications();
             const open = menu.classList.toggle('open');
             trigger.setAttribute('aria-expanded', String(open));
         });
