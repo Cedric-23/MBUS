@@ -90,9 +90,6 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <a href="manage_operators.php"><i class="fa fa-user-gear" aria-hidden="true"></i> Manage Operators</a>
             <a href="manage_routes.php"><i class="fa fa-route" aria-hidden="true"></i> Manage Routes</a>
             <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
-            <a href="../Commuter/commuter_dashboard.php"><i class="fa fa-globe" aria-hidden="true"></i> Main Website</a>
-            <a href="../Operator/operator_dashboard.php"><i class="fa fa-id-badge" aria-hidden="true"></i> Driver Portal</a>
-            <a href="../Conductor/conductor_dashboard.php"><i class="fa fa-user-group" aria-hidden="true"></i> Conductor Portal</a>
         </nav>
 
         <div class="menu-bottom">
