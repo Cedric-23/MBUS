@@ -22,24 +22,10 @@ $operator_id = $_SESSION['user_id'];
 /* App-timezone day boundaries, not the DB clock */
 $b = mbus_local_bounds();
 
-/* TODAY'S OPEN TRIPS (this operator's buses): running first, then by departure time */
-$trips = [];
-$tq = mbus_db_prepare($conn, "
-SELECT s.schedule_id, s.departure_time, s.trip_status, b.bus_number, b.capacity,
-       rt.origin, rt.destination,
-       (SELECT COUNT(*) FROM reservation r WHERE r.schedule_id = s.schedule_id AND r.status IN ('Paid','Confirmed','Boarded')) AS booked,
-       (SELECT COUNT(*) FROM reservation r WHERE r.schedule_id = s.schedule_id AND r.status = 'Boarded') AS boarded
-FROM schedule s
-JOIN buses b ON b.bus_id = s.bus_id
-JOIN routes rt ON rt.route_id = s.route_id
-JOIN operator_bus_assignments oba ON oba.bus_id = s.bus_id
-WHERE oba.operator_id = ?
-AND s.schedule_status = 'Active'
-AND s.trip_status IN ('Scheduled','Boarding','Departed')
-AND s.departure_time >= ? AND s.departure_time < ?
-ORDER BY (s.trip_status = 'Departed') DESC, (s.trip_status = 'Boarding') DESC, s.departure_time ASC", [$operator_id, $b['today'], $b['tomorrow']]);
-while($tq !== false && ($r = mbus_db_fetch_assoc($tq))) $trips[] = $r;
-$todays_trips = array_slice($trips, 0, 5);
+/* BUS, CONDUCTOR AND SCHEDULES (today highlighted, everything upcoming listed) */
+require_once __DIR__ . '/../Includes/driver_home.php';
+$home = mbus_driver_home_data($conn, (int)$operator_id, $b);
+$today_ymd = date('Y-m-d', strtotime($b['today']));
 
 /* TODAY STATS */
 $stat = ['trips' => 0, 'booked' => 0, 'boarded' => 0, 'pending' => 0];
@@ -71,7 +57,6 @@ if ($wq !== false && ($wrow = mbus_db_fetch_assoc($wq))) $waitingCount = (int)$w
 /* Shared avatar rendering; Driver accounts do not receive Conductor GCash controls. */
 require_once dirname(__DIR__) . '/Includes/header_avatar.php';
 
-$state_label = ['Scheduled' => 'Up next', 'Boarding' => 'Boarding now', 'Departed' => 'On the road'];
 $greeting = (int)date('G') < 12 ? 'Good morning' : ((int)date('G') < 18 ? 'Good afternoon' : 'Good evening');
 $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
 ?>
@@ -103,6 +88,7 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
     <link rel="stylesheet" href="../Assets/css/unify.css?v=3">
     <link rel="stylesheet" href="../Assets/css/operator_dashboard_extras.css?v=1">
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
+    <link rel="stylesheet" href="../Assets/css/driver_home.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/driver_home.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/notif_bell.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/notif_bell.css'); ?>">
 </head>
 
@@ -162,6 +148,8 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <select id="operatorTrackingTrip" aria-label="Active trip"></select>
         </div>
 
+        <?php echo mbus_driver_home_today_html($home, $today_ymd); ?>
+
         <div class="today-strip" aria-label="Today">
             <div><b><?php echo $stat['trips']; ?></b><span>Trips today</span></div>
             <div><b><?php echo $stat['booked']; ?></b><span>Booked riders today</span></div>
@@ -169,22 +157,9 @@ $first_name = explode(' ', trim($_SESSION['full_name'] ?? 'there'))[0];
             <div><b><?php echo $my_buses; ?></b><span><?php echo $my_buses === 1 ? 'Bus' : 'Buses'; ?></span></div>
         </div>
 
-        <section class="home-section" aria-labelledby="today-h">
-            <div class="home-section-head"><h2 id="today-h">Trips today</h2></div>
-            <?php if($todays_trips){ ?>
-            <ul class="soon-list">
-                <?php foreach($todays_trips as $t){ $full = (int)$t['booked'] >= (int)$t['capacity']; $bus_label = ctype_digit((string)$t['bus_number']) ? 'Bus ' . $t['bus_number'] : $t['bus_number']; ?>
-                <li>
-                    <span class="soon-time"><?php echo date('g:i', strtotime($t['departure_time'])); ?><small><?php echo date('A', strtotime($t['departure_time'])); ?></small></span>
-                    <span class="soon-body"><strong><?php echo htmlspecialchars($t['origin'] . ' to ' . $t['destination']); ?></strong><small><?php echo htmlspecialchars($bus_label . ' · ' . ($state_label[$t['trip_status']] ?? 'Up next') . ' · ' . (int)$t['boarded'] . ' of ' . (int)$t['booked'] . ' boarded'); ?></small></span>
-                    <span class="seat-chip <?php echo $full ? 'full' : 'ok'; ?>"><?php echo (int)$t['booked']; ?>/<?php echo (int)$t['capacity']; ?></span>
-                </li>
-                <?php } ?>
-            </ul>
-            <?php } else { ?>
-            <p class="attn is-clear"><span><strong>No trips left today</strong><small>Nothing else is assigned to your buses. Check upcoming trips.</small></span></p>
-            <?php } ?>
-        </section>
+        <?php echo mbus_driver_home_buses_html($home, '../'); ?>
+
+        <?php echo mbus_driver_home_schedule_html($home, $today_ymd); ?>
 
     </div></main>
 

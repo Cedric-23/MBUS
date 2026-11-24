@@ -1,0 +1,58 @@
+/* Driver home: highlighted "scheduled today" card, bus + conductor cards, grouped schedule list. */
+.staff-home .dh-pill{display:inline-block;padding:4px 12px;border-radius:999px;background:#ffc93c;color:#4a3200;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.staff-home .dh-pill.is-quiet{background:#e6eefc;color:#25467f}
+
+/* today card */
+.staff-home .dh-today{margin-top:6px;padding:20px;border-radius:24px;color:#fff;background:linear-gradient(160deg,#16335f 0,#2358c0 55%,#2f6fe4 100%);box-shadow:0 14px 30px rgba(35,88,192,.28)}
+.staff-home .dh-today.is-none{background:#fff;color:#14213d;box-shadow:0 1px 8px rgba(47,111,228,.12)}
+.staff-home .dh-today.is-none h2{margin:10px 0 4px;font-size:1.2rem}
+.staff-home .dh-today.is-none p{margin:0;color:#64748b;font-size:.9rem}
+.staff-home .dh-today-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.staff-home .dh-state{padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.18);font-size:.78rem;font-weight:600}
+.staff-home .dh-state.is-road{background:#16a34a}
+.staff-home .dh-state.is-board{background:#f59e0b;color:#3b2500}
+.staff-home .dh-today-main{display:flex;align-items:center;gap:16px;margin-top:16px}
+.staff-home .dh-today-time{font-size:2.6rem;font-weight:700;line-height:1;letter-spacing:-.02em}
+.staff-home .dh-today-time small{margin-left:4px;font-size:.95rem;font-weight:600;opacity:.85}
+.staff-home .dh-today-route{display:grid;gap:0;min-width:0}
+.staff-home .dh-today-route strong{font-size:1.05rem;line-height:1.25;overflow-wrap:anywhere}
+.staff-home .dh-today-route span{font-size:.75rem;opacity:.75}
+.staff-home .dh-today-meta{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.2);font-size:.85rem}
+.staff-home .dh-today-meta i{opacity:.85;margin-right:4px}
+.staff-home .dh-today .dh-nocond{opacity:.8}
+.staff-home .dh-today-more{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.2)}
+.staff-home .dh-today-more h3{margin:0 0 8px;color:rgba(255,255,255,.85);font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.staff-home .dh-today-more ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.staff-home .dh-today-more li{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:.85rem}
+.staff-home .dh-today-more em{font-style:normal;opacity:.8;font-size:.75rem}
+
+/* bus cards */
+.staff-home .dh-buses{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.staff-home .dh-buses li{display:flex;gap:14px;align-items:center;padding:12px;border-radius:20px;background:#fff;box-shadow:0 1px 8px rgba(47,111,228,.12)}
+.staff-home .dh-bus-img{flex:none;width:84px;height:64px;border-radius:14px;background:#eaf1ff center/cover no-repeat;display:grid;place-items:center;color:#2f6fe4;font-size:1.5rem}
+.staff-home .dh-bus-body{min-width:0;display:grid;gap:2px}
+.staff-home .dh-bus-body strong{font-size:1.05rem}
+.staff-home .dh-bus-body small{color:#64748b}
+.staff-home .dh-crew{margin-top:4px;font-size:.85rem;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+.staff-home .dh-cond{color:#1f4fb8;font-weight:600}
+.staff-home .dh-today .dh-cond{color:#fff;font-weight:500}
+.staff-home .dh-nocond{color:#94a3b8}
+.staff-home .dh-tel{color:#2f6fe4;text-decoration:none;font-weight:600}
+.staff-home .dh-cond i,.staff-home .dh-nocond i{margin-right:4px}
+
+/* schedules */
+.staff-home .dh-day{margin-top:14px}
+.staff-home .dh-day h3{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:.9rem;color:#475569}
+.staff-home .dh-day.is-today h3{color:#1f4fb8;font-size:1rem}
+.staff-home .dh-sched{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.staff-home .dh-sched li{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border-radius:18px;background:#fff;box-shadow:0 1px 8px rgba(47,111,228,.1)}
+.staff-home .dh-day.is-today .dh-sched li{background:#fff9e6;box-shadow:inset 4px 0 0 #ffc93c,0 1px 8px rgba(255,201,60,.25)}
+.staff-home .dh-time{font-weight:700;font-size:1.1rem;line-height:1.1;color:#14213d}
+.staff-home .dh-time small{display:block;font-size:.7rem;font-weight:600;color:#64748b}
+.staff-home .dh-body{min-width:0;display:grid;gap:2px}
+.staff-home .dh-body strong{font-size:.95rem;overflow-wrap:anywhere}
+.staff-home .dh-body small{color:#64748b;font-size:.8rem}
+.staff-home .dh-state-text{font-style:normal;font-weight:600;color:#25467f}
+.staff-home .dh-state-text.is-road{color:#15803d}
+.staff-home .dh-state-text.is-board{color:#b45309}
+@media(max-width:380px){.staff-home .dh-today-time{font-size:2.2rem}.staff-home .dh-bus-img{width:68px;height:56px}}
