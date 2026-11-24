@@ -6,8 +6,11 @@ require_once "../Includes/csrf.php";
 require_once "../Includes/activity_log.php";
 require_once "../Includes/ticket_qr.php";
 require_once "../Includes/staff_assignment_scope.php";
+require_once "../Includes/staff_nav.php";
 
-if(!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ?? '')) !== 'conductor'){
+/* Drivers and Conductors can both scan tickets for the buses assigned to them. */
+$staffRole = mbus_staff_role();
+if(!isset($_SESSION['user_id']) || $staffRole === ''){
     if($_SERVER['REQUEST_METHOD'] === 'POST'){
         http_response_code(401);
         header('Content-Type: application/json');
@@ -18,10 +21,9 @@ if(!isset($_SESSION['user_id']) || strtolower((string)($_SESSION['user_type'] ??
     exit();
 }
 
-$staffRole = 'conductor';
-$isConductor = true;
-$staffLabel = 'Conductor';
-$homeHref = '../Conductor/conductor_dashboard.php';
+$isConductor = $staffRole === 'conductor';
+$staffLabel = $isConductor ? 'Conductor' : 'Driver';
+$homeHref = mbus_staff_nav_items($staffRole)['home'][0];
 $operator_id = (int)$_SESSION['user_id'];
 
 function scan_json(array $data, int $status = 200): void
@@ -185,18 +187,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
 <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
     <div class="logo-container"><img src="../Assets/images/mbus_logo.png" class="logo" alt="MBUS Logo"></div>
     <h2><?php echo $staffLabel; ?></h2>
-    <nav class="menu-top" aria-label="<?php echo $staffLabel; ?> menu">
-        <a href="<?php echo $homeHref; ?>"><i class="fa fa-home" aria-hidden="true"></i> Dashboard</a>
-        <a href="scan.php" aria-current="page"><i class="fa fa-qrcode" aria-hidden="true"></i> Scan Ticket</a>
-        <a href="manage_trips.php"><i class="fa fa-bus" aria-hidden="true"></i> Manage Trips</a>
-        <?php if($isConductor): ?>
-        <a href="passengers.php"><i class="fa fa-users" aria-hidden="true"></i> Riders</a>
-        <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
-        <?php else: ?>
-        <a href="my_bus.php"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a>
-        <a href="waiting.php"><i class="fa fa-hourglass-half" aria-hidden="true"></i> Waiting</a>
-        <?php endif; ?>
-    </nav>
+    <?php echo mbus_staff_sidebar_nav($staffRole, 'scan'); ?>
     <div class="menu-bottom">
         <a href="../logout.php" class="logout-btn btn btn-outline btn-block"><i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
     </div>
@@ -215,8 +206,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
                         <span class="profile-menu-name"><?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Account'); ?></span>
                         <span class="profile-menu-role"><?php echo $staffLabel; ?> account</span>
                     </div>
-                    <?php if($isConductor): ?><a href="payments.php" role="menuitem"><i class="fa fa-wallet" aria-hidden="true"></i> GCash Payments</a><a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a><?php else: ?><a href="my_bus.php" role="menuitem"><i class="fa fa-bus-simple" aria-hidden="true"></i> My Bus</a><a href="profile.php" role="menuitem"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a><?php endif; ?>
-                    <a href="reports.php" role="menuitem"><i class="fa fa-chart-line" aria-hidden="true"></i> Analytics</a>
+                    <?php echo mbus_staff_profile_links($staffRole); ?>
                     <a href="../logout.php" class="logout-link" role="menuitem"><i class="fa fa-sign-out" aria-hidden="true"></i> Log out</a>
                 </div>
             </div>
@@ -278,15 +268,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
     </div>
 </main>
 
-<nav class="bottom-nav" role="navigation" aria-label="Main navigation">
-    <a href="<?php echo $homeHref; ?>" class="bottom-nav-item"><i class="fa fa-home" aria-hidden="true"></i><span>Home</span></a>
-    <a href="manage_trips.php" class="bottom-nav-item"><i class="fa fa-bus" aria-hidden="true"></i><span>Trips</span></a>
-    <a href="scan.php" class="bottom-nav-item active" aria-current="page"><i class="fa fa-qrcode" aria-hidden="true"></i><span>Scan</span></a>
-    <?php if($isConductor): ?><a href="passengers.php" class="bottom-nav-item"><i class="fa fa-users" aria-hidden="true"></i><span>Riders</span></a><?php else: ?><a href="my_bus.php" class="bottom-nav-item"><i class="fa fa-bus-simple" aria-hidden="true"></i><span>My Bus</span></a><?php endif; ?>
-    <a href="waiting.php" class="bottom-nav-item">
-        <i class="fa fa-hourglass-half" aria-hidden="true"></i><span>Waiting</span>
-    </a>
-</nav>
+<?php echo mbus_staff_bottom_nav($staffRole, 'scan'); ?>
 
 <script>const scanCsrf = <?php echo json_encode(csrf_get_token()); ?>;</script>
 <script src="../Assets/js/vendor/jsQR.js"></script>
