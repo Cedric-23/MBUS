@@ -13,6 +13,7 @@ const conductorPayments = read('Operator/payments.php');
 const dashboard = read('Admin/admin_dashboard.php');
 
 assert.match(menu, /href="conductor_applications\.php"/, 'Admin applications should open on Conductors');
+assert.match(menu, /href="reports\.php"[^>]*>.*Reports/s, 'Admin profile menu must expose Reports');
 assert.match(menu, /conductor_application/, 'Admin application badges should count Conductor applications');
 assert.match(conductorApplications, /href="operator_applications\.php"/, 'Drivers must remain accessible from the application tabs');
 assert.match(conductorApplications, /class="on" aria-current="page">Conductors/, 'Conductors should be the active first queue');
