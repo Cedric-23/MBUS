@@ -20,6 +20,12 @@ $hour = (int)date('G');
 $greeting = $hour < 12 ? 'Good morning' : ($hour < 18 ? 'Good afternoon' : 'Good evening');
 $passenger_type = mbus_passenger_type($conn, $user_id);
 
+/* Discount ID: is the latest submitted ID still waiting for an admin to review it? */
+$verif_pending = null;
+$vq = mbus_db_prepare($conn, "SELECT verification_type, verification_status FROM commuter_verification WHERE user_id = ? ORDER BY verification_id DESC LIMIT 1", [$user_id]);
+$vrow = $vq === false ? false : mbus_db_fetch_assoc($vq);
+if($vrow && $vrow['verification_status'] === 'Pending') $verif_pending = (string)$vrow['verification_type'];
+
 /* Which pending seats are already paid and waiting for an operator to approve them?
    A GCash checkout with a reference number = waiting for approval; one without = still at the GCash step. */
 $await_by_res = [];
@@ -152,6 +158,13 @@ function mbus_home_pay_tag(string $pay): string {
         .next-kind { display: inline-block; margin: 8px 0 0; padding: 3px 10px; border-radius: 999px; background: rgba(255, 255, 255, .2); font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
         .soon-sub { display: flex; align-items: center; gap: 8px; margin: 14px 2px 6px; font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b7a90; }
         .soon-sub span { padding: 1px 8px; border-radius: 999px; background: #e3ecfb; color: #2f6fe4; font-size: .72rem; }
+        /* discount ID submitted: show it is being reviewed (spinner) instead of the "verify your ID" prompt */
+        .home-perk.is-pending { display: flex; align-items: center; gap: 14px; background: #eef4ff; border: 1px solid #cfe0fb; }
+        .home-perk.is-pending > span:nth-child(2) { flex: 1; min-width: 0; }
+        .home-perk.is-pending > i { flex: none; }
+        .perk-spin { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 3px solid #cfe0fb; border-top-color: #2f6fe4; animation: perk-spin .9s linear infinite; }
+        @keyframes perk-spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) { .perk-spin { animation-duration: 2.6s; } }
     </style>
 </head>
 
@@ -320,7 +333,13 @@ function mbus_home_pay_tag(string $pay): string {
         <i class="fa fa-chevron-right" aria-hidden="true"></i>
     </a>
 
-    <?php if($passenger_type === 'Regular'){ ?>
+    <?php if($passenger_type === 'Regular' && $verif_pending !== null){ ?>
+    <a class="home-perk is-pending" href="verification.php" role="status">
+        <span class="perk-spin" aria-hidden="true"></span>
+        <span><strong>Verifying your <?php echo htmlspecialchars($verif_pending); ?> ID</strong><small>Waiting for admin approval. You pay the regular fare until it is approved.</small></span>
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+    </a>
+    <?php } elseif($passenger_type === 'Regular'){ ?>
     <a class="home-perk" href="verification.php">
         <span><strong>Student, senior or PWD?</strong><small>Verify your ID and get 20% off your fare.</small></span>
         <i class="fa fa-chevron-right" aria-hidden="true"></i>
