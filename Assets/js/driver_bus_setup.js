@@ -161,18 +161,36 @@
             rowElement.className = 'seat-row';
             rowElement.setAttribute('role', 'row');
 
-            /* back bench: 5 fixed seats, no aisle */
+            /* Rear bench: keep the normal two-seat / aisle / two-seat geometry and place the
+               fifth rear seat in the centered back position instead of destroying the aisle. */
             if (row.length === 5) {
                 rowElement.classList.add('seat-back');
-                row.forEach((_, i) => {
+                [0, 1, 3, 4].forEach(i => {
                     number++;
                     const seat = document.createElement('span');
                     seat.className = 'seat-cell is-open';
+                    seat.style.gridColumn = String(i + 1);
+                    seat.style.gridRow = '1';
                     seat.setAttribute('role', 'gridcell');
                     seat.setAttribute('aria-label', `Back row, seat ${number}`);
                     seat.textContent = String(number);
                     rowElement.append(seat);
                 });
+                const aisle = document.createElement('span');
+                aisle.className = 'seat-aisle';
+                aisle.style.gridColumn = '3';
+                aisle.style.gridRow = '1 / 3';
+                aisle.setAttribute('aria-hidden', 'true');
+                rowElement.append(aisle);
+                number++;
+                const center = document.createElement('span');
+                center.className = 'seat-cell is-open seat-back-center';
+                center.style.gridColumn = '3';
+                center.style.gridRow = '3';
+                center.setAttribute('role', 'gridcell');
+                center.setAttribute('aria-label', `Back row, seat ${number}`);
+                center.textContent = String(number);
+                rowElement.append(center);
                 grid.append(rowElement);
                 return;
             }

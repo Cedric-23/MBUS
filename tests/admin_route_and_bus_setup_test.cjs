@@ -80,6 +80,10 @@ assert.doesNotMatch(setupJs, /lockDriver/,
     'the builder must not delete front-row seats to place the driver');
 assert.match(setupJs, /classList\.add\('seat-front'\)|className = 'seat-row seat-front'/,
     'the builder must draw a driver row above a bus that keeps its front seats');
+assert.match(setupJs, /seat-back-center/,
+    'the five-seat rear bench must keep the aisle and place its fifth seat in the centered rear position');
+assert.match(read('Assets/css/main/driver_bus_setup.css'), /seat-row\.seat-back.*grid-template-columns:repeat\(2,48px\) 24px repeat\(2,48px\)/,
+    'the rear bench must retain two seats, a center aisle, and two seats');
 assert.match(read('Operator/passengers.php'), /seat-row seat-front/,
     'the Riders map must show the driver tile for every bus design');
 assert.match(read('Commuter/reserve.php'), /bm-front-row/,

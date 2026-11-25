@@ -1,7 +1,7 @@
 <?php
 /* Bus seat layouts.
  * A layout is a list of rows; every row has 4 booleans (2 seats, the aisle, 2 seats). The last row may instead be
- * a back bench of 5 seats with no aisle.
+ * a five-seat rear bench; its renderer keeps the center aisle and places the fifth seat in the centered rear spot.
  * true = a seat is there, false = no seat. Seats are numbered 1..N from the front, left to right.
  * Saved in buses.seat_layout (JSON). A bus without one gets a plain layout from its capacity: the driver's cell
  * stays free in the front row, then full rows of 4.
@@ -22,7 +22,7 @@ function mbus_seat_layout_doors(array $layout): int
 {
     $doors = 0;
     foreach (array_values($layout) as $index => $row) {
-        if (!is_array($row) || count($row) !== 4) continue;   // the 5-seat back bench has no doors
+        if (!is_array($row) || count($row) !== 4) continue;   // the 5-seat rear bench has no door pairs
         foreach ([0, 2] as $start) {
             if ($index === 0 && $start === 0) continue;       // the driver's cell
             if (empty($row[$start]) && empty($row[$start + 1])) $doors++;
@@ -72,7 +72,7 @@ function mbus_seat_layout_default(int $capacity): array
     $row = [false, false, false, false];
     for ($i = 2; $i < 4 && $left > 0; $i++) { $row[$i] = true; $left--; }
     $layout = [$row];
-    /* The back row is a bench of 5 seats (no aisle), so set those 5 aside when the bus is big enough. */
+    /* The back row is a bench of 5 seats; its renderer preserves the aisle and centers the fifth seat behind it. */
     $bench = $capacity >= 9;
     if ($bench) $left -= 5;
     while ($left > 0) {

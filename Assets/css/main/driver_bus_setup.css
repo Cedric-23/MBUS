@@ -304,8 +304,9 @@
 .form-body select[name="vehicle-type"]:invalid { color: #8a98ae; }
 .form-body input[name="bus-seats"] { padding-left: 46px; }
 
-.seat-layout-preview .seat-row.seat-back{grid-template-columns:repeat(5,48px);justify-content:center}
-@media (max-width:640px){.seat-layout-preview .seat-row.seat-back{grid-template-columns:repeat(5,44px);gap:6px}}
+.seat-layout-preview .seat-row.seat-back{grid-template-columns:repeat(2,48px) 24px repeat(2,48px);grid-template-rows:48px 8px 48px;justify-content:center;row-gap:0}
+.seat-layout-preview .seat-row.seat-back .seat-back-center{grid-column:3;grid-row:3}
+@media (max-width:640px){.seat-layout-preview .seat-row.seat-back{grid-template-columns:repeat(2,44px) 16px repeat(2,44px);grid-template-rows:44px 6px 44px;gap:0 6px}}
 
 /* Multi-file upload box: thumbnails on top, the status line below, Change button on the right */
 .extra-uploads[hidden] { display: none !important; }
