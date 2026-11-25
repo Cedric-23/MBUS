@@ -200,3 +200,5 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
 }
 
 @media(max-width:900px){body.staff-registration .auth-hero-m p{font-size:.78rem;max-width:none}}
+@media(max-width:900px){body.staff-registration .auth-hero-m h1{font-size:1.3rem;white-space:nowrap;margin-bottom:6px}}
+@media(max-width:360px){body.staff-registration .auth-hero-m h1{font-size:1.15rem}}
