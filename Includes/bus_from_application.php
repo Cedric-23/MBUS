@@ -21,10 +21,14 @@ function mbus_driver_last_name(array $app): string {
 function mbus_bus_from_application(PDO $pdo, array $app, int $operatorId): ?array {
     $plate = trim((string)($app['vehicle_plate_number'] ?? ''));
     $type = stripos((string)($app['vehicle_type'] ?? ''), 'air') !== false ? 'Aircon' : 'Ordinary';
-    /* Applicants only pick the bus type; the seat layout is set later in My Bus. Until then use a standard one. */
+    /* Applicants enter their real number of seats; the seat layout is finished later in My Bus. */
     $layout = mbus_seat_layout_parse((string)($app['seat_layout'] ?? ''));
     if ($layout === null || mbus_seat_layout_count($layout) < 1) {
         $layout = mbus_seat_layout_default(40);
+    } elseif (mbus_seat_layout_doors($layout) === 0 && $layout === mbus_seat_layout_default(mbus_seat_layout_count($layout))) {
+        /* A plain layout with no door yet: give it the 2 seats the door will replace (30 entered = 32 in the system),
+           so when the driver removes that pair in My Bus to make the one door, the real seat count is left. */
+        $layout = mbus_seat_layout_with_door_room(mbus_seat_layout_count($layout));
     }
     $count = mbus_seat_layout_count($layout);
 
