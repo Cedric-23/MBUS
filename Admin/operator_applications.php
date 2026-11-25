@@ -79,6 +79,11 @@ $f = $_GET['status'] ?? 'pending'; if ($f !== 'all' && !isset($opts[$f])) $f = '
 $counts = array_fill_keys(array_keys($opts), 0);
 $cq = mbus_db_prepare($conn, "SELECT LOWER(application_status::text) AS s, COUNT(*) AS c FROM operator_application WHERE email_verified = TRUE GROUP BY 1", []);
 while ($cq !== false && ($r = mbus_db_fetch_assoc($cq))) if (isset($counts[$r['s']])) $counts[$r['s']] = (int)$r['c'];
+/* Pending applications of both kinds, shown as a badge on the Conductors / Drivers tabs */
+$pendingDrivers = (int)$counts['pending'];
+$pendingConductors = 0;
+$pcq = mbus_db_prepare($conn, "SELECT COUNT(*) AS n FROM conductor_application WHERE email_verified = TRUE AND application_status::text = 'Pending'", []);
+if ($pcq !== false && ($pcr = mbus_db_fetch_assoc($pcq))) $pendingConductors = (int)$pcr['n'];
 $where = "WHERE email_verified = TRUE" . ($f === 'all' ? '' : " AND LOWER(application_status::text) = '" . $f . "'");
 $rows = [];
 $q = mbus_db_prepare($conn, "SELECT application_id, full_name, email, phone_number, address, license_number, license_expiry, vehicle_type, vehicle_plate_number,
@@ -122,6 +127,11 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
     <link rel="stylesheet" href="../Assets/css/staff_modern.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/staff_modern.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/admin/admin_application_review.css?v=<?php echo (int)filemtime(__DIR__ . '/../Assets/css/admin/admin_application_review.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/notif_bell.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/notif_bell.css'); ?>">
+    <style>
+    /* red count on the Conductors / Drivers tab when applications are waiting */
+    .ar-type-tabs .ar-tab-badge{display:inline-grid;place-items:center;min-width:20px;height:20px;margin-left:8px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:#e5484d;color:#fff;font-size:.72rem;font-weight:700;line-height:1;vertical-align:middle}
+    .ar-type-tabs .ar-tab-badge .ar-tab-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+    </style>
     <meta name="csrf-token" content="<?php echo htmlspecialchars(csrf_get_token(), ENT_QUOTES); ?>">
 </head>
 
@@ -183,8 +193,8 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
 </header>
 
 <nav class="ad-seg vf-tabs ar-type-tabs" aria-label="Application type">
-    <a href="conductor_applications.php" class="">Conductors</a>
-    <a href="operator_applications.php" class="on" aria-current="page">Drivers</a>
+    <a href="conductor_applications.php" class="">Conductors<?php if ($pendingConductors > 0): ?><span class="ar-tab-badge"><?php echo $pendingConductors > 99 ? '99+' : $pendingConductors; ?><span class="ar-tab-sr"> pending</span></span><?php endif; ?></a>
+    <a href="operator_applications.php" class="on" aria-current="page">Drivers<?php if ($pendingDrivers > 0): ?><span class="ar-tab-badge"><?php echo $pendingDrivers > 99 ? '99+' : $pendingDrivers; ?><span class="ar-tab-sr"> pending</span></span><?php endif; ?></a>
 </nav>
 
 <?php if($success !== ''): ?><div class="alert alert-success" role="status"><?php echo htmlspecialchars($success); ?></div><?php endif; ?>
