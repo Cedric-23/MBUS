@@ -101,7 +101,7 @@
     layout = normalizeLegacyLayout(layout);
     layout = layout.slice(0, 25);
 
-    const MAX_SEATS = 40, MAX_DOORS = 2;
+    const MAX_SEATS = 40, MAX_DOORS = 1;
     function seatTotal() {
         return layout.reduce((total, row) => total + row.filter(Boolean).length, 0);
     }
@@ -229,9 +229,9 @@
                     button.setAttribute('aria-pressed', String(active));
                     button.setAttribute('aria-label', `Row ${rowIndex + 1}, seat ${seatIndex + 1}: ${active ? `included as seat ${number}` : 'removed'}`);
                     const other = seatIndex === start ? start + 1 : start;
-                    const wouldCreateThirdDoor = active && !row[other] && doorTotal() >= MAX_DOORS;
-                    button.disabled = layoutLocked || wouldCreateThirdDoor;
-                    if (wouldCreateThirdDoor) button.setAttribute('aria-label', 'Maximum of 2 doors reached; this seat cannot be removed');
+                    const wouldCreateAdditionalDoor = active && !row[other] && doorTotal() >= MAX_DOORS;
+                    button.disabled = layoutLocked || wouldCreateAdditionalDoor;
+                    if (wouldCreateAdditionalDoor) button.setAttribute('aria-label', 'Maximum of 1 door reached; this seat cannot be removed');
                     button.textContent = active ? String(number) : '—';
                     button.addEventListener('click', () => {
                         if (layoutLocked) return;
@@ -250,7 +250,7 @@
         countLabel.textContent = problem || `${total} seat${total === 1 ? '' : 's'} selected · ${doors} door${doors === 1 ? '' : 's'}`;
         countLabel.style.color = problem ? '#b42318' : '';
         if (doorWarning) {
-            doorWarning.textContent = doors >= MAX_DOORS ? 'Maximum of 2 doors reached. Remove a door before adding another.' : '';
+            doorWarning.textContent = doors >= MAX_DOORS ? 'Maximum of 1 door reached. Remove it before adding another.' : '';
             doorWarning.hidden = doors < MAX_DOORS;
         }
         dataInput.value = JSON.stringify(layout);

@@ -52,12 +52,16 @@ assert.match(setupJs, /JSON\.stringify\(layout\)/,
     'seat-map changes must be serialized into the application form');
 assert.match(setupJs, /total > MAX_SEATS/,
     'the client must enforce the maximum seating capacity');
-assert.match(setupJs, /const MAX_SEATS = 40, MAX_DOORS = 2/,
-    'the builder must use the 40-seat and two-door limits');
-assert.match(setupJs, /wouldCreateThirdDoor/,
-    'the builder must block creating a third door before changing the seat');
-assert.match(setupJs, /Maximum of 2 doors reached/,
-    'the builder must show an inline two-door warning');
+assert.match(setupJs, /const MAX_SEATS = 40, MAX_DOORS = 1/,
+    'the builder must use the 40-seat and one-door limits');
+assert.match(setupJs, /wouldCreateAdditionalDoor/,
+    'the builder must block creating an additional door before changing the seat');
+assert.match(setupJs, /Maximum of 1 door reached/,
+    'the builder must show an inline one-door warning');
+assert.match(registration, /\$maxPassengerSeats = MBUS_MAX_SEATS - 2/,
+    'registration must leave two layout positions for later door conversion');
+assert.match(registration, /mbus_seat_layout_with_door_room\(\$seats\)/,
+    'registration must store two additional layout seats');
 const myBusPage = read('Operator/my_bus.php');
 assert.match(myBusPage, /mbus_bus_schedule_locked/,
     'My Bus must check whether its bus is on an active schedule');

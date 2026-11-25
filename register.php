@@ -260,8 +260,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if (!in_array($vehicle_type, ['Ordinary', 'Aircon'], true)) $errors['vehicle-type'] = 'Choose a bus type (Ordinary or Aircon).';
         if ($e = mbus_check_plate($plate)) $errors['vehicle-plate'] = $e;
         $seats = ctype_digit($seatsRaw) ? (int)$seatsRaw : 0;
-        /* the seat map holds at most MBUS_MAX_SEATS seats, so the number typed here has to fit it as well */
-        if ($seats < 10 || $seats > MBUS_MAX_SEATS) $errors['bus-seats'] = 'Enter how many seats your bus has (10 to ' . MBUS_MAX_SEATS . ').';
+        /* The applicant enters passenger seats. Two additional layout positions are provisioned so one
+           two-seat pair can later be converted into the single supported door without losing the intended count. */
+        $maxPassengerSeats = MBUS_MAX_SEATS - 2;
+        if ($seats < 10 || $seats > $maxPassengerSeats) $errors['bus-seats'] = 'Enter how many passenger seats your bus has (10 to ' . $maxPassengerSeats . ').';
         /* registration expiry is optional: only documents that show one */
         if ($vehicle_expiry !== '') {
             $vd = DateTime::createFromFormat('Y-m-d', $vehicle_expiry);
@@ -336,7 +338,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 [$full_name, $email, $phone_number, $address, $license_number, ($license_expiry === "" ? null : $license_expiry), $vehicle_type, $plate,
                  $lic['b64'], $lic['mime'], $veh['b64'], $veh['mime'], password_hash($password, PASSWORD_DEFAULT),
                  $busPhoto['b64'], $busPhoto['mime'], $interiorPhoto['b64'], $interiorPhoto['mime'],
-                 $last_name, $vehicle_expiry !== '' ? $vehicle_expiry : null, json_encode(mbus_seat_layout_default($seats)),
+                 $last_name, $vehicle_expiry !== '' ? $vehicle_expiry : null, json_encode(mbus_seat_layout_with_door_room($seats)),
                  $idPhoto['b64'], $idPhoto['mime'], $medical['b64'], $medical['mime'], $nbi['b64'], $nbi['mime'],
                  $extras['license_document_2']['b64'] ?? null, $extras['license_document_2']['mime'] ?? null,
                  $extras['license_document_3']['b64'] ?? null, $extras['license_document_3']['mime'] ?? null,
@@ -716,7 +718,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                     <?= mbus_field_error($errors, 'vehicle-plate') ?></div>
                                     <div class="bus-seats">
                                         <label class="input-label">Number of Seats</label>
-                                        <input type="text" name="bus-seats" inputmode="numeric" pattern="[0-9]{2,3}" maxlength="3" title="Enter 10 to <?= MBUS_MAX_SEATS ?> seats" placeholder="e.g. 40" value="<?= reg_old('bus-seats') ?>" required/>
+                                        <input type="text" name="bus-seats" inputmode="numeric" pattern="[0-9]{2,3}" maxlength="3" title="Enter 10 to <?= MBUS_MAX_SEATS - 2 ?> passenger seats" placeholder="e.g. 30" value="<?= reg_old('bus-seats') ?>" required/>
                                         <i class="input-icon" data-lucide="armchair"></i>
                                     <?= mbus_field_error($errors, 'bus-seats') ?></div>
                                     <div class="vehicle-expiry">

@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $busId > 0) {
         if ($err === '') {
             $newLayout = mbus_seat_layout_parse((string)($_POST['seat-layout'] ?? ''));
             if ($newLayout === null) {
-                $err = 'The seat layout is invalid. Use 1 to 40 seats and at most 2 doors.';
+                $err = 'The seat layout is invalid. Use 1 to 40 seats and at most 1 door.';
             } else {
                 $count = mbus_seat_layout_count($newLayout);
                 $current = mbus_bus_seat_rows($bus['seat_layout'], (int)$bus['capacity']);
@@ -162,7 +162,7 @@ $name = htmlspecialchars((string)($_SESSION['full_name'] ?? 'Driver'));
                     <div><h3 id="seat-builder-title">Seat layout</h3><p>Tap a seat to add or remove it. The aisle sits between the two seats on each side.</p></div>
                     <div class="seat-builder-actions"><button type="button" class="seat-layout-button" data-seat-add-row>Add Row</button><button type="button" class="seat-layout-button" data-seat-minus-row>Minus Row</button><button type="button" class="seat-layout-button" data-seat-reset>Reset</button></div>
                 </div>
-                <div class="seat-builder-meta"><span data-seat-count aria-live="polite"><?php echo (int)$bus['capacity']; ?> seats selected</span><span data-seat-warning class="seat-layout-warning" role="status"></span><span>1–40 seats · up to 2 doors</span></div>
+                <div class="seat-builder-meta"><span data-seat-count aria-live="polite"><?php echo (int)$bus['capacity']; ?> seats selected</span><span data-seat-warning class="seat-layout-warning" role="status"></span><span>1–40 seats · 1 door maximum</span></div>
                 <div class="seat-layout-preview" data-seat-grid role="grid" aria-label="Bus seat layout"></div>
                 <input type="hidden" name="seat-layout" data-seat-layout value="<?php echo htmlspecialchars(json_encode($layout), ENT_QUOTES); ?>">
             </section>
