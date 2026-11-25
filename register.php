@@ -606,28 +606,31 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         <i class="input-icon" data-lucide="calendar"></i>
                                     <?= mbus_field_error($errors, 'license-expiry') ?></div>
                                 </div>
-                                <div class="upload-group">
-                                    <label class="input-label">Updated Driver's License</label>
+                                <div class="upload-group" data-multi data-extra-prefix="license_document">
+                                    <label class="input-label">Updated Driver's License <span class="optional-tag">(up to 3 files)</span></label>
                                     <div class="upload-document-group">
                                         <div class="upload-icon">
                                             <i data-lucide="upload"></i>
                                         </div>
                                         <div class="document-desc">
                                             <span class="document-name">Click to upload</span>
+                                            <span class="document-hint">Pick up to 3 photos at once</span>
                                         </div>
                                         <div class="document-input-button">
                                             <button type="button">Browse</button>
-                                            <input type="file" name="license_document" accept=".jpg,.jpeg,.png,.pdf" required/>
+                                            <input type="file" name="license_document" accept=".jpg,.jpeg,.png,.pdf" multiple required/>
                                         </div>
                                     </div>
-                                    <?= mbus_field_error($errors, 'license_document') ?>
+                                    <?= mbus_field_error($errors, 'license_document') ?><?= mbus_field_error($errors, 'license_document_2') ?><?= mbus_field_error($errors, 'license_document_3') ?>
                                     <div class="document-preview">
                                         <img class="document-preview-image" alt="License document preview"/>
                                         <iframe class="document-preview-frame" title="License document preview"></iframe>
                                     </div>
                                 </div>
-                                <?= mbus_extra_upload_html('license_document_2', "Driver's License, extra page", $errors['license_document_2'] ?? null) ?>
-                                <?= mbus_extra_upload_html('license_document_3', "Driver's License, extra page", $errors['license_document_3'] ?? null) ?>
+                                <div class="extra-uploads" data-extra-for="license_document" hidden>
+                                    <?= mbus_extra_upload_html('license_document_2', 'License document, page 2', null) ?>
+                                    <?= mbus_extra_upload_html('license_document_3', 'License document, page 3', null) ?>
+                                </div>
                                 <div class="upload-group">
                                     <label class="input-label" for="id-photo-input">2x2 Picture</label>
                                     <div class="upload-document-group">
@@ -721,28 +724,31 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         <input type="date" name="vehicle-expiry" min="<?= date('Y-m-d') ?>" value="<?= reg_old('vehicle-expiry') ?>"/>
                                     <?= mbus_field_error($errors, 'vehicle-expiry') ?></div>
                                 </div>
-                                <div class="upload-group">
-                                    <label class="input-label">Upload Vehicle Registration Document</label>
+                                <div class="upload-group" data-multi data-extra-prefix="vehicle_document">
+                                    <label class="input-label">Upload Vehicle Registration Document <span class="optional-tag">(up to 3 files)</span></label>
                                     <div class="upload-document-group">
                                         <div class="upload-icon">
                                             <i data-lucide="upload"></i>
                                         </div>
                                         <div class="document-desc">
                                             <span class="document-name">Click to upload</span>
+                                            <span class="document-hint">Pick up to 3 photos at once</span>
                                         </div>
                                         <div class="document-input-button">
                                             <button type="button">Browse</button>
-                                            <input type="file" name="vehicle_document" accept=".jpg,.jpeg,.png,.pdf" required/>
+                                            <input type="file" name="vehicle_document" accept=".jpg,.jpeg,.png,.pdf" multiple required/>
                                         </div>
                                     </div>
-                                    <?= mbus_field_error($errors, 'vehicle_document') ?>
+                                    <?= mbus_field_error($errors, 'vehicle_document') ?><?= mbus_field_error($errors, 'vehicle_document_2') ?><?= mbus_field_error($errors, 'vehicle_document_3') ?>
                                     <div class="document-preview">
                                         <img class="document-preview-image" alt="Vehicle registration document preview"/>
                                         <iframe class="document-preview-frame" title="Vehicle registration document preview"></iframe>
                                     </div>
                                 </div>
-                                <?= mbus_extra_upload_html('vehicle_document_2', 'Vehicle Registration, extra page', $errors['vehicle_document_2'] ?? null) ?>
-                                <?= mbus_extra_upload_html('vehicle_document_3', 'Vehicle Registration, extra page', $errors['vehicle_document_3'] ?? null) ?>
+                                <div class="extra-uploads" data-extra-for="vehicle_document" hidden>
+                                    <?= mbus_extra_upload_html('vehicle_document_2', 'Vehicle registration document, page 2', null) ?>
+                                    <?= mbus_extra_upload_html('vehicle_document_3', 'Vehicle registration document, page 3', null) ?>
+                                </div>
                                 <div class="bus-photo-grid">
                                     <div class="upload-group">
                                         <label class="input-label" for="bus-photo-input">Bus Exterior Photo</label>

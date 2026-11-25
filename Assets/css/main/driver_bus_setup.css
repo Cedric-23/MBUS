@@ -306,3 +306,22 @@
 
 .seat-layout-preview .seat-row.seat-back{grid-template-columns:repeat(5,48px);justify-content:center}
 @media (max-width:640px){.seat-layout-preview .seat-row.seat-back{grid-template-columns:repeat(5,44px);gap:6px}}
+
+/* Multi-file upload box: thumbnails on top, the status line below, Change button on the right */
+.extra-uploads[hidden] { display: none !important; }
+.auth-register .upload-group[data-multi] .upload-document-group {
+    display: grid !important; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "thumbs btn" "desc btn";
+    align-items: center; column-gap: 12px; row-gap: 8px;
+}
+.auth-register .upload-group[data-multi] .upload-icon { grid-area: thumbs; }
+.auth-register .upload-group[data-multi] .multi-thumbs { grid-area: thumbs; display: flex; gap: 8px; flex-wrap: nowrap; min-width: 0; }
+.auth-register .upload-group[data-multi] .multi-thumbs[hidden] { display: none; }
+.auth-register .upload-group[data-multi] .multi-thumbs .mt {
+    flex: none; width: 56px; height: 56px; border-radius: 12px; background: #e3edff center / cover no-repeat;
+    border: 1px solid #cfe0fb; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #2f6fe4;
+}
+.auth-register .upload-group[data-multi] .document-desc { grid-area: desc; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.auth-register .upload-group[data-multi] .document-input-button { grid-area: btn; }
+.auth-register .upload-group[data-multi] .document-hint { font-size: 12.5px; color: #7a889e; }
+.auth-register .upload-group[data-multi].is-done .document-hint { color: #1f8a57; font-weight: 600; }
+.auth-register .upload-group[data-multi].is-done .document-name { font-size: 13px; color: #516278; overflow: hidden; text-overflow: ellipsis; }

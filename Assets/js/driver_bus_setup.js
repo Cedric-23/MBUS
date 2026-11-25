@@ -6,7 +6,7 @@
         const img = group.querySelector('.document-preview-image');
         const input = group.querySelector('input[type="file"]');
         const button = group.querySelector('.document-input-button button');
-        if (!icon || !img || !input) return;
+        if (!icon || !img || !input || group.hasAttribute('data-multi')) return;
         const idleLabel = button ? button.textContent : '';
         const n0 = group.querySelector('.document-name'), h0 = group.querySelector('.document-desc span:last-child');
         if (n0 && h0) { n0.dataset.idle = n0.textContent; h0.dataset.idle = h0.textContent; }
@@ -293,4 +293,87 @@
     }
 
     render();
+})();
+
+
+/* One upload box for up to 3 files (license / vehicle registration): the first file stays in the main field and
+   the others are handed to hidden fields, so the server still gets license_document, _2 and _3. register.js
+   shrinks each photo through its own change handler. */
+(() => {
+    const MAX = 3;
+    document.querySelectorAll('.upload-group[data-multi]').forEach(group => {
+        const prefix = group.dataset.extraPrefix;
+        const main = group.querySelector('input[type="file"]');
+        const holder = document.querySelector('[data-extra-for="' + prefix + '"]');
+        const box = group.querySelector('.upload-document-group');
+        const icon = group.querySelector('.upload-icon');
+        const button = group.querySelector('.document-input-button button');
+        const name = group.querySelector('.document-name');
+        const hint = group.querySelector('.document-hint');
+        if (!main || !holder || !box || !name || !hint) return;
+        const extras = Array.from(holder.querySelectorAll('input[type="file"]'));
+        const inputs = [main].concat(extras);
+        const idle = { name: name.textContent, hint: hint.textContent, button: button ? button.textContent : '' };
+        const strip = document.createElement('div');
+        strip.className = 'multi-thumbs';
+        strip.hidden = true;
+        box.insertBefore(strip, box.querySelector('.document-desc'));
+        const urls = [];
+
+        function give(input, file) {
+            let changed = false;
+            try {
+                const dt = new DataTransfer();
+                if (file) dt.items.add(file);
+                input.files = dt.files;
+                changed = true;
+            } catch (_) { /* old browser: keep what it has */ }
+            return changed;
+        }
+
+        function draw() {
+            urls.splice(0).forEach(u => URL.revokeObjectURL(u));
+            strip.replaceChildren();
+            const files = inputs.map(i => i.files && i.files[0]).filter(Boolean);
+            const done = files.length > 0;
+            strip.hidden = !done;
+            if (icon) icon.style.display = done ? 'none' : '';
+            group.classList.toggle('is-done', done);
+            if (button) button.textContent = done ? 'Change' : idle.button;
+            if (!done) { name.textContent = idle.name; hint.textContent = idle.hint; return; }
+            files.forEach(f => {
+                const t = document.createElement('span');
+                t.className = 'mt';
+                if (/^image\//.test(f.type)) {
+                    const u = URL.createObjectURL(f); urls.push(u);
+                    t.style.backgroundImage = 'url("' + u + '")';
+                } else { t.textContent = 'PDF'; t.classList.add('mt-pdf'); }
+                strip.append(t);
+            });
+            const kb = Math.max(1, Math.round(files.reduce((n, f) => n + f.size, 0) / 1024));
+            name.textContent = files.length === 1 ? files[0].name : files.length + ' files selected';
+            hint.textContent = '\u2713 Ready \u00b7 ' + kb + ' KB';
+        }
+
+        /* capture phase: runs before register.js sees the change, so it only ever handles one file per field */
+        main.addEventListener('change', () => {
+            const picked = Array.from(main.files || []).slice(0, MAX);
+            if (picked.length > 1) give(main, picked[0]);
+            extras.forEach((input, i) => {
+                const file = picked[i + 1] || null;
+                if ((input.files && input.files.length) || file) {
+                    give(input, file);
+                    if (file) input.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+            setTimeout(draw, 0);
+        }, { capture: true });
+
+        /* register.js swaps in a smaller copy after it finishes: redraw then */
+        [group].concat(Array.from(holder.querySelectorAll('.upload-group'))).forEach(g => {
+            const img = g.querySelector('.document-preview-image');
+            if (img) new MutationObserver(() => setTimeout(draw, 0)).observe(img, { attributes: true, attributeFilter: ['src'] });
+        });
+        draw();
+    });
 })();
