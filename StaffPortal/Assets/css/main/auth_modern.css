@@ -86,6 +86,7 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
   .auth-hero-m::after{content:"";position:absolute;right:30px;top:60px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.05)}
   .auth-back{position:relative;z-index:1;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;border:1.5px solid rgba(255,255,255,.55);color:#fff;text-decoration:none;margin-bottom:28px}
   .auth-back svg,.auth-back i{width:18px;height:18px}
+  .auth-hero-mark{position:relative;z-index:2;display:block;height:34px;width:auto;margin:0 0 18px}
   .auth-hero-m h1{position:relative;z-index:1;margin:0 0 8px;font-size:1.7rem;line-height:1.2;font-weight:700;letter-spacing:-.01em;max-width:80%}
   .auth-hero-m p{position:relative;z-index:1;margin:0;color:rgba(255,255,255,.8);font-size:.9rem;max-width:85%}
   .form-container .form-header-text{display:none}
@@ -128,3 +129,70 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
   .auth-hero-m.auth-hero-brand p{font-size:.85rem}
   .auth-hero-m.auth-hero-brand .auth-hero-art{position:absolute;left:50%;right:auto;bottom:44px;transform:translateX(-50%);width:min(160px,46%);height:auto;z-index:1;pointer-events:none}
 }
+
+/* Login (phones): bigger logo set a little lower, bus picture higher and on the left */
+@media (max-width:768px){
+  .auth-hero-m.auth-hero-brand .auth-hero-logo{top:30px;height:46px}
+  .auth-hero-m.auth-hero-brand{min-height:237px}
+  .auth-hero-m.auth-hero-brand .auth-hero-art{left:41%;transform:translateX(-50%);bottom:57px;width:min(150px,42%)}
+}
+
+/* Login hero (phones): one tidy grid so the logo, headline and bus fit together.
+   Logo sits top-left. Below it the headline and subtitle sit on the left and the bus
+   sits beside them on the right, so nothing floats, overlaps or leaves empty space. */
+@media (max-width:900px){
+  body.auth-login .auth-hero-m.auth-hero-brand{
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,40%);
+    grid-template-areas:"logo logo" "title art" "sub art";grid-template-rows:auto auto 1fr;
+    column-gap:6px;align-items:start;justify-content:stretch;
+    height:auto;min-height:0;padding:22px 22px 62px;
+  }
+  body.auth-login .auth-hero-brand .auth-hero-logo{grid-area:logo;position:relative;top:auto;right:auto;left:auto;height:38px;width:auto;margin:0 0 22px;justify-self:start;z-index:2}
+  body.auth-login .auth-hero-brand h1{grid-area:title;align-self:end;max-width:none;margin:0 0 6px;font-size:1.55rem;line-height:1.15;white-space:nowrap}
+  body.auth-login .auth-hero-brand p{grid-area:sub;align-self:start;max-width:none;font-size:.86rem;line-height:1.4}
+  body.auth-login .auth-hero-brand .auth-hero-art{grid-area:art;position:relative;left:auto;right:auto;bottom:auto;transform:none;width:100%;max-width:170px;height:auto;justify-self:end;align-self:center;z-index:1;pointer-events:none}
+}
+
+/* Keep the login and registration sheets starting at the same vertical position. */
+@media (min-width:901px){
+  .right-container{align-items:flex-start}
+  /* Center the tall primary registration against the viewport using a shared offset. */
+  .right-container{padding-top:max(40px, calc((100vh - 806px) / 2))}
+  .form-container{margin:0 auto}
+}
+
+/* Matching mobile hero heights prevent the sheet from jumping between auth pages. */
+@media (max-width:900px){
+  body.auth-login .auth-hero-m.auth-hero-brand,
+  body.auth-register .auth-hero-m{
+    box-sizing:border-box;
+    height:220px;
+    min-height:220px;
+  }
+  body.auth-login .auth-hero-m.auth-hero-brand{padding:14px 22px 26px}
+  body.auth-login .auth-hero-brand .auth-hero-logo{height:32px;margin:0 0 8px}
+  body.auth-login .auth-hero-brand h1{margin-bottom:4px;font-size:1.32rem}
+  body.auth-login .auth-hero-brand p{font-size:.76rem;line-height:1.28}
+  body.auth-login .auth-hero-brand .auth-hero-art{max-width:140px}
+  body.auth-register .auth-hero-m{
+    justify-content:flex-start;
+    padding:24px 24px 0;
+  }
+}
+@media (max-width:768px){
+  body.auth-login .auth-hero-m.auth-hero-brand,
+  body.auth-register .auth-hero-m{
+    height:190px;
+    min-height:190px;
+  }
+}
+
+/* Mobile registration: keep the picker hint close to the auth tabs and fields. */
+@media (max-width:900px){
+  body.auth-register .auth-tabs{margin-bottom:12px}
+  body.auth-register .form-header-picker{margin-top:0}
+  body.auth-register .form-header{margin-bottom:8px}
+}
+
+.auth-hero-mark{display:none}
+@media(max-width:900px){.auth-hero-mark{display:block}}
