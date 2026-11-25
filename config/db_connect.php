@@ -127,6 +127,8 @@ function mbus_run_schema_upgrades(PDO $pdo): void {
           "medical_document_b64 TEXT",
           "medical_document_mime VARCHAR(50)",
           "nbi_document_b64 TEXT",
+          "license_document_2_b64 TEXT", "license_document_2_mime VARCHAR(50)", "license_document_3_b64 TEXT", "license_document_3_mime VARCHAR(50)",
+          "vehicle_document_2_b64 TEXT", "vehicle_document_2_mime VARCHAR(50)", "vehicle_document_3_b64 TEXT", "vehicle_document_3_mime VARCHAR(50)",
           "nbi_document_mime VARCHAR(50)",
       ] as $col) {
           $pdo->exec('ALTER TABLE operator_application ADD COLUMN IF NOT EXISTS ' . $col);
@@ -206,7 +208,7 @@ try {
     if ($pdo->inTransaction()) { try { $pdo->rollBack(); } catch (Throwable $e) { $pdo->exec('ROLLBACK'); } }
     $pdo->exec("SET TIME ZONE '" . str_replace("'", "''", mbus_timezone()) . "'");
     // Schema upgrades are ~35 extra round trips to the database. Run them once per version, not on every page.
-    $schemaVersion = '2026-11-24b';
+    $schemaVersion = '2026-11-25a';
     $schemaFlag = sys_get_temp_dir() . '/mbus_schema_' . md5($host . $database . $schemaVersion) . '.ok';
     if (!is_file($schemaFlag)) {
         $done = false;

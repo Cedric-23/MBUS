@@ -44,6 +44,24 @@ function mbus_application_file(string $field, &$error): ?array {
     return ['b64' => base64_encode($data), 'mime' => $mime];
 }
 
+/** Optional extra page for a document: null when nothing was attached, error text only for a bad file. */
+function mbus_application_extra_file(string $field, &$error): ?array {
+    if (!isset($_FILES[$field]) || $_FILES[$field]['error'] === UPLOAD_ERR_NO_FILE) return null;
+    return mbus_application_file($field, $error);
+}
+
+/** Markup for an optional extra upload box (same look and behavior as the required ones). */
+function mbus_extra_upload_html(string $name, string $label, ?string $err): string {
+    return '<div class="upload-group extra-upload"><label class="input-label">' . $label . ' <span class="optional-tag">(optional)</span></label>'
+        . '<div class="upload-document-group"><div class="upload-icon"><i data-lucide="plus"></i></div>'
+        . '<div class="document-desc"><span class="document-name">Click to add another page</span></div>'
+        . '<div class="document-input-button"><button type="button">Browse</button>'
+        . '<input type="file" name="' . $name . '" accept=".jpg,.jpeg,.png,.pdf"/></div></div>'
+        . ($err ? '<small class="field-error" role="alert">' . htmlspecialchars($err) . '</small>' : '')
+        . '<div class="document-preview"><img class="document-preview-image" alt="' . $label . ' preview"/>'
+        . '<iframe class="document-preview-frame" title="' . $label . ' preview"></iframe></div></div>';
+}
+
 /** Read a required JPEG/PNG vehicle photo, with a small request-safe limit. */
 function mbus_application_photo(string $field, &$error): ?array {
     if (!isset($_FILES[$field]) || $_FILES[$field]['error'] === UPLOAD_ERR_NO_FILE) { $error = 'Please attach both bus photos.'; return null; }
@@ -289,6 +307,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             if (!$nbi) $errors['nbi_document'] = 'NBI clearance: ' . $fe;
             $fe = ''; $veh = mbus_application_file('vehicle_document', $fe);
             if (!$veh) $errors['vehicle_document'] = 'Vehicle registration file: ' . $fe;
+            $extras = [];
+            foreach (['license_document_2' => "Driver's license (extra page)", 'license_document_3' => "Driver's license (extra page)",
+                      'vehicle_document_2' => 'Vehicle registration (extra page)', 'vehicle_document_3' => 'Vehicle registration (extra page)'] as $f => $lbl) {
+                $fe = ''; $extras[$f] = mbus_application_extra_file($f, $fe);
+                if ($fe !== '') $errors[$f] = $lbl . ': ' . $fe;
+            }
             $fe = ''; $busPhoto = mbus_application_photo('bus_photo', $fe);
             if (!$busPhoto) $errors['bus_photo'] = 'Bus exterior photo: ' . $fe;
             $fe = ''; $interiorPhoto = mbus_application_photo('interior_photo', $fe);
@@ -305,13 +329,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                      license_document_b64, license_document_mime, vehicle_document_b64, vehicle_document_mime, password_hash,
                      bus_photo_b64, bus_photo_mime, interior_photo_b64, interior_photo_mime, last_name, vehicle_registration_expiry, seat_layout,
                      id_photo_b64, id_photo_mime, medical_document_b64, medical_document_mime, nbi_document_b64, nbi_document_mime,
+                     license_document_2_b64, license_document_2_mime, license_document_3_b64, license_document_3_mime,
+                     vehicle_document_2_b64, vehicle_document_2_mime, vehicle_document_3_b64, vehicle_document_3_mime,
                      email_verified, verification_code, verification_code_expiry, verification_code_attempts, application_status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, ?, ?, 0, 'Pending')",
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, ?, ?, 0, 'Pending')",
                 [$full_name, $email, $phone_number, $address, $license_number, ($license_expiry === "" ? null : $license_expiry), $vehicle_type, $plate,
                  $lic['b64'], $lic['mime'], $veh['b64'], $veh['mime'], password_hash($password, PASSWORD_DEFAULT),
                  $busPhoto['b64'], $busPhoto['mime'], $interiorPhoto['b64'], $interiorPhoto['mime'],
                  $last_name, $vehicle_expiry !== '' ? $vehicle_expiry : null, json_encode(mbus_seat_layout_default($seats)),
                  $idPhoto['b64'], $idPhoto['mime'], $medical['b64'], $medical['mime'], $nbi['b64'], $nbi['mime'],
+                 $extras['license_document_2']['b64'] ?? null, $extras['license_document_2']['mime'] ?? null,
+                 $extras['license_document_3']['b64'] ?? null, $extras['license_document_3']['mime'] ?? null,
+                 $extras['vehicle_document_2']['b64'] ?? null, $extras['vehicle_document_2']['mime'] ?? null,
+                 $extras['vehicle_document_3']['b64'] ?? null, $extras['vehicle_document_3']['mime'] ?? null,
                  $verify_code, $verify_expiry]);
             if ($ok === false) { $error = 'We could not save your application. Please try again.'; }
             else {
@@ -324,8 +354,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if ($errors && $error === '') $error = 'Please fix the highlighted fields.';
     // Driver form is a 3-step wizard: reopen on the first step that has an error
     $stepOf = ['driver-first-name'=>0,'driver-last-name'=>0,'email-address'=>0,'phone-number'=>0,'home-address'=>0,'driver-password'=>0,'driver-confirm'=>0,
-               'license-number'=>1,'license-expiry'=>1,'license_document'=>1,'id_photo'=>1,'medical_document'=>1,'nbi_document'=>1,
-               'vehicle-type'=>2,'vehicle-plate'=>2,'bus-seats'=>2,'vehicle-expiry'=>2,'vehicle_document'=>2,
+               'license-number'=>1,'license-expiry'=>1,'license_document'=>1,'license_document_2'=>1,'license_document_3'=>1,'id_photo'=>1,'medical_document'=>1,'nbi_document'=>1,
+               'vehicle-type'=>2,'vehicle-plate'=>2,'bus-seats'=>2,'vehicle-expiry'=>2,'vehicle_document'=>2,'vehicle_document_2'=>2,'vehicle_document_3'=>2,
                'bus_photo'=>2,'interior_photo'=>2];
     foreach (array_keys($errors) as $k) { if (isset($stepOf[$k])) { $step_with_error = $stepOf[$k]; break; } }
 }
@@ -596,6 +626,8 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         <iframe class="document-preview-frame" title="License document preview"></iframe>
                                     </div>
                                 </div>
+                                <?= mbus_extra_upload_html('license_document_2', "Driver's License, extra page", $errors['license_document_2'] ?? null) ?>
+                                <?= mbus_extra_upload_html('license_document_3', "Driver's License, extra page", $errors['license_document_3'] ?? null) ?>
                                 <div class="upload-group">
                                     <label class="input-label" for="id-photo-input">2x2 Picture</label>
                                     <div class="upload-document-group">
@@ -709,6 +741,8 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         <iframe class="document-preview-frame" title="Vehicle registration document preview"></iframe>
                                     </div>
                                 </div>
+                                <?= mbus_extra_upload_html('vehicle_document_2', 'Vehicle Registration, extra page', $errors['vehicle_document_2'] ?? null) ?>
+                                <?= mbus_extra_upload_html('vehicle_document_3', 'Vehicle Registration, extra page', $errors['vehicle_document_3'] ?? null) ?>
                                 <div class="bus-photo-grid">
                                     <div class="upload-group">
                                         <label class="input-label" for="bus-photo-input">Bus Exterior Photo</label>

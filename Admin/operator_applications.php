@@ -83,6 +83,10 @@ $where = "WHERE email_verified = TRUE" . ($f === 'all' ? '' : " AND LOWER(applic
 $rows = [];
 $q = mbus_db_prepare($conn, "SELECT application_id, full_name, email, phone_number, address, license_number, license_expiry, vehicle_type, vehicle_plate_number,
     (license_document_b64 IS NOT NULL AND license_document_b64 <> '') AS has_lic, (vehicle_document_b64 IS NOT NULL AND vehicle_document_b64 <> '') AS has_veh,
+    (license_document_2_b64 IS NOT NULL AND license_document_2_b64 <> '') AS has_lic2, license_document_2_mime AS lic2_mime,
+    (license_document_3_b64 IS NOT NULL AND license_document_3_b64 <> '') AS has_lic3, license_document_3_mime AS lic3_mime,
+    (vehicle_document_2_b64 IS NOT NULL AND vehicle_document_2_b64 <> '') AS has_veh2, vehicle_document_2_mime AS veh2_mime,
+    (vehicle_document_3_b64 IS NOT NULL AND vehicle_document_3_b64 <> '') AS has_veh3, vehicle_document_3_mime AS veh3_mime,
     vehicle_registration_expiry, license_document_mime AS lic_mime, vehicle_document_mime AS veh_mime,
     (bus_photo_b64 IS NOT NULL AND bus_photo_b64 <> '') AS has_bus_photo,
     (interior_photo_b64 IS NOT NULL AND interior_photo_b64 <> '') AS has_interior_photo,
@@ -218,15 +222,19 @@ $yes = fn($v) => in_array($v, [true, 1, '1', 't', 'true'], true);
         $aid = (int)$a['application_id'];
         $photos = [
             ['license',  'Updated license',      $yes($a['has_lic']),          (string)($a['lic_mime'] ?? '')],
+            ['license2', 'License, page 2',      $yes($a['has_lic2'] ?? false), (string)($a['lic2_mime'] ?? '')],
+            ['license3', 'License, page 3',      $yes($a['has_lic3'] ?? false), (string)($a['lic3_mime'] ?? '')],
             ['photo',    '2x2 picture',          $yes($a['has_id_photo']),     (string)($a['id_mime'] ?? 'image/jpeg')],
             ['medical',  'Medical + drug test',  $yes($a['has_medical']),      (string)($a['med_mime'] ?? '')],
             ['nbi',      'NBI clearance',        $yes($a['has_nbi']),          (string)($a['nbi_mime'] ?? '')],
             ['vehicle',  'Vehicle registration', $yes($a['has_veh']),          (string)($a['veh_mime'] ?? '')],
+            ['vehicle2', 'Vehicle reg., page 2', $yes($a['has_veh2'] ?? false), (string)($a['veh2_mime'] ?? '')],
+            ['vehicle3', 'Vehicle reg., page 3', $yes($a['has_veh3'] ?? false), (string)($a['veh3_mime'] ?? '')],
             ['bus',      'Bus exterior',         $yes($a['has_bus_photo']),    'image/jpeg'],
             ['interior', 'Bus interior',         $yes($a['has_interior_photo']), 'image/jpeg'],
         ]; ?>
         <div class="oa-photos" aria-label="Submitted photos and documents">
-            <?php foreach($photos as [$key, $label, $has, $mime]): $url = 'application_file.php?id=' . $aid . '&doc=' . $key; ?>
+            <?php foreach($photos as [$key, $label, $has, $mime]): if(!$has && preg_match('/^(license|vehicle)[23]$/', $key)) continue; $url = 'application_file.php?id=' . $aid . '&doc=' . $key; ?>
                 <?php if($has): ?>
                 <button type="button" class="oa-photo" data-photo="<?php echo htmlspecialchars($url, ENT_QUOTES); ?>" data-label="<?php echo htmlspecialchars($label, ENT_QUOTES); ?>" data-pdf="<?php echo $mime === 'application/pdf' ? '1' : '0'; ?>" aria-label="View <?php echo htmlspecialchars($label, ENT_QUOTES); ?> larger">
                     <?php if($mime === 'application/pdf'): ?><span class="oa-photo-pdf"><i class="fa fa-file-pdf" aria-hidden="true"></i>PDF</span><?php else: ?><img src="<?php echo htmlspecialchars($url, ENT_QUOTES); ?>" alt="" loading="lazy"><?php endif; ?>

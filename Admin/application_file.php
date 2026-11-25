@@ -5,6 +5,7 @@ if (strtolower((string)($_SESSION['user_type'] ?? '')) !== 'admin') { http_respo
 include "../config/db_connect.php";
 $id = (int)($_GET['id'] ?? 0);
 $docMap = ['license' => 'license_document', 'vehicle' => 'vehicle_document', 'bus' => 'bus_photo', 'interior' => 'interior_photo',
+           'license2' => 'license_document_2', 'license3' => 'license_document_3', 'vehicle2' => 'vehicle_document_2', 'vehicle3' => 'vehicle_document_3',
            'photo' => 'id_photo', 'medical' => 'medical_document', 'nbi' => 'nbi_document'];
 $docKey = (string)($_GET['doc'] ?? 'license');
 $doc = $docMap[$docKey] ?? 'license_document';
