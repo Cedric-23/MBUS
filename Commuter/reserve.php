@@ -430,15 +430,17 @@ if(!mbus_seat_rows_driver_inside($seat_rows)){
 echo "<div class='seat-row bm-row bm-front-row' role='row'><span class='bm-driver' role='gridcell' aria-label='Driver seat'>Driver</span><div class='aisle bm-aisle' role='separator' aria-label='Aisle'></div></div>";
 }
 foreach($seat_rows as $ri => $cells){
-echo "<div class='seat-row bm-row' role='row'>";
-foreach([0,2] as $start){
-if($start === 2){ echo "<div class='aisle bm-aisle' role='separator' aria-label='Aisle'></div>"; }
-if($cells[$start] === null && $cells[$start+1] === null){
+$grps = count($cells) === 5 ? [[0,1,2,3,4]] : [[0,1],[2,3]];
+echo "<div class='seat-row bm-row" . (count($cells) === 5 ? " seat-back" : "") . "' role='row'>";
+foreach($grps as $gi => $grp){
+$start = $grp[0];
+if($gi === 1){ echo "<div class='aisle bm-aisle' role='separator' aria-label='Aisle'></div>"; }
+if(count($grp) === 2 && $cells[$start] === null && $cells[$start+1] === null){
 if($ri === 0 && $start === 0){ echo "<span class='bm-driver' role='gridcell' aria-label='Driver seat'>Driver</span>"; }
 else { echo "<span class='bm-door' role='gridcell' aria-label='Door, no seats'>Door</span>"; }
 continue;
 }
-foreach([$start, $start+1] as $ci){
+foreach($grp as $ci){
 $seat = $cells[$ci];
 if($seat === null){
 echo "<div class='seat-cell seat-gap' aria-hidden='true'></div>";

@@ -34,3 +34,5 @@
   .reserve-page .seat-map.bm { padding: 12px 10px 16px; }
   .reserve-page .seat-map.bm .seat-btn, .reserve-page .seat-map.bm .bm-driver, .reserve-page .seat-map.bm .bm-door { height: 48px; min-height: 48px; }
 }
+
+.reserve-page .seat-map.bm .seat-row.seat-back{grid-template-columns:repeat(5,minmax(0,1fr))}

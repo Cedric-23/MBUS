@@ -435,15 +435,17 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
             echo "<div class='seat-row seat-front'><span class='rtile driver' aria-label='Driver seat'>Driver</span><span class='aisle' aria-hidden='true'></span></div>";
         }
         foreach($seat_rows as $ri => $cells){
-            echo "<div class='seat-row'>";
-            foreach([0, 2] as $start){
-                if($start === 2){ echo "<span class='aisle' aria-hidden='true'></span>"; }
-                if(($cells[$start] ?? null) === null && ($cells[$start + 1] ?? null) === null){
+            $grps = count($cells) === 5 ? [[0,1,2,3,4]] : [[0,1],[2,3]];
+            echo "<div class='seat-row" . (count($cells) === 5 ? " seat-back" : "") . "'>";
+            foreach($grps as $gi => $grp){
+                $start = $grp[0];
+                if($gi === 1){ echo "<span class='aisle' aria-hidden='true'></span>"; }
+                if(count($grp) === 2 && ($cells[$start] ?? null) === null && ($cells[$start + 1] ?? null) === null){
                     if($ri === 0 && $start === 0){ echo "<span class='rtile driver' aria-label='Driver seat'>Driver</span>"; }
                     else { echo "<span class='rtile door' aria-label='Door, no seats'>Door</span>"; }
                     continue;
                 }
-                foreach([$start, $start + 1] as $ci){
+                foreach($grp as $ci){
                     $n = $cells[$ci] ?? null;
                     if($n === null){
                         echo "<span class='rseat gap' aria-hidden='true'></span>";

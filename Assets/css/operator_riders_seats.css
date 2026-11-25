@@ -99,3 +99,5 @@
 .riders-page .rider-map .seat-front { margin-bottom: 2px; }
 .riders-page .rider-map .seat-front .rtile.driver { grid-column: 1 / 3; }
 @media (max-width: 640px) { .riders-page .rtile { height: 48px; } }
+
+.riders-page .rider-map .seat-row.seat-back{grid-template-columns:repeat(5,minmax(0,1fr))}

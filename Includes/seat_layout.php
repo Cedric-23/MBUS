@@ -1,6 +1,7 @@
 <?php
 /* Bus seat layouts.
- * A layout is a list of rows; every row has 4 booleans (2 seats, the aisle, 2 seats).
+ * A layout is a list of rows; every row has 4 booleans (2 seats, the aisle, 2 seats). The last row may instead be
+ * a back bench of 5 seats with no aisle.
  * true = a seat is there, false = no seat. Seats are numbered 1..N from the front, left to right.
  * Saved in buses.seat_layout (JSON). A bus without one gets a plain layout from its capacity: the driver's cell
  * stays free in the front row, then full rows of 4. */
@@ -17,12 +18,19 @@ function mbus_seat_layout_parse($raw): ?array
     $seats = 0; $doors = 0;
     $clean = [];
     foreach ($layout as $row) {
-        if (!is_array($row) || count($row) !== 4) return null;
+        if (!is_array($row)) return null;
+        $isBench = count($row) === 5 && count($clean) === count($layout) - 1;   // the back row: 5 seats side by side, no aisle
+        if (count($row) !== 4 && !$isBench) return null;
         $cells = [];
         foreach (array_values($row) as $seat) {
             if (!is_bool($seat)) return null;
             if ($seat) $seats++;
             $cells[] = $seat;
+        }
+        if ($isBench) {
+            if (in_array(false, $cells, true)) return null;
+            $clean[] = $cells;
+            continue;
         }
         foreach ([0, 2] as $start) {
             if (count($clean) === 0 && $start === 0) continue;   // the driver's cell
@@ -49,6 +57,9 @@ function mbus_seat_layout_default(int $capacity): array
     $row = [false, false, false, false];
     for ($i = 2; $i < 4 && $left > 0; $i++) { $row[$i] = true; $left--; }
     $layout = [$row];
+    /* The back row is a bench of 5 seats (no aisle), so set those 5 aside when the bus is big enough. */
+    $bench = $capacity >= 9;
+    if ($bench) $left -= 5;
     while ($left > 0) {
         $row = [];
         for ($i = 0; $i < 4; $i++) {
@@ -57,6 +68,7 @@ function mbus_seat_layout_default(int $capacity): array
         }
         $layout[] = $row;
     }
+    if ($bench) $layout[] = [true, true, true, true, true];
     return $layout;
 }
 

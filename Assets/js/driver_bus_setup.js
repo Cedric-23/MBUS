@@ -67,12 +67,15 @@
     function layoutForSeatCount(count) {
         const result = [[false, false, false, false]];
         let left = Math.max(1, Math.min(40, count));
+        const bench = left >= 9;   // back row: 5 seats side by side
+        if (bench) left -= 5;
         for (let i = 2; i < 4 && left > 0; i++) { result[0][i] = true; left--; }
         while (left > 0) {
             const row = [];
             for (let i = 0; i < 4; i++) { row.push(left > 0); if (left > 0) left--; }
             result.push(row);
         }
+        if (bench) result.push([true, true, true, true, true]);
         return result;
     }
 
@@ -92,7 +95,7 @@
     }
 
     try { layout = JSON.parse(dataInput.value); } catch (_) { layout = null; }
-    if (!Array.isArray(layout) || !layout.length || !layout.every(row => Array.isArray(row) && row.length === 4 && row.every(v => typeof v === 'boolean'))) {
+    if (!Array.isArray(layout) || !layout.length || !layout.every(row => Array.isArray(row) && (row.length === 4 || (row.length === 5 && row.every(Boolean))) && row.every(v => typeof v === 'boolean'))) {
         layout = defaultLayout();
     }
     layout = normalizeLegacyLayout(layout);
@@ -157,6 +160,22 @@
             const rowElement = document.createElement('div');
             rowElement.className = 'seat-row';
             rowElement.setAttribute('role', 'row');
+
+            /* back bench: 5 fixed seats, no aisle */
+            if (row.length === 5) {
+                rowElement.classList.add('seat-back');
+                row.forEach((_, i) => {
+                    number++;
+                    const seat = document.createElement('span');
+                    seat.className = 'seat-cell is-open';
+                    seat.setAttribute('role', 'gridcell');
+                    seat.setAttribute('aria-label', `Back row, seat ${number}`);
+                    seat.textContent = String(number);
+                    rowElement.append(seat);
+                });
+                grid.append(rowElement);
+                return;
+            }
 
             [0, 2].forEach(start => {
                 if (start === 2) {
@@ -236,21 +255,23 @@
         }
         dataInput.value = JSON.stringify(layout);
         addRow.disabled = layoutLocked || layout.length >= 25;
-        minusRow.disabled = layoutLocked || layout.length <= 1;
+        minusRow.disabled = layoutLocked || layout.length - (layout[layout.length - 1].length === 5 ? 1 : 0) <= 1;
         reset.disabled = layoutLocked;
     }
 
     addRow.addEventListener('click', () => {
         if (!layoutLocked && layout.length < 25) {
-            layout.push([true, true, true, true]);
+            const at = layout[layout.length - 1].length === 5 ? layout.length - 1 : layout.length;
+            layout.splice(at, 0, [true, true, true, true]);
             render();
             grid.lastElementChild?.scrollIntoView({ block: 'nearest' });
         }
     });
 
     minusRow.addEventListener('click', () => {
-        if (!layoutLocked && layout.length > 1) {
-            layout.pop();
+        const benchRow = layout[layout.length - 1].length === 5 ? 1 : 0;
+        if (!layoutLocked && layout.length - benchRow > 1) {
+            layout.splice(layout.length - 1 - benchRow, 1);
             render();
         }
     });
