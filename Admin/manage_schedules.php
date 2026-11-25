@@ -200,7 +200,7 @@ while($row = mbus_db_fetch_assoc($query)){
     $row['route_type']=$route_type;
     $groups[date('Y-m-d', strtotime($row['departure_time']))][]=$row;
 }
-$bus_options = function() use ($bus_rows){ $o='<option value="">Select bus</option>'; foreach($bus_rows as $b){ $o.='<option value="'.(int)$b['bus_id'].'">Bus '.htmlspecialchars($b['bus_number']).' &middot; '.(int)$b['capacity'].' seats</option>'; } return $o; };
+$bus_options = function() use ($bus_rows){ $o='<option value="">Select bus</option>'; foreach($bus_rows as $b){ $o.='<option value="'.(int)$b['bus_id'].'">'.htmlspecialchars($b['bus_number']).' &middot; '.(int)$b['capacity'].' seats</option>'; } return $o; };
 $route_options = function() use ($route_rows){ $o='<option value="">Select route</option>'; foreach($route_rows as $r){ $o.='<option value="'.(int)$r['route_id'].'">'.htmlspecialchars($r['origin']).' &rarr; '.htmlspecialchars($r['destination']).'</option>'; } return $o; };
 ?>
 <div class="ad-toolbar">
