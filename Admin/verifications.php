@@ -27,14 +27,15 @@ if(isset($_POST['review'])){
     } elseif($decision === 'Rejected' && $reason === ''){
         $_SESSION['vf_flash'] = ['error', "Add a short reason so the commuter knows what to fix."];
     } else {
-        $done = 0; $skipped_expired = 0; $skipped_done = 0;
+        $done = 0; $skipped_expired = 0; $skipped_done = 0; $failed = 0;
         foreach($ids as $vid){
             $q = mbus_db_prepare($conn, "SELECT user_id, verification_type, expiry_date FROM commuter_verification WHERE verification_id = ? AND verification_status = 'Pending'", [$vid]);
             $v = $q === false ? false : mbus_db_fetch_assoc($q);
             if(!$v){ $skipped_done++; continue; }
             if($decision === 'Approved' && !empty($v['expiry_date']) && $v['expiry_date'] < date('Y-m-d')){ $skipped_expired++; continue; }
-            mbus_db_prepare($conn, "UPDATE commuter_verification SET verification_status = ?, reviewed_at = NOW(), reviewed_by = ?, rejection_reason = ? WHERE verification_id = ?",
+            $review = mbus_db_prepare($conn, "UPDATE commuter_verification SET verification_status = ?, reviewed_at = NOW(), reviewed_by = ?, rejection_reason = ? WHERE verification_id = ?",
                 [$decision, (int)$_SESSION['user_id'], $decision === 'Rejected' ? $reason : null, $vid]);
+            if ($review === false) { $failed++; continue; }
             if($decision === 'Approved'){
                 mbus_db_prepare($conn, "UPDATE users SET verification_status = 'Approved', verification_type = ? WHERE user_id = ?", [$v['verification_type'], (int)$v['user_id']]);
             } else {
@@ -49,7 +50,8 @@ if(isset($_POST['review'])){
         $m = "$done " . strtolower($decision);
         if($skipped_expired) $m .= ", $skipped_expired skipped (ID expired: reject or ask for a new ID)";
         if($skipped_done) $m .= ", $skipped_done already reviewed";
-        $_SESSION['vf_flash'] = [$done ? 'success' : 'error', $m . "."];
+        if($failed) $m .= ", $failed could not be saved (check the database schema and try again)";
+        $_SESSION['vf_flash'] = [$done && !$failed ? 'success' : 'error', $m . "."];
     }
     header("Location: verifications.php?" . http_build_query(array_filter(['status' => $_POST['f_status'] ?? '', 'type' => $_POST['f_type'] ?? '', 'q' => $_POST['f_q'] ?? '', 'page' => $_POST['f_page'] ?? ''], fn($x) => $x !== '' && $x !== null)));
     exit();

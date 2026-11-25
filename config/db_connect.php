@@ -67,6 +67,13 @@ function mbus_run_schema_upgrades(PDO $pdo): void {
   } catch (PDOException $schema_error) {
       error_log('Reservation schema check failed: ' . $schema_error->getMessage());
   }
+  // Older deployments may have the commuter verification table without the rejection reason column.
+  // The Admin classification review cannot persist a rejection until this additive upgrade is present.
+  try {
+      $pdo->exec('ALTER TABLE commuter_verification ADD COLUMN IF NOT EXISTS rejection_reason TEXT');
+  } catch (PDOException $schema_error) {
+      error_log('Commuter verification schema check failed: ' . $schema_error->getMessage());
+  }
   // PayMongo GCash checkout sessions: one row per redirect, finalized by the webhook or the return page.
   try {
       $pdo->exec("CREATE TABLE IF NOT EXISTS paymongo_checkout (
@@ -208,7 +215,7 @@ try {
     if ($pdo->inTransaction()) { try { $pdo->rollBack(); } catch (Throwable $e) { $pdo->exec('ROLLBACK'); } }
     $pdo->exec("SET TIME ZONE '" . str_replace("'", "''", mbus_timezone()) . "'");
     // Schema upgrades are ~35 extra round trips to the database. Run them once per version, not on every page.
-    $schemaVersion = '2026-11-25a';
+    $schemaVersion = '2026-11-25b';
     $schemaFlag = sys_get_temp_dir() . '/mbus_schema_' . md5($host . $database . $schemaVersion) . '.ok';
     if (!is_file($schemaFlag)) {
         $done = false;

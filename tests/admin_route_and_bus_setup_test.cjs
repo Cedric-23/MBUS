@@ -32,6 +32,8 @@ const db = read('config/db_connect.php');
 for (const column of ['origin_lat DECIMAL(10, 8)', 'origin_lng DECIMAL(11, 8)', 'destination_lat DECIMAL(10, 8)', 'destination_lng DECIMAL(11, 8)']) {
     assert.ok(db.includes(column), `runtime schema upgrade must add ${column}`);
 }
+assert.match(db, /ALTER TABLE commuter_verification ADD COLUMN IF NOT EXISTS rejection_reason TEXT/,
+    'runtime schema upgrade must add the ID rejection-reason column');
 assert.match(db, /schemaVersion\s*=\s*'2026-11-(2[3-9]|30)[a-z]'/,
     'the runtime schema version must advance so existing deployments run the new upgrades');
 
@@ -67,6 +69,11 @@ assert.match(myBusPage, /mbus_bus_schedule_locked/,
     'My Bus must check whether its bus is on an active schedule');
 assert.match(myBusPage, /cannot be changed until that schedule is completed/,
     'My Bus must explain the schedule layout lock inline');
+const verifications = read('Admin/verifications.php');
+assert.match(verifications, /\$review = mbus_db_prepare\(\$conn, "UPDATE commuter_verification/,
+    'ID review must check whether the status update was saved');
+assert.match(verifications, /\$failed could not be saved/,
+    'ID review must show a useful error when rejection persistence fails');
 /* The driver's cell is part of the bus design: the builder never deletes front-row seats to make room for it,
    and every seat map (My Bus, Riders, commuter) shows the same driver and door tiles. */
 const layoutHelper = read('Includes/seat_layout.php');
