@@ -208,8 +208,8 @@ $route_options = function() use ($route_rows){ $o='<option value="">Select route
 <div class="op-tools has-tabs sc-tools">
     <nav class="op-tabs" aria-label="Schedule filters">
         <a href="?filter=all" class="op-tab <?php echo $filter==='all' ? 'on' : ''; ?>"<?php echo $filter==='all' ? ' aria-current="page"' : ''; ?>><em>All</em> <span><?php echo $all_count; ?></span></a>
-        <a href="?filter=morong" class="op-tab <?php echo $filter==='morong' ? 'on' : ''; ?>"<?php echo $filter==='morong' ? ' aria-current="page"' : ''; ?>><em>Morong &rarr; SBMA</em> <span><?php echo $morong_count; ?></span></a>
-        <a href="?filter=sbma" class="op-tab <?php echo $filter==='sbma' ? 'on' : ''; ?>"<?php echo $filter==='sbma' ? ' aria-current="page"' : ''; ?>><em>SBMA &rarr; Morong</em> <span><?php echo $sbma_count; ?></span></a>
+        <a href="?filter=morong" class="op-tab <?php echo $filter==='morong' ? 'on' : ''; ?>" aria-label="Morong to SBMA"<?php echo $filter==='morong' ? ' aria-current="page"' : ''; ?>><em><b class="lg">Morong &rarr; SBMA</b><b class="sm">Morong &rarr;</b></em> <span><?php echo $morong_count; ?></span></a>
+        <a href="?filter=sbma" class="op-tab <?php echo $filter==='sbma' ? 'on' : ''; ?>" aria-label="SBMA to Morong"<?php echo $filter==='sbma' ? ' aria-current="page"' : ''; ?>><em><b class="lg">SBMA &rarr; Morong</b><b class="sm">SBMA &rarr;</b></em> <span><?php echo $sbma_count; ?></span></a>
     </nav>
     <div class="op-search"><i class="fa fa-search" aria-hidden="true"></i><input type="search" id="adSearch" placeholder="Search route, bus, date or status" autocomplete="off" aria-label="Search schedules"><button type="button" class="op-clear" id="adClear" aria-label="Clear search" hidden><i class="fa fa-xmark" aria-hidden="true"></i></button></div>
 </div>

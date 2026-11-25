@@ -312,7 +312,10 @@
 .op-tools.sc-tools .op-search{grid-column:1;grid-row:2}
 .op-tools.sc-tools a.op-tab,.op-tools.sc-tools a.op-tab:hover{text-decoration:none}
 .op-tools.sc-tools .op-tab em{font-style:normal}
+/* route tabs: full label on wide screens, short label (same row as the count) on phones */
+.op-tools.sc-tools .op-tab b{font-weight:inherit}
+.op-tools.sc-tools .op-tab .sm{display:none}
 @media (max-width:640px){
-  /* three long route labels: stack the label above its count so nothing gets cut off */
-  .op-tools.sc-tools .op-tab{flex-direction:column;gap:3px;min-height:56px;padding:6px 2px;white-space:normal;text-align:center;line-height:1.15;font-size:.76rem}
+  .op-tools.sc-tools .op-tab .lg{display:none}
+  .op-tools.sc-tools .op-tab .sm{display:inline}
 }
