@@ -4,18 +4,39 @@
  * a back bench of 5 seats with no aisle.
  * true = a seat is there, false = no seat. Seats are numbered 1..N from the front, left to right.
  * Saved in buses.seat_layout (JSON). A bus without one gets a plain layout from its capacity: the driver's cell
- * stays free in the front row, then full rows of 4. */
+ * stays free in the front row, then full rows of 4.
+ *
+ * Doors: every bus has ONE door, and a door takes the place of two side-by-side seats. So a layout is built with
+ * two extra seats (the real seat count + 2); the driver removes those two seats in My Bus to make the door and ends up
+ * with the real count. Until the door is made the layout is allowed two seats over the normal maximum. */
 
-/** Most seats and doors a bus layout may have. A door is a pair of side-by-side cells with no seats (the driver's cell does not count). */
+/** Most seats a bus may have once its door is made. */
 if (!defined('MBUS_MAX_SEATS')) define('MBUS_MAX_SEATS', 40);
-if (!defined('MBUS_MAX_DOORS')) define('MBUS_MAX_DOORS', 2);
+/** Seats the one door replaces: they exist in a new layout and are removed when the door is made. */
+if (!defined('MBUS_DOOR_SEATS')) define('MBUS_DOOR_SEATS', 2);
+/** A bus has a single door: a pair of side-by-side cells with no seats (the driver's cell does not count). */
+if (!defined('MBUS_MAX_DOORS')) define('MBUS_MAX_DOORS', 1);
 
-/** Validated layout (1-25 rows, 1-40 seats, at most 2 doors) from JSON or an array, or null when it is not usable. */
+/** Number of doors in a layout (side-by-side empty pairs; the driver's front-left pair does not count). */
+function mbus_seat_layout_doors(array $layout): int
+{
+    $doors = 0;
+    foreach (array_values($layout) as $index => $row) {
+        if (!is_array($row) || count($row) !== 4) continue;   // the 5-seat back bench has no doors
+        foreach ([0, 2] as $start) {
+            if ($index === 0 && $start === 0) continue;       // the driver's cell
+            if (empty($row[$start]) && empty($row[$start + 1])) $doors++;
+        }
+    }
+    return $doors;
+}
+
+/** Validated layout (1-25 rows, at most 1 door, 1-40 seats, or up to 42 while the door is not made yet) from JSON or an array, or null when it is not usable. */
 function mbus_seat_layout_parse($raw): ?array
 {
     $layout = is_array($raw) ? $raw : json_decode((string)$raw, true);
     if (!is_array($layout) || count($layout) < 1 || count($layout) > 25) return null;
-    $seats = 0; $doors = 0;
+    $seats = 0;
     $clean = [];
     foreach ($layout as $row) {
         if (!is_array($row)) return null;
@@ -27,18 +48,12 @@ function mbus_seat_layout_parse($raw): ?array
             if ($seat) $seats++;
             $cells[] = $seat;
         }
-        if ($isBench) {
-            if (in_array(false, $cells, true)) return null;
-            $clean[] = $cells;
-            continue;
-        }
-        foreach ([0, 2] as $start) {
-            if (count($clean) === 0 && $start === 0) continue;   // the driver's cell
-            if (!$cells[$start] && !$cells[$start + 1]) $doors++;
-        }
+        if ($isBench && in_array(false, $cells, true)) return null;
         $clean[] = $cells;
     }
-    return ($seats >= 1 && $seats <= MBUS_MAX_SEATS && $doors <= MBUS_MAX_DOORS) ? $clean : null;
+    $doors = mbus_seat_layout_doors($clean);
+    $maxSeats = MBUS_MAX_SEATS + ($doors === 0 ? MBUS_DOOR_SEATS : 0);
+    return ($seats >= 1 && $seats <= $maxSeats && $doors <= MBUS_MAX_DOORS) ? $clean : null;
 }
 
 function mbus_seat_layout_count(array $layout): int
@@ -51,7 +66,7 @@ function mbus_seat_layout_count(array $layout): int
 /** Plain layout for a bus with no saved one: the driver's cell stays free in the front row, then full rows of 4. */
 function mbus_seat_layout_default(int $capacity): array
 {
-    $capacity = max(1, min(MBUS_MAX_SEATS, $capacity));
+    $capacity = max(1, min(MBUS_MAX_SEATS + MBUS_DOOR_SEATS, $capacity));
     $left = $capacity;
     /* Front row: the front-left pair is the driver's cell, so only the right pair can hold seats. */
     $row = [false, false, false, false];
@@ -70,6 +85,15 @@ function mbus_seat_layout_default(int $capacity): array
     }
     if ($bench) $layout[] = [true, true, true, true, true];
     return $layout;
+}
+
+/**
+ * Layout for a bus whose driver entered their real number of seats. It gets the 2 seats the door will replace
+ * (30 seats entered = 32 in the layout), so removing the door pair in My Bus leaves exactly the real count.
+ */
+function mbus_seat_layout_with_door_room(int $realSeats): array
+{
+    return mbus_seat_layout_default(max(1, min(MBUS_MAX_SEATS, $realSeats)) + MBUS_DOOR_SEATS);
 }
 
 /**
