@@ -24,6 +24,10 @@ assert.match(registration, /mbus_registration_allow_application\(\$conn, \$email
     'admin-reviewed applications also need a server-side submission throttle');
 assert.ok(registration.indexOf('mbus_registration_allow_application($conn, $email)') < registration.indexOf("mbus_application_file('license_document'"),
     'application throttling must run before documents are read and stored');
+assert.match(registration, /is_array\(\$f\['error'\] \?\? null\)/,
+    'multi-file document fields must be normalized before validation');
+assert.match(registration, /\(int\)\(\$f\['error'\] \?\? UPLOAD_ERR_NO_FILE\)/,
+    'empty optional document pages must be recognized across PHP upload representations');
 assert.doesNotMatch(registration, /SMTP_USERNAME.*SMTP_PASSWORD.*Email verification is not configured/s,
     'signup must not reject a configured Brevo or mail-relay transport just because SMTP is absent');
 

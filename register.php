@@ -36,6 +36,23 @@ function reg_old(string $key): string {
 function mbus_application_file(string $field, &$error): ?array {
     if (!isset($_FILES[$field]) || $_FILES[$field]['error'] === UPLOAD_ERR_NO_FILE) { $error = 'Please attach all required documents.'; return null; }
     $f = $_FILES[$field];
+    /* The main license/vehicle controls allow multiple files. Most browsers split them into the
+       numbered extra fields in JS, but mobile browsers can submit the original field as an array.
+       Normalize that shape before validating the actual temporary file. */
+    if (is_array($f['error'] ?? null)) {
+        $index = null;
+        foreach ($f['error'] as $i => $uploadError) {
+            if ((int)$uploadError !== UPLOAD_ERR_NO_FILE) { $index = $i; break; }
+        }
+        if ($index === null) { $error = 'Please attach all required documents.'; return null; }
+        foreach (['name', 'type', 'tmp_name', 'error', 'size', 'full_path'] as $key) {
+            if (isset($f[$key]) && is_array($f[$key])) $f[$key] = $f[$key][$index] ?? null;
+        }
+    }
+    if ((int)($f['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        $error = 'Please attach all required documents.';
+        return null;
+    }
     if ($f['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name'])) { $error = 'A document could not be uploaded. Try a smaller file.'; return null; }
     if ($f['size'] > 3 * 1024 * 1024) { $error = 'Each document must be 3 MB or smaller.'; return null; }
     $data = file_get_contents($f['tmp_name']);
