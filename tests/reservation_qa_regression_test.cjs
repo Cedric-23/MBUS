@@ -57,6 +57,12 @@ assert.match(read('Commuter/history.php'), /ticket\.php\?reservation_id=/, 'hist
 const history = read('Commuter/history.php');
 const tripReservations = read('Commuter/my_reservations.php');
 const tripStatusApi = read('api/commuter_trip_status.php');
+const commuterSchedule = read('Commuter/schedule.php');
+const conductorTrips = read('Operator/manage_trips.php');
+assert.match(commuterSchedule, /COALESCE\(schedule\.arrival_time, schedule\.departure_time \+ INTERVAL '4 hours'\) > '\$nowSql'/,
+  'commuter schedule cards must disappear after their scheduled arrival time');
+assert.match(conductorTrips, /case 'today': \$where \.= " AND s\.departure_time >=/,
+  'conductor trips must continue to show the full operational day for late status updates');
 assert.match(tripReservations, /schedule\.trip_status/, 'the passenger Trips view must read current operator trip status');
 assert.match(tripReservations, /trip-completion-confirmation/, 'the Trips view must render a clear completion confirmation');
 assert.match(tripReservations, /refreshTripCompletion/, 'the Trips view should detect arrival without a manual refresh');

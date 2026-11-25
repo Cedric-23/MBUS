@@ -42,7 +42,8 @@ $weekAfterNextStart = $weekStart->modify('+14 days');
 $fmt = function(DateTimeImmutable $d){ return $d->format('Y-m-d H:i:s'); };
 
 $where="";
-$activeWhere="WHERE schedule.schedule_status='Active' AND schedule.trip_status IN ('Scheduled','Boarding','Departed')";
+$activeWhere="WHERE schedule.schedule_status='Active' AND schedule.trip_status IN ('Scheduled','Boarding','Departed')
+    AND COALESCE(schedule.arrival_time, schedule.departure_time + INTERVAL '4 hours') > '$nowSql'";
 
 if($filter=="all"){
     $where=$activeWhere." AND schedule.departure_time >= '" . $fmt($todayStart) . "'";
