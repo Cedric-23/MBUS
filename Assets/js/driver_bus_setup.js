@@ -161,36 +161,19 @@
             rowElement.className = 'seat-row';
             rowElement.setAttribute('role', 'row');
 
-            /* Rear bench: keep the normal two-seat / aisle / two-seat geometry and place the
-               fifth rear seat in the centered back position instead of destroying the aisle. */
+            /* Rear bench: one row of 5 seats numbered left to right. The middle seat sits on the aisle line,
+               directly between the two seats on each side, in the same row (not dropped below). */
             if (row.length === 5) {
                 rowElement.classList.add('seat-back');
-                [0, 1, 3, 4].forEach(i => {
+                row.forEach((_, i) => {
                     number++;
                     const seat = document.createElement('span');
-                    seat.className = 'seat-cell is-open';
-                    seat.style.gridColumn = String(i + 1);
-                    seat.style.gridRow = '1';
+                    seat.className = 'seat-cell is-open' + (i === 2 ? ' seat-back-center' : '');
                     seat.setAttribute('role', 'gridcell');
                     seat.setAttribute('aria-label', `Back row, seat ${number}`);
                     seat.textContent = String(number);
                     rowElement.append(seat);
                 });
-                const aisle = document.createElement('span');
-                aisle.className = 'seat-aisle';
-                aisle.style.gridColumn = '3';
-                aisle.style.gridRow = '1 / 3';
-                aisle.setAttribute('aria-hidden', 'true');
-                rowElement.append(aisle);
-                number++;
-                const center = document.createElement('span');
-                center.className = 'seat-cell is-open seat-back-center';
-                center.style.gridColumn = '3';
-                center.style.gridRow = '3';
-                center.setAttribute('role', 'gridcell');
-                center.setAttribute('aria-label', `Back row, seat ${number}`);
-                center.textContent = String(number);
-                rowElement.append(center);
                 grid.append(rowElement);
                 return;
             }
@@ -370,7 +353,7 @@
             });
             const kb = Math.max(1, Math.round(files.reduce((n, f) => n + f.size, 0) / 1024));
             name.textContent = files.length === 1 ? files[0].name : files.length + ' files selected';
-            hint.textContent = '\u2713 Ready \u00b7 ' + kb + ' KB';
+            hint.textContent = '✓ Ready · ' + kb + ' KB';
         }
 
         /* capture phase: runs before register.js sees the change, so it only ever handles one file per field */
