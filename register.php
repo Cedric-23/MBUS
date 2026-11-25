@@ -385,7 +385,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
         <div class="left-container">
             <div class="left-container-child-1">
                 <div class="logo-wordmark">
-                    <img src="Assets/images/mbus_logo.png" alt="logo">
+                    <img src="Assets/images/mbus_logo_light.png" alt="logo">
                 </div>
             </div>
             <div class="left-container-child-2">

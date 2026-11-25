@@ -167,13 +167,13 @@ $has_error = ($csrf_error !== '' || $login_error !== '');
         <div class="auth-hero-m auth-hero-brand">
             <h1>Welcome back</h1>
             <p>Sign in to manage your trips and bookings.</p>
-            <img class="auth-hero-logo" src="Assets/images/mbus_logo.png" alt="MBUS">
+            <img class="auth-hero-logo" src="Assets/images/mbus_logo_light.png" alt="MBUS">
             <img class="auth-hero-art" src="Assets/images/auth_bus.svg" alt="" aria-hidden="true">
         </div>
         <div class="left-container">
             <div class="left-container-child-1">
                 <div class="logo-wordmark">
-                    <img src="Assets/images/mbus_logo.png" alt="logo">
+                    <img src="Assets/images/mbus_logo_light.png" alt="logo">
                 </div>
             </div>
             <div class="left-container-child-2">

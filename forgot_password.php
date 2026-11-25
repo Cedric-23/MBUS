@@ -71,7 +71,7 @@ function reset_page_e(mixed $value): string { return htmlspecialchars((string)$v
 <body class="auth-reset">
 <div class="auth-hero-m"><h1>Reset your password</h1><p>We’ll send a 6-digit verification code to your MBUS email.</p></div>
     <div class="left-container">
-        <div class="left-container-child-1"><div class="logo-wordmark"><img src="Assets/images/mbus_logo.png" alt="MBUS"></div></div>
+        <div class="left-container-child-1"><div class="logo-wordmark"><img src="Assets/images/mbus_logo_light.png" alt="MBUS"></div></div>
         <div class="left-container-child-2"><div class="lc-heading"><h1>Travel smarter.</h1><h1>Travel on time.</h1></div><div class="lc-sub-heading"><p>Your dependable way to reserve seats, manage trips, and travel with confidence.</p></div></div>
         <img class="auth-art" src="Assets/images/auth_bus.svg" alt="" aria-hidden="true"><div class="lc-circle-1"></div><div class="lc-circle-2"></div>
     </div>
