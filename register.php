@@ -380,7 +380,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
     <body class="auth-register<?= $staff_portal ? ' staff-registration' : '' ?>">
         <div class="auth-hero-m">
             <h1><?= $staff_portal ? 'Apply for an MBUS staff role' : 'Create your account' ?></h1>
-            <p><?= $staff_portal ? 'Choose Driver/Operator or Conductor to start an application.' : 'Plan your next bus trip in just a few steps.' ?></p>
+            <p><?= $staff_portal ? 'Choose Conductor or Driver to start an application.' : 'Plan your next bus trip in just a few steps.' ?></p>
         </div>
         <div class="left-container">
             <div class="left-container-child-1">
