@@ -102,7 +102,7 @@ ORDER BY departure_time ASC
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../Assets/css/responsive.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_sidebar.css">
-    <link rel="stylesheet" href="../Assets/css/admin/manage_schedules.css">
+    <link rel="stylesheet" href="../Assets/css/admin/manage_schedules.css?v=<?php echo (int)@filemtime(__DIR__ . '/../Assets/css/admin/manage_schedules.css'); ?>">
     <link rel="stylesheet" href="../Assets/css/mobile-optimized.css">
     <link rel="stylesheet" href="../Assets/css/professional-filters.css">
     <link rel="stylesheet" href="../Assets/css/admin/admin_ui.css?v=<?php echo filemtime(__DIR__ . '/../Assets/css/admin/admin_ui.css'); ?>">
@@ -189,11 +189,13 @@ $route_rows=[]; mbus_db_data_seek($routes, 0);
 while($r=mbus_db_fetch_assoc($routes)){ $route_rows[]=$r; }
 $bus_label=[]; foreach($bus_rows as $b){ $bus_label[(int)$b['bus_id']]=$b['bus_number']; }
 $filter = $_GET['filter'] ?? 'all';
-$groups=[]; $all_count=0; $active_count=0; $today_count=0;
+if(!in_array($filter, ['all','morong','sbma'], true)) $filter = 'all';
+$groups=[]; $all_count=0; $active_count=0; $today_count=0; $morong_count=0; $sbma_count=0;
 mbus_db_data_seek($query, 0);
 while($row = mbus_db_fetch_assoc($query)){
     $route_type = (stripos((string)$row['origin'], 'morong') !== false) ? 'morong' : 'sbma';
     $all_count++;
+    if($route_type === 'morong') $morong_count++; else $sbma_count++;
     if($row['schedule_status'] === 'Active') $active_count++;
     if(date('Y-m-d', strtotime($row['departure_time'])) === date('Y-m-d')) $today_count++;
     if($filter !== 'all' && $filter !== $route_type) continue;
@@ -203,12 +205,15 @@ while($row = mbus_db_fetch_assoc($query)){
 $bus_options = function() use ($bus_rows){ $o='<option value="">Select bus</option>'; foreach($bus_rows as $b){ $o.='<option value="'.(int)$b['bus_id'].'">'.htmlspecialchars($b['bus_number']).' &middot; '.(int)$b['capacity'].' seats</option>'; } return $o; };
 $route_options = function() use ($route_rows){ $o='<option value="">Select route</option>'; foreach($route_rows as $r){ $o.='<option value="'.(int)$r['route_id'].'">'.htmlspecialchars($r['origin']).' &rarr; '.htmlspecialchars($r['destination']).'</option>'; } return $o; };
 ?>
-<div class="ad-toolbar">
-    <nav class="ad-seg" aria-label="Schedule filters">
-        <a href="?filter=all" class="<?php echo $filter==='all' ? 'on' : ''; ?>">All</a>
-        <a href="?filter=morong" class="<?php echo $filter==='morong' ? 'on' : ''; ?>">Morong &rarr; SBMA</a>
-        <a href="?filter=sbma" class="<?php echo $filter==='sbma' ? 'on' : ''; ?>">SBMA &rarr; Morong</a>
+<div class="op-tools has-tabs sc-tools">
+    <nav class="op-tabs" aria-label="Schedule filters">
+        <a href="?filter=all" class="op-tab <?php echo $filter==='all' ? 'on' : ''; ?>"<?php echo $filter==='all' ? ' aria-current="page"' : ''; ?>><em>All</em> <span><?php echo $all_count; ?></span></a>
+        <a href="?filter=morong" class="op-tab <?php echo $filter==='morong' ? 'on' : ''; ?>"<?php echo $filter==='morong' ? ' aria-current="page"' : ''; ?>><em>Morong &rarr; SBMA</em> <span><?php echo $morong_count; ?></span></a>
+        <a href="?filter=sbma" class="op-tab <?php echo $filter==='sbma' ? 'on' : ''; ?>"<?php echo $filter==='sbma' ? ' aria-current="page"' : ''; ?>><em>SBMA &rarr; Morong</em> <span><?php echo $sbma_count; ?></span></a>
     </nav>
+    <div class="op-search"><i class="fa fa-search" aria-hidden="true"></i><input type="search" id="adSearch" placeholder="Search route, bus, date or status" autocomplete="off" aria-label="Search schedules"><button type="button" class="op-clear" id="adClear" aria-label="Clear search" hidden><i class="fa fa-xmark" aria-hidden="true"></i></button></div>
+</div>
+<div class="ad-toolbar">
     <button type="button" class="ad-btn primary" data-ad-open="add" data-title="Add schedule" data-action="add_schedule"><i class="fa fa-plus" aria-hidden="true"></i> Add schedule</button>
 </div>
 
@@ -239,6 +244,7 @@ $route_options = function() use ($route_rows){ $o='<option value="">Select route
     </div>
 </section>
 <?php endforeach; ?>
+<div class="ad-empty" id="adNone" hidden><i class="fa fa-filter" aria-hidden="true"></i><p>Nothing matches your search.</p></div>
 
 <dialog class="ad-dialog" id="adDialog" aria-labelledby="adTitle">
     <form method="POST" class="ad-form">
@@ -332,6 +338,20 @@ document.addEventListener('keydown', function(e) {
     </a>
 </nav>
 <script src="../Assets/js/admin_list.js?v=<?php echo filemtime(__DIR__ . '/../Assets/js/admin_list.js'); ?>"></script>
+<script>
+/* Search extras: clear button + "nothing matches" message (the filtering itself is in admin_list.js) */
+(function () {
+  var q = document.getElementById('adSearch'), clr = document.getElementById('adClear'), none = document.getElementById('adNone');
+  if (!q || !clr || !none) return;
+  function sync() {
+    var term = q.value.trim() !== '';
+    clr.hidden = !term;
+    none.hidden = !(term && document.querySelector('[data-group]') && !document.querySelector('[data-group]:not([hidden])'));
+  }
+  q.addEventListener('input', sync);
+  clr.addEventListener('click', function () { q.value = ''; q.dispatchEvent(new Event('input')); q.focus(); });
+})();
+</script>
 <script src="../Assets/js/app-header.js"></script>
 <script src="../Assets/js/notifications.js"></script>
 

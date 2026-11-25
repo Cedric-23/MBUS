@@ -305,3 +305,14 @@
 }
 
 .action-buttons [hidden] { display: none !important; }
+
+/* Schedules: same search + tabs card as Manage Operators (styles live in admin_ui.css) */
+.op-tools.sc-tools{grid-template-columns:minmax(0,1fr)}
+.op-tools.sc-tools .op-tabs{grid-column:1;grid-row:1}
+.op-tools.sc-tools .op-search{grid-column:1;grid-row:2}
+.op-tools.sc-tools a.op-tab,.op-tools.sc-tools a.op-tab:hover{text-decoration:none}
+.op-tools.sc-tools .op-tab em{font-style:normal}
+@media (max-width:640px){
+  /* three long route labels: stack the label above its count so nothing gets cut off */
+  .op-tools.sc-tools .op-tab{flex-direction:column;gap:3px;min-height:56px;padding:6px 2px;white-space:normal;text-align:center;line-height:1.15;font-size:.76rem}
+}
