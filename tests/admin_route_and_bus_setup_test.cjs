@@ -77,13 +77,15 @@ assert.match(layoutHelper, /\$row = \[false, false, false, false\]/,
 assert.match(setupJs, /function driverInside\(\)/,
     'the builder must detect a front row that still holds seats instead of clearing them');
 assert.doesNotMatch(setupJs, /lockDriver/,
-    'the builder must not delete front-row seats to place the driver');
+    'the builder must not delete front-row seats to make room for it');
 assert.match(setupJs, /classList\.add\('seat-front'\)|className = 'seat-row seat-front'/,
     'the builder must draw a driver row above a bus that keeps its front seats');
 assert.match(setupJs, /seat-back-center/,
-    'the five-seat rear bench must keep the aisle and place its fifth seat in the centered rear position');
-assert.match(read('Assets/css/main/driver_bus_setup.css'), /seat-row\.seat-back.*grid-template-columns:repeat\(2,48px\) 24px repeat\(2,48px\)/,
-    'the rear bench must retain two seats, a center aisle, and two seats');
+    'the five-seat rear bench must mark its middle seat');
+assert.doesNotMatch(setupJs, /center\.style\.gridRow = '3'/,
+    'the middle rear seat must stay in the same row as the other four, not drop below them');
+assert.match(read('Assets/css/main/driver_bus_setup.css'), /seat-row\.seat-back\{grid-template-columns:repeat\(5,48px\)\}/,
+    'the rear bench must be one row of five seats with the middle seat between the two pairs');
 assert.match(read('Operator/passengers.php'), /seat-row seat-front/,
     'the Riders map must show the driver tile for every bus design');
 assert.match(read('Commuter/reserve.php'), /bm-front-row/,
