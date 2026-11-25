@@ -250,3 +250,36 @@
   .op-count{grid-row:3;padding:0 4px}
   .op-chips{grid-row:2}
 }
+
+/* ===== Search bars (Manage Operators / Manage Buses / ID approvals): one clean look =====
+   .stf input[type=search] in staff_modern.css gives the field its own bordered pill, which showed up as a
+   second box inside the bar. These rules are more specific, so the bar is the only box. */
+.op-tools .op-search{height:48px;padding:0 6px 0 16px;gap:10px;background:#f1f5fb;border:1.5px solid transparent;border-radius:14px;color:#7b8aa3}
+.op-tools .op-search:focus-within{background:#fff;border-color:#2f6fe4;box-shadow:0 0 0 4px rgba(47,111,228,.14);color:#2f6fe4}
+.op-tools .op-search > i.fa{font-size:1rem}
+.op-tools .op-search input[type=search]{all:unset!important;display:block!important;box-sizing:border-box!important;flex:1 1 auto!important;min-width:0!important;height:100%!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;font:inherit!important;font-size:1rem!important;color:#1c2b44!important;-webkit-appearance:none!important}
+.op-tools .op-search input[type=search]::placeholder{color:#8a98ae!important;opacity:1}
+.op-tools .op-search input[type=search]::-webkit-search-cancel-button,.op-tools .op-search input[type=search]::-webkit-search-decoration{display:none}
+.vf-filters input[type=search],.stf .vf-filters input[type=search]{all:unset!important;box-sizing:border-box!important;flex:1 1 240px!important;height:48px!important;padding:0 16px 0 44px!important;border:1.5px solid transparent!important;border-radius:14px!important;background:#f1f5fb url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%237b8aa3' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 16px center!important;font-size:1rem!important;color:#1c2b44!important}
+.vf-filters input[type=search]:focus,.stf .vf-filters input[type=search]:focus{background-color:#fff!important;border-color:#2f6fe4!important;box-shadow:0 0 0 4px rgba(47,111,228,.14)!important}
+.vf-filters input[type=search]::placeholder{color:#8a98ae!important;opacity:1}
+
+/* Role tabs on Manage Operators */
+.op-tools.has-tabs .op-tabs{grid-column:1/-1;grid-row:1;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;background:#f1f5fb;border-radius:14px}
+.op-tools.has-tabs .op-search{grid-row:2;grid-column:1}
+.op-tools.has-tabs .op-count{grid-row:2;grid-column:2}
+.op-tools.has-tabs .op-chips{grid-row:3}
+.op-tab{display:flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:0 10px;border:0;border-radius:11px;background:transparent;color:#5b6b84;font:inherit;font-size:.9rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,box-shadow .15s}
+.op-tab span{min-width:22px;padding:1px 7px;border-radius:999px;background:#e1e8f4;color:#5b6b84;font-size:.74rem;font-weight:700;text-align:center}
+.op-tab.on{background:#fff;color:#2f6fe4;box-shadow:0 1px 3px rgba(22,32,51,.12)}
+.op-tab.on span{background:#2f6fe4;color:#fff}
+.op-tab:focus-visible{outline:2px solid #2f6fe4;outline-offset:2px}
+.op-role{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:#eaf1fd;color:#2f6fe4;font-size:.68rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;vertical-align:middle}
+.op-role.is-conductor{background:#fff1e0;color:#b45f06}
+@media (max-width:640px){
+  .op-tools.has-tabs .op-search{grid-row:2;grid-column:1}
+  .op-tools.has-tabs .op-chips{grid-row:3}
+  .op-tools.has-tabs .op-count{grid-row:4;grid-column:1}
+  .op-tab{font-size:.8rem;padding:0 4px;gap:5px}
+  .op-tab i{display:none}
+}

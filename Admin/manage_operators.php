@@ -31,7 +31,7 @@ if(isset($_POST['update_operator'])){
         $phone_error = mbus_validate_phone($phone_number);
 
         if($user_id <= 0){
-            $error = "Operator not found.";
+            $error = "Account not found.";
         } elseif($name_error !== null){
             $error = $name_error;
         } elseif($email_error !== null){
@@ -46,12 +46,12 @@ if(isset($_POST['update_operator'])){
             } elseif(mbus_db_num_rows($dup) > 0){
                 $error = "This email address is already used by another account.";
             } else {
-                $saved = mbus_db_prepare($conn, "UPDATE users SET full_name = ?, email = ?, phone_number = ? WHERE user_id = ? AND LOWER(user_type) IN ('operator', 'driver')", [$full_name, $email, $phone_number, $user_id]);
+                $saved = mbus_db_prepare($conn, "UPDATE users SET full_name = ?, email = ?, phone_number = ? WHERE user_id = ? AND LOWER(user_type) IN ('operator', 'driver', 'conductor')", [$full_name, $email, $phone_number, $user_id]);
                 if($saved === false){
                     error_log('Admin operator update failed: ' . mbus_db_error($conn));
-                    $error = "Operator could not be saved. Please check the details and try again.";
+                    $error = "The details could not be saved. Please check them and try again.";
                 } else {
-                    $success = "Operator details saved.";
+                    $success = "Details saved.";
                 }
             }
         }
@@ -64,12 +64,12 @@ if(isset($_POST['delete_operator'])){
         $error = "Security validation failed. Please try again.";
     } else {
         $user_id = (int)$_POST['user_id'];
-        $deleted = mbus_db_prepare($conn, "DELETE FROM users WHERE user_id = ? AND LOWER(user_type) IN ('operator', 'driver')", [$user_id]);
+        $deleted = mbus_db_prepare($conn, "DELETE FROM users WHERE user_id = ? AND LOWER(user_type) IN ('operator', 'driver', 'conductor')", [$user_id]);
         if($deleted === false){
             error_log('Operator delete failed: ' . mbus_db_error($conn));
-            $error = "Operator could not be deleted. Please try again.";
+            $error = "The account could not be deleted. Please try again.";
         } else {
-            $success = "Operator deleted successfully";
+            $success = "Account deleted successfully";
         }
     }
 }
@@ -167,42 +167,62 @@ if(isset($_POST['delete_operator'])){
 
 <?php
 $oq = mbus_db_query($conn, "
-    SELECT u.user_id, u.full_name, u.email, u.phone_number,
-      (SELECT string_agg(b.bus_number, ', ') FROM operator_bus_assignments oa JOIN buses b ON b.bus_id=oa.bus_id WHERE oa.operator_id=u.user_id) AS buses
-    FROM users u WHERE LOWER(u.user_type) IN ('operator', 'driver') ORDER BY u.full_name");
+    SELECT u.user_id, u.full_name, u.email, u.phone_number, LOWER(u.user_type) AS role,
+      CASE WHEN LOWER(u.user_type) = 'conductor'
+        THEN (SELECT string_agg(b.bus_number, ', ') FROM conductor_bus_assignments ca JOIN buses b ON b.bus_id=ca.bus_id WHERE ca.conductor_id=u.user_id)
+        ELSE (SELECT string_agg(b.bus_number, ', ') FROM operator_bus_assignments oa JOIN buses b ON b.bus_id=oa.bus_id WHERE oa.operator_id=u.user_id)
+      END AS buses
+    FROM users u WHERE LOWER(u.user_type) IN ('operator', 'driver', 'conductor') ORDER BY u.full_name");
+if($oq === false){
+    /* conductor assignments table not created yet: still list the drivers */
+    $oq = mbus_db_query($conn, "
+        SELECT u.user_id, u.full_name, u.email, u.phone_number, LOWER(u.user_type) AS role,
+          (SELECT string_agg(b.bus_number, ', ') FROM operator_bus_assignments oa JOIN buses b ON b.bus_id=oa.bus_id WHERE oa.operator_id=u.user_id) AS buses
+        FROM users u WHERE LOWER(u.user_type) IN ('operator', 'driver') ORDER BY u.full_name");
+}
 $op_list = [];
-while($oq !== false && ($row = mbus_db_fetch_assoc($oq))){ $op_list[] = $row; }
+while($oq !== false && ($row = mbus_db_fetch_assoc($oq))){
+    $row['role'] = $row['role'] === 'conductor' ? 'conductor' : 'driver';
+    $op_list[] = $row;
+}
 $assigned = count(array_filter($op_list, fn($x) => !empty($x['buses'])));
+$n_drivers = count(array_filter($op_list, fn($x) => $x['role'] === 'driver'));
+$n_conductors = count($op_list) - $n_drivers;
 ?>
-<div class="op-tools">
-    <div class="op-search"><i class="fa fa-search" aria-hidden="true"></i><input type="search" id="opSearch" placeholder="Search name, email or bus" autocomplete="off" aria-label="Search operators"><button type="button" class="op-clear" id="opClear" aria-label="Clear search" hidden><i class="fa fa-xmark" aria-hidden="true"></i></button></div>
-    <div class="op-chips" role="group" aria-label="Filter operators">
-        <button type="button" class="op-chip on" data-f="all">All <span><?php echo count($op_list); ?></span></button>
+<div class="op-tools has-tabs">
+    <div class="op-tabs" role="tablist" aria-label="Staff role">
+        <button type="button" class="op-tab on" role="tab" aria-selected="true" data-role="all">All <span><?php echo count($op_list); ?></span></button>
+        <button type="button" class="op-tab" role="tab" aria-selected="false" data-role="driver"><i class="fa fa-id-card-clip" aria-hidden="true"></i> Drivers <span><?php echo $n_drivers; ?></span></button>
+        <button type="button" class="op-tab" role="tab" aria-selected="false" data-role="conductor"><i class="fa fa-ticket" aria-hidden="true"></i> Conductors <span><?php echo $n_conductors; ?></span></button>
+    </div>
+    <div class="op-search"><i class="fa fa-search" aria-hidden="true"></i><input type="search" id="opSearch" placeholder="Search name, email or bus" autocomplete="off" aria-label="Search drivers and conductors"><button type="button" class="op-clear" id="opClear" aria-label="Clear search" hidden><i class="fa fa-xmark" aria-hidden="true"></i></button></div>
+    <div class="op-chips" role="group" aria-label="Filter by bus">
+        <button type="button" class="op-chip on" data-f="all">Any bus</button>
         <button type="button" class="op-chip" data-f="bus">With bus <span><?php echo $assigned; ?></span></button>
         <button type="button" class="op-chip" data-f="nobus">No bus <span><?php echo count($op_list) - $assigned; ?></span></button>
     </div>
     <p class="op-count" id="opCount" aria-live="polite"></p>
 </div>
 
-<?php if(!$op_list): ?><div class="ad-empty"><i class="fa fa-user-gear" aria-hidden="true"></i><p>No operators yet.</p></div><?php endif; ?>
+<?php if(!$op_list): ?><div class="ad-empty"><i class="fa fa-user-gear" aria-hidden="true"></i><p>No drivers or conductors yet.</p></div><?php endif; ?>
 <div class="ad-table ops">
-    <div class="ad-th"><span>Operator</span><span>Phone</span><span>Bus</span><span></span></div>
+    <div class="ad-th"><span>Name</span><span>Phone</span><span>Bus</span><span></span></div>
     <?php foreach($op_list as $row):
         $initial = strtoupper(mb_substr(trim((string)$row['full_name']) ?: '?', 0, 1));
     ?>
-    <div class="ad-tr" data-op data-has="<?php echo !empty($row['buses']) ? 'bus' : 'nobus'; ?>" data-q="<?php echo htmlspecialchars(strtolower($row['full_name'].' '.$row['email'].' '.($row['buses'] ?? '')), ENT_QUOTES); ?>">
-        <div class="ad-c person"><span class="ad-avatar"><?php echo htmlspecialchars($initial); ?></span><div><b><?php echo htmlspecialchars($row['full_name']); ?></b><small><?php echo htmlspecialchars($row['email']); ?></small></div></div>
+    <div class="ad-tr" data-op data-role="<?php echo $row['role']; ?>" data-has="<?php echo !empty($row['buses']) ? 'bus' : 'nobus'; ?>" data-q="<?php echo htmlspecialchars(strtolower($row['full_name'].' '.$row['email'].' '.$row['role'].' '.($row['buses'] ?? '')), ENT_QUOTES); ?>">
+        <div class="ad-c person"><span class="ad-avatar"><?php echo htmlspecialchars($initial); ?></span><div><b><?php echo htmlspecialchars($row['full_name']); ?> <span class="op-role is-<?php echo $row['role']; ?>"><?php echo ucfirst($row['role']); ?></span></b><small><?php echo htmlspecialchars($row['email']); ?></small></div></div>
         <div class="ad-c phone"><?php echo htmlspecialchars((string)$row['phone_number']); ?></div>
-        <div class="ad-c bus"><?php echo !empty($row['buses']) ? '<span class="ad-pill active"><i class="fa fa-bus" aria-hidden="true"></i> Bus '.htmlspecialchars($row['buses']).'</span>' : '<span class="ad-pill muted">No bus</span>'; ?></div>
+        <div class="ad-c bus"><?php echo !empty($row['buses']) ? '<span class="ad-pill active"><i class="fa fa-bus" aria-hidden="true"></i> '.htmlspecialchars($row['buses']).'</span>' : '<span class="ad-pill muted">No bus</span>'; ?></div>
         <div class="ad-c actions">
-            <button type="button" class="ad-icon" data-ad-open="edit" data-title="Edit operator" data-action="update_operator" data-edit="<?php echo htmlspecialchars(json_encode(['user_id'=>(int)$row['user_id'],'full_name'=>$row['full_name'],'email'=>$row['email'],'phone_number'=>preg_replace('/^0/','',(string)$row['phone_number'])]), ENT_QUOTES); ?>" aria-label="Edit operator"><i class="fa fa-pen" aria-hidden="true"></i></button>
-            <form method="POST" data-confirm="Delete this operator?"><?php csrf_field(); ?><input type="hidden" name="user_id" value="<?php echo (int)$row['user_id']; ?>"><button type="submit" name="delete_operator" class="ad-icon danger" aria-label="Delete operator"><i class="fa fa-trash" aria-hidden="true"></i></button></form>
+            <button type="button" class="ad-icon" data-ad-open="edit" data-title="Edit <?php echo $row['role']; ?>" data-action="update_operator" data-edit="<?php echo htmlspecialchars(json_encode(['user_id'=>(int)$row['user_id'],'full_name'=>$row['full_name'],'email'=>$row['email'],'phone_number'=>preg_replace('/^0/','',(string)$row['phone_number'])]), ENT_QUOTES); ?>" aria-label="Edit <?php echo $row['role']; ?>"><i class="fa fa-pen" aria-hidden="true"></i></button>
+            <form method="POST" data-confirm="Delete this <?php echo $row['role']; ?>?"><?php csrf_field(); ?><input type="hidden" name="user_id" value="<?php echo (int)$row['user_id']; ?>"><button type="submit" name="delete_operator" class="ad-icon danger" aria-label="Delete <?php echo $row['role']; ?>"><i class="fa fa-trash" aria-hidden="true"></i></button></form>
         </div>
     </div>
     <?php endforeach; ?>
 </div>
-<div class="ad-empty" id="opNone" hidden><i class="fa fa-filter" aria-hidden="true"></i><p>No operators match.</p></div>
-<nav class="op-pager" id="opPager" aria-label="Operator pages" hidden>
+<div class="ad-empty" id="opNone" hidden><i class="fa fa-filter" aria-hidden="true"></i><p>Nothing matches your search.</p></div>
+<nav class="op-pager" id="opPager" aria-label="Pages" hidden>
     <button type="button" data-d="-1">Previous</button><span id="opPageLabel"></span><button type="button" data-d="1">Next</button>
 </nav>
 
@@ -210,7 +230,7 @@ $assigned = count(array_filter($op_list, fn($x) => !empty($x['buses'])));
     <form method="POST" class="ad-form">
         <?php csrf_field(); ?>
         <input type="hidden" name="user_id" value="">
-        <header class="ad-dialog-head"><h2 id="adTitle">Edit operator</h2><button type="button" class="ad-x" data-ad-close aria-label="Close"><i class="fa fa-xmark" aria-hidden="true"></i></button></header>
+        <header class="ad-dialog-head"><h2 id="adTitle">Edit details</h2><button type="button" class="ad-x" data-ad-close aria-label="Close"><i class="fa fa-xmark" aria-hidden="true"></i></button></header>
         <div class="ad-dialog-body">
             <label class="ad-field"><span>Full name</span><input type="text" name="full_name" maxlength="100" required></label>
             <label class="ad-field"><span>Email</span><input type="email" name="email" maxlength="100" required></label>
@@ -289,21 +309,24 @@ document.addEventListener('keydown', function(e) {
 <script>
 /* Filter + search + pages of 4 */
 (function () {
-  var PER = 4, rows = [].slice.call(document.querySelectorAll('[data-op]')), page = 0, f = 'all';
+  var PER = 4, rows = [].slice.call(document.querySelectorAll('[data-op]')), page = 0, f = 'all', role = 'all';
   var q = document.getElementById('opSearch'), pager = document.getElementById('opPager'), label = document.getElementById('opPageLabel'), none = document.getElementById('opNone');
   var table = document.querySelector('.ad-table.ops');
   var cnt = document.getElementById('opCount'), clr = document.getElementById('opClear');
   clr.addEventListener('click', function () { q.value = ''; page = 0; apply(); q.focus(); });
   function apply() {
     var term = q.value.trim().toLowerCase();
-    var hit = rows.filter(function (r) { return (f === 'all' || r.dataset.has === f) && (term === '' || r.dataset.q.indexOf(term) !== -1); });
+    var hit = rows.filter(function (r) { return (role === 'all' || r.dataset.role === role) && (f === 'all' || r.dataset.has === f) && (term === '' || r.dataset.q.indexOf(term) !== -1); });
     var pages = Math.max(1, Math.ceil(hit.length / PER));
     page = Math.min(page, pages - 1);
     rows.forEach(function (r) { r.hidden = true; });
     hit.slice(page * PER, page * PER + PER).forEach(function (r) { r.hidden = false; });
     if (table) table.hidden = rows.length > 0 && hit.length === 0;
     none.hidden = !(rows.length > 0 && hit.length === 0);
-    cnt.textContent = hit.length === rows.length ? rows.length + ' operators' : hit.length + ' of ' + rows.length + ' operators';
+    var inRole = rows.filter(function (r) { return role === 'all' || r.dataset.role === role; }).length;
+    var noun = role === 'driver' ? 'driver' : role === 'conductor' ? 'conductor' : 'staff';
+    if (noun !== 'staff' && inRole !== 1) noun += 's';
+    cnt.textContent = hit.length === inRole ? inRole + ' ' + noun : hit.length + ' of ' + inRole + ' ' + noun;
     clr.hidden = term === '';
     pager.hidden = pages < 2;
     label.textContent = 'Page ' + (page + 1) + ' of ' + pages;
@@ -315,6 +338,12 @@ document.addEventListener('keydown', function(e) {
     c.addEventListener('click', function () {
       document.querySelectorAll('.op-chip').forEach(function (x) { x.classList.toggle('on', x === c); });
       f = c.dataset.f; page = 0; apply();
+    });
+  });
+  document.querySelectorAll('.op-tab').forEach(function (t) {
+    t.addEventListener('click', function () {
+      document.querySelectorAll('.op-tab').forEach(function (x) { var on = x === t; x.classList.toggle('on', on); x.setAttribute('aria-selected', on ? 'true' : 'false'); });
+      role = t.dataset.role; page = 0; apply();
     });
   });
   pager.addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b || b.disabled) return; page += +b.dataset.d; apply(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
