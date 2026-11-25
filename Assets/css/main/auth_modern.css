@@ -195,6 +195,6 @@ body{background:#f3f7ff;font-family:'Inter',system-ui,sans-serif;color:var(--nav
 
 
 @media(max-width:900px){
-  body.auth-register .auth-hero-m{text-align:center;padding:48px 24px 82px}
+  body.auth-register .auth-hero-m{text-align:center;display:flex;flex-direction:column;justify-content:center;padding:0 24px 34px}
   body.auth-register .auth-hero-m h1,body.auth-register .auth-hero-m p{max-width:none;margin-left:auto;margin-right:auto}
 }
