@@ -148,6 +148,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
         if (!$errors && $error === '') {
+            mbus_purge_unverified_signups($conn, $email, $phone);
             $phone_used = mbus_phone_in_use($conn, $phone);
             if ($phone_used === null) $error = 'Registration is temporarily unavailable. Please try again in a moment.';
             elseif ($phone_used) $errors['mobileNumber'] = 'That mobile number is already used by another account. Use a different number or log in.';
