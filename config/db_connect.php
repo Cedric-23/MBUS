@@ -175,6 +175,7 @@ function mbus_run_schema_upgrades(PDO $pdo): void {
               "verification_code VARCHAR(10)",
               "verification_code_expiry TIMESTAMP",
               "verification_code_attempts INT NOT NULL DEFAULT 0",
+              "totp_secret VARCHAR(64)",
           ] as $col) {
               $pdo->exec('ALTER TABLE ' . $appTable . ' ADD COLUMN IF NOT EXISTS ' . $col);
           }

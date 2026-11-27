@@ -9,6 +9,7 @@ include __DIR__ . "/Includes/activity_log.php";
 require_once __DIR__ . "/Includes/csrf.php";
 require_once __DIR__ . '/Includes/reset_mailer.php';
 require_once __DIR__ . '/Includes/registration_security.php';
+require_once __DIR__ . '/Includes/totp.php';
 require_once __DIR__ . '/Includes/phone_unique.php';
 
 $staff_portal = defined('MBUS_STAFF_PORTAL') && MBUS_STAFF_PORTAL === true;
@@ -108,6 +109,12 @@ function mbus_application_id_photo(string $field, &$error): ?array {
  * The application stays hidden from the admin until the code is entered (see verify_application.php).
  */
 function mbus_staff_send_verification($conn, string $type, string $email, string $full_name, string $code): void {
+    if ($type === 'driver') {   // drivers confirm with an authenticator app instead of an email code
+        $_SESSION['staff_verify_email'] = $email;
+        $_SESSION['staff_verify_type'] = 'driver';
+        header('Location: verify_driver_authenticator.php');
+        exit();
+    }
     $mail_error = mbus_send_registration_code($email, $code, $full_name);
     if ($mail_error !== null) error_log('Staff application verification email failed: ' . (string)$mail_error);
     $_SESSION['staff_verify_email'] = $email;
@@ -338,8 +345,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             if (!$interiorPhoto) $errors['interior_photo'] = 'Bus interior photo: ' . $fe;
         }
         if (!$errors && $error === '') {
-            $verify_code = (string)random_int(100000, 999999);
-            $verify_expiry = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+            $verify_code = '';
+            $totp_secret = mbus_totp_new_secret();
             /* replace an earlier, never-verified attempt with the same email */
             mbus_db_prepare($conn, "DELETE FROM operator_application WHERE LOWER(email) = LOWER(?) AND email_verified = FALSE", [$email]);
             $ok = mbus_db_prepare($conn,
@@ -350,8 +357,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                      id_photo_b64, id_photo_mime, medical_document_b64, medical_document_mime, nbi_document_b64, nbi_document_mime,
                      license_document_2_b64, license_document_2_mime, license_document_3_b64, license_document_3_mime,
                      vehicle_document_2_b64, vehicle_document_2_mime, vehicle_document_3_b64, vehicle_document_3_mime,
-                     email_verified, verification_code, verification_code_expiry, verification_code_attempts, application_status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, ?, ?, 0, 'Pending')",
+                     email_verified, verification_code_attempts, application_status, totp_secret)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, 0, 'Pending', ?)",
                 [$full_name, $email, $phone_number, $address, $license_number, ($license_expiry === "" ? null : $license_expiry), $vehicle_type, $plate,
                  $lic['b64'], $lic['mime'], $veh['b64'], $veh['mime'], password_hash($password, PASSWORD_DEFAULT),
                  $busPhoto['b64'], $busPhoto['mime'], $interiorPhoto['b64'], $interiorPhoto['mime'],
@@ -361,7 +368,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                  $extras['license_document_3']['b64'] ?? null, $extras['license_document_3']['mime'] ?? null,
                  $extras['vehicle_document_2']['b64'] ?? null, $extras['vehicle_document_2']['mime'] ?? null,
                  $extras['vehicle_document_3']['b64'] ?? null, $extras['vehicle_document_3']['mime'] ?? null,
-                 $verify_code, $verify_expiry]);
+                 $totp_secret]);
             if ($ok === false) { $error = 'We could not save your application. Please try again.'; }
             else {
                 /* the admin is notified only after the email is verified (verify_application.php) */
