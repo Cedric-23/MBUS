@@ -78,16 +78,18 @@ $where_sql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 $order = $f_status === 'pending' ? 'v.submitted_at ASC' : 'COALESCE(v.reviewed_at, v.submitted_at) DESC';
 $base = "FROM commuter_verification v JOIN users u ON u.user_id = v.user_id $where_sql";
 
-/* CSV export of the current filter */
+/* Excel / PDF export of the current filter */
 if(isset($_GET['export'])){
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="verifications-' . date('Ymd') . '.csv"');
-    $out = fopen('php://output', 'w');
-    fputcsv($out, ['Name', 'Email', 'Type', 'ID number', 'ID expiry', 'Submitted', 'Status', 'Reviewed', 'Reason']);
-    $safe = fn($x) => (is_string($x) && $x !== '' && strpos("=+-@\t\r", $x[0]) !== false) ? "'" . $x : $x;
+    require_once __DIR__ . '/../Includes/report_export.php';
+    $rows = [];
     $q = mbus_db_prepare($conn, "SELECT u.full_name, u.email, v.verification_type, v.document_number, v.expiry_date, v.submitted_at, v.verification_status, v.reviewed_at, v.rejection_reason $base ORDER BY $order", $params);
-    while($q !== false && ($r = mbus_db_fetch_assoc($q))){ fputcsv($out, array_map($safe, array_values($r))); }
-    exit();
+    while($q !== false && ($r = mbus_db_fetch_assoc($q))){
+        foreach (['expiry_date' => 'Y-m-d', 'submitted_at' => 'Y-m-d h:i A', 'reviewed_at' => 'Y-m-d h:i A'] as $k => $f) $r[$k] = $r[$k] ? date($f, strtotime($r[$k])) : '';
+        $rows[] = array_values($r);
+    }
+    $meta = ['Filter' => $f_status !== '' ? ucfirst((string)$f_status) : 'All statuses'];
+    mbus_report_send(mbus_report_format(), 'mbus_id_verifications_' . date('Ymd'), 'ID verifications', $meta, ['Records' => count($rows)],
+        ['Name', 'Email', 'Type', 'ID number', 'ID expiry', 'Submitted', 'Status', 'Reviewed', 'Reason'], $rows);
 }
 
 /* Counts for the tabs */
@@ -209,7 +211,7 @@ $qs = fn(array $over = []) => '?' . http_build_query(array_filter(array_merge(['
         <?php foreach($type_opts as $t): ?><option <?php echo $f_type === $t ? 'selected' : ''; ?>><?php echo $t; ?></option><?php endforeach; ?>
     </select>
     <button class="ad-btn" type="submit">Search</button>
-    <a class="ad-btn" href="<?php echo $qs(['export' => '1']); ?>" download><i class="fa fa-download" aria-hidden="true"></i> Export CSV</a>
+    <a class="ad-btn" href="<?php echo $qs(['export' => '1', 'format' => 'xlsx']); ?>"><i class="fa fa-file-excel-o" aria-hidden="true"></i> Excel</a> <a class="ad-btn" href="<?php echo $qs(['export' => '1', 'format' => 'pdf']); ?>"><i class="fa fa-file-pdf-o" aria-hidden="true"></i> PDF</a>
 </form>
 
 <form method="POST" id="vfForm">

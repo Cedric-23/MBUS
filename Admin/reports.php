@@ -124,20 +124,13 @@ if ($report === 'trips') {
         $r['rstatus'], $r['pstatus'] ?? '-', $r['amount'] !== null ? number_format((float)$r['amount'], 2, '.', '') : ''];
 }
 
-/* ---------- CSV export ---------- */
+/* ---------- Excel / PDF export ---------- */
 if ($export) {
-    $name = 'mbus_' . $report . '_' . ($from ?: 'start') . '_to_' . ($to ?: 'now') . '.csv';
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="' . $name . '"');
-    header('X-Content-Type-Options: nosniff');
-    $out = fopen('php://output', 'w');
-    fwrite($out, "\xEF\xBB\xBF");
-    $safe = static fn($v) => is_string($v) && $v !== '' && strpbrk($v[0], "=+-@\t\r") !== false && !is_numeric($v) ? "'" . $v : $v;
-    fputcsv($out, ['MBUS ' . $title . ' report', 'From: ' . ($from ?: 'all'), 'To: ' . ($to ?: 'all'), 'Generated: ' . date('Y-m-d H:i')]);
-    fputcsv($out, $head);
-    foreach ($rows as $r) fputcsv($out, array_map($safe, $r));
-    fclose($out);
-    exit;
+    require_once __DIR__ . '/../Includes/report_export.php';
+    $meta = ['From' => $from ?: 'All dates', 'To' => $to ?: 'All dates'];
+    $summary = ['Trips' => $kpi['trips'], 'Buses used' => count($kpi['buses']), 'Passengers booked' => $kpi['booked'], 'Boarded' => $kpi['boarded'],
+        'Seat occupancy' => $kpi['occ'] . '%', 'Revenue (PHP)' => number_format($kpi['revenue'], 2)];
+    mbus_report_send(mbus_report_format(), 'mbus_' . $report . '_' . ($from ?: 'start') . '_to_' . ($to ?: 'now'), $title, $meta, $summary, $head, $rows);
 }
 
 $total = count($rows);
@@ -250,7 +243,7 @@ $busLabel = static fn($n) => ctype_digit((string)$n) ? 'Bus ' . $n : $n;
     <section class="rp-card">
         <div class="rp-card-head">
             <div><h2><?php echo $h($title); ?></h2><p><?php echo number_format($total); ?> row<?php echo $total === 1 ? '' : 's'; ?> · <?php echo $from ? $h(date('M j, Y', strtotime($from))) : 'the beginning'; ?> to <?php echo $to ? $h(date('M j, Y', strtotime($to))) : 'now'; ?></p></div>
-            <a class="btn btn-primary" href="?<?php echo $h($qs(['export' => 1])); ?>"><i class="fa fa-download" aria-hidden="true"></i> Export CSV</a>
+            <span class="rp-export"><a class="btn btn-primary" href="?<?php echo $h($qs(['export' => 1, 'format' => 'xlsx'])); ?>"><i class="fa fa-file-excel-o" aria-hidden="true"></i> Excel</a> <a class="btn btn-primary" href="?<?php echo $h($qs(['export' => 1, 'format' => 'pdf'])); ?>"><i class="fa fa-file-pdf-o" aria-hidden="true"></i> PDF</a></span>
         </div>
         <?php if (!$shown): ?>
             <p class="rp-empty">Nothing matches these filters. Try a wider date range.</p>
