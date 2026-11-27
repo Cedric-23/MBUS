@@ -304,8 +304,11 @@
 .form-body select[name="vehicle-type"]:invalid { color: #8a98ae; }
 .form-body input[name="bus-seats"] { padding-left: 46px; }
 
-.seat-layout-preview .seat-row.seat-back{grid-template-columns:repeat(5,48px);justify-content:center}
-@media (max-width:640px){.seat-layout-preview .seat-row.seat-back{grid-template-columns:repeat(5,44px);gap:6px}}
+/* Back bench: 5 seats in one row; the middle seat is centered under the aisle line. Rows stay centered. */
+.seat-layout-preview .seat-row{justify-content:center}
+.seat-layout-preview .seat-row.seat-back .seat-cell{display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+.seat-layout-preview .seat-row.seat-back{grid-template-columns:repeat(5,48px)}
+@media (max-width:640px){.seat-layout-preview .seat-row.seat-back{grid-template-columns:repeat(5,44px)}}
 
 /* Multi-file upload box: thumbnails on top, the status line below, Change button on the right */
 .extra-uploads[hidden] { display: none !important; }
@@ -325,3 +328,11 @@
 .auth-register .upload-group[data-multi] .document-hint { font-size: 12.5px; color: #7a889e; }
 .auth-register .upload-group[data-multi].is-done .document-hint { color: #1f8a57; font-weight: 600; }
 .auth-register .upload-group[data-multi].is-done .document-name { font-size: 13px; color: #516278; overflow: hidden; text-overflow: ellipsis; }
+
+/* License OCR status line */
+.ocr-note{margin:8px 0 0;font-size:.82rem;line-height:1.35;color:#475569}
+.ocr-note[data-kind="ok"]{color:#15803d}
+.ocr-note[data-kind="warn"]{color:#b45309}
+.ocr-note[data-kind="busy"]::before{content:"";display:inline-block;width:10px;height:10px;margin-right:6px;border:2px solid #94a3b8;border-top-color:transparent;border-radius:50%;animation:ocrspin .8s linear infinite;vertical-align:-1px}
+@keyframes ocrspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.ocr-note[data-kind="busy"]::before{animation:none}}

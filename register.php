@@ -826,6 +826,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
         <script src="register.js?v=<?= @filemtime(__DIR__ . "/register.js") ?>"></script>
         <script src="Assets/js/ph_address.js?v=2"></script>
     <script src="Assets/js/driver_bus_setup.js?v=<?= @filemtime(__DIR__ . '/Assets/js/driver_bus_setup.js') ?>"></script>
+        <script src="Assets/js/license_ocr.js?v=<?= @filemtime(__DIR__ . "/Assets/js/license_ocr.js") ?>"></script>
         <script> if (window.lucide) lucide.createIcons(); </script>
         <script src="Assets/js/password-toggle.js"></script>
         <?php if (!empty($success)): ?><script>try{localStorage.removeItem("mbus_reg_draft_v1")}catch(e){}</script><?php endif; ?>
