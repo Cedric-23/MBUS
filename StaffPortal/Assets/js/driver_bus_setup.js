@@ -101,14 +101,22 @@
     layout = normalizeLegacyLayout(layout);
     layout = layout.slice(0, 25);
 
-    const MAX_SEATS = 40, MAX_DOORS = 2;
+    const MAX_SEATS = 40, MAX_DOORS = 1;
     function seatTotal() {
         return layout.reduce((total, row) => total + row.filter(Boolean).length, 0);
     }
     /* a door is a side-by-side pair with no seats (the driver's cell does not count) */
+    /* the empty right pair at the end of the last regular row is just the unfilled end of the rows, not a door */
+    function isRowEnd(rowIndex, start) {
+        if (start !== 2) return false;
+        let last = layout.length - 1;
+        if (last >= 0 && layout[last].length === 5) last--;
+        return rowIndex === last && (layout[rowIndex][0] || layout[rowIndex][1]);
+    }
+
     function doorTotal() {
         let n = 0;
-        layout.forEach((row, i) => [0, 2].forEach(s => { if (!(i === 0 && s === 0) && !row[s] && !row[s + 1]) n++; }));
+        layout.forEach((row, i) => { if (row.length === 5) return; [0, 2].forEach(s => { if (!(i === 0 && s === 0) && !row[s] && !row[s + 1] && !isRowEnd(i, s)) n++; }); });
         return n;
     }
     function limitMessage() {
@@ -161,13 +169,14 @@
             rowElement.className = 'seat-row';
             rowElement.setAttribute('role', 'row');
 
-            /* back bench: 5 fixed seats, no aisle */
+            /* Rear bench: one row of 5 seats numbered left to right. The middle seat sits on the aisle line,
+               directly between the two seats on each side, in the same row (not dropped below). */
             if (row.length === 5) {
                 rowElement.classList.add('seat-back');
                 row.forEach((_, i) => {
                     number++;
                     const seat = document.createElement('span');
-                    seat.className = 'seat-cell is-open';
+                    seat.className = 'seat-cell is-open' + (i === 2 ? ' seat-back-center' : '');
                     seat.setAttribute('role', 'gridcell');
                     seat.setAttribute('aria-label', `Back row, seat ${number}`);
                     seat.textContent = String(number);
@@ -199,7 +208,7 @@
                 }
 
                 /* two seats side by side both removed: the pair is cleared automatically and shown as a door */
-                if (!row[start] && !row[start + 1]) {
+                if (!row[start] && !row[start + 1] && !isRowEnd(rowIndex, start)) {
                     const door = document.createElement('button');
                     door.type = 'button';
                     door.className = 'seat-door';
@@ -229,9 +238,9 @@
                     button.setAttribute('aria-pressed', String(active));
                     button.setAttribute('aria-label', `Row ${rowIndex + 1}, seat ${seatIndex + 1}: ${active ? `included as seat ${number}` : 'removed'}`);
                     const other = seatIndex === start ? start + 1 : start;
-                    const wouldCreateThirdDoor = active && !row[other] && doorTotal() >= MAX_DOORS;
-                    button.disabled = layoutLocked || wouldCreateThirdDoor;
-                    if (wouldCreateThirdDoor) button.setAttribute('aria-label', 'Maximum of 2 doors reached; this seat cannot be removed');
+                    const wouldCreateAdditionalDoor = active && !row[other] && doorTotal() >= MAX_DOORS;
+                    button.disabled = layoutLocked || wouldCreateAdditionalDoor;
+                    if (wouldCreateAdditionalDoor) button.setAttribute('aria-label', 'Maximum of 1 door reached; this seat cannot be removed');
                     button.textContent = active ? String(number) : '—';
                     button.addEventListener('click', () => {
                         if (layoutLocked) return;
@@ -250,7 +259,7 @@
         countLabel.textContent = problem || `${total} seat${total === 1 ? '' : 's'} selected · ${doors} door${doors === 1 ? '' : 's'}`;
         countLabel.style.color = problem ? '#b42318' : '';
         if (doorWarning) {
-            doorWarning.textContent = doors >= MAX_DOORS ? 'Maximum of 2 doors reached. Remove a door before adding another.' : '';
+            doorWarning.textContent = doors >= MAX_DOORS ? 'Maximum of 1 door reached. Remove it before adding another.' : '';
             doorWarning.hidden = doors < MAX_DOORS;
         }
         dataInput.value = JSON.stringify(layout);
@@ -352,7 +361,7 @@
             });
             const kb = Math.max(1, Math.round(files.reduce((n, f) => n + f.size, 0) / 1024));
             name.textContent = files.length === 1 ? files[0].name : files.length + ' files selected';
-            hint.textContent = '\u2713 Ready \u00b7 ' + kb + ' KB';
+            hint.textContent = '✓ Ready · ' + kb + ' KB';
         }
 
         /* capture phase: runs before register.js sees the change, so it only ever handles one file per field */

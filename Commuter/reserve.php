@@ -435,7 +435,7 @@ echo "<div class='seat-row bm-row" . (count($cells) === 5 ? " seat-back" : "") .
 foreach($grps as $gi => $grp){
 $start = $grp[0];
 if($gi === 1){ echo "<div class='aisle bm-aisle' role='separator' aria-label='Aisle'></div>"; }
-if(count($grp) === 2 && $cells[$start] === null && $cells[$start+1] === null){
+if(count($grp) === 2 && $cells[$start] === null && $cells[$start+1] === null && !mbus_seat_pair_is_row_end($seat_rows, $ri, $start)){
 if($ri === 0 && $start === 0){ echo "<span class='bm-driver' role='gridcell' aria-label='Driver seat'>Driver</span>"; }
 else { echo "<span class='bm-door' role='gridcell' aria-label='Door, no seats'>Door</span>"; }
 continue;

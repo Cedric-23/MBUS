@@ -106,9 +106,17 @@
         return layout.reduce((total, row) => total + row.filter(Boolean).length, 0);
     }
     /* a door is a side-by-side pair with no seats (the driver's cell does not count) */
+    /* the empty right pair at the end of the last regular row is just the unfilled end of the rows, not a door */
+    function isRowEnd(rowIndex, start) {
+        if (start !== 2) return false;
+        let last = layout.length - 1;
+        if (last >= 0 && layout[last].length === 5) last--;
+        return rowIndex === last && (layout[rowIndex][0] || layout[rowIndex][1]);
+    }
+
     function doorTotal() {
         let n = 0;
-        layout.forEach((row, i) => [0, 2].forEach(s => { if (!(i === 0 && s === 0) && !row[s] && !row[s + 1]) n++; }));
+        layout.forEach((row, i) => { if (row.length === 5) return; [0, 2].forEach(s => { if (!(i === 0 && s === 0) && !row[s] && !row[s + 1] && !isRowEnd(i, s)) n++; }); });
         return n;
     }
     function limitMessage() {
@@ -200,7 +208,7 @@
                 }
 
                 /* two seats side by side both removed: the pair is cleared automatically and shown as a door */
-                if (!row[start] && !row[start + 1]) {
+                if (!row[start] && !row[start + 1] && !isRowEnd(rowIndex, start)) {
                     const door = document.createElement('button');
                     door.type = 'button';
                     door.className = 'seat-door';

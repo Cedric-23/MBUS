@@ -440,7 +440,7 @@ $tomorrow_key = substr($b['tomorrow'], 0, 10);
             foreach($grps as $gi => $grp){
                 $start = $grp[0];
                 if($gi === 1){ echo "<span class='aisle' aria-hidden='true'></span>"; }
-                if(count($grp) === 2 && ($cells[$start] ?? null) === null && ($cells[$start + 1] ?? null) === null){
+                if(count($grp) === 2 && ($cells[$start] ?? null) === null && ($cells[$start + 1] ?? null) === null && !mbus_seat_pair_is_row_end($seat_rows, $ri, $start)){
                     if($ri === 0 && $start === 0){ echo "<span class='rtile driver' aria-label='Driver seat'>Driver</span>"; }
                     else { echo "<span class='rtile door' aria-label='Door, no seats'>Door</span>"; }
                     continue;

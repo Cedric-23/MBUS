@@ -17,15 +17,29 @@ if (!defined('MBUS_DOOR_SEATS')) define('MBUS_DOOR_SEATS', 2);
 /** A bus has a single door: a pair of side-by-side cells with no seats (the driver's cell does not count). */
 if (!defined('MBUS_MAX_DOORS')) define('MBUS_MAX_DOORS', 1);
 
+/**
+ * True for the empty right pair at the end of the last regular row while its left pair still has seats: that is just
+ * the unfilled end of the rows (a seat count that is not a multiple of 4), not a door. Works on seat booleans or seat numbers.
+ */
+function mbus_seat_pair_is_row_end(array $rows, int $rowIndex, int $start): bool
+{
+    if ($start !== 2) return false;
+    $last = count($rows) - 1;
+    if ($last >= 0 && count($rows[$last]) === 5) $last--;   // the rear bench is not a regular row
+    if ($rowIndex !== $last) return false;
+    return !empty($rows[$rowIndex][0]) || !empty($rows[$rowIndex][1]);
+}
+
 /** Number of doors in a layout (side-by-side empty pairs; the driver's front-left pair does not count). */
 function mbus_seat_layout_doors(array $layout): int
 {
     $doors = 0;
-    foreach (array_values($layout) as $index => $row) {
+    $layout = array_values($layout);
+    foreach ($layout as $index => $row) {
         if (!is_array($row) || count($row) !== 4) continue;   // the 5-seat rear bench has no door pairs
         foreach ([0, 2] as $start) {
             if ($index === 0 && $start === 0) continue;       // the driver's cell
-            if (empty($row[$start]) && empty($row[$start + 1])) $doors++;
+            if (empty($row[$start]) && empty($row[$start + 1]) && !mbus_seat_pair_is_row_end($layout, $index, $start)) $doors++;
         }
     }
     return $doors;
