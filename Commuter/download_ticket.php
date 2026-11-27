@@ -125,7 +125,7 @@ $pdf->MultiCell(0,5,$seat_list);
 foreach ($reservations as $reservation) {
     $line = $fareLines[(int)$reservation['reservation_id']] ?? null;
     if ($line) {
-        $pdf->MultiCell(0,4,'Seat ' . $reservation['seat_number'] . ' fare: PHP ' . number_format((float)$line['base'],2) . ' - PHP ' . number_format((float)$line['discount'],2) . ' discount + PHP ' . number_format((float)$line['fee'],2) . ' fee');
+        $pdf->MultiCell(0,4,'Seat ' . $reservation['seat_number'] . ' fare: PHP ' . number_format((float)$line['base'],2) . ' - PHP ' . number_format((float)$line['discount'],2) . ' discount');
     }
 }
 $pdf->Ln(3);

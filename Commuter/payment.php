@@ -404,7 +404,7 @@ if(isset($_POST['cancel_reservation'])){
         <span class="seat-tag">Seat <?php echo htmlspecialchars($sk); ?></span>
         <span class="pay-seat-info">
             <span class="pay-seat-stop"><?php echo htmlspecialchars($stopBySeat[$sk] ?? ''); ?></span>
-            <small class="pay-seat-break"><?php echo htmlspecialchars($ln['type']); ?> &middot; &#8369;<?php echo number_format($ln['base'], 2); ?><?php if($ln['discount'] > 0): ?> &minus; &#8369;<?php echo number_format($ln['discount'], 2); ?><?php endif; ?> + &#8369;<?php echo number_format($ln['fee'], 2); ?> fee</small>
+            <small class="pay-seat-break"><?php echo htmlspecialchars($ln['type']); ?> &middot; &#8369;<?php echo number_format($ln['base'], 2); ?><?php if($ln['discount'] > 0): ?> &minus; &#8369;<?php echo number_format($ln['discount'], 2); ?><?php endif; ?></small>
         </span>
         <span class="pay-line">&#8369;<?php echo number_format($ln['final'], 2); ?></span>
         <?php if($canRemoveSeat){ ?>

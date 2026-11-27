@@ -488,7 +488,6 @@ function calculateFare() {
 
     if (!reviewed) return;
 
-    let reservationFee = selectedSeats.length * 10;
     let total = 0;
     let html = "";
 
@@ -523,11 +522,6 @@ function calculateFare() {
 
     });
 
-    total += reservationFee;
-
-    html += `
-    <p>Reservation Fee: ₱${reservationFee.toFixed(2)}</p>
-    `;
 
     document.getElementById("fareDetails").innerHTML = html;
     document.getElementById("totalAmount").innerText = total.toFixed(2);

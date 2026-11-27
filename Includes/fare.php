@@ -1,7 +1,8 @@
 <?php
 /* Fare table, passenger type and discount rules shared by reserve + payment. */
 
-const MBUS_RESERVATION_FEE = 10.00;
+/* The reservation fee was removed (beneficiary revision): riders pay the fare only. Kept at 0 so older callers still work. */
+const MBUS_RESERVATION_FEE = 0.00;
 const MBUS_DISCOUNT_RATE = 0.20;
 
 function mbus_fare_table(): array {
@@ -46,7 +47,7 @@ function mbus_seat_fare(string $pickup, string $destination): float {
     return round(max(MBUS_MIN_FARE, abs($p[$destination] - $p[$pickup])), 2);
 }
 
-/* Per-seat lines: base fare, 20% discount for Student/Senior/PWD, plus reservation fee.
+/* Per-seat lines: base fare, 20% discount for Student/Senior/PWD. No reservation fee.
    $types maps reservation_id => passenger type (missing = Regular). */
 function mbus_quote_lines(array $reservations, array $types = []): array {
     $lines = []; $total = 0.0;

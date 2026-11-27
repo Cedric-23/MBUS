@@ -127,7 +127,7 @@ $can_submit = !$latest || $status === 'Rejected' || ($status === 'Approved' && $
     <span class="v-label">Your passenger type</span>
     <p class="v-type v-<?php echo strtolower($current); ?>"><?php echo htmlspecialchars($current); ?></p>
     <?php if($current !== 'Regular'){ ?>
-        <p class="v-note">20% off the fare on your own seat. Reservation fee stays the same.<?php if(!empty($latest['expiry_date'])){ echo ' ID valid until ' . htmlspecialchars(date('M j, Y', strtotime($latest['expiry_date']))) . '.'; } ?></p>
+        <p class="v-note">20% off the fare on your own seat.<?php if(!empty($latest['expiry_date'])){ echo ' ID valid until ' . htmlspecialchars(date('M j, Y', strtotime($latest['expiry_date']))) . '.'; } ?></p>
     <?php } elseif($status === 'Pending'){ ?>
         <p class="v-note">Your <?php echo htmlspecialchars($latest['verification_type']); ?> request is under review. You'll pay the regular fare until it's approved.</p>
     <?php } elseif($status === 'Rejected'){ ?>
