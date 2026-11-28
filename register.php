@@ -380,7 +380,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if ($errors && $error === '') $error = 'Please fix the highlighted fields.';
     // Driver form is a 3-step wizard: reopen on the first step that has an error
     $stepOf = ['driver-first-name'=>0,'driver-last-name'=>0,'email-address'=>0,'phone-number'=>0,'home-address'=>0,'driver-password'=>0,'driver-confirm'=>0,
-               'license-number'=>1,'license-expiry'=>1,'license_document'=>1,'license_document_2'=>1,'license_document_3'=>1,'id_photo'=>1,'medical_document'=>1,'nbi_document'=>1,
+               'license-number'=>0,'license-expiry'=>0,'license_document'=>0,'license_document_2'=>0,'license_document_3'=>0,'id_photo'=>1,'medical_document'=>1,'nbi_document'=>1,
                'vehicle-type'=>2,'vehicle-plate'=>2,'bus-seats'=>2,'vehicle-expiry'=>2,'vehicle_document'=>2,'vehicle_document_2'=>2,'vehicle_document_3'=>2,
                'bus_photo'=>2,'interior_photo'=>2];
     foreach (array_keys($errors) as $k) { if (isset($stepOf[$k])) { $step_with_error = $stepOf[$k]; break; } }
@@ -471,7 +471,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                 <div class="form-header">
                     <div class="form-header-text">
                         <h1><?= $staff_portal ? 'Apply to join MBUS' : 'Create your Account' ?></h1>
-                        <p><?= $staff_portal ? 'Verify your email, then an admin reviews your application before staff access is granted.' : 'Plan your next bus trip in just a few steps.' ?></p>
+                        <p><?= $staff_portal ? 'Confirm your application, then an admin reviews your application before staff access is granted.' : 'Plan your next bus trip in just a few steps.' ?></p>
                     </div>
                     <div class="form-header-picker">
                         <div class="picker-container-text">
@@ -554,9 +554,47 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                         <div class="driver-input-group active">
                             <div class="group-header">
                                 <div class="group-count">1</div>
-                                <p class="group-name">Personal Information</p>
+                                <p class="group-name">License &amp; Personal Information</p>
                             </div>
                             <div class="form-inputs">
+                                <p class="ocr-intro">Start with your license. We read the photo and fill in your details below. Check them before you continue.</p>
+                                <div class="upload-group" data-multi data-extra-prefix="license_document">
+                                    <label class="input-label">Upload your driver's license <span class="optional-tag">(up to 3 files)</span></label>
+                                    <div class="upload-document-group">
+                                        <div class="upload-icon">
+                                            <i data-lucide="upload"></i>
+                                        </div>
+                                        <div class="document-desc">
+                                            <span class="document-name">Click to upload</span>
+                                            <span class="document-hint">Front photo first; we read it and fill in the form for you</span>
+                                        </div>
+                                        <div class="document-input-button">
+                                            <button type="button">Browse</button>
+                                            <input type="file" name="license_document" accept=".jpg,.jpeg,.png,.pdf" multiple required/>
+                                        </div>
+                                    </div>
+                                    <?= mbus_field_error($errors, 'license_document') ?><?= mbus_field_error($errors, 'license_document_2') ?><?= mbus_field_error($errors, 'license_document_3') ?>
+                                    <div class="document-preview">
+                                        <img class="document-preview-image" alt="License document preview"/>
+                                        <iframe class="document-preview-frame" title="License document preview"></iframe>
+                                    </div>
+                                </div>
+                                <div class="extra-uploads" data-extra-for="license_document" hidden>
+                                    <?= mbus_extra_upload_html('license_document_2', 'License document, page 2', null) ?>
+                                    <?= mbus_extra_upload_html('license_document_3', 'License document, page 3', null) ?>
+                                </div>
+                                <div class="input-group">
+                                    <div class="license-number">
+                                        <label class="input-label">License Number <span class="optional-tag">(from your license)</span></label>
+                                        <input type="text" name="license-number" placeholder="Enter your license number" maxlength="20" value="<?= reg_old('license-number') ?>" required/>
+                                        <i class="input-icon" data-lucide="user"></i>
+                                    <?= mbus_field_error($errors, 'license-number') ?></div>
+                                    <div class="license-expiry">
+                                        <label class="input-label">ID Expiry Date <span class="optional-tag">(if applicable)</span></label>
+                                        <input type="date" name="license-expiry" min="<?= date('Y-m-d') ?>" value="<?= reg_old('license-expiry') ?>"/>
+                                        <i class="input-icon" data-lucide="calendar"></i>
+                                    <?= mbus_field_error($errors, 'license-expiry') ?></div>
+                                </div>
                                 <div class="input-group">
                                     <div class="first-name">
                                         <label class="input-label">First Name</label>
@@ -575,7 +613,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                         <input type="email" name="email-address" placeholder="Enter your email" maxlength="254" autocapitalize="none" spellcheck="false" value="<?= reg_old('email-address') ?>" required/>
                                         <i class="input-icon" data-lucide="mail"></i>
                                     <?= mbus_field_error($errors, 'email-address') ?>
-                                        <small class="field-hint">We’ll send a 6-digit code to verify this email. Your application goes to the admin only after you verify it.</small></div>
+                                        <small class="field-hint">You’ll confirm your application with an authenticator app at the end. It goes to the admin only after that.</small></div>
                                     <div class="phone-number">
                                         <label>Phone Number</label>
                                 <div class="phone-input"><span class="phone-prefix" aria-hidden="true">+63</span><input type="text" name="phone-number" placeholder="9XXXXXXXXX" maxlength="10" minlength="10" inputmode="numeric" pattern="9[0-9]{9}" value="<?= preg_replace('/^0/', '', reg_old('phone-number')) ?>" required/></div>
@@ -617,46 +655,9 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                         <div class="driver-input-group">
                             <div class="group-header">
                                 <div class="group-count">2</div>
-                                <h3 class="group-name">License &amp; Requirements</h3>
+                                <h3 class="group-name">Requirements</h3>
                             </div>
                             <div class="form-inputs">
-                                <div class="input-group">
-                                    <div class="license-number">
-                                        <label class="input-label">License Number</label>
-                                        <input type="text" name="license-number" placeholder="Enter your license number" maxlength="20" value="<?= reg_old('license-number') ?>" required/>
-                                        <i class="input-icon" data-lucide="user"></i>
-                                    <?= mbus_field_error($errors, 'license-number') ?></div>
-                                    <div class="license-expiry">
-                                        <label class="input-label">ID Expiry Date <span class="optional-tag">(if applicable)</span></label>
-                                        <input type="date" name="license-expiry" min="<?= date('Y-m-d') ?>" value="<?= reg_old('license-expiry') ?>"/>
-                                        <i class="input-icon" data-lucide="calendar"></i>
-                                    <?= mbus_field_error($errors, 'license-expiry') ?></div>
-                                </div>
-                                <div class="upload-group" data-multi data-extra-prefix="license_document">
-                                    <label class="input-label">Updated Driver's License <span class="optional-tag">(up to 3 files)</span></label>
-                                    <div class="upload-document-group">
-                                        <div class="upload-icon">
-                                            <i data-lucide="upload"></i>
-                                        </div>
-                                        <div class="document-desc">
-                                            <span class="document-name">Click to upload</span>
-                                            <span class="document-hint">Pick up to 3 photos at once</span>
-                                        </div>
-                                        <div class="document-input-button">
-                                            <button type="button">Browse</button>
-                                            <input type="file" name="license_document" accept=".jpg,.jpeg,.png,.pdf" multiple required/>
-                                        </div>
-                                    </div>
-                                    <?= mbus_field_error($errors, 'license_document') ?><?= mbus_field_error($errors, 'license_document_2') ?><?= mbus_field_error($errors, 'license_document_3') ?>
-                                    <div class="document-preview">
-                                        <img class="document-preview-image" alt="License document preview"/>
-                                        <iframe class="document-preview-frame" title="License document preview"></iframe>
-                                    </div>
-                                </div>
-                                <div class="extra-uploads" data-extra-for="license_document" hidden>
-                                    <?= mbus_extra_upload_html('license_document_2', 'License document, page 2', null) ?>
-                                    <?= mbus_extra_upload_html('license_document_3', 'License document, page 3', null) ?>
-                                </div>
                                 <div class="upload-group">
                                     <label class="input-label" for="id-photo-input">2x2 Picture</label>
                                     <div class="upload-document-group">
@@ -807,7 +808,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                             <div class="button-container">
                                 <button class="step-button-back" id="step-back" type="button">Back</button>
                                 <button class="submit-button step-button-next active" id="step-next" type="button">Next</button>
-                                <button class="submit-button step-button-submit" id="step-submit" type="submit">Submit &amp; Verify Email</button>
+                                <button class="submit-button step-button-submit" id="step-submit" type="submit">Submit &amp; Set Up Authenticator</button>
                             </div>
                             <div class="redirect-footer">
                                 <div class="accounts-redirect">

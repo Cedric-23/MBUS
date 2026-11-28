@@ -336,3 +336,4 @@
 .ocr-note[data-kind="busy"]::before{content:"";display:inline-block;width:10px;height:10px;margin-right:6px;border:2px solid #94a3b8;border-top-color:transparent;border-radius:50%;animation:ocrspin .8s linear infinite;vertical-align:-1px}
 @keyframes ocrspin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.ocr-note[data-kind="busy"]::before{animation:none}}
+.ocr-intro{margin:0 0 12px;font-size:.88rem;line-height:1.4;color:#475569}
