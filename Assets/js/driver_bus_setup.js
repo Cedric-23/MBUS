@@ -309,8 +309,8 @@
    the others are handed to hidden fields, so the server still gets license_document, _2 and _3. register.js
    shrinks each photo through its own change handler. */
 (() => {
-    const MAX = 3;
     document.querySelectorAll('.upload-group[data-multi]').forEach(group => {
+        const MAX = Math.min(3, Math.max(1, parseInt(group.dataset.max, 10) || 3));
         const prefix = group.dataset.extraPrefix;
         const main = group.querySelector('input[type="file"]');
         const holder = document.querySelector('[data-extra-for="' + prefix + '"]');
@@ -367,6 +367,7 @@
         /* capture phase: runs before register.js sees the change, so it only ever handles one file per field */
         main.addEventListener('change', () => {
             const picked = Array.from(main.files || []).slice(0, MAX);
+            group.dispatchEvent(new CustomEvent('mbus:picked', { detail: { files: picked.slice() } }));   // originals, before they are shrunk
             if (picked.length > 1) give(main, picked[0]);
             extras.forEach((input, i) => {
                 const file = picked[i + 1] || null;

@@ -558,15 +558,15 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                             </div>
                             <div class="form-inputs">
                                 <p class="ocr-intro">Start with your license. We read the photo and fill in your details below. Check them before you continue.</p>
-                                <div class="upload-group" data-multi data-extra-prefix="license_document">
-                                    <label class="input-label">Upload your driver's license <span class="optional-tag">(up to 3 files)</span></label>
+                                <div class="upload-group" data-multi data-max="2" data-extra-prefix="license_document">
+                                    <label class="input-label">Upload your driver's license <span class="optional-tag">(front and back)</span></label>
                                     <div class="upload-document-group">
                                         <div class="upload-icon">
                                             <i data-lucide="upload"></i>
                                         </div>
                                         <div class="document-desc">
                                             <span class="document-name">Click to upload</span>
-                                            <span class="document-hint">Front photo first; we read it and fill in the form for you</span>
+                                            <span class="document-hint">Pick the front and back photos</span>
                                         </div>
                                         <div class="document-input-button">
                                             <button type="button">Browse</button>
@@ -580,8 +580,7 @@ $driver_disabled    = $user_type !== "driver" ? "disabled" : "";
                                     </div>
                                 </div>
                                 <div class="extra-uploads" data-extra-for="license_document" hidden>
-                                    <?= mbus_extra_upload_html('license_document_2', 'License document, page 2', null) ?>
-                                    <?= mbus_extra_upload_html('license_document_3', 'License document, page 3', null) ?>
+                                    <?= mbus_extra_upload_html('license_document_2', 'License document, back', null) ?>
                                 </div>
                                 <div class="input-group">
                                     <div class="license-number">

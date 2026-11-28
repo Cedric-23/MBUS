@@ -337,3 +337,14 @@
 @keyframes ocrspin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.ocr-note[data-kind="busy"]::before{animation:none}}
 .ocr-intro{margin:0 0 12px;font-size:.88rem;line-height:1.4;color:#475569}
+
+/* Smaller multi-file upload box: one compact row until files are picked */
+.auth-register .upload-group[data-multi] .upload-document-group {
+    padding: 7px 10px !important; border-width: 1px !important; border-radius: 10px !important; column-gap: 10px; row-gap: 6px;
+}
+.auth-register .upload-group[data-multi]:not(.is-done) .upload-document-group {
+    grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "thumbs desc btn";
+}
+.auth-register .upload-group[data-multi] .upload-icon { width: 36px !important; height: 36px !important; border-radius: 9px !important; }
+.auth-register .upload-group[data-multi] .multi-thumbs .mt { width: 44px; height: 44px; border-radius: 9px; }
+.auth-register .upload-group[data-multi] .document-input-button button { padding: 6px 14px; font-size: 13px; }
